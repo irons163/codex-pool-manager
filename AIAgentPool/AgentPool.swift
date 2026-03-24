@@ -47,6 +47,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var focusLockedAccountID: UUID?
     var minSwitchInterval: TimeInterval
     var lowUsageThresholdRatio: Double
+    var minUsageRatioDeltaToSwitch: Double
 }
 
 struct AccountPoolState {
@@ -60,12 +61,14 @@ struct AccountPoolState {
 
     private(set) var minSwitchInterval: TimeInterval
     private(set) var lowUsageThresholdRatio: Double
+    private(set) var minUsageRatioDeltaToSwitch: Double
 
     init(
         accounts: [AgentAccount],
         mode: SwitchMode = .intelligent,
         minSwitchInterval: TimeInterval = 300,
-        lowUsageThresholdRatio: Double = 0.15
+        lowUsageThresholdRatio: Double = 0.15,
+        minUsageRatioDeltaToSwitch: Double = 0
     ) {
         self.accounts = accounts
         self.mode = mode
@@ -75,6 +78,7 @@ struct AccountPoolState {
         self.lastSwitchAt = nil
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
+        self.minUsageRatioDeltaToSwitch = max(0, min(0.5, minUsageRatioDeltaToSwitch))
     }
 
     init(snapshot: AccountPoolSnapshot) {
@@ -86,6 +90,7 @@ struct AccountPoolState {
         self.lastSwitchAt = nil
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
+        self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
         evaluate(now: .now)
     }
 
@@ -107,13 +112,15 @@ struct AccountPoolState {
             manualAccountID: manualAccountID,
             focusLockedAccountID: focusLockedAccountID,
             minSwitchInterval: minSwitchInterval,
-            lowUsageThresholdRatio: lowUsageThresholdRatio
+            lowUsageThresholdRatio: lowUsageThresholdRatio,
+            minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch
         )
     }
 
     mutating func updateSwitchSettings(
         minSwitchInterval: TimeInterval? = nil,
         lowUsageThresholdRatio: Double? = nil,
+        minUsageRatioDeltaToSwitch: Double? = nil,
         now: Date = .now
     ) {
         if let minSwitchInterval {
@@ -121,6 +128,9 @@ struct AccountPoolState {
         }
         if let lowUsageThresholdRatio {
             self.lowUsageThresholdRatio = min(0.9, max(0.01, lowUsageThresholdRatio))
+        }
+        if let minUsageRatioDeltaToSwitch {
+            self.minUsageRatioDeltaToSwitch = min(0.5, max(0, minUsageRatioDeltaToSwitch))
         }
         evaluate(now: now)
     }
@@ -264,6 +274,13 @@ struct AccountPoolState {
 
             if current.id == candidateID {
                 return
+            }
+
+            if let candidate = accounts.first(where: { $0.id == candidateID }) {
+                let improvement = current.usageRatio - candidate.usageRatio
+                if improvement < minUsageRatioDeltaToSwitch {
+                    return
+                }
             }
 
             guard canSwitch(now: now) else { return }

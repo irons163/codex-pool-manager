@@ -53,6 +53,10 @@ struct ContentView: View {
                         Text("低用量提醒門檻 \(Int(state.lowUsageThresholdRatio * 100))%")
                         Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("智能切換最小改善 \(Int(state.minUsageRatioDeltaToSwitch * 100))%")
+                        Slider(value: minUsageDeltaBinding, in: 0...0.2, step: 0.01)
+                    }
                     if state.mode == .intelligent {
                         if state.canIntelligentSwitch() {
                             Text("目前可切換帳號")
@@ -222,6 +226,15 @@ struct ContentView: View {
             get: { state.lowUsageThresholdRatio },
             set: { newValue in
                 state.updateSwitchSettings(lowUsageThresholdRatio: newValue)
+            }
+        )
+    }
+
+    private var minUsageDeltaBinding: Binding<Double> {
+        Binding(
+            get: { state.minUsageRatioDeltaToSwitch },
+            set: { newValue in
+                state.updateSwitchSettings(minUsageRatioDeltaToSwitch: newValue)
             }
         )
     }

@@ -170,6 +170,7 @@ struct AIAgentPoolTests {
         #expect(restored.activeAccount?.id == state.activeAccount?.id)
         #expect(restored.minSwitchInterval == state.minSwitchInterval)
         #expect(restored.lowUsageThresholdRatio == state.lowUsageThresholdRatio)
+        #expect(restored.minUsageRatioDeltaToSwitch == state.minUsageRatioDeltaToSwitch)
     }
 
     @Test
@@ -190,7 +191,8 @@ struct AIAgentPoolTests {
             manualAccountID: accountID,
             focusLockedAccountID: accountID,
             minSwitchInterval: 600,
-            lowUsageThresholdRatio: 0.2
+            lowUsageThresholdRatio: 0.2,
+            minUsageRatioDeltaToSwitch: 0.1
         )
 
         store.save(snapshot)
@@ -207,10 +209,11 @@ struct AIAgentPoolTests {
             mode: .intelligent
         )
 
-        state.updateSwitchSettings(minSwitchInterval: 5, lowUsageThresholdRatio: 2)
+        state.updateSwitchSettings(minSwitchInterval: 5, lowUsageThresholdRatio: 2, minUsageRatioDeltaToSwitch: 9)
 
         #expect(state.minSwitchInterval == 30)
         #expect(state.lowUsageThresholdRatio == 0.9)
+        #expect(state.minUsageRatioDeltaToSwitch == 0.5)
     }
 
     @Test
@@ -276,5 +279,41 @@ struct AIAgentPoolTests {
 
         #expect(state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 300)))
         #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 300)) == 0)
+    }
+
+    @Test
+    func intelligentModeDoesNotSwitchWhenImprovementIsBelowThreshold() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 300, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 280, quota: 1000)
+            ],
+            mode: .manual
+        )
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(minUsageRatioDeltaToSwitch: 0.05, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
+
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
+    func intelligentModeSwitchesWhenImprovementMeetsThreshold() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 300, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
+            ],
+            mode: .manual
+        )
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(minUsageRatioDeltaToSwitch: 0.05, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
+
+        #expect(state.activeAccount?.id == b)
     }
 }
