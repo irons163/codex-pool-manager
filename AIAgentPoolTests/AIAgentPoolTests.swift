@@ -760,6 +760,26 @@ struct AIAgentPoolTests {
         #expect(loaded.accounts.first?.apiToken == token)
         defaults.removePersistentDomain(forName: suiteName)
     }
+
+    @Test
+    func codexSyncRetriesAfterTransientFailure() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+
+        let client = FlakyCodexUsageClient(
+            failuresBeforeSuccess: 1,
+            successUsage: CodexUsage(usedUnits: 333, quota: 1000)
+        )
+        let sync = CodexUsageSyncService(client: client, maxRetries: 1)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].usedUnits == 333)
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
@@ -772,3 +792,21 @@ private struct MockCodexUsageClient: CodexUsageClient {
         return responseByToken[apiToken] ?? CodexUsage(usedUnits: 0, quota: 1000)
     }
 }
+
+private actor FlakyCodexUsageClient: CodexUsageClient {
+    var failuresBeforeSuccess: Int
+    let successUsage: CodexUsage
+    init(failuresBeforeSuccess: Int, successUsage: CodexUsage) {
+        self.failuresBeforeSuccess = failuresBeforeSuccess
+        self.successUsage = successUsage
+    }
+
+    func fetchUsage(apiToken: String) async throws -> CodexUsage {
+        if failuresBeforeSuccess > 0 {
+            failuresBeforeSuccess -= 1
+            throw URLError(.timedOut)
+        }
+        return successUsage
+    }
+}
+

@@ -11,11 +11,31 @@ protocol CodexUsageClient {
 
 struct CodexUsageSyncService<Client: CodexUsageClient> {
     let client: Client
+    let maxRetries: Int
+
+    init(client: Client, maxRetries: Int = 0) {
+        self.client = client
+        self.maxRetries = max(0, maxRetries)
+    }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
         for account in state.accounts where !account.apiToken.isEmpty {
-            let usage = try await client.fetchUsage(apiToken: account.apiToken)
+            let usage = try await fetchUsageWithRetry(apiToken: account.apiToken)
             state.updateAccount(account.id, quota: usage.quota, usedUnits: usage.usedUnits, now: now)
+        }
+    }
+
+    private func fetchUsageWithRetry(apiToken: String) async throws -> CodexUsage {
+        var attempt = 0
+        while true {
+            do {
+                return try await client.fetchUsage(apiToken: apiToken)
+            } catch {
+                if attempt >= maxRetries {
+                    throw error
+                }
+                attempt += 1
+            }
         }
     }
 }
