@@ -58,6 +58,12 @@ struct ContentView: View {
                         Slider(value: minUsageDeltaBinding, in: 0...0.2, step: 0.01)
                     }
                     if state.mode == .intelligent {
+                        if let candidateID = state.intelligentCandidateID,
+                           let candidate = state.accounts.first(where: { $0.id == candidateID }) {
+                            Text("推薦切換帳號：\(candidate.name)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                         if state.canIntelligentSwitch() {
                             Text("目前可切換帳號")
                                 .font(.subheadline)

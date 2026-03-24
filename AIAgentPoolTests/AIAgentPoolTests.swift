@@ -395,4 +395,34 @@ struct AIAgentPoolTests {
         #expect(state.availableAccountsCount == 1)
         #expect(!state.isPoolExhausted)
     }
+
+    @Test
+    func intelligentCandidateReturnsLowestUsageAvailableAccount() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let c = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 500, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 300, quota: 1000),
+                AgentAccount(id: c, name: "C", usedUnits: 1000, quota: 1000)
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.intelligentCandidateID == b)
+    }
+
+    @Test
+    func intelligentCandidateIsNilWhenAllAccountsExhausted() {
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 1000, quota: 1000),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 500, quota: 500)
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.intelligentCandidateID == nil)
+    }
 }

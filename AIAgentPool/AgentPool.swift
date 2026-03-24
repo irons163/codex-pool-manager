@@ -157,6 +157,10 @@ struct AccountPoolState {
         !accounts.isEmpty && availableAccountsCount == 0
     }
 
+    var intelligentCandidateID: UUID? {
+        intelligentCandidateAccountID()
+    }
+
     var snapshot: AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts,
