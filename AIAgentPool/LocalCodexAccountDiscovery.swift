@@ -16,18 +16,16 @@ struct LocalCodexOAuthAccount: Identifiable, Equatable {
 }
 
 enum LocalCodexAccountDiscovery {
+    private static let emailKeys = ["email", "user_email", "username", "login"]
+    private static let displayNameKeys = ["name", "display_name", "user_name", "account_name"]
+    private static let accessTokenKeys = ["access_token", "accessToken"]
+
     static func discover(
         fileManager: FileManager = .default,
         homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
     ) -> [LocalCodexOAuthAccount] {
-        let candidates = [
-            homeDirectory.appending(path: ".codex/auth.json"),
-            homeDirectory.appending(path: ".config/codex/auth.json"),
-            homeDirectory.appending(path: ".openai/auth.json")
-        ]
-
         var discovered: [LocalCodexOAuthAccount] = []
-        for path in candidates {
+        for path in candidateAuthFiles(homeDirectory: homeDirectory) {
             guard fileManager.fileExists(atPath: path.path) else { continue }
             guard let data = try? Data(contentsOf: path) else { continue }
             discovered.append(contentsOf: parseAccounts(from: data, source: path.path))
@@ -45,8 +43,8 @@ enum LocalCodexAccountDiscovery {
 
         if let dictionary = node as? [String: Any] {
             if let accessToken = findAccessToken(in: dictionary) {
-                let email = findString(in: dictionary, keys: ["email", "user_email", "username", "login"])
-                let name = findString(in: dictionary, keys: ["name", "display_name", "user_name", "account_name"]) ?? email ?? "Codex OAuth"
+                let email = findString(in: dictionary, keys: emailKeys)
+                let name = findString(in: dictionary, keys: displayNameKeys) ?? email ?? "Codex OAuth"
                 let id = "\(source)|\(email ?? name)|\(accessToken.prefix(16))"
                 accounts.append(
                     LocalCodexOAuthAccount(
@@ -72,14 +70,23 @@ enum LocalCodexAccountDiscovery {
     }
 
     private static func findAccessToken(in dictionary: [String: Any]) -> String? {
+        let token = findString(in: dictionary, keys: ["token"])
         let candidates = [
-            findString(in: dictionary, keys: ["access_token", "accessToken"]),
-            findString(in: dictionary, keys: ["token"])?.hasPrefix("sk-") == true ? findString(in: dictionary, keys: ["token"]) : nil
+            findString(in: dictionary, keys: accessTokenKeys),
+            token?.hasPrefix("sk-") == true ? token : nil
         ]
 
         return candidates
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first(where: { !$0.isEmpty })
+    }
+
+    private static func candidateAuthFiles(homeDirectory: URL) -> [URL] {
+        [
+            homeDirectory.appending(path: ".codex/auth.json"),
+            homeDirectory.appending(path: ".config/codex/auth.json"),
+            homeDirectory.appending(path: ".openai/auth.json")
+        ]
     }
 
     private static func findString(in dictionary: [String: Any], keys: [String]) -> String? {
