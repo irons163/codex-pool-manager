@@ -22,6 +22,8 @@ struct ContentView: View {
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     @State private var isSyncingUsage = false
     @State private var syncError: String?
+    @State private var lastUsageRawJSON = ""
+    @State private var showUsageRawJSON = false
     @State private var isSigningInOAuth = false
     @State private var oauthError: String?
     @State private var oauthSuccessMessage: String?
@@ -72,6 +74,27 @@ struct ContentView: View {
                     Text(syncError)
                         .font(.footnote)
                         .foregroundStyle(.red)
+                }
+            }
+
+            GroupBox("Debug") {
+                DisclosureGroup("Last Usage Raw JSON", isExpanded: $showUsageRawJSON) {
+                    if lastUsageRawJSON.isEmpty {
+                        Text("尚未捕捉到 usage response")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        TextEditor(text: $lastUsageRawJSON)
+                            .font(.system(.footnote, design: .monospaced))
+                            .frame(minHeight: 120)
+                        HStack {
+                            Button("清除") {
+                                lastUsageRawJSON = ""
+                            }
+                            .buttonStyle(.bordered)
+                            Spacer()
+                        }
+                    }
                 }
             }
 
@@ -343,35 +366,37 @@ struct ContentView: View {
                                         }
                                     }
                                     Spacer()
-                                    Button("重設用量") {
-                                        state.resetUsage(for: account.id)
-                                    }
-                                    .buttonStyle(.bordered)
                                     Button("刪除", role: .destructive) {
                                         state.removeAccount(account.id)
                                     }
                                 }
 
-                                SecureField("Codex API Token", text: accountTokenBinding(accountID: account.id))
-                                    .textFieldStyle(.roundedBorder)
-
-                                HStack {
-                                    Stepper(
-                                        "已用 \(account.usedUnits)",
-                                        value: accountUsedBinding(accountID: account.id),
-                                        in: 0...account.quota,
-                                        step: 50
-                                    )
-                                    Stepper(
-                                        "配額 \(account.quota)",
-                                        value: accountQuotaBinding(accountID: account.id),
-                                        in: 100...20_000,
-                                        step: 100
-                                    )
+                                if isPercentUsageAccount(account) {
+                                    HStack {
+                                        Text("已用 \(account.usedUnits)%")
+                                        Spacer()
+                                        Text("剩餘 \(account.remainingUnits)%")
+                                    }
+                                    .font(.subheadline)
+                                } else {
+                                    HStack {
+                                        Stepper(
+                                            "已用 \(account.usedUnits)",
+                                            value: accountUsedBinding(accountID: account.id),
+                                            in: 0...account.quota,
+                                            step: 50
+                                        )
+                                        Stepper(
+                                            "配額 \(account.quota)",
+                                            value: accountQuotaBinding(accountID: account.id),
+                                            in: 100...20_000,
+                                            step: 100
+                                        )
+                                    }
                                 }
 
                                 HStack {
-                                    Text("剩餘 \(account.remainingUnits)")
+                                    Text(remainingLabel(for: account))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                     Spacer()
@@ -561,17 +586,6 @@ struct ContentView: View {
         )
     }
 
-    private func accountTokenBinding(accountID: UUID) -> Binding<String> {
-        Binding(
-            get: {
-                state.accounts.first(where: { $0.id == accountID })?.apiToken ?? ""
-            },
-            set: { newToken in
-                state.updateAccount(accountID, apiToken: newToken)
-            }
-        )
-    }
-
     @MainActor
     private func syncCodexUsage() async {
         guard !isSyncingUsage else { return }
@@ -579,7 +593,14 @@ struct ContentView: View {
         defer { isSyncingUsage = false }
 
         do {
-            let service = CodexUsageSyncService(client: OpenAICodexUsageClient())
+            let client = OpenAICodexUsageClient(
+                onRawResponse: { raw in
+                    Task { @MainActor in
+                        lastUsageRawJSON = raw
+                    }
+                }
+            )
+            let service = CodexUsageSyncService(client: client)
             var nextState = state
             try await service.sync(state: &nextState)
             state = nextState
@@ -636,6 +657,7 @@ struct ContentView: View {
 
         let discovered = LocalCodexAccountDiscovery.discover()
         localOAuthImportViewModel.applyAutomaticScanResult(discovered)
+        normalizeStoredImportedAccountNames()
     }
 
     private func loadLocalOAuthAccounts(from url: URL) {
@@ -650,6 +672,7 @@ struct ContentView: View {
             let data = try Data(contentsOf: url)
             let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: url.path)
             localOAuthImportViewModel.applyLoadedAccountsFromFile(accounts)
+            normalizeStoredImportedAccountNames()
         } catch {
             localOAuthImportViewModel.applyReadFailure(error)
         }
@@ -731,22 +754,32 @@ struct ContentView: View {
         }
 
         do {
-            let usage = try await OpenAICodexUsageClient().fetchUsage(
+            let client = OpenAICodexUsageClient(
+                onRawResponse: { raw in
+                    Task { @MainActor in
+                        lastUsageRawJSON = raw
+                    }
+                }
+            )
+            let usage = try await client.fetchUsage(
                 accessToken: accessToken,
                 accountID: chatGPTAccountID
             )
+            let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? name) : name
+            let resolvedAccountID = usage.accountID ?? chatGPTAccountID
             let newAccountID = state.addAccount(
-                name: name,
+                name: resolvedName,
                 quota: usage.quota,
                 usedUnits: usage.usedUnits,
-                chatGPTAccountID: chatGPTAccountID,
+                chatGPTAccountID: resolvedAccountID,
                 usageWindowName: usage.usageWindowName,
                 usageWindowResetAt: usage.usageWindowResetAt
             )
             state.updateAccount(
                 newAccountID,
                 apiToken: accessToken,
-                chatGPTAccountID: chatGPTAccountID,
+                chatGPTAccountID: resolvedAccountID,
                 usageWindowName: usage.usageWindowName,
                 usageWindowResetAt: usage.usageWindowResetAt
             )
@@ -789,6 +822,17 @@ struct ContentView: View {
         return "用量來源：手動/本地設定"
     }
 
+    private func isPercentUsageAccount(_ account: AgentAccount) -> Bool {
+        account.chatGPTAccountID != nil && account.quota == 100
+    }
+
+    private func remainingLabel(for account: AgentAccount) -> String {
+        if isPercentUsageAccount(account) {
+            return "剩餘 \(account.remainingUnits)%"
+        }
+        return "剩餘 \(account.remainingUnits)"
+    }
+
     private func usageWindowDetailLabel(for account: AgentAccount) -> String? {
         guard account.chatGPTAccountID != nil else { return nil }
 
@@ -809,6 +853,18 @@ struct ContentView: View {
         if ratio >= 0.9 { return .red }
         if ratio >= 0.7 { return .orange }
         return .blue
+    }
+
+    private func normalizeStoredImportedAccountNames() {
+        for localAccount in localOAuthImportViewModel.accounts {
+            guard let chatGPTAccountID = localAccount.chatGPTAccountID else { continue }
+            guard let persisted = state.accounts.first(where: { $0.chatGPTAccountID == chatGPTAccountID }) else { continue }
+            guard persisted.name == "Codex OAuth" else { continue }
+
+            let improvedName = localAccount.email ?? localAccount.displayName
+            guard !improvedName.isEmpty, improvedName != persisted.name else { continue }
+            state.updateAccount(persisted.id, name: improvedName)
+        }
     }
 }
 

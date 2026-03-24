@@ -29,17 +29,23 @@ struct CodexUsage: Equatable {
     let quota: Int
     let usageWindowName: String?
     let usageWindowResetAt: Date?
+    let accountID: String?
+    let accountEmail: String?
 
     init(
         usedUnits: Int,
         quota: Int,
         usageWindowName: String? = nil,
-        usageWindowResetAt: Date? = nil
+        usageWindowResetAt: Date? = nil,
+        accountID: String? = nil,
+        accountEmail: String? = nil
     ) {
         self.usedUnits = usedUnits
         self.quota = quota
         self.usageWindowName = usageWindowName
         self.usageWindowResetAt = usageWindowResetAt
+        self.accountID = accountID
+        self.accountEmail = accountEmail
     }
 }
 
@@ -113,9 +119,16 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
 struct OpenAICodexUsageClient: CodexUsageClient {
     var endpoint: URL
     var session: URLSession = .shared
+    var onRawResponse: ((String) -> Void)?
 
-    init(endpoint: URL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!) {
+    init(
+        endpoint: URL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!,
+        session: URLSession = .shared,
+        onRawResponse: ((String) -> Void)? = nil
+    ) {
         self.endpoint = endpoint
+        self.session = session
+        self.onRawResponse = onRawResponse
     }
 
     func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
@@ -136,16 +149,23 @@ struct OpenAICodexUsageClient: CodexUsageClient {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw CodexClientHTTPError(statusCode: statusCode)
         }
+        if let raw = String(data: data, encoding: .utf8) {
+            onRawResponse?(raw)
+        }
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)
-        let usageWindowName = payload.rateLimit?.primaryWindow?.name
+        let usageWindowName = payload.rateLimit?.primaryWindow?.name ?? "primary_window"
         let usageWindowResetAt = payload.rateLimit?.primaryWindow?.resetAt
+        let accountID = payload.accountID
+        let accountEmail = payload.email
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
             return CodexUsage(
                 usedUnits: usedUnits,
                 quota: quota,
                 usageWindowName: usageWindowName,
-                usageWindowResetAt: usageWindowResetAt
+                usageWindowResetAt: usageWindowResetAt,
+                accountID: accountID,
+                accountEmail: accountEmail
             )
         }
         if let usedPercent = payload.rateLimit?.primaryWindow?.usedPercent {
@@ -154,7 +174,9 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 usedUnits: clamped,
                 quota: 100,
                 usageWindowName: usageWindowName,
-                usageWindowResetAt: usageWindowResetAt
+                usageWindowResetAt: usageWindowResetAt,
+                accountID: accountID,
+                accountEmail: accountEmail
             )
         }
         throw CodexSyncError.unknown
@@ -164,11 +186,15 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let usedUnits: Int?
         let quota: Int?
         let rateLimit: RateLimit?
+        let accountID: String?
+        let email: String?
 
         private enum CodingKeys: String, CodingKey {
             case usedUnits = "used_units"
             case quota
             case rateLimit = "rate_limit"
+            case accountID = "account_id"
+            case email
         }
     }
 
@@ -221,7 +247,7 @@ private extension KeyedDecodingContainer where K == OpenAICodexUsageClient.Dynam
                   contains(codingKey) else {
                 continue
             }
-            if let value = try decodeIfPresent(T.self, forKey: codingKey) {
+            if let value = try? decodeIfPresent(T.self, forKey: codingKey) {
                 return value
             }
         }

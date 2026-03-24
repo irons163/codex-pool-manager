@@ -912,6 +912,82 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func openAICodexUsageClientParsesUsedUnitsPayloadAndSendsRequiredHeaders() async throws {
+        let responseJSON = """
+        {
+          "used_units": 42,
+          "quota": 400
+        }
+        """
+        let data = Data(responseJSON.utf8)
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=units"))
+        let capturedRequest = LockedValue<URLRequest?>(nil)
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: data,
+            requestObserver: { request in
+                capturedRequest.withLock { $0 = request }
+            }
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token-123", accountID: "acct-123")
+
+        #expect(usage.usedUnits == 42)
+        #expect(usage.quota == 400)
+
+        let request = try #require(capturedRequest.value)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer token-123")
+        #expect(request.value(forHTTPHeaderField: "ChatGPT-Account-Id") == "acct-123")
+        #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
+    }
+
+    @Test
+    func openAICodexUsageClientParsesRateLimitPayloadAndCapturesRawJSON() async throws {
+        let responseJSON = """
+        {
+          "user_id": "user-001",
+          "account_id": "user-001",
+          "email": "philtest@example.com",
+          "rate_limit": {
+            "primary_window": {
+              "used_percent": 11,
+              "limit_window_seconds": 604800,
+              "reset_after_seconds": 526902,
+              "reset_at": 1774885346
+            }
+          }
+        }
+        """
+        let data = Data(responseJSON.utf8)
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=rate_limit"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: data
+        )
+        let rawCapture = LockedValue<String?>(nil)
+
+        let client = OpenAICodexUsageClient(
+            endpoint: endpoint,
+            session: session,
+            onRawResponse: { raw in
+                rawCapture.withLock { $0 = raw }
+            }
+        )
+        let usage = try await client.fetchUsage(accessToken: "token-abc", accountID: "acct-abc")
+
+        #expect(usage.usedUnits == 11)
+        #expect(usage.quota == 100)
+        #expect(usage.usageWindowName == "primary_window")
+        #expect(usage.accountID == "user-001")
+        #expect(usage.accountEmail == "philtest@example.com")
+        #expect(usage.usageWindowResetAt == Date(timeIntervalSince1970: 1_774_885_346))
+        #expect(rawCapture.value?.contains("\"used_percent\": 11") == true)
+    }
+
+    @Test
     func oauthAuthorizeURLContainsRequiredParameters() throws {
         let config = OAuthClientConfiguration(
             issuer: URL(string: "https://auth.example.com")!,
@@ -1026,6 +1102,32 @@ struct AIAgentPoolTests {
 
         #expect(accounts.count == 1)
     }
+
+    @Test
+    func localCodexDiscoveryFindsEmailWhenTokenAndProfileAreInDifferentLevels() {
+        let json = """
+        {
+          "session": {
+            "token": "sk-deep-token-123",
+            "profile": {
+              "email": "deep@example.com",
+              "name": "Deep User"
+            },
+            "account": {
+              "account_id": "acct-deep"
+            }
+          }
+        }
+        """
+
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 1)
+        #expect(accounts[0].email == "deep@example.com")
+        #expect(accounts[0].displayName == "Deep User")
+        #expect(accounts[0].chatGPTAccountID == "acct-deep")
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
@@ -1040,6 +1142,102 @@ private struct MockCodexUsageClient: CodexUsageClient {
             throw URLError(.badServerResponse)
         }
         return responseByToken[accessToken] ?? CodexUsage(usedUnits: 0, quota: 1000)
+    }
+}
+
+private func makeMockedURLSession(
+    endpoint: URL,
+    statusCode: Int,
+    data: Data,
+    requestObserver: ((URLRequest) -> Void)? = nil
+) -> URLSession {
+    MockUsageURLProtocol.setMock(
+        for: endpoint.absoluteString,
+        statusCode: statusCode,
+        data: data,
+        requestObserver: requestObserver
+    )
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockUsageURLProtocol.self]
+    return URLSession(configuration: configuration)
+}
+
+private final class MockUsageURLProtocol: URLProtocol {
+    private static let lock = NSLock()
+    private static var responseByURL: [String: (statusCode: Int, data: Data)] = [:]
+    private static var observerByURL: [String: (URLRequest) -> Void] = [:]
+
+    static func setMock(
+        for url: String,
+        statusCode: Int,
+        data: Data,
+        requestObserver: ((URLRequest) -> Void)?
+    ) {
+        lock.lock()
+        defer { lock.unlock() }
+        responseByURL[url] = (statusCode: statusCode, data: data)
+        observerByURL[url] = requestObserver
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        true
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        guard let url = request.url?.absoluteString else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badURL))
+            return
+        }
+
+        let responseTuple: (statusCode: Int, data: Data)?
+        let observer: ((URLRequest) -> Void)?
+        Self.lock.lock()
+        responseTuple = Self.responseByURL[url]
+        observer = Self.observerByURL[url]
+        Self.lock.unlock()
+
+        observer?(request)
+        guard let responseTuple else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
+        }
+
+        let response = HTTPURLResponse(
+            url: request.url ?? URL(string: "https://example.com")!,
+            statusCode: responseTuple.statusCode,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: responseTuple.data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+private final class LockedValue<Value> {
+    private let lock = NSLock()
+    private var _value: Value
+
+    init(_ value: Value) {
+        _value = value
+    }
+
+    var value: Value {
+        lock.lock()
+        defer { lock.unlock() }
+        return _value
+    }
+
+    func withLock(_ body: (inout Value) -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        body(&_value)
     }
 }
 

@@ -17,7 +17,16 @@ struct LocalCodexOAuthAccount: Identifiable, Equatable {
 }
 
 enum LocalCodexAccountDiscovery {
-    private static let emailKeys = ["email", "user_email", "username", "login"]
+    private static let emailKeys = [
+        "email",
+        "user_email",
+        "account_email",
+        "primary_email",
+        "email_address",
+        "emailAddress",
+        "username",
+        "login"
+    ]
     private static let displayNameKeys = ["name", "display_name", "user_name", "account_name"]
     private static let accountIDKeys = ["account_id", "accountId", "chatgpt_account_id", "chatgptAccountId"]
     private static let accessTokenKeys = ["access_token", "accessToken"]
@@ -45,9 +54,9 @@ enum LocalCodexAccountDiscovery {
 
         if let dictionary = node as? [String: Any] {
             if let accessToken = findAccessToken(in: dictionary) {
-                let email = findString(in: dictionary, keys: emailKeys)
-                let name = findString(in: dictionary, keys: displayNameKeys) ?? email ?? "Codex OAuth"
-                let chatGPTAccountID = findString(in: dictionary, keys: accountIDKeys)
+                let email = findStringDeep(in: dictionary, keys: emailKeys)
+                let name = findStringDeep(in: dictionary, keys: displayNameKeys) ?? email ?? "Codex OAuth"
+                let chatGPTAccountID = findStringDeep(in: dictionary, keys: accountIDKeys)
                 let id = "\(source)|\(chatGPTAccountID ?? (email ?? name))|\(accessToken.prefix(16))"
                 accounts.append(
                     LocalCodexOAuthAccount(
@@ -97,6 +106,26 @@ enum LocalCodexAccountDiscovery {
         for key in keys {
             if let value = dictionary[key] as? String {
                 return value
+            }
+        }
+        return nil
+    }
+
+    private static func findStringDeep(in node: Any, keys: [String]) -> String? {
+        if let dictionary = node as? [String: Any] {
+            if let value = findString(in: dictionary, keys: keys) {
+                return value
+            }
+            for value in dictionary.values {
+                if let nested = findStringDeep(in: value, keys: keys) {
+                    return nested
+                }
+            }
+        } else if let array = node as? [Any] {
+            for value in array {
+                if let nested = findStringDeep(in: value, keys: keys) {
+                    return nested
+                }
             }
         }
         return nil
