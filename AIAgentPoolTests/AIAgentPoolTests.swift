@@ -316,4 +316,31 @@ struct AIAgentPoolTests {
 
         #expect(state.activeAccount?.id == b)
     }
+
+    @Test
+    func snapshotDecodingSupportsLegacyPayloadWithoutNewFields() throws {
+        let legacyJSON = """
+        {
+          "accounts": [
+            {
+              "id": "00000000-0000-0000-0000-0000000000A1",
+              "name": "A",
+              "usedUnits": 100,
+              "quota": 1000
+            }
+          ],
+          "mode": "智能切換",
+          "activeAccountID": "00000000-0000-0000-0000-0000000000A1",
+          "manualAccountID": "00000000-0000-0000-0000-0000000000A1",
+          "focusLockedAccountID": null,
+          "minSwitchInterval": 300,
+          "lowUsageThresholdRatio": 0.15
+        }
+        """
+
+        let data = try #require(legacyJSON.data(using: .utf8))
+        let snapshot = try JSONDecoder().decode(AccountPoolSnapshot.self, from: data)
+
+        #expect(snapshot.minUsageRatioDeltaToSwitch == 0)
+    }
 }

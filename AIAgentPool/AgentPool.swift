@@ -48,6 +48,38 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var minSwitchInterval: TimeInterval
     var lowUsageThresholdRatio: Double
     var minUsageRatioDeltaToSwitch: Double
+
+    init(
+        accounts: [AgentAccount],
+        mode: SwitchMode,
+        activeAccountID: UUID?,
+        manualAccountID: UUID?,
+        focusLockedAccountID: UUID?,
+        minSwitchInterval: TimeInterval,
+        lowUsageThresholdRatio: Double,
+        minUsageRatioDeltaToSwitch: Double
+    ) {
+        self.accounts = accounts
+        self.mode = mode
+        self.activeAccountID = activeAccountID
+        self.manualAccountID = manualAccountID
+        self.focusLockedAccountID = focusLockedAccountID
+        self.minSwitchInterval = minSwitchInterval
+        self.lowUsageThresholdRatio = lowUsageThresholdRatio
+        self.minUsageRatioDeltaToSwitch = minUsageRatioDeltaToSwitch
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accounts = try container.decode([AgentAccount].self, forKey: .accounts)
+        mode = try container.decode(SwitchMode.self, forKey: .mode)
+        activeAccountID = try container.decodeIfPresent(UUID.self, forKey: .activeAccountID)
+        manualAccountID = try container.decodeIfPresent(UUID.self, forKey: .manualAccountID)
+        focusLockedAccountID = try container.decodeIfPresent(UUID.self, forKey: .focusLockedAccountID)
+        minSwitchInterval = try container.decode(TimeInterval.self, forKey: .minSwitchInterval)
+        lowUsageThresholdRatio = try container.decode(Double.self, forKey: .lowUsageThresholdRatio)
+        minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
+    }
 }
 
 struct AccountPoolState {
