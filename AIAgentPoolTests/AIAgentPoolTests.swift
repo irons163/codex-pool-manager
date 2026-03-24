@@ -212,4 +212,30 @@ struct AIAgentPoolTests {
         #expect(state.minSwitchInterval == 30)
         #expect(state.lowUsageThresholdRatio == 0.9)
     }
+
+    @Test
+    func lowUsageAlertPolicyTriggersOnlyOnEnteringLowStateInFocusMode() {
+        var policy = LowUsageAlertPolicy()
+
+        let first = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
+        let second = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
+        let third = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: false)
+        let fourth = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
+
+        #expect(first)
+        #expect(!second)
+        #expect(!third)
+        #expect(fourth)
+    }
+
+    @Test
+    func lowUsageAlertPolicyDoesNotTriggerOutsideFocusMode() {
+        var policy = LowUsageAlertPolicy()
+
+        let intelligent = policy.shouldTriggerAlert(mode: .intelligent, hasLowUsageWarning: true)
+        let manual = policy.shouldTriggerAlert(mode: .manual, hasLowUsageWarning: true)
+
+        #expect(!intelligent)
+        #expect(!manual)
+    }
 }

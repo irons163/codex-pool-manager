@@ -5,7 +5,7 @@ struct ContentView: View {
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
     @State private var showLowUsageAlert = false
-    @State private var lowWarningWasActive = false
+    @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -155,15 +155,13 @@ struct ContentView: View {
         .frame(minWidth: 640, minHeight: 520)
         .onAppear {
             state.evaluate()
-            lowWarningWasActive = state.mode == .focus && state.hasLowUsageWarning
+            _ = lowUsageAlertPolicy.shouldTriggerAlert(mode: state.mode, hasLowUsageWarning: state.hasLowUsageWarning)
         }
         .onChange(of: state.snapshot) { _, snapshot in
             store.save(snapshot)
-            let shouldWarn = state.mode == .focus && state.hasLowUsageWarning
-            if shouldWarn && !lowWarningWasActive {
+            if lowUsageAlertPolicy.shouldTriggerAlert(mode: state.mode, hasLowUsageWarning: state.hasLowUsageWarning) {
                 showLowUsageAlert = true
             }
-            lowWarningWasActive = shouldWarn
         }
         .alert("低剩餘用量提醒", isPresented: $showLowUsageAlert) {
             Button("知道了", role: .cancel) { }

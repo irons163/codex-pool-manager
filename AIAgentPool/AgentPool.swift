@@ -29,6 +29,16 @@ enum SwitchMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 }
 
+struct LowUsageAlertPolicy {
+    private var lowWarningWasActive = false
+
+    mutating func shouldTriggerAlert(mode: SwitchMode, hasLowUsageWarning: Bool) -> Bool {
+        let isCurrentlyLow = (mode == .focus) && hasLowUsageWarning
+        defer { lowWarningWasActive = isCurrentlyLow }
+        return isCurrentlyLow && !lowWarningWasActive
+    }
+}
+
 struct AccountPoolSnapshot: Codable, Equatable {
     var accounts: [AgentAccount]
     var mode: SwitchMode
