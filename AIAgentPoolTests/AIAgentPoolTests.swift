@@ -462,4 +462,19 @@ struct AIAgentPoolTests {
         #expect(!state.isFocusLockActive)
         #expect(state.focusLockedID == nil)
     }
+
+    @Test
+    func switchModeDecodingSupportsEnglishLegacyValues() throws {
+        let intelligentData = try #require("\"intelligent\"".data(using: .utf8))
+        let manualData = try #require("\"manual\"".data(using: .utf8))
+        let focusData = try #require("\"focus\"".data(using: .utf8))
+
+        let intelligent = try JSONDecoder().decode(SwitchMode.self, from: intelligentData)
+        let manual = try JSONDecoder().decode(SwitchMode.self, from: manualData)
+        let focus = try JSONDecoder().decode(SwitchMode.self, from: focusData)
+
+        #expect(intelligent == .intelligent)
+        #expect(manual == .manual)
+        #expect(focus == .focus)
+    }
 }

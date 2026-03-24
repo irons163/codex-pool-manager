@@ -27,6 +27,29 @@ enum SwitchMode: String, CaseIterable, Identifiable, Codable {
     case focus = "專注模式"
 
     var id: String { rawValue }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        switch value {
+        case SwitchMode.intelligent.rawValue, "intelligent":
+            self = .intelligent
+        case SwitchMode.manual.rawValue, "manual":
+            self = .manual
+        case SwitchMode.focus.rawValue, "focus":
+            self = .focus
+        default:
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot initialize SwitchMode from invalid value \(value)"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 struct LowUsageAlertPolicy {
