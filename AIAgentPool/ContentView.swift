@@ -9,6 +9,8 @@ struct ContentView: View {
     @State private var backupError: String?
     @State private var showLowUsageAlert = false
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
+    @State private var isSyncingUsage = false
+    @State private var syncError: String?
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -36,6 +38,20 @@ struct ContentView: View {
             Text("Codex 帳號池")
                 .font(.largeTitle)
                 .fontWeight(.semibold)
+
+            HStack {
+                Button(isSyncingUsage ? "同步中..." : "同步 Codex 用量") {
+                    Task { await syncCodexUsage() }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isSyncingUsage)
+
+                if let syncError {
+                    Text(syncError)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            }
 
             Picker("切換模式", selection: modeBinding) {
                 ForEach(SwitchMode.allCases) { mode in
@@ -188,6 +204,9 @@ struct ContentView: View {
                                         state.removeAccount(account.id)
                                     }
                                 }
+
+                                SecureField("Codex API Token", text: accountTokenBinding(accountID: account.id))
+                                    .textFieldStyle(.roundedBorder)
 
                                 HStack {
                                     Stepper(
@@ -379,6 +398,34 @@ struct ContentView: View {
                 state.updateAccount(accountID, usedUnits: newUsed)
             }
         )
+    }
+
+    private func accountTokenBinding(accountID: UUID) -> Binding<String> {
+        Binding(
+            get: {
+                state.accounts.first(where: { $0.id == accountID })?.apiToken ?? ""
+            },
+            set: { newToken in
+                state.updateAccount(accountID, apiToken: newToken)
+            }
+        )
+    }
+
+    @MainActor
+    private func syncCodexUsage() async {
+        guard !isSyncingUsage else { return }
+        isSyncingUsage = true
+        defer { isSyncingUsage = false }
+
+        do {
+            let service = CodexUsageSyncService(client: OpenAICodexUsageClient())
+            var nextState = state
+            try await service.sync(state: &nextState)
+            state = nextState
+            syncError = nil
+        } catch {
+            syncError = "同步失敗：\(error.localizedDescription)"
+        }
     }
 }
 

@@ -5,6 +5,30 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var name: String
     var usedUnits: Int
     var quota: Int
+    var apiToken: String
+
+    init(
+        id: UUID,
+        name: String,
+        usedUnits: Int,
+        quota: Int,
+        apiToken: String = ""
+    ) {
+        self.id = id
+        self.name = name
+        self.usedUnits = usedUnits
+        self.quota = quota
+        self.apiToken = apiToken
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        usedUnits = try container.decode(Int.self, forKey: .usedUnits)
+        quota = try container.decode(Int.self, forKey: .quota)
+        apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
+    }
 
     var remainingUnits: Int {
         max(0, quota - usedUnits)
@@ -343,6 +367,7 @@ struct AccountPoolState {
         name: String? = nil,
         quota: Int? = nil,
         usedUnits: Int? = nil,
+        apiToken: String? = nil,
         now: Date = .now
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
@@ -355,6 +380,9 @@ struct AccountPoolState {
         }
         if let usedUnits {
             accounts[index].usedUnits = max(0, usedUnits)
+        }
+        if let apiToken {
+            accounts[index].apiToken = apiToken
         }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)

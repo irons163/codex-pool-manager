@@ -655,4 +655,61 @@ struct AIAgentPoolTests {
             _ = try AccountPoolSnapshotCodec.importJSON("not-json")
         }
     }
+
+    @Test
+    func codexSyncUpdatesAccountsWithApiToken() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a"),
+                AgentAccount(id: b, name: "B", usedUnits: 100, quota: 1000, apiToken: "")
+            ],
+            mode: .manual
+        )
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(usedUnits: 250, quota: 1200)
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts.first(where: { $0.id == a })?.usedUnits == 250)
+        #expect(state.accounts.first(where: { $0.id == a })?.quota == 1200)
+        #expect(state.accounts.first(where: { $0.id == b })?.usedUnits == 100)
+    }
+
+    @Test
+    func codexSyncKeepsStateWhenClientFails() async {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 10, quota: 1000, apiToken: "bad-token")
+            ],
+            mode: .manual
+        )
+
+        let client = MockCodexUsageClient(responseByToken: [:], shouldThrow: true)
+        let sync = CodexUsageSyncService(client: client)
+        do {
+            try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+            Issue.record("Expected sync to throw")
+        } catch {
+            #expect(state.accounts[0].usedUnits == 10)
+        }
+    }
 }
+private struct MockCodexUsageClient: CodexUsageClient {
+    let responseByToken: [String: CodexUsage]
+    var shouldThrow: Bool = false
+
+    func fetchUsage(apiToken: String) async throws -> CodexUsage {
+        if shouldThrow {
+            throw URLError(.badServerResponse)
+        }
+        return responseByToken[apiToken] ?? CodexUsage(usedUnits: 0, quota: 1000)
+    }
+}
+
