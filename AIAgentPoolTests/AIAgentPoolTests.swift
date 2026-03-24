@@ -623,4 +623,36 @@ struct AIAgentPoolTests {
 
         #expect(!third)
     }
+
+    @Test
+    func snapshotCodecCanEncodeAndDecodeRoundTrip() throws {
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 200, quota: 1000)
+            ],
+            activities: [
+                PoolActivity(id: UUID(), timestamp: Date(timeIntervalSince1970: 1), message: "切換帳號：A")
+            ],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0.05,
+            lastSwitchAt: Date(timeIntervalSince1970: 2)
+        )
+
+        let json = try AccountPoolSnapshotCodec.exportJSON(snapshot)
+        let decoded = try AccountPoolSnapshotCodec.importJSON(json)
+
+        #expect(decoded == snapshot)
+    }
+
+    @Test
+    func snapshotCodecThrowsOnInvalidJSON() {
+        #expect(throws: Error.self) {
+            _ = try AccountPoolSnapshotCodec.importJSON("not-json")
+        }
+    }
 }

@@ -5,6 +5,8 @@ struct ContentView: View {
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
     @State private var resetAllLatch = DestructiveActionLatch()
+    @State private var backupJSON = ""
+    @State private var backupError: String?
     @State private var showLowUsageAlert = false
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     private let store: AccountPoolStoring
@@ -233,6 +235,43 @@ struct ContentView: View {
                     }
                     .listStyle(.plain)
                     .frame(minHeight: 160)
+                }
+            }
+
+            GroupBox("備份與還原") {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Button("匯出 JSON") {
+                            do {
+                                backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot)
+                                backupError = nil
+                            } catch {
+                                backupError = "匯出失敗：\(error.localizedDescription)"
+                            }
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button("匯入 JSON") {
+                            do {
+                                let snapshot = try AccountPoolSnapshotCodec.importJSON(backupJSON)
+                                state = AccountPoolState(snapshot: snapshot)
+                                backupError = nil
+                            } catch {
+                                backupError = "匯入失敗：\(error.localizedDescription)"
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+
+                    TextEditor(text: $backupJSON)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 140)
+
+                    if let backupError {
+                        Text(backupError)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
         }
