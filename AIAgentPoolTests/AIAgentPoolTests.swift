@@ -101,4 +101,52 @@ struct AIAgentPoolTests {
 
         #expect(state.hasLowUsageWarning)
     }
+
+    @Test
+    func addAccountInManualModeSelectsFirstCreatedAccount() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+
+        let accountID = state.addAccount(name: "New", quota: 1000, usedUnits: 0, now: Date(timeIntervalSince1970: 0))
+
+        #expect(state.accounts.count == 1)
+        #expect(state.manualAccountID == accountID)
+        #expect(state.activeAccount?.id == accountID)
+    }
+
+    @Test
+    func removeActiveAccountFallsBackToRemainingAccount() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 50, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 400, quota: 1000)
+            ],
+            mode: .manual
+        )
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 10))
+        #expect(state.activeAccount?.id == a)
+
+        state.removeAccount(a, now: Date(timeIntervalSince1970: 20))
+
+        #expect(state.accounts.count == 1)
+        #expect(state.activeAccount?.id == b)
+        #expect(state.manualAccountID == b)
+    }
+
+    @Test
+    func updateAccountClampsUsedUnitsToQuota() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        state.updateAccount(a, quota: 400, usedUnits: 700, now: Date(timeIntervalSince1970: 0))
+
+        #expect(state.accounts[0].quota == 400)
+        #expect(state.accounts[0].usedUnits == 400)
+    }
 }

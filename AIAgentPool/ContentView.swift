@@ -11,6 +11,8 @@ struct ContentView: View {
         minSwitchInterval: 300,
         lowUsageThresholdRatio: 0.15
     )
+    @State private var newAccountName = ""
+    @State private var newAccountQuota = 1000
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -25,7 +27,7 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
 
-            if state.mode == .manual {
+            if state.mode == .manual, !state.accounts.isEmpty {
                 Picker("手動帳號", selection: manualSelectionBinding) {
                     ForEach(state.accounts) { account in
                         Text(account.name).tag(account.id)
@@ -71,21 +73,53 @@ struct ContentView: View {
             }
 
             GroupBox("帳號用量") {
-                List(state.accounts) { account in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(account.name)
-                            Spacer()
-                            Text("\(account.usedUnits)/\(account.quota)")
-                                .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        TextField("新帳號名稱", text: $newAccountName)
+                            .textFieldStyle(.roundedBorder)
+                        Stepper("配額 \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
+                        Button("新增帳號") {
+                            state.addAccount(name: newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), quota: newAccountQuota)
+                            newAccountName = ""
                         }
-
-                        ProgressView(value: account.usageRatio)
+                        .buttonStyle(.borderedProminent)
                     }
-                    .padding(.vertical, 4)
+
+                    List {
+                        ForEach(state.accounts) { account in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    TextField("帳號名稱", text: accountNameBinding(accountID: account.id))
+                                        .textFieldStyle(.roundedBorder)
+                                    Spacer()
+                                    Button("刪除", role: .destructive) {
+                                        state.removeAccount(account.id)
+                                    }
+                                }
+
+                                HStack {
+                                    Stepper(
+                                        "已用 \(account.usedUnits)",
+                                        value: accountUsedBinding(accountID: account.id),
+                                        in: 0...account.quota,
+                                        step: 50
+                                    )
+                                    Stepper(
+                                        "配額 \(account.quota)",
+                                        value: accountQuotaBinding(accountID: account.id),
+                                        in: 100...20_000,
+                                        step: 100
+                                    )
+                                }
+
+                                ProgressView(value: account.usageRatio)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .frame(minHeight: 220)
                 }
-                .listStyle(.plain)
-                .frame(minHeight: 200)
             }
         }
         .padding(20)
@@ -114,6 +148,39 @@ struct ContentView: View {
             },
             set: { newID in
                 state.selectManualAccount(newID)
+            }
+        )
+    }
+
+    private func accountNameBinding(accountID: UUID) -> Binding<String> {
+        Binding(
+            get: {
+                state.accounts.first(where: { $0.id == accountID })?.name ?? ""
+            },
+            set: { newName in
+                state.updateAccount(accountID, name: newName)
+            }
+        )
+    }
+
+    private func accountQuotaBinding(accountID: UUID) -> Binding<Int> {
+        Binding(
+            get: {
+                state.accounts.first(where: { $0.id == accountID })?.quota ?? 100
+            },
+            set: { newQuota in
+                state.updateAccount(accountID, quota: newQuota)
+            }
+        )
+    }
+
+    private func accountUsedBinding(accountID: UUID) -> Binding<Int> {
+        Binding(
+            get: {
+                state.accounts.first(where: { $0.id == accountID })?.usedUnits ?? 0
+            },
+            set: { newUsed in
+                state.updateAccount(accountID, usedUnits: newUsed)
             }
         )
     }

@@ -4,7 +4,7 @@ struct AgentAccount: Identifiable, Equatable {
     let id: UUID
     var name: String
     var usedUnits: Int
-    let quota: Int
+    var quota: Int
 
     var remainingUnits: Int {
         max(0, quota - usedUnits)
@@ -90,6 +90,70 @@ struct AccountPoolState {
 
         let nextUsage = min(accounts[index].quota, accounts[index].usedUnits + units)
         accounts[index].usedUnits = nextUsage
+        evaluate(now: now)
+    }
+
+    @discardableResult
+    mutating func addAccount(
+        name: String,
+        quota: Int,
+        usedUnits: Int = 0,
+        now: Date = .now
+    ) -> UUID {
+        let normalizedQuota = max(1, quota)
+        let normalizedUsedUnits = max(0, min(usedUnits, normalizedQuota))
+        let account = AgentAccount(
+            id: UUID(),
+            name: name.isEmpty ? "未命名帳號" : name,
+            usedUnits: normalizedUsedUnits,
+            quota: normalizedQuota
+        )
+        accounts.append(account)
+
+        if manualAccountID == nil {
+            manualAccountID = account.id
+        }
+        evaluate(now: now)
+        return account.id
+    }
+
+    mutating func removeAccount(_ accountID: UUID, now: Date = .now) {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
+        accounts.remove(at: index)
+
+        if activeAccountID == accountID {
+            activeAccountID = nil
+        }
+        if manualAccountID == accountID {
+            manualAccountID = accounts.first?.id
+        }
+        if focusLockedAccountID == accountID {
+            focusLockedAccountID = nil
+        }
+
+        evaluate(now: now)
+    }
+
+    mutating func updateAccount(
+        _ accountID: UUID,
+        name: String? = nil,
+        quota: Int? = nil,
+        usedUnits: Int? = nil,
+        now: Date = .now
+    ) {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
+
+        if let name {
+            accounts[index].name = name.isEmpty ? "未命名帳號" : name
+        }
+        if let quota {
+            accounts[index].quota = max(1, quota)
+        }
+        if let usedUnits {
+            accounts[index].usedUnits = max(0, usedUnits)
+        }
+
+        accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)
         evaluate(now: now)
     }
 
