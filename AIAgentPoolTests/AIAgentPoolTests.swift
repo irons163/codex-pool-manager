@@ -567,4 +567,38 @@ struct AIAgentPoolTests {
         #expect(!restored.activities.isEmpty)
         #expect(restored.activities.contains(where: { $0.message.contains("重設") }))
     }
+
+    @Test
+    func clearActivitiesRemovesAllEntries() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 200, quota: 1000)
+            ],
+            mode: .manual
+        )
+        state.resetUsage(for: a, now: Date(timeIntervalSince1970: 1))
+        #expect(!state.activities.isEmpty)
+
+        state.clearActivities()
+
+        #expect(state.activities.isEmpty)
+    }
+
+    @Test
+    func activityLogKeepsLatest100Entries() {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 1000),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 0, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        for i in 0..<120 {
+            _ = state.addAccount(name: "N\(i)", quota: 1000, now: Date(timeIntervalSince1970: TimeInterval(i)))
+        }
+
+        #expect(state.activities.count == 100)
+    }
 }

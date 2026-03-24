@@ -214,6 +214,13 @@ struct ContentView: View {
                     Text("目前沒有活動紀錄")
                         .foregroundStyle(.secondary)
                 } else {
+                    HStack {
+                        Spacer()
+                        Button("清除活動紀錄", role: .destructive) {
+                            state.clearActivities()
+                        }
+                        .buttonStyle(.bordered)
+                    }
                     List(state.activities.prefix(8)) { activity in
                         HStack {
                             Text(activity.timestamp, format: Date.FormatStyle(date: .omitted, time: .standard))

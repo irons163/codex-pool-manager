@@ -295,6 +295,7 @@ struct AccountPoolState {
             quota: normalizedQuota
         )
         accounts.append(account)
+        appendActivity("新增帳號 \(account.name)", now: now)
 
         if manualAccountID == nil {
             manualAccountID = account.id
@@ -356,6 +357,10 @@ struct AccountPoolState {
         }
         appendActivity("重設全部帳號用量", now: now)
         evaluate(now: now)
+    }
+
+    mutating func clearActivities() {
+        activities.removeAll()
     }
 
     mutating func evaluate(now: Date = .now) {
