@@ -161,6 +161,14 @@ struct AccountPoolState {
         intelligentCandidateAccountID()
     }
 
+    var focusLockedID: UUID? {
+        focusLockedAccountID
+    }
+
+    var isFocusLockActive: Bool {
+        mode == .focus && focusLockedAccountID != nil
+    }
+
     var snapshot: AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts,

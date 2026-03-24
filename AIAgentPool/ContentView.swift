@@ -121,6 +121,12 @@ struct ContentView: View {
 
                         ProgressView(value: active.usageRatio)
 
+                        if state.isFocusLockActive {
+                            Text("專注模式鎖定中")
+                                .font(.subheadline)
+                                .foregroundStyle(.blue)
+                        }
+
                         if state.mode == .focus && state.hasLowUsageWarning {
                             Text("低剩餘用量提醒：目前帳號剩餘不足 \(Int(state.lowUsageThresholdRatio * 100))%")
                                 .font(.subheadline)

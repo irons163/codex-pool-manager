@@ -425,4 +425,41 @@ struct AIAgentPoolTests {
 
         #expect(state.intelligentCandidateID == nil)
     }
+
+    @Test
+    func focusLockIsActiveAndMatchesActiveAccountInFocusMode() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 300, quota: 1000)
+            ],
+            mode: .focus
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+
+        #expect(state.isFocusLockActive)
+        #expect(state.focusLockedID == state.activeAccount?.id)
+    }
+
+    @Test
+    func focusLockClearsAfterLeavingFocusMode() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 300, quota: 1000)
+            ],
+            mode: .focus
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 600))
+
+        #expect(!state.isFocusLockActive)
+        #expect(state.focusLockedID == nil)
+    }
 }
