@@ -4,6 +4,8 @@ struct ContentView: View {
     @State private var state: AccountPoolState
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
+    @State private var showLowUsageAlert = false
+    @State private var lowWarningWasActive = false
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -153,9 +155,24 @@ struct ContentView: View {
         .frame(minWidth: 640, minHeight: 520)
         .onAppear {
             state.evaluate()
+            lowWarningWasActive = state.mode == .focus && state.hasLowUsageWarning
         }
         .onChange(of: state.snapshot) { _, snapshot in
             store.save(snapshot)
+            let shouldWarn = state.mode == .focus && state.hasLowUsageWarning
+            if shouldWarn && !lowWarningWasActive {
+                showLowUsageAlert = true
+            }
+            lowWarningWasActive = shouldWarn
+        }
+        .alert("低剩餘用量提醒", isPresented: $showLowUsageAlert) {
+            Button("知道了", role: .cancel) { }
+        } message: {
+            if let active = state.activeAccount {
+                Text("\(active.name) 剩餘 \(active.remainingUnits)，已低於 \(Int(state.lowUsageThresholdRatio * 100))% 門檻。")
+            } else {
+                Text("目前帳號剩餘用量偏低。")
+            }
         }
     }
 
