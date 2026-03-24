@@ -1,5 +1,29 @@
 import Foundation
 
+struct CodexClientHTTPError: Error, Equatable {
+    let statusCode: Int
+}
+
+enum CodexSyncError: Error, Equatable, LocalizedError {
+    case unauthorized
+    case rateLimited
+    case network
+    case unknown
+
+    var errorDescription: String? {
+        switch self {
+        case .unauthorized:
+            return "授權失敗，請檢查 API Token。"
+        case .rateLimited:
+            return "已達速率限制，請稍後再試。"
+        case .network:
+            return "網路異常，請檢查連線。"
+        case .unknown:
+            return "同步失敗，請稍後再試。"
+        }
+    }
+}
+
 struct CodexUsage: Equatable {
     let usedUnits: Int
     let quota: Int
@@ -32,11 +56,27 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 return try await client.fetchUsage(apiToken: apiToken)
             } catch {
                 if attempt >= maxRetries {
-                    throw error
+                    throw mapSyncError(error)
                 }
                 attempt += 1
             }
         }
+    }
+
+    private func mapSyncError(_ error: Error) -> CodexSyncError {
+        if let http = error as? CodexClientHTTPError {
+            if http.statusCode == 401 || http.statusCode == 403 {
+                return .unauthorized
+            }
+            if http.statusCode == 429 {
+                return .rateLimited
+            }
+            return .unknown
+        }
+        if error is URLError {
+            return .network
+        }
+        return .unknown
     }
 }
 
@@ -55,7 +95,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw CodexClientHTTPError(statusCode: statusCode)
         }
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)

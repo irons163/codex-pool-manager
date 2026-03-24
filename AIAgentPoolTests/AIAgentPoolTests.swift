@@ -780,12 +780,64 @@ struct AIAgentPoolTests {
 
         #expect(state.accounts[0].usedUnits == 333)
     }
+
+    @Test
+    func codexSyncMapsUnauthorizedError() async {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        let client = MockCodexUsageClient(
+            responseByToken: [:],
+            shouldThrowError: CodexClientHTTPError(statusCode: 401)
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        do {
+            try await sync.sync(state: &state)
+            Issue.record("Expected unauthorized error")
+        } catch let error as CodexSyncError {
+            #expect(error == .unauthorized)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func codexSyncMapsRateLimitError() async {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        let client = MockCodexUsageClient(
+            responseByToken: [:],
+            shouldThrowError: CodexClientHTTPError(statusCode: 429)
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        do {
+            try await sync.sync(state: &state)
+            Issue.record("Expected rate limit error")
+        } catch let error as CodexSyncError {
+            #expect(error == .rateLimited)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
     var shouldThrow: Bool = false
+    var shouldThrowError: Error?
 
     func fetchUsage(apiToken: String) async throws -> CodexUsage {
+        if let shouldThrowError {
+            throw shouldThrowError
+        }
         if shouldThrow {
             throw URLError(.badServerResponse)
         }
@@ -809,4 +861,3 @@ private actor FlakyCodexUsageClient: CodexUsageClient {
         return successUsage
     }
 }
-
