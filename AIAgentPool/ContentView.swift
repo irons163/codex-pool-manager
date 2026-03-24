@@ -86,6 +86,10 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
                     ProgressView(value: state.overallUsageRatio)
+                    Button("重設全部用量") {
+                        state.resetAllUsage()
+                    }
+                    .buttonStyle(.bordered)
                     HStack {
                         Text("可用帳號數 \(state.availableAccountsCount)")
                             .font(.subheadline)
@@ -171,6 +175,10 @@ struct ContentView: View {
                                     TextField("帳號名稱", text: accountNameBinding(accountID: account.id))
                                         .textFieldStyle(.roundedBorder)
                                     Spacer()
+                                    Button("重設用量") {
+                                        state.resetUsage(for: account.id)
+                                    }
+                                    .buttonStyle(.bordered)
                                     Button("刪除", role: .destructive) {
                                         state.removeAccount(account.id)
                                     }

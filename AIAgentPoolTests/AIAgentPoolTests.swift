@@ -499,4 +499,35 @@ struct AIAgentPoolTests {
         #expect(restored.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 100)) == 200)
         #expect(!restored.canIntelligentSwitch(now: Date(timeIntervalSince1970: 100)))
     }
+
+    @Test
+    func resetUsageForAccountSetsUsedUnitsToZero() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 450, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        state.resetUsage(for: a, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].usedUnits == 0)
+    }
+
+    @Test
+    func resetAllUsageSetsEveryAccountToZero() {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 450, quota: 1000),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 120, quota: 800)
+            ],
+            mode: .intelligent
+        )
+
+        state.resetAllUsage(now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts.allSatisfy { $0.usedUnits == 0 })
+        #expect(state.totalUsedUnits == 0)
+    }
 }

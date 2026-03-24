@@ -329,6 +329,19 @@ struct AccountPoolState {
         evaluate(now: now)
     }
 
+    mutating func resetUsage(for accountID: UUID, now: Date = .now) {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
+        accounts[index].usedUnits = 0
+        evaluate(now: now)
+    }
+
+    mutating func resetAllUsage(now: Date = .now) {
+        for index in accounts.indices {
+            accounts[index].usedUnits = 0
+        }
+        evaluate(now: now)
+    }
+
     mutating func evaluate(now: Date = .now) {
         guard !accounts.isEmpty else {
             activeAccountID = nil
