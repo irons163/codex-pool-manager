@@ -68,6 +68,23 @@ struct LowUsageAlertPolicy {
     }
 }
 
+struct DestructiveActionLatch {
+    private(set) var isArmed = false
+
+    mutating func confirmOrArm() -> Bool {
+        if isArmed {
+            isArmed = false
+            return true
+        }
+        isArmed = true
+        return false
+    }
+
+    mutating func reset() {
+        isArmed = false
+    }
+}
+
 struct AccountPoolSnapshot: Codable, Equatable {
     var accounts: [AgentAccount]
     var activities: [PoolActivity]

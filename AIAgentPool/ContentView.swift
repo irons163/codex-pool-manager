@@ -4,6 +4,7 @@ struct ContentView: View {
     @State private var state: AccountPoolState
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
+    @State private var resetAllLatch = DestructiveActionLatch()
     @State private var showLowUsageAlert = false
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     private let store: AccountPoolStoring
@@ -86,8 +87,10 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
                     ProgressView(value: state.overallUsageRatio)
-                    Button("重設全部用量") {
-                        state.resetAllUsage()
+                    Button(resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量") {
+                        if resetAllLatch.confirmOrArm() {
+                            state.resetAllUsage()
+                        }
                     }
                     .buttonStyle(.bordered)
                     HStack {

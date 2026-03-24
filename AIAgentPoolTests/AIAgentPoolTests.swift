@@ -601,4 +601,26 @@ struct AIAgentPoolTests {
 
         #expect(state.activities.count == 100)
     }
+
+    @Test
+    func destructiveActionLatchRequiresSecondConfirmation() {
+        var latch = DestructiveActionLatch()
+
+        let first = latch.confirmOrArm()
+        let second = latch.confirmOrArm()
+
+        #expect(!first)
+        #expect(second)
+    }
+
+    @Test
+    func destructiveActionLatchResetsAfterConfirmation() {
+        var latch = DestructiveActionLatch()
+
+        _ = latch.confirmOrArm()
+        _ = latch.confirmOrArm()
+        let third = latch.confirmOrArm()
+
+        #expect(!third)
+    }
 }
