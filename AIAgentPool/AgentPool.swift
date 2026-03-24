@@ -136,6 +136,19 @@ struct AccountPoolState {
         return activeAccount.remainingRatio <= lowUsageThresholdRatio
     }
 
+    var totalUsedUnits: Int {
+        accounts.reduce(0) { $0 + $1.usedUnits }
+    }
+
+    var totalQuota: Int {
+        accounts.reduce(0) { $0 + $1.quota }
+    }
+
+    var overallUsageRatio: Double {
+        guard totalQuota > 0 else { return 0 }
+        return Double(totalUsedUnits) / Double(totalQuota)
+    }
+
     var snapshot: AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts,

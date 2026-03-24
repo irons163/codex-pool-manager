@@ -343,4 +343,28 @@ struct AIAgentPoolTests {
 
         #expect(snapshot.minUsageRatioDeltaToSwitch == 0)
     }
+
+    @Test
+    func usageSummaryCalculatesTotalsAndRatio() {
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 200, quota: 1000),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 300, quota: 500)
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.totalUsedUnits == 500)
+        #expect(state.totalQuota == 1500)
+        #expect(state.overallUsageRatio == 1.0 / 3.0)
+    }
+
+    @Test
+    func usageSummaryIsZeroWhenNoAccounts() {
+        let state = AccountPoolState(accounts: [], mode: .intelligent)
+
+        #expect(state.totalUsedUnits == 0)
+        #expect(state.totalQuota == 0)
+        #expect(state.overallUsageRatio == 0)
+    }
 }

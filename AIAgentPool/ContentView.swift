@@ -71,6 +71,18 @@ struct ContentView: View {
                 }
             }
 
+            GroupBox("整體用量") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("總用量 \(state.totalUsedUnits)/\(state.totalQuota)")
+                        Spacer()
+                        Text("\(Int(state.overallUsageRatio * 100))%")
+                            .foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: state.overallUsageRatio)
+                }
+            }
+
             if state.mode == .manual, !state.accounts.isEmpty {
                 Picker("手動帳號", selection: manualSelectionBinding) {
                     ForEach(state.accounts) { account in
