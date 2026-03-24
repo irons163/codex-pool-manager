@@ -1,7 +1,11 @@
 import SwiftUI
 import UniformTypeIdentifiers
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct ContentView: View {
+    private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = ""
     @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access"
@@ -21,8 +25,8 @@ struct ContentView: View {
     @State private var isSigningInOAuth = false
     @State private var oauthError: String?
     @State private var oauthSuccessMessage: String?
-    @State private var localOAuthViewModel = LocalOAuthImportViewModel()
-    @State private var showAuthFileImporter = false
+    @State private var localOAuthAccounts: [LocalCodexOAuthAccount] = []
+    @State private var localOAuthError: String?
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -125,27 +129,27 @@ struct ContentView: View {
                         .buttonStyle(.bordered)
 
                         Button("選擇 auth.json") {
-                            showAuthFileImporter = true
+                            openAuthFilePanel()
                         }
                         .buttonStyle(.bordered)
 
-                        if let localOAuthError = localOAuthViewModel.localOAuthError {
+                        if let localOAuthError {
                             Text(localOAuthError)
                                 .font(.footnote)
                                 .foregroundStyle(.red)
                         } else {
-                            Text("找到 \(localOAuthViewModel.localOAuthAccounts.count) 個帳號")
+                            Text("找到 \(localOAuthAccounts.count) 個帳號")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    if localOAuthViewModel.localOAuthAccounts.isEmpty {
+                    if localOAuthAccounts.isEmpty {
                         Text("尚未找到本機 OAuth 帳號。若你已登入 Codex，請點「選擇 auth.json」並選擇 ~/.codex/auth.json")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(localOAuthViewModel.localOAuthAccounts) { account in
+                        ForEach(localOAuthAccounts) { account in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(account.displayName)
@@ -160,7 +164,7 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button("匯入") {
-                                    Task { await importLocalOAuthAccount(account) }
+                                    importLocalOAuthAccount(account)
                                 }
                                 .buttonStyle(.borderedProminent)
                             }
@@ -426,22 +430,6 @@ struct ContentView: View {
                 showLowUsageAlert = true
             }
         }
-        .fileImporter(
-            isPresented: $showAuthFileImporter,
-            allowedContentTypes: [.json],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
-                localOAuthViewModel.handleSelectedAuthFile(url)
-            case .failure(let error):
-                localOAuthViewModel = LocalOAuthImportViewModel(
-                    localOAuthAccounts: localOAuthViewModel.localOAuthAccounts,
-                    localOAuthError: "選檔失敗：\(error.localizedDescription)"
-                )
-            }
-        }
         .alert("低剩餘用量提醒", isPresented: $showLowUsageAlert) {
             Button("知道了", role: .cancel) { }
         } message: {
@@ -605,14 +593,114 @@ struct ContentView: View {
     }
 
     private func refreshLocalOAuthAccounts() {
-        localOAuthViewModel.refresh()
+        if loadLocalOAuthAccountsFromBookmark() {
+            return
+        }
+
+        let discovered = LocalCodexAccountDiscovery.discover()
+        localOAuthAccounts = discovered
+        if discovered.isEmpty {
+            localOAuthError = "自動掃描沒有讀到帳號，可能是 macOS Sandbox 限制。請按「選擇 auth.json」授權。"
+        } else {
+            localOAuthError = nil
+        }
+    }
+
+    private func loadLocalOAuthAccounts(from url: URL) {
+        let hasSecurityScope = url.startAccessingSecurityScopedResource()
+        defer {
+            if hasSecurityScope {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: url.path)
+            localOAuthAccounts = accounts
+            if accounts.isEmpty {
+                localOAuthError = "檔案格式可讀，但未找到 access token"
+            } else {
+                localOAuthError = nil
+            }
+        } catch {
+            localOAuthError = "讀取失敗：\(error.localizedDescription)"
+        }
+    }
+
+    private func saveAuthFileBookmark(for url: URL) {
+        do {
+            let bookmark = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            UserDefaults.standard.set(bookmark, forKey: Self.codexAuthBookmarkKey)
+        } catch {
+            localOAuthError = "儲存授權失敗：\(error.localizedDescription)"
+        }
+    }
+
+    @discardableResult
+    private func loadLocalOAuthAccountsFromBookmark() -> Bool {
+        guard let bookmark = UserDefaults.standard.data(forKey: Self.codexAuthBookmarkKey) else {
+            return false
+        }
+
+        do {
+            var isStale = false
+            let url = try URL(
+                resolvingBookmarkData: bookmark,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            )
+
+            if isStale {
+                saveAuthFileBookmark(for: url)
+            }
+            loadLocalOAuthAccounts(from: url)
+            return !localOAuthAccounts.isEmpty
+        } catch {
+            localOAuthError = "授權已失效，請重新選擇 auth.json"
+            return false
+        }
+    }
+
+    private func hasSavedAuthFileBookmark() -> Bool {
+        UserDefaults.standard.data(forKey: Self.codexAuthBookmarkKey) != nil
     }
 
     @MainActor
-    private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
-        let imported = localOAuthViewModel.importAccount(localAccount, into: &state)
-        guard imported else { return }
-        await syncCodexUsage()
+    private func openAuthFilePanel() {
+#if canImport(AppKit)
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.json]
+        panel.prompt = "選擇"
+        panel.message = "請選擇 ~/.codex/auth.json"
+
+        let codexDirectory = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex")
+        panel.directoryURL = codexDirectory
+        panel.nameFieldStringValue = "auth.json"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            saveAuthFileBookmark(for: url)
+            loadLocalOAuthAccounts(from: url)
+        }
+#else
+        localOAuthError = "目前平台不支援檔案面板"
+#endif
+    }
+
+    private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) {
+        if state.accounts.contains(where: { $0.apiToken == localAccount.accessToken }) {
+            localOAuthError = "此帳號已在帳號池"
+            return
+        }
+
+        let name = localAccount.email ?? localAccount.displayName
+        let newAccountID = state.addAccount(name: name, quota: 1000)
+        state.updateAccount(newAccountID, apiToken: localAccount.accessToken)
+        localOAuthError = nil
     }
 }
 
