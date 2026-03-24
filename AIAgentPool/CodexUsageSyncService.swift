@@ -47,6 +47,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
             let usage = try await fetchUsageWithRetry(apiToken: account.apiToken)
             state.updateAccount(account.id, quota: usage.quota, usedUnits: usage.usedUnits, now: now)
         }
+        state.markUsageSynced(at: now)
     }
 
     private func fetchUsageWithRetry(apiToken: String) async throws -> CodexUsage {

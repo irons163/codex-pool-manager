@@ -120,6 +120,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var lowUsageThresholdRatio: Double
     var minUsageRatioDeltaToSwitch: Double
     var lastSwitchAt: Date?
+    var lastUsageSyncAt: Date?
 
     init(
         accounts: [AgentAccount],
@@ -131,7 +132,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
         minUsageRatioDeltaToSwitch: Double,
-        lastSwitchAt: Date?
+        lastSwitchAt: Date?,
+        lastUsageSyncAt: Date? = nil
     ) {
         self.accounts = accounts
         self.activities = activities
@@ -143,6 +145,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = minUsageRatioDeltaToSwitch
         self.lastSwitchAt = lastSwitchAt
+        self.lastUsageSyncAt = lastUsageSyncAt
     }
 
     init(from decoder: Decoder) throws {
@@ -157,6 +160,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         lowUsageThresholdRatio = try container.decode(Double.self, forKey: .lowUsageThresholdRatio)
         minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
         lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
+        lastUsageSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastUsageSyncAt)
     }
 }
 
@@ -169,6 +173,7 @@ struct AccountPoolState {
 
     private var focusLockedAccountID: UUID?
     private var lastSwitchAt: Date?
+    private(set) var lastUsageSyncAt: Date?
 
     private(set) var minSwitchInterval: TimeInterval
     private(set) var lowUsageThresholdRatio: Double
@@ -188,6 +193,7 @@ struct AccountPoolState {
         self.manualAccountID = accounts.first?.id
         self.focusLockedAccountID = nil
         self.lastSwitchAt = nil
+        self.lastUsageSyncAt = nil
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = max(0, min(0.5, minUsageRatioDeltaToSwitch))
@@ -201,6 +207,7 @@ struct AccountPoolState {
         self.manualAccountID = snapshot.manualAccountID
         self.focusLockedAccountID = snapshot.focusLockedAccountID
         self.lastSwitchAt = snapshot.lastSwitchAt
+        self.lastUsageSyncAt = snapshot.lastUsageSyncAt
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
@@ -261,7 +268,8 @@ struct AccountPoolState {
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
-            lastSwitchAt: lastSwitchAt
+            lastSwitchAt: lastSwitchAt,
+            lastUsageSyncAt: lastUsageSyncAt
         )
     }
 
@@ -406,6 +414,10 @@ struct AccountPoolState {
 
     mutating func clearActivities() {
         activities.removeAll()
+    }
+
+    mutating func markUsageSynced(at now: Date = .now) {
+        lastUsageSyncAt = now
     }
 
     mutating func evaluate(now: Date = .now) {

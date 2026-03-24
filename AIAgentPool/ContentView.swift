@@ -46,6 +46,12 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(isSyncingUsage)
 
+                if let last = state.lastUsageSyncAt {
+                    Text("最近同步：\(last, format: Date.FormatStyle(date: .omitted, time: .standard))")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 if let syncError {
                     Text(syncError)
                         .font(.footnote)

@@ -828,6 +828,26 @@ struct AIAgentPoolTests {
             Issue.record("Unexpected error: \(error)")
         }
     }
+
+    @Test
+    func codexSyncRecordsLastSyncTimestampOnSuccess() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        let client = MockCodexUsageClient(
+            responseByToken: ["token-a": CodexUsage(usedUnits: 100, quota: 1000)]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        let now = Date(timeIntervalSince1970: 123)
+
+        try await sync.sync(state: &state, now: now)
+
+        #expect(state.lastUsageSyncAt == now)
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
