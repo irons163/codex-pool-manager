@@ -1,9 +1,15 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
+    @AppStorage("oauth_client_id") private var oauthClientID = ""
+    @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access"
+    @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "aiaagentpool://oauth/callback"
     @State private var state: AccountPoolState
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
+    @State private var oauthAccountName = ""
+    @State private var oauthAccountQuota = 1000
     @State private var resetAllLatch = DestructiveActionLatch()
     @State private var backupJSON = ""
     @State private var backupError: String?
@@ -11,6 +17,9 @@ struct ContentView: View {
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     @State private var isSyncingUsage = false
     @State private var syncError: String?
+    @State private var isSigningInOAuth = false
+    @State private var oauthError: String?
+    @State private var oauthSuccessMessage: String?
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -34,7 +43,8 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
             Text("Codex 帳號池")
                 .font(.largeTitle)
                 .fontWeight(.semibold)
@@ -56,6 +66,50 @@ struct ContentView: View {
                     Text(syncError)
                         .font(.footnote)
                         .foregroundStyle(.red)
+                }
+            }
+
+            GroupBox("OAuth 登入（你自行填 client_id）") {
+                VStack(alignment: .leading, spacing: 10) {
+                    TextField("Client ID", text: $oauthClientID)
+                        .textFieldStyle(.roundedBorder)
+
+                    DisclosureGroup("進階設定（一般情況不用改）") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("Issuer (例如 https://auth.openai.com)", text: $oauthIssuer)
+                                .textFieldStyle(.roundedBorder)
+                            TextField("Scopes", text: $oauthScopes)
+                                .textFieldStyle(.roundedBorder)
+                            TextField("Redirect URI", text: $oauthRedirectURI)
+                                .textFieldStyle(.roundedBorder)
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    HStack {
+                        TextField("登入後帳號名稱", text: $oauthAccountName)
+                            .textFieldStyle(.roundedBorder)
+                        Stepper("配額 \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
+                    }
+
+                    HStack {
+                        Button(isSigningInOAuth ? "OAuth 登入中..." : "OAuth 登入並新增帳號") {
+                            Task { await signInWithOAuth() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isSigningInOAuth)
+
+                        if let oauthSuccessMessage {
+                            Text(oauthSuccessMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.green)
+                        }
+                        if let oauthError {
+                            Text(oauthError)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+                    }
                 }
             }
 
@@ -299,8 +353,10 @@ struct ContentView: View {
                     }
                 }
             }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(20)
         .frame(minWidth: 640, minHeight: 520)
         .onAppear {
             state.evaluate()
@@ -431,6 +487,45 @@ struct ContentView: View {
             syncError = nil
         } catch {
             syncError = "同步失敗：\(error.localizedDescription)"
+        }
+    }
+
+    @MainActor
+    private func signInWithOAuth() async {
+        guard !isSigningInOAuth else { return }
+        isSigningInOAuth = true
+        defer { isSigningInOAuth = false }
+
+        oauthError = nil
+        oauthSuccessMessage = nil
+
+        guard let issuerURL = URL(string: oauthIssuer.trimmingCharacters(in: .whitespacesAndNewlines)),
+              !oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            oauthError = "請至少填入 Client ID（其餘欄位有預設值）"
+            return
+        }
+
+        let configuration = OAuthClientConfiguration(
+            issuer: issuerURL,
+            clientID: oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines),
+            scopes: oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines),
+            redirectURI: oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+
+        do {
+            let tokens = try await OAuthLoginService().signIn(configuration: configuration)
+            let accountName = oauthAccountName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let newAccountID = state.addAccount(
+                name: accountName.isEmpty ? "OAuth Account" : accountName,
+                quota: oauthAccountQuota
+            )
+            state.updateAccount(newAccountID, apiToken: tokens.accessToken)
+            oauthSuccessMessage = "登入成功，已新增帳號"
+            oauthAccountName = ""
+        } catch {
+            oauthError = error.localizedDescription
         }
     }
 }

@@ -848,6 +848,65 @@ struct AIAgentPoolTests {
 
         #expect(state.lastUsageSyncAt == now)
     }
+
+    @Test
+    func oauthAuthorizeURLContainsRequiredParameters() throws {
+        let config = OAuthClientConfiguration(
+            issuer: URL(string: "https://auth.example.com")!,
+            clientID: "client-123",
+            scopes: "openid profile email",
+            redirectURI: "aiaagentpool://oauth/callback"
+        )
+        let request = OAuthAuthorizationRequest(
+            state: "test-state",
+            codeChallenge: "challenge-abc"
+        )
+
+        let url = try OAuthAuthorizationRequestBuilder.makeAuthorizeURL(
+            config: config,
+            request: request
+        )
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+
+        #expect(components.path == "/oauth/authorize")
+        #expect(items["client_id"] == "client-123")
+        #expect(items["redirect_uri"] == "aiaagentpool://oauth/callback")
+        #expect(items["scope"] == "openid profile email")
+        #expect(items["response_type"] == "code")
+        #expect(items["state"] == "test-state")
+        #expect(items["code_challenge"] == "challenge-abc")
+        #expect(items["code_challenge_method"] == "S256")
+    }
+
+    @Test
+    func oauthCallbackParserExtractsCodeAndState() throws {
+        let callbackURL = try #require(
+            URL(string: "aiaagentpool://oauth/callback?code=abc123&state=s1")
+        )
+
+        let callback = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+
+        #expect(callback.code == "abc123")
+        #expect(callback.state == "s1")
+    }
+
+    @Test
+    func oauthTokenRequestBodyContainsExpectedFields() {
+        let body = OAuthTokenRequestBuilder.authorizationCodeBody(
+            clientID: "client-123",
+            code: "code-xyz",
+            redirectURI: "aiaagentpool://oauth/callback",
+            codeVerifier: "verifier-123"
+        )
+        let form = String(data: body, encoding: .utf8) ?? ""
+
+        #expect(form.contains("grant_type=authorization_code"))
+        #expect(form.contains("client_id=client-123"))
+        #expect(form.contains("code=code-xyz"))
+        #expect(form.contains("redirect_uri=aiaagentpool%3A%2F%2Foauth%2Fcallback"))
+        #expect(form.contains("code_verifier=verifier-123"))
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
