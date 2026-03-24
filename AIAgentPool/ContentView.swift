@@ -80,6 +80,17 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
                     ProgressView(value: state.overallUsageRatio)
+                    HStack {
+                        Text("可用帳號數 \(state.availableAccountsCount)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    if state.isPoolExhausted {
+                        Text("所有帳號用量已耗盡，請補充配額或重設用量。")
+                            .font(.subheadline)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
 

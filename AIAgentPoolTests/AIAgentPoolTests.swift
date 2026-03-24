@@ -367,4 +367,32 @@ struct AIAgentPoolTests {
         #expect(state.totalQuota == 0)
         #expect(state.overallUsageRatio == 0)
     }
+
+    @Test
+    func poolExhaustedStateIsTrueWhenNoAccountHasRemainingUnits() {
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 1000, quota: 1000),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 500, quota: 500)
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.availableAccountsCount == 0)
+        #expect(state.isPoolExhausted)
+    }
+
+    @Test
+    func poolExhaustedStateIsFalseWhenAtLeastOneAccountHasRemainingUnits() {
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 1000, quota: 1000),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 300, quota: 500)
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.availableAccountsCount == 1)
+        #expect(!state.isPoolExhausted)
+    }
 }

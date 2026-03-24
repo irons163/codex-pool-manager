@@ -149,6 +149,14 @@ struct AccountPoolState {
         return Double(totalUsedUnits) / Double(totalQuota)
     }
 
+    var availableAccountsCount: Int {
+        accounts.filter { $0.remainingUnits > 0 }.count
+    }
+
+    var isPoolExhausted: Bool {
+        !accounts.isEmpty && availableAccountsCount == 0
+    }
+
     var snapshot: AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts,
