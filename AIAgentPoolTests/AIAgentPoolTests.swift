@@ -168,6 +168,8 @@ struct AIAgentPoolTests {
         #expect(restored.mode == state.mode)
         #expect(restored.manualAccountID == state.manualAccountID)
         #expect(restored.activeAccount?.id == state.activeAccount?.id)
+        #expect(restored.minSwitchInterval == state.minSwitchInterval)
+        #expect(restored.lowUsageThresholdRatio == state.lowUsageThresholdRatio)
     }
 
     @Test
@@ -186,7 +188,9 @@ struct AIAgentPoolTests {
             mode: .focus,
             activeAccountID: accountID,
             manualAccountID: accountID,
-            focusLockedAccountID: accountID
+            focusLockedAccountID: accountID,
+            minSwitchInterval: 600,
+            lowUsageThresholdRatio: 0.2
         )
 
         store.save(snapshot)
@@ -194,5 +198,18 @@ struct AIAgentPoolTests {
 
         #expect(loaded == snapshot)
         defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
+    func updateSwitchSettingsClampsValues() {
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 1000)],
+            mode: .intelligent
+        )
+
+        state.updateSwitchSettings(minSwitchInterval: 5, lowUsageThresholdRatio: 2)
+
+        #expect(state.minSwitchInterval == 30)
+        #expect(state.lowUsageThresholdRatio == 0.9)
     }
 }

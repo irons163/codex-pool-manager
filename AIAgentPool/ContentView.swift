@@ -39,6 +39,21 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
 
+            GroupBox("策略設定") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Stepper(
+                        "最小切換間隔 \(Int(state.minSwitchInterval)) 秒",
+                        value: minSwitchIntervalBinding,
+                        in: 30...1800,
+                        step: 30
+                    )
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("低用量提醒門檻 \(Int(state.lowUsageThresholdRatio * 100))%")
+                        Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
+                    }
+                }
+            }
+
             if state.mode == .manual, !state.accounts.isEmpty {
                 Picker("手動帳號", selection: manualSelectionBinding) {
                     ForEach(state.accounts) { account in
@@ -61,7 +76,7 @@ struct ContentView: View {
                         ProgressView(value: active.usageRatio)
 
                         if state.mode == .focus && state.hasLowUsageWarning {
-                            Text("低剩餘用量提醒：目前帳號剩餘不足 15%")
+                            Text("低剩餘用量提醒：目前帳號剩餘不足 \(Int(state.lowUsageThresholdRatio * 100))%")
                                 .font(.subheadline)
                                 .foregroundStyle(.orange)
                         }
@@ -163,6 +178,24 @@ struct ContentView: View {
             },
             set: { newID in
                 state.selectManualAccount(newID)
+            }
+        )
+    }
+
+    private var minSwitchIntervalBinding: Binding<Double> {
+        Binding(
+            get: { state.minSwitchInterval },
+            set: { newValue in
+                state.updateSwitchSettings(minSwitchInterval: newValue)
+            }
+        )
+    }
+
+    private var lowThresholdBinding: Binding<Double> {
+        Binding(
+            get: { state.lowUsageThresholdRatio },
+            set: { newValue in
+                state.updateSwitchSettings(lowUsageThresholdRatio: newValue)
             }
         )
     }

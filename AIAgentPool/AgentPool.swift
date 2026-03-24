@@ -35,6 +35,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var activeAccountID: UUID?
     var manualAccountID: UUID?
     var focusLockedAccountID: UUID?
+    var minSwitchInterval: TimeInterval
+    var lowUsageThresholdRatio: Double
 }
 
 struct AccountPoolState {
@@ -46,8 +48,8 @@ struct AccountPoolState {
     private var focusLockedAccountID: UUID?
     private var lastSwitchAt: Date?
 
-    let minSwitchInterval: TimeInterval
-    let lowUsageThresholdRatio: Double
+    private(set) var minSwitchInterval: TimeInterval
+    private(set) var lowUsageThresholdRatio: Double
 
     init(
         accounts: [AgentAccount],
@@ -65,19 +67,15 @@ struct AccountPoolState {
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
     }
 
-    init(
-        snapshot: AccountPoolSnapshot,
-        minSwitchInterval: TimeInterval = 300,
-        lowUsageThresholdRatio: Double = 0.15
-    ) {
+    init(snapshot: AccountPoolSnapshot) {
         self.accounts = snapshot.accounts
         self.mode = snapshot.mode
         self.activeAccountID = snapshot.activeAccountID
         self.manualAccountID = snapshot.manualAccountID
         self.focusLockedAccountID = snapshot.focusLockedAccountID
         self.lastSwitchAt = nil
-        self.minSwitchInterval = minSwitchInterval
-        self.lowUsageThresholdRatio = lowUsageThresholdRatio
+        self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
+        self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
         evaluate(now: .now)
     }
 
@@ -97,8 +95,24 @@ struct AccountPoolState {
             mode: mode,
             activeAccountID: activeAccountID,
             manualAccountID: manualAccountID,
-            focusLockedAccountID: focusLockedAccountID
+            focusLockedAccountID: focusLockedAccountID,
+            minSwitchInterval: minSwitchInterval,
+            lowUsageThresholdRatio: lowUsageThresholdRatio
         )
+    }
+
+    mutating func updateSwitchSettings(
+        minSwitchInterval: TimeInterval? = nil,
+        lowUsageThresholdRatio: Double? = nil,
+        now: Date = .now
+    ) {
+        if let minSwitchInterval {
+            self.minSwitchInterval = max(30, minSwitchInterval)
+        }
+        if let lowUsageThresholdRatio {
+            self.lowUsageThresholdRatio = min(0.9, max(0.01, lowUsageThresholdRatio))
+        }
+        evaluate(now: now)
     }
 
     mutating func setMode(_ newMode: SwitchMode, now: Date = .now) {
