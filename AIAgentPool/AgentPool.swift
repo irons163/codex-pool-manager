@@ -71,6 +71,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var minSwitchInterval: TimeInterval
     var lowUsageThresholdRatio: Double
     var minUsageRatioDeltaToSwitch: Double
+    var lastSwitchAt: Date?
 
     init(
         accounts: [AgentAccount],
@@ -80,7 +81,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         focusLockedAccountID: UUID?,
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
-        minUsageRatioDeltaToSwitch: Double
+        minUsageRatioDeltaToSwitch: Double,
+        lastSwitchAt: Date?
     ) {
         self.accounts = accounts
         self.mode = mode
@@ -90,6 +92,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = minUsageRatioDeltaToSwitch
+        self.lastSwitchAt = lastSwitchAt
     }
 
     init(from decoder: Decoder) throws {
@@ -102,6 +105,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minSwitchInterval = try container.decode(TimeInterval.self, forKey: .minSwitchInterval)
         lowUsageThresholdRatio = try container.decode(Double.self, forKey: .lowUsageThresholdRatio)
         minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
+        lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
     }
 }
 
@@ -142,7 +146,7 @@ struct AccountPoolState {
         self.activeAccountID = snapshot.activeAccountID
         self.manualAccountID = snapshot.manualAccountID
         self.focusLockedAccountID = snapshot.focusLockedAccountID
-        self.lastSwitchAt = nil
+        self.lastSwitchAt = snapshot.lastSwitchAt
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
@@ -201,7 +205,8 @@ struct AccountPoolState {
             focusLockedAccountID: focusLockedAccountID,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
-            minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch
+            minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
+            lastSwitchAt: lastSwitchAt
         )
     }
 

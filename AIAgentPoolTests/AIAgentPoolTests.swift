@@ -192,7 +192,8 @@ struct AIAgentPoolTests {
             focusLockedAccountID: accountID,
             minSwitchInterval: 600,
             lowUsageThresholdRatio: 0.2,
-            minUsageRatioDeltaToSwitch: 0.1
+            minUsageRatioDeltaToSwitch: 0.1,
+            lastSwitchAt: nil
         )
 
         store.save(snapshot)
@@ -476,5 +477,26 @@ struct AIAgentPoolTests {
         #expect(intelligent == .intelligent)
         #expect(manual == .manual)
         #expect(focus == .focus)
+    }
+
+    @Test
+    func intelligentCooldownPersistsAcrossSnapshotRestore() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
+            ],
+            mode: .intelligent,
+            minSwitchInterval: 300
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        let snapshot = state.snapshot
+        let restored = AccountPoolState(snapshot: snapshot)
+
+        #expect(restored.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 100)) == 200)
+        #expect(!restored.canIntelligentSwitch(now: Date(timeIntervalSince1970: 100)))
     }
 }
