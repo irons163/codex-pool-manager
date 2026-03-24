@@ -700,6 +700,29 @@ struct AIAgentPoolTests {
             #expect(state.accounts[0].usedUnits == 10)
         }
     }
+
+    @Test
+    func snapshotExportRedactsApiTokensByDefault() throws {
+        let token = "sk-test-secret"
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 1000, apiToken: token)
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        let json = try AccountPoolSnapshotCodec.exportJSON(snapshot)
+
+        #expect(!json.contains(token))
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
@@ -712,4 +735,3 @@ private struct MockCodexUsageClient: CodexUsageClient {
         return responseByToken[apiToken] ?? CodexUsage(usedUnits: 0, quota: 1000)
     }
 }
-
