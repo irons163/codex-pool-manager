@@ -52,8 +52,32 @@ struct LocalOAuthImportViewModelTests {
 
         let decision = viewModel.prepareImport(account, existingAccessTokens: [])
 
-        #expect(decision == .importAccount(name: "new@example.com", accessToken: "sk-new-token"))
+        #expect(
+            decision == .importAccount(
+                name: "new@example.com",
+                accessToken: "sk-new-token",
+                chatGPTAccountID: "account-123"
+            )
+        )
         #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test
+    func prepareImportMissingAccountIDReturnsMissingDecision() {
+        var viewModel = LocalOAuthImportViewModel()
+        let account = LocalCodexOAuthAccount(
+            id: UUID().uuidString,
+            displayName: "Codex User",
+            email: "missing@example.com",
+            source: "~/.codex/auth.json",
+            accessToken: "sk-missing-id",
+            chatGPTAccountID: nil
+        )
+
+        let decision = viewModel.prepareImport(account, existingAccessTokens: [])
+
+        #expect(decision == .missingAccountID)
+        #expect(viewModel.errorMessage == "auth.json 缺少 ChatGPT Account ID，無法查詢用量")
     }
 
     private func sampleAccount(email: String, token: String) -> LocalCodexOAuthAccount {
@@ -62,7 +86,8 @@ struct LocalOAuthImportViewModelTests {
             displayName: "Codex User",
             email: email,
             source: "~/.codex/auth.json",
-            accessToken: token
+            accessToken: token,
+            chatGPTAccountID: "account-123"
         )
     }
 }

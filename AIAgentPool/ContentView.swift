@@ -163,7 +163,9 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button("匯入") {
-                                    importLocalOAuthAccount(account)
+                                    Task {
+                                        await importLocalOAuthAccount(account)
+                                    }
                                 }
                                 .buttonStyle(.borderedProminent)
                             }
@@ -680,19 +682,61 @@ struct ContentView: View {
 #endif
     }
 
-    private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) {
+    @MainActor
+    private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
         let existingAccessTokens = Set(state.accounts.compactMap(\.apiToken))
         let decision = localOAuthImportViewModel.prepareImport(
             localAccount,
             existingAccessTokens: existingAccessTokens
         )
 
-        guard case let .importAccount(name, accessToken) = decision else {
+        guard case let .importAccount(name, accessToken, chatGPTAccountID) = decision else {
             return
         }
 
-        let newAccountID = state.addAccount(name: name, quota: 1000)
-        state.updateAccount(newAccountID, apiToken: accessToken)
+        do {
+            let usage = try await OpenAICodexUsageClient().fetchUsage(
+                accessToken: accessToken,
+                accountID: chatGPTAccountID
+            )
+            let newAccountID = state.addAccount(
+                name: name,
+                quota: usage.quota,
+                usedUnits: usage.usedUnits,
+                chatGPTAccountID: chatGPTAccountID
+            )
+            state.updateAccount(
+                newAccountID,
+                apiToken: accessToken,
+                chatGPTAccountID: chatGPTAccountID
+            )
+            localOAuthImportViewModel.errorMessage = nil
+            syncError = nil
+        } catch {
+            localOAuthImportViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(localizedCodexSyncError(error))"
+        }
+    }
+
+    private func localizedCodexSyncError(_ error: Error) -> String {
+        if let syncError = error as? CodexSyncError {
+            return syncError.localizedDescription
+        }
+
+        if let http = error as? CodexClientHTTPError {
+            if http.statusCode == 401 || http.statusCode == 403 {
+                return CodexSyncError.unauthorized.localizedDescription
+            }
+            if http.statusCode == 429 {
+                return CodexSyncError.rateLimited.localizedDescription
+            }
+            return CodexSyncError.unknown.localizedDescription
+        }
+
+        if error is URLError {
+            return CodexSyncError.network.localizedDescription
+        }
+
+        return CodexSyncError.unknown.localizedDescription
     }
 }
 

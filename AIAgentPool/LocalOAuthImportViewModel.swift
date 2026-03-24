@@ -2,7 +2,8 @@ import Foundation
 
 struct LocalOAuthImportViewModel {
     enum ImportDecision: Equatable {
-        case importAccount(name: String, accessToken: String)
+        case importAccount(name: String, accessToken: String, chatGPTAccountID: String)
+        case missingAccountID
         case duplicate
     }
 
@@ -43,6 +44,10 @@ struct LocalOAuthImportViewModel {
         _ account: LocalCodexOAuthAccount,
         existingAccessTokens: Set<String>
     ) -> ImportDecision {
+        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+            errorMessage = "auth.json 缺少 ChatGPT Account ID，無法查詢用量"
+            return .missingAccountID
+        }
         if existingAccessTokens.contains(account.accessToken) {
             errorMessage = "此帳號已在帳號池"
             return .duplicate
@@ -50,6 +55,6 @@ struct LocalOAuthImportViewModel {
 
         errorMessage = nil
         let name = account.email ?? account.displayName
-        return .importAccount(name: name, accessToken: account.accessToken)
+        return .importAccount(name: name, accessToken: account.accessToken, chatGPTAccountID: chatGPTAccountID)
     }
 }

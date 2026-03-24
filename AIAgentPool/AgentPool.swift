@@ -6,19 +6,22 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var usedUnits: Int
     var quota: Int
     var apiToken: String
+    var chatGPTAccountID: String?
 
     init(
         id: UUID,
         name: String,
         usedUnits: Int,
         quota: Int,
-        apiToken: String = ""
+        apiToken: String = "",
+        chatGPTAccountID: String? = nil
     ) {
         self.id = id
         self.name = name
         self.usedUnits = usedUnits
         self.quota = quota
         self.apiToken = apiToken
+        self.chatGPTAccountID = chatGPTAccountID
     }
 
     init(from decoder: Decoder) throws {
@@ -28,6 +31,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         usedUnits = try container.decode(Int.self, forKey: .usedUnits)
         quota = try container.decode(Int.self, forKey: .quota)
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
+        chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
     }
 
     var remainingUnits: Int {
@@ -333,6 +337,7 @@ struct AccountPoolState {
         name: String,
         quota: Int,
         usedUnits: Int = 0,
+        chatGPTAccountID: String? = nil,
         now: Date = .now
     ) -> UUID {
         let normalizedQuota = max(1, quota)
@@ -341,7 +346,8 @@ struct AccountPoolState {
             id: UUID(),
             name: name.isEmpty ? "未命名帳號" : name,
             usedUnits: normalizedUsedUnits,
-            quota: normalizedQuota
+            quota: normalizedQuota,
+            chatGPTAccountID: chatGPTAccountID
         )
         accounts.append(account)
         appendActivity("新增帳號 \(account.name)", now: now)
@@ -376,6 +382,7 @@ struct AccountPoolState {
         quota: Int? = nil,
         usedUnits: Int? = nil,
         apiToken: String? = nil,
+        chatGPTAccountID: String? = nil,
         now: Date = .now
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
@@ -391,6 +398,9 @@ struct AccountPoolState {
         }
         if let apiToken {
             accounts[index].apiToken = apiToken
+        }
+        if let chatGPTAccountID {
+            accounts[index].chatGPTAccountID = chatGPTAccountID
         }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)

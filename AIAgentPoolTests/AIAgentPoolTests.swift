@@ -667,6 +667,7 @@ struct AIAgentPoolTests {
             ],
             mode: .manual
         )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
 
         let client = MockCodexUsageClient(
             responseByToken: [
@@ -690,6 +691,7 @@ struct AIAgentPoolTests {
             ],
             mode: .manual
         )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
 
         let client = MockCodexUsageClient(responseByToken: [:], shouldThrow: true)
         let sync = CodexUsageSyncService(client: client)
@@ -699,6 +701,28 @@ struct AIAgentPoolTests {
         } catch {
             #expect(state.accounts[0].usedUnits == 10)
         }
+    }
+
+    @Test
+    func codexSyncSkipsAccountWithoutChatGPTAccountID() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 10, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(usedUnits: 999, quota: 2000)
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].usedUnits == 10)
+        #expect(state.accounts[0].quota == 1000)
     }
 
     @Test
@@ -770,6 +794,7 @@ struct AIAgentPoolTests {
             ],
             mode: .manual
         )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
 
         let client = FlakyCodexUsageClient(
             failuresBeforeSuccess: 1,
@@ -789,6 +814,9 @@ struct AIAgentPoolTests {
             ],
             mode: .manual
         )
+        if let accountID = state.accounts.first?.id {
+            state.updateAccount(accountID, chatGPTAccountID: "acct-a")
+        }
         let client = MockCodexUsageClient(
             responseByToken: [:],
             shouldThrowError: CodexClientHTTPError(statusCode: 401)
@@ -813,6 +841,9 @@ struct AIAgentPoolTests {
             ],
             mode: .manual
         )
+        if let accountID = state.accounts.first?.id {
+            state.updateAccount(accountID, chatGPTAccountID: "acct-a")
+        }
         let client = MockCodexUsageClient(
             responseByToken: [:],
             shouldThrowError: CodexClientHTTPError(statusCode: 429)
@@ -838,6 +869,7 @@ struct AIAgentPoolTests {
             ],
             mode: .manual
         )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
         let client = MockCodexUsageClient(
             responseByToken: ["token-a": CodexUsage(usedUnits: 100, quota: 1000)]
         )
@@ -916,12 +948,14 @@ struct AIAgentPoolTests {
             {
               "name": "Phil",
               "email": "phil@example.com",
+              "account_id": "acct-phil",
               "access_token": "sk-local-token-111111"
             },
             {
               "session": {
                 "display_name": "Teammate",
                 "user_email": "team@example.com",
+                "account_id": "acct-team",
                 "accessToken": "sk-local-token-222222"
               }
             }
@@ -935,6 +969,7 @@ struct AIAgentPoolTests {
         #expect(accounts.count == 2)
         #expect(accounts[0].displayName == "Phil")
         #expect(accounts[1].email == "team@example.com")
+        #expect(accounts[0].chatGPTAccountID == "acct-phil")
     }
 
     @Test
@@ -967,14 +1002,14 @@ private struct MockCodexUsageClient: CodexUsageClient {
     var shouldThrow: Bool = false
     var shouldThrowError: Error?
 
-    func fetchUsage(apiToken: String) async throws -> CodexUsage {
+    func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
         if let shouldThrowError {
             throw shouldThrowError
         }
         if shouldThrow {
             throw URLError(.badServerResponse)
         }
-        return responseByToken[apiToken] ?? CodexUsage(usedUnits: 0, quota: 1000)
+        return responseByToken[accessToken] ?? CodexUsage(usedUnits: 0, quota: 1000)
     }
 }
 
@@ -986,7 +1021,7 @@ private actor FlakyCodexUsageClient: CodexUsageClient {
         self.successUsage = successUsage
     }
 
-    func fetchUsage(apiToken: String) async throws -> CodexUsage {
+    func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
         if failuresBeforeSuccess > 0 {
             failuresBeforeSuccess -= 1
             throw URLError(.timedOut)

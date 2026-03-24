@@ -6,6 +6,7 @@ struct LocalCodexOAuthAccount: Identifiable, Equatable {
     let email: String?
     let source: String
     let accessToken: String
+    let chatGPTAccountID: String?
 
     var maskedToken: String {
         guard accessToken.count > 10 else { return "********" }
@@ -18,6 +19,7 @@ struct LocalCodexOAuthAccount: Identifiable, Equatable {
 enum LocalCodexAccountDiscovery {
     private static let emailKeys = ["email", "user_email", "username", "login"]
     private static let displayNameKeys = ["name", "display_name", "user_name", "account_name"]
+    private static let accountIDKeys = ["account_id", "accountId", "chatgpt_account_id", "chatgptAccountId"]
     private static let accessTokenKeys = ["access_token", "accessToken"]
 
     static func discover(
@@ -45,14 +47,16 @@ enum LocalCodexAccountDiscovery {
             if let accessToken = findAccessToken(in: dictionary) {
                 let email = findString(in: dictionary, keys: emailKeys)
                 let name = findString(in: dictionary, keys: displayNameKeys) ?? email ?? "Codex OAuth"
-                let id = "\(source)|\(email ?? name)|\(accessToken.prefix(16))"
+                let chatGPTAccountID = findString(in: dictionary, keys: accountIDKeys)
+                let id = "\(source)|\(chatGPTAccountID ?? (email ?? name))|\(accessToken.prefix(16))"
                 accounts.append(
                     LocalCodexOAuthAccount(
                         id: id,
                         displayName: name,
                         email: email,
                         source: source,
-                        accessToken: accessToken
+                        accessToken: accessToken,
+                        chatGPTAccountID: chatGPTAccountID
                     )
                 )
             }
