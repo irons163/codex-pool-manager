@@ -149,4 +149,50 @@ struct AIAgentPoolTests {
         #expect(state.accounts[0].quota == 400)
         #expect(state.accounts[0].usedUnits == 400)
     }
+
+    @Test
+    func snapshotCanRestoreState() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 250, quota: 1000)
+            ],
+            mode: .manual
+        )
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 10))
+        let snapshot = state.snapshot
+
+        let restored = AccountPoolState(snapshot: snapshot)
+
+        #expect(restored.accounts == state.accounts)
+        #expect(restored.mode == state.mode)
+        #expect(restored.manualAccountID == state.manualAccountID)
+        #expect(restored.activeAccount?.id == state.activeAccount?.id)
+    }
+
+    @Test
+    func userDefaultsStoreCanSaveAndLoadSnapshot() {
+        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot")
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let snapshot = AccountPoolSnapshot(
+            accounts: [AgentAccount(id: accountID, name: "A", usedUnits: 150, quota: 1000)],
+            mode: .focus,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: accountID
+        )
+
+        store.save(snapshot)
+        let loaded = store.load()
+
+        #expect(loaded == snapshot)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
 }

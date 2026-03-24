@@ -1,6 +1,6 @@
 import Foundation
 
-struct AgentAccount: Identifiable, Equatable {
+struct AgentAccount: Identifiable, Equatable, Codable {
     let id: UUID
     var name: String
     var usedUnits: Int
@@ -21,12 +21,20 @@ struct AgentAccount: Identifiable, Equatable {
     }
 }
 
-enum SwitchMode: String, CaseIterable, Identifiable {
+enum SwitchMode: String, CaseIterable, Identifiable, Codable {
     case intelligent = "智能切換"
     case manual = "手動切換"
     case focus = "專注模式"
 
     var id: String { rawValue }
+}
+
+struct AccountPoolSnapshot: Codable, Equatable {
+    var accounts: [AgentAccount]
+    var mode: SwitchMode
+    var activeAccountID: UUID?
+    var manualAccountID: UUID?
+    var focusLockedAccountID: UUID?
 }
 
 struct AccountPoolState {
@@ -57,6 +65,22 @@ struct AccountPoolState {
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
     }
 
+    init(
+        snapshot: AccountPoolSnapshot,
+        minSwitchInterval: TimeInterval = 300,
+        lowUsageThresholdRatio: Double = 0.15
+    ) {
+        self.accounts = snapshot.accounts
+        self.mode = snapshot.mode
+        self.activeAccountID = snapshot.activeAccountID
+        self.manualAccountID = snapshot.manualAccountID
+        self.focusLockedAccountID = snapshot.focusLockedAccountID
+        self.lastSwitchAt = nil
+        self.minSwitchInterval = minSwitchInterval
+        self.lowUsageThresholdRatio = lowUsageThresholdRatio
+        evaluate(now: .now)
+    }
+
     var activeAccount: AgentAccount? {
         guard let activeAccountID else { return nil }
         return accounts.first(where: { $0.id == activeAccountID })
@@ -65,6 +89,16 @@ struct AccountPoolState {
     var hasLowUsageWarning: Bool {
         guard let activeAccount else { return false }
         return activeAccount.remainingRatio <= lowUsageThresholdRatio
+    }
+
+    var snapshot: AccountPoolSnapshot {
+        AccountPoolSnapshot(
+            accounts: accounts,
+            mode: mode,
+            activeAccountID: activeAccountID,
+            manualAccountID: manualAccountID,
+            focusLockedAccountID: focusLockedAccountID
+        )
     }
 
     mutating func setMode(_ newMode: SwitchMode, now: Date = .now) {

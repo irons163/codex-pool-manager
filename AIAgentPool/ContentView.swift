@@ -1,18 +1,30 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var state = AccountPoolState(
-        accounts: [
-            AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: 1000),
-            AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: 1000),
-            AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: 1000)
-        ],
-        mode: .intelligent,
-        minSwitchInterval: 300,
-        lowUsageThresholdRatio: 0.15
-    )
+    @State private var state: AccountPoolState
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
+    private let store: AccountPoolStoring
+
+    init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
+        self.store = store
+        if let snapshot = store.load() {
+            _state = State(initialValue: AccountPoolState(snapshot: snapshot))
+        } else {
+            var defaultState = AccountPoolState(
+                accounts: [
+                    AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: 1000),
+                    AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: 1000),
+                    AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: 1000)
+                ],
+                mode: .intelligent,
+                minSwitchInterval: 300,
+                lowUsageThresholdRatio: 0.15
+            )
+            defaultState.evaluate(now: .now)
+            _state = State(initialValue: defaultState)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -127,6 +139,9 @@ struct ContentView: View {
         .onAppear {
             state.evaluate()
         }
+        .onChange(of: state.snapshot) { _, snapshot in
+            store.save(snapshot)
+        }
     }
 
     private var modeBinding: Binding<SwitchMode> {
@@ -187,5 +202,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
 }
