@@ -8,19 +8,61 @@ protocol AccountPoolStoring {
 struct UserDefaultsAccountPoolStore: AccountPoolStoring {
     private let defaults: UserDefaults
     private let key: String
+    private let tokenVault: AccountTokenVault
 
-    init(defaults: UserDefaults = .standard, key: String = "account_pool_snapshot") {
+    init(
+        defaults: UserDefaults = .standard,
+        key: String = "account_pool_snapshot",
+        tokenVault: AccountTokenVault = KeychainAccountTokenVault()
+    ) {
         self.defaults = defaults
         self.key = key
+        self.tokenVault = tokenVault
     }
 
     func load() -> AccountPoolSnapshot? {
         guard let data = defaults.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(AccountPoolSnapshot.self, from: data)
+        guard var snapshot = try? JSONDecoder().decode(AccountPoolSnapshot.self, from: data) else {
+            return nil
+        }
+        for index in snapshot.accounts.indices {
+            let accountID = snapshot.accounts[index].id
+            snapshot.accounts[index].apiToken = tokenVault.token(for: accountID) ?? ""
+        }
+        return snapshot
     }
 
     func save(_ snapshot: AccountPoolSnapshot) {
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        for account in snapshot.accounts {
+            if account.apiToken.isEmpty {
+                tokenVault.removeToken(for: account.id)
+            } else {
+                tokenVault.setToken(account.apiToken, for: account.id)
+            }
+        }
+
+        let redacted = AccountPoolSnapshot(
+            accounts: snapshot.accounts.map {
+                AgentAccount(
+                    id: $0.id,
+                    name: $0.name,
+                    usedUnits: $0.usedUnits,
+                    quota: $0.quota,
+                    apiToken: ""
+                )
+            },
+            activities: snapshot.activities,
+            mode: snapshot.mode,
+            activeAccountID: snapshot.activeAccountID,
+            manualAccountID: snapshot.manualAccountID,
+            focusLockedAccountID: snapshot.focusLockedAccountID,
+            minSwitchInterval: snapshot.minSwitchInterval,
+            lowUsageThresholdRatio: snapshot.lowUsageThresholdRatio,
+            minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
+            lastSwitchAt: snapshot.lastSwitchAt
+        )
+
+        guard let data = try? JSONEncoder().encode(redacted) else { return }
         defaults.set(data, forKey: key)
     }
 }

@@ -723,6 +723,43 @@ struct AIAgentPoolTests {
 
         #expect(!json.contains(token))
     }
+
+    @Test
+    func userDefaultsStoreKeepsTokensOutOfSnapshotPayload() throws {
+        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+
+        let token = "sk-live-secret"
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let snapshot = AccountPoolSnapshot(
+            accounts: [AgentAccount(id: accountID, name: "A", usedUnits: 10, quota: 1000, apiToken: token)],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+        let rawData = try #require(defaults.data(forKey: "snapshot"))
+        let rawJSON = String(data: rawData, encoding: .utf8) ?? ""
+
+        #expect(!rawJSON.contains(token))
+
+        let loaded = try #require(store.load())
+        #expect(loaded.accounts.first?.apiToken == token)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
