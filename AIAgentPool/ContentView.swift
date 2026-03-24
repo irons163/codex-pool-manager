@@ -1,8 +1,5 @@
 import SwiftUI
 import UniformTypeIdentifiers
-#if canImport(AppKit)
-import AppKit
-#endif
 
 struct ContentView: View {
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
@@ -25,6 +22,7 @@ struct ContentView: View {
     @State private var oauthError: String?
     @State private var oauthSuccessMessage: String?
     @State private var localOAuthViewModel = LocalOAuthImportViewModel()
+    @State private var showAuthFileImporter = false
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -127,7 +125,7 @@ struct ContentView: View {
                         .buttonStyle(.bordered)
 
                         Button("選擇 auth.json") {
-                            openAuthFilePanel()
+                            showAuthFileImporter = true
                         }
                         .buttonStyle(.bordered)
 
@@ -162,7 +160,7 @@ struct ContentView: View {
                                 }
                                 Spacer()
                                 Button("匯入") {
-                                    importLocalOAuthAccount(account)
+                                    Task { await importLocalOAuthAccount(account) }
                                 }
                                 .buttonStyle(.borderedProminent)
                             }
@@ -428,6 +426,22 @@ struct ContentView: View {
                 showLowUsageAlert = true
             }
         }
+        .fileImporter(
+            isPresented: $showAuthFileImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                localOAuthViewModel.handleSelectedAuthFile(url)
+            case .failure(let error):
+                localOAuthViewModel = LocalOAuthImportViewModel(
+                    localOAuthAccounts: localOAuthViewModel.localOAuthAccounts,
+                    localOAuthError: "選檔失敗：\(error.localizedDescription)"
+                )
+            }
+        }
         .alert("低剩餘用量提醒", isPresented: $showLowUsageAlert) {
             Button("知道了", role: .cancel) { }
         } message: {
@@ -595,33 +609,10 @@ struct ContentView: View {
     }
 
     @MainActor
-    private func openAuthFilePanel() {
-#if canImport(AppKit)
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json]
-        panel.showsHiddenFiles = true
-        panel.prompt = "選擇"
-        panel.message = "請選擇 ~/.codex/auth.json"
-
-        let codexPath = ("~/.codex" as NSString).expandingTildeInPath
-        panel.directoryURL = URL(fileURLWithPath: codexPath, isDirectory: true)
-
-        if panel.runModal() == .OK, let url = panel.url {
-            localOAuthViewModel.handleSelectedAuthFile(url)
-        }
-#else
-        localOAuthViewModel = LocalOAuthImportViewModel(
-            localOAuthAccounts: localOAuthViewModel.localOAuthAccounts,
-            localOAuthError: "目前平台不支援檔案面板"
-        )
-#endif
-    }
-
-    private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) {
-        localOAuthViewModel.importAccount(localAccount, into: &state)
+    private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
+        let imported = localOAuthViewModel.importAccount(localAccount, into: &state)
+        guard imported else { return }
+        await syncCodexUsage()
     }
 }
 

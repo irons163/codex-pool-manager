@@ -1,5 +1,16 @@
 import Foundation
 
+enum AuthFileAccessError: LocalizedError {
+    case securityScopeAccessDenied
+
+    var errorDescription: String? {
+        switch self {
+        case .securityScopeAccessDenied:
+            return "無法取得檔案授權，請重新選擇 auth.json"
+        }
+    }
+}
+
 protocol AuthFileAccessing {
     func hasSavedBookmark() -> Bool
     func resolveBookmarkedAuthURL() throws -> URL?
@@ -41,10 +52,11 @@ struct DefaultAuthFileAccess: AuthFileAccessing {
 
     func loadAccounts(from url: URL) throws -> [LocalCodexOAuthAccount] {
         let hasSecurityScope = url.startAccessingSecurityScopedResource()
+        guard hasSecurityScope else {
+            throw AuthFileAccessError.securityScopeAccessDenied
+        }
         defer {
-            if hasSecurityScope {
-                url.stopAccessingSecurityScopedResource()
-            }
+            url.stopAccessingSecurityScopedResource()
         }
 
         let data = try Data(contentsOf: url)
@@ -77,13 +89,12 @@ struct LocalOAuthImportViewModel {
             return
         }
 
-        let discovered = authAccess.autoDiscoverAccounts()
-        localOAuthAccounts = discovered
+        localOAuthAccounts = []
 
-        if discovered.isEmpty {
-            localOAuthError = "自動掃描沒有讀到帳號，可能是 macOS Sandbox 限制。請按「選擇 auth.json」授權。"
+        if authAccess.hasSavedBookmark() {
+            localOAuthError = "授權已失效，請重新選擇 auth.json"
         } else {
-            localOAuthError = nil
+            localOAuthError = "尚未授權讀取 auth.json，請按「選擇 auth.json」"
         }
     }
 
@@ -98,16 +109,17 @@ struct LocalOAuthImportViewModel {
         }
     }
 
-    mutating func importAccount(_ localAccount: LocalCodexOAuthAccount, into state: inout AccountPoolState) {
+    mutating func importAccount(_ localAccount: LocalCodexOAuthAccount, into state: inout AccountPoolState) -> Bool {
         if state.accounts.contains(where: { $0.apiToken == localAccount.accessToken }) {
             localOAuthError = "此帳號已在帳號池"
-            return
+            return false
         }
 
         let name = localAccount.email ?? localAccount.displayName
         let newAccountID = state.addAccount(name: name, quota: 1000)
         state.updateAccount(newAccountID, apiToken: localAccount.accessToken)
         localOAuthError = nil
+        return true
     }
 
     private mutating func loadFromBookmarkIfPossible() -> Bool {

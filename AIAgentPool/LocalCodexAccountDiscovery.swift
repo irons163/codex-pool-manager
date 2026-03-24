@@ -29,6 +29,7 @@ enum LocalCodexAccountDiscovery {
         var discovered: [LocalCodexOAuthAccount] = []
         for path in candidates {
             guard fileManager.fileExists(atPath: path.path) else { continue }
+            guard fileManager.isReadableFile(atPath: path.path) else { continue }
             guard let data = try? Data(contentsOf: path) else { continue }
             discovered.append(contentsOf: parseAccounts(from: data, source: path.path))
         }
