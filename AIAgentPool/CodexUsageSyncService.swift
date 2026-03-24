@@ -27,6 +27,20 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
 struct CodexUsage: Equatable {
     let usedUnits: Int
     let quota: Int
+    let usageWindowName: String?
+    let usageWindowResetAt: Date?
+
+    init(
+        usedUnits: Int,
+        quota: Int,
+        usageWindowName: String? = nil,
+        usageWindowResetAt: Date? = nil
+    ) {
+        self.usedUnits = usedUnits
+        self.quota = quota
+        self.usageWindowName = usageWindowName
+        self.usageWindowResetAt = usageWindowResetAt
+    }
 }
 
 protocol CodexUsageClient {
@@ -53,7 +67,14 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 accessToken: account.apiToken,
                 accountID: chatGPTAccountID
             )
-            state.updateAccount(account.id, quota: usage.quota, usedUnits: usage.usedUnits, now: now)
+            state.updateAccount(
+                account.id,
+                quota: usage.quota,
+                usedUnits: usage.usedUnits,
+                usageWindowName: usage.usageWindowName,
+                usageWindowResetAt: usage.usageWindowResetAt,
+                now: now
+            )
         }
         state.markUsageSynced(at: now)
     }
@@ -117,12 +138,24 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         }
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)
+        let usageWindowName = payload.rateLimit?.primaryWindow?.name
+        let usageWindowResetAt = payload.rateLimit?.primaryWindow?.resetAt
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
-            return CodexUsage(usedUnits: usedUnits, quota: quota)
+            return CodexUsage(
+                usedUnits: usedUnits,
+                quota: quota,
+                usageWindowName: usageWindowName,
+                usageWindowResetAt: usageWindowResetAt
+            )
         }
         if let usedPercent = payload.rateLimit?.primaryWindow?.usedPercent {
-            let clamped = min(max(usedPercent, 0), 100)
-            return CodexUsage(usedUnits: clamped, quota: 100)
+            let clamped = min(max(Int(usedPercent.rounded()), 0), 100)
+            return CodexUsage(
+                usedUnits: clamped,
+                quota: 100,
+                usageWindowName: usageWindowName,
+                usageWindowResetAt: usageWindowResetAt
+            )
         }
         throw CodexSyncError.unknown
     }
@@ -148,10 +181,70 @@ struct OpenAICodexUsageClient: CodexUsageClient {
     }
 
     private struct Window: Decodable {
-        let usedPercent: Int?
+        let usedPercent: Double?
+        let name: String?
+        let resetAt: Date?
 
-        private enum CodingKeys: String, CodingKey {
-            case usedPercent = "used_percent"
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: DynamicCodingKey.self)
+            usedPercent = try container.decodeIfPresent(Double.self, forKeys: ["used_percent", "usedPercent"])
+            name = try container.decodeIfPresent(String.self, forKeys: ["name", "window_name", "windowName"])
+            resetAt = try container.decodeDateIfPresent(forKeys: ["reset_at", "resets_at", "resetAt", "resetsAt"])
         }
     }
+
+    fileprivate struct DynamicCodingKey: CodingKey {
+        let stringValue: String
+        let intValue: Int?
+
+        init?(stringValue: String) {
+            self.stringValue = stringValue
+            self.intValue = nil
+        }
+
+        init?(intValue: Int) {
+            self.stringValue = String(intValue)
+            self.intValue = intValue
+        }
+    }
+
+    fileprivate static let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 }
+private extension KeyedDecodingContainer where K == OpenAICodexUsageClient.DynamicCodingKey {
+    func decodeIfPresent<T: Decodable>(_ type: T.Type, forKeys keys: [String]) throws -> T? {
+        for key in keys {
+            guard let codingKey = OpenAICodexUsageClient.DynamicCodingKey(stringValue: key),
+                  contains(codingKey) else {
+                continue
+            }
+            if let value = try decodeIfPresent(T.self, forKey: codingKey) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    func decodeDateIfPresent(forKeys keys: [String]) throws -> Date? {
+        if let unix = try decodeIfPresent(Double.self, forKeys: keys) {
+            return Date(timeIntervalSince1970: unix)
+        }
+        if let raw = try decodeIfPresent(String.self, forKeys: keys) {
+            if let date = OpenAICodexUsageClient.iso8601Formatter.date(from: raw) {
+                return date
+            }
+            let fallbackFormatter = ISO8601DateFormatter()
+            if let date = fallbackFormatter.date(from: raw) {
+                return date
+            }
+            if let unix = Double(raw) {
+                return Date(timeIntervalSince1970: unix)
+            }
+        }
+        return nil
+    }
+}
+

@@ -679,7 +679,37 @@ struct AIAgentPoolTests {
 
         #expect(state.accounts.first(where: { $0.id == a })?.usedUnits == 250)
         #expect(state.accounts.first(where: { $0.id == a })?.quota == 1200)
+        #expect(state.accounts.first(where: { $0.id == a })?.usageWindowName == nil)
         #expect(state.accounts.first(where: { $0.id == b })?.usedUnits == 100)
+    }
+
+    @Test
+    func codexSyncStoresUsageWindowMetadata() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let resetAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 85,
+                    quota: 100,
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: resetAt
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].usageWindowName == "primary_window")
+        #expect(state.accounts[0].usageWindowResetAt == resetAt)
     }
 
     @Test

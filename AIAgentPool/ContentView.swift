@@ -336,6 +336,11 @@ struct ContentView: View {
                                         Text(usageSourceLabel(for: account))
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
+                                        if let usageWindowDetail = usageWindowDetailLabel(for: account) {
+                                            Text(usageWindowDetail)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                     Spacer()
                                     Button("重設用量") {
@@ -734,12 +739,16 @@ struct ContentView: View {
                 name: name,
                 quota: usage.quota,
                 usedUnits: usage.usedUnits,
-                chatGPTAccountID: chatGPTAccountID
+                chatGPTAccountID: chatGPTAccountID,
+                usageWindowName: usage.usageWindowName,
+                usageWindowResetAt: usage.usageWindowResetAt
             )
             state.updateAccount(
                 newAccountID,
                 apiToken: accessToken,
-                chatGPTAccountID: chatGPTAccountID
+                chatGPTAccountID: chatGPTAccountID,
+                usageWindowName: usage.usageWindowName,
+                usageWindowResetAt: usage.usageWindowResetAt
             )
             localOAuthImportViewModel.errorMessage = nil
             syncError = nil
@@ -778,6 +787,21 @@ struct ContentView: View {
             return "用量來源：response.used_units / quota"
         }
         return "用量來源：手動/本地設定"
+    }
+
+    private func usageWindowDetailLabel(for account: AgentAccount) -> String? {
+        guard account.chatGPTAccountID != nil else { return nil }
+
+        var segments: [String] = []
+        if let usageWindowName = account.usageWindowName, !usageWindowName.isEmpty {
+            segments.append("視窗：\(usageWindowName)")
+        }
+        if let resetAt = account.usageWindowResetAt {
+            segments.append(
+                "重置：\(resetAt.formatted(.dateTime.month().day().hour().minute()))"
+            )
+        }
+        return segments.isEmpty ? nil : segments.joined(separator: " · ")
     }
 
     private func usageProgressColor(for account: AgentAccount) -> Color {

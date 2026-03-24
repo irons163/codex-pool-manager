@@ -49,7 +49,9 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
                     usedUnits: $0.usedUnits,
                     quota: $0.quota,
                     apiToken: "",
-                    chatGPTAccountID: $0.chatGPTAccountID
+                    chatGPTAccountID: $0.chatGPTAccountID,
+                    usageWindowName: $0.usageWindowName,
+                    usageWindowResetAt: $0.usageWindowResetAt
                 )
             },
             activities: snapshot.activities,

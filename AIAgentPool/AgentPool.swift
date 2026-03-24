@@ -7,6 +7,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var quota: Int
     var apiToken: String
     var chatGPTAccountID: String?
+    var usageWindowName: String?
+    var usageWindowResetAt: Date?
 
     init(
         id: UUID,
@@ -14,7 +16,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         usedUnits: Int,
         quota: Int,
         apiToken: String = "",
-        chatGPTAccountID: String? = nil
+        chatGPTAccountID: String? = nil,
+        usageWindowName: String? = nil,
+        usageWindowResetAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -22,6 +26,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.quota = quota
         self.apiToken = apiToken
         self.chatGPTAccountID = chatGPTAccountID
+        self.usageWindowName = usageWindowName
+        self.usageWindowResetAt = usageWindowResetAt
     }
 
     init(from decoder: Decoder) throws {
@@ -32,6 +38,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         quota = try container.decode(Int.self, forKey: .quota)
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
+        usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)
+        usageWindowResetAt = try container.decodeIfPresent(Date.self, forKey: .usageWindowResetAt)
     }
 
     var remainingUnits: Int {
@@ -338,6 +346,8 @@ struct AccountPoolState {
         quota: Int,
         usedUnits: Int = 0,
         chatGPTAccountID: String? = nil,
+        usageWindowName: String? = nil,
+        usageWindowResetAt: Date? = nil,
         now: Date = .now
     ) -> UUID {
         let normalizedQuota = max(1, quota)
@@ -347,7 +357,9 @@ struct AccountPoolState {
             name: name.isEmpty ? "未命名帳號" : name,
             usedUnits: normalizedUsedUnits,
             quota: normalizedQuota,
-            chatGPTAccountID: chatGPTAccountID
+            chatGPTAccountID: chatGPTAccountID,
+            usageWindowName: usageWindowName,
+            usageWindowResetAt: usageWindowResetAt
         )
         accounts.append(account)
         appendActivity("新增帳號 \(account.name)", now: now)
@@ -383,6 +395,8 @@ struct AccountPoolState {
         usedUnits: Int? = nil,
         apiToken: String? = nil,
         chatGPTAccountID: String? = nil,
+        usageWindowName: String? = nil,
+        usageWindowResetAt: Date? = nil,
         now: Date = .now
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
@@ -401,6 +415,12 @@ struct AccountPoolState {
         }
         if let chatGPTAccountID {
             accounts[index].chatGPTAccountID = chatGPTAccountID
+        }
+        if let usageWindowName {
+            accounts[index].usageWindowName = usageWindowName
+        }
+        if let usageWindowResetAt {
+            accounts[index].usageWindowResetAt = usageWindowResetAt
         }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)
