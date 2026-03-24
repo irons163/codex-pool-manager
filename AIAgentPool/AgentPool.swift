@@ -21,6 +21,12 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     }
 }
 
+struct PoolActivity: Identifiable, Codable, Equatable {
+    let id: UUID
+    let timestamp: Date
+    let message: String
+}
+
 enum SwitchMode: String, CaseIterable, Identifiable, Codable {
     case intelligent = "智能切換"
     case manual = "手動切換"
@@ -64,6 +70,7 @@ struct LowUsageAlertPolicy {
 
 struct AccountPoolSnapshot: Codable, Equatable {
     var accounts: [AgentAccount]
+    var activities: [PoolActivity]
     var mode: SwitchMode
     var activeAccountID: UUID?
     var manualAccountID: UUID?
@@ -75,6 +82,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
 
     init(
         accounts: [AgentAccount],
+        activities: [PoolActivity],
         mode: SwitchMode,
         activeAccountID: UUID?,
         manualAccountID: UUID?,
@@ -85,6 +93,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         lastSwitchAt: Date?
     ) {
         self.accounts = accounts
+        self.activities = activities
         self.mode = mode
         self.activeAccountID = activeAccountID
         self.manualAccountID = manualAccountID
@@ -98,6 +107,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         accounts = try container.decode([AgentAccount].self, forKey: .accounts)
+        activities = try container.decodeIfPresent([PoolActivity].self, forKey: .activities) ?? []
         mode = try container.decode(SwitchMode.self, forKey: .mode)
         activeAccountID = try container.decodeIfPresent(UUID.self, forKey: .activeAccountID)
         manualAccountID = try container.decodeIfPresent(UUID.self, forKey: .manualAccountID)
@@ -111,6 +121,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
 
 struct AccountPoolState {
     private(set) var accounts: [AgentAccount]
+    private(set) var activities: [PoolActivity]
     private(set) var mode: SwitchMode
     private(set) var activeAccountID: UUID?
     private(set) var manualAccountID: UUID?
@@ -130,6 +141,7 @@ struct AccountPoolState {
         minUsageRatioDeltaToSwitch: Double = 0
     ) {
         self.accounts = accounts
+        self.activities = []
         self.mode = mode
         self.activeAccountID = nil
         self.manualAccountID = accounts.first?.id
@@ -142,6 +154,7 @@ struct AccountPoolState {
 
     init(snapshot: AccountPoolSnapshot) {
         self.accounts = snapshot.accounts
+        self.activities = snapshot.activities
         self.mode = snapshot.mode
         self.activeAccountID = snapshot.activeAccountID
         self.manualAccountID = snapshot.manualAccountID
@@ -199,6 +212,7 @@ struct AccountPoolState {
     var snapshot: AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts,
+            activities: activities,
             mode: mode,
             activeAccountID: activeAccountID,
             manualAccountID: manualAccountID,
@@ -332,6 +346,7 @@ struct AccountPoolState {
     mutating func resetUsage(for accountID: UUID, now: Date = .now) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
         accounts[index].usedUnits = 0
+        appendActivity("重設帳號 \(accounts[index].name) 用量", now: now)
         evaluate(now: now)
     }
 
@@ -339,6 +354,7 @@ struct AccountPoolState {
         for index in accounts.indices {
             accounts[index].usedUnits = 0
         }
+        appendActivity("重設全部帳號用量", now: now)
         evaluate(now: now)
     }
 
@@ -421,8 +437,25 @@ struct AccountPoolState {
     private mutating func switchActive(to accountID: UUID, now: Date) {
         let validID = accounts.contains(where: { $0.id == accountID }) ? accountID : accounts[0].id
         if activeAccountID != validID {
+            let previousName = accounts.first(where: { $0.id == activeAccountID })?.name
             activeAccountID = validID
             lastSwitchAt = now
+            let targetName = accounts.first(where: { $0.id == validID })?.name ?? "未知帳號"
+            if let previousName {
+                appendActivity("切換帳號：\(previousName) -> \(targetName)", now: now)
+            } else {
+                appendActivity("切換帳號：\(targetName)", now: now)
+            }
+        }
+    }
+
+    private mutating func appendActivity(_ message: String, now: Date) {
+        activities.insert(
+            PoolActivity(id: UUID(), timestamp: now, message: message),
+            at: 0
+        )
+        if activities.count > 100 {
+            activities.removeLast(activities.count - 100)
         }
     }
 }

@@ -186,6 +186,7 @@ struct AIAgentPoolTests {
         let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let snapshot = AccountPoolSnapshot(
             accounts: [AgentAccount(id: accountID, name: "A", usedUnits: 150, quota: 1000)],
+            activities: [],
             mode: .focus,
             activeAccountID: accountID,
             manualAccountID: accountID,
@@ -529,5 +530,41 @@ struct AIAgentPoolTests {
 
         #expect(state.accounts.allSatisfy { $0.usedUnits == 0 })
         #expect(state.totalUsedUnits == 0)
+    }
+
+    @Test
+    func switchingAccountCreatesActivityLogEntry() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 500, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 100, quota: 1000)
+            ],
+            mode: .intelligent
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+
+        #expect(state.activities.count == 1)
+        #expect(state.activities[0].message.contains("切換"))
+    }
+
+    @Test
+    func activitiesPersistAcrossSnapshotRestore() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 200, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        state.resetUsage(for: a, now: Date(timeIntervalSince1970: 10))
+        let snapshot = state.snapshot
+        let restored = AccountPoolState(snapshot: snapshot)
+
+        #expect(!restored.activities.isEmpty)
+        #expect(restored.activities.contains(where: { $0.message.contains("重設") }))
     }
 }

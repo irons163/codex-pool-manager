@@ -208,6 +208,23 @@ struct ContentView: View {
                     .frame(minHeight: 220)
                 }
             }
+
+            GroupBox("近期活動") {
+                if state.activities.isEmpty {
+                    Text("目前沒有活動紀錄")
+                        .foregroundStyle(.secondary)
+                } else {
+                    List(state.activities.prefix(8)) { activity in
+                        HStack {
+                            Text(activity.timestamp, format: Date.FormatStyle(date: .omitted, time: .standard))
+                                .foregroundStyle(.secondary)
+                            Text(activity.message)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .frame(minHeight: 160)
+                }
+            }
         }
         .padding(20)
         .frame(minWidth: 640, minHeight: 520)
