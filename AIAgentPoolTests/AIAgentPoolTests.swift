@@ -907,6 +907,60 @@ struct AIAgentPoolTests {
         #expect(form.contains("redirect_uri=aiaagentpool%3A%2F%2Foauth%2Fcallback"))
         #expect(form.contains("code_verifier=verifier-123"))
     }
+
+    @Test
+    func localCodexDiscoveryParsesNestedOAuthAccounts() {
+        let json = """
+        {
+          "profiles": [
+            {
+              "name": "Phil",
+              "email": "phil@example.com",
+              "access_token": "sk-local-token-111111"
+            },
+            {
+              "session": {
+                "display_name": "Teammate",
+                "user_email": "team@example.com",
+                "accessToken": "sk-local-token-222222"
+              }
+            }
+          ]
+        }
+        """
+
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 2)
+        #expect(accounts[0].displayName == "Phil")
+        #expect(accounts[1].email == "team@example.com")
+    }
+
+    @Test
+    func localCodexDiscoveryDeduplicatesSameToken() {
+        let json = """
+        {
+          "items": [
+            {
+              "name": "A",
+              "email": "same@example.com",
+              "access_token": "sk-dup-token"
+            },
+            {
+              "name": "B",
+              "email": "same@example.com",
+              "accessToken": "sk-dup-token"
+            }
+          ]
+        }
+        """
+
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 1)
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
