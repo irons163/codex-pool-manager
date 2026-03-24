@@ -160,6 +160,15 @@ struct ContentView: View {
                                     Text(account.maskedToken)
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
+                                    if let chatGPTAccountID = account.chatGPTAccountID {
+                                        Text("Account ID: \(chatGPTAccountID)")
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text("缺少 Account ID，無法查詢用量")
+                                            .font(.footnote)
+                                            .foregroundStyle(.orange)
+                                    }
                                 }
                                 Spacer()
                                 Button("匯入") {
@@ -168,6 +177,7 @@ struct ContentView: View {
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
+                                .disabled(account.chatGPTAccountID == nil)
                             }
                             .padding(.vertical, 4)
                         }
@@ -315,8 +325,18 @@ struct ContentView: View {
                         ForEach(state.accounts) { account in
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    TextField("帳號名稱", text: accountNameBinding(accountID: account.id))
-                                        .textFieldStyle(.roundedBorder)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        TextField("帳號名稱", text: accountNameBinding(accountID: account.id))
+                                            .textFieldStyle(.roundedBorder)
+                                        if let chatGPTAccountID = account.chatGPTAccountID {
+                                            Text("Account ID: \(chatGPTAccountID)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Text(usageSourceLabel(for: account))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                     Spacer()
                                     Button("重設用量") {
                                         state.resetUsage(for: account.id)
@@ -345,7 +365,18 @@ struct ContentView: View {
                                     )
                                 }
 
+                                HStack {
+                                    Text("剩餘 \(account.remainingUnits)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text("\(Int(account.usageRatio * 100))%")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
                                 ProgressView(value: account.usageRatio)
+                                    .tint(usageProgressColor(for: account))
                             }
                             .padding(.vertical, 4)
                         }
@@ -737,6 +768,23 @@ struct ContentView: View {
         }
 
         return CodexSyncError.unknown.localizedDescription
+    }
+
+    private func usageSourceLabel(for account: AgentAccount) -> String {
+        if account.chatGPTAccountID != nil, account.quota == 100 {
+            return "用量來源：response.rate_limit.primary_window.used_percent"
+        }
+        if account.chatGPTAccountID != nil {
+            return "用量來源：response.used_units / quota"
+        }
+        return "用量來源：手動/本地設定"
+    }
+
+    private func usageProgressColor(for account: AgentAccount) -> Color {
+        let ratio = account.usageRatio
+        if ratio >= 0.9 { return .red }
+        if ratio >= 0.7 { return .orange }
+        return .blue
     }
 }
 
