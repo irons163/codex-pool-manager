@@ -125,6 +125,17 @@ struct AccountPoolState {
         evaluate(now: now)
     }
 
+    func canIntelligentSwitch(now: Date = .now) -> Bool {
+        guard mode == .intelligent else { return false }
+        return canSwitch(now: now)
+    }
+
+    func intelligentSwitchCooldownRemaining(now: Date = .now) -> Int {
+        guard mode == .intelligent, let lastSwitchAt else { return 0 }
+        let remaining = minSwitchInterval - now.timeIntervalSince(lastSwitchAt)
+        return max(0, Int(ceil(remaining)))
+    }
+
     mutating func setMode(_ newMode: SwitchMode, now: Date = .now) {
         if mode != newMode {
             mode = newMode

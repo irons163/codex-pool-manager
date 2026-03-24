@@ -238,4 +238,43 @@ struct AIAgentPoolTests {
         #expect(!intelligent)
         #expect(!manual)
     }
+
+    @Test
+    func intelligentModeReportsSwitchCooldownAfterRecentSwitch() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
+            ],
+            mode: .intelligent,
+            minSwitchInterval: 300
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        state.recordUsage(units: 900, now: Date(timeIntervalSince1970: 30))
+
+        #expect(!state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 30)))
+        #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 30)) == 270)
+    }
+
+    @Test
+    func intelligentModeCooldownReachesZeroWhenIntervalElapsed() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
+            ],
+            mode: .intelligent,
+            minSwitchInterval: 300
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+
+        #expect(state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 300)))
+        #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 300)) == 0)
+    }
 }

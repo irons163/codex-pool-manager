@@ -53,6 +53,17 @@ struct ContentView: View {
                         Text("低用量提醒門檻 \(Int(state.lowUsageThresholdRatio * 100))%")
                         Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
                     }
+                    if state.mode == .intelligent {
+                        if state.canIntelligentSwitch() {
+                            Text("目前可切換帳號")
+                                .font(.subheadline)
+                                .foregroundStyle(.green)
+                        } else {
+                            Text("冷卻中，\(state.intelligentSwitchCooldownRemaining()) 秒後可切換")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 
