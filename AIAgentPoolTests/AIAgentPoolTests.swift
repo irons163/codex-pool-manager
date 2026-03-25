@@ -1080,6 +1080,23 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func oauthIDTokenClaimsParserExtractsSubjectAccountAndEmail() throws {
+        let payload = "{\"sub\":\"user-123\",\"account_id\":\"acct-123\",\"email\":\"demo@example.com\"}"
+        let payloadData = try #require(payload.data(using: .utf8))
+        let encodedPayload = payloadData.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let token = "header.\(encodedPayload).sig"
+
+        let claims = try #require(OAuthIDTokenClaimsParser.parse(token))
+
+        #expect(claims.subject == "user-123")
+        #expect(claims.accountID == "acct-123")
+        #expect(claims.email == "demo@example.com")
+    }
+
+    @Test
     func oauthTokenRequestBodyContainsExpectedFields() {
         let body = OAuthTokenRequestBuilder.authorizationCodeBody(
             clientID: "client-123",

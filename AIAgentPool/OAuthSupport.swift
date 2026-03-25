@@ -138,6 +138,39 @@ struct OAuthTokens: Equatable {
     let idToken: String?
 }
 
+struct OAuthIDTokenClaims: Equatable {
+    let subject: String?
+    let accountID: String?
+    let email: String?
+}
+
+enum OAuthIDTokenClaimsParser {
+    static func parse(_ idToken: String?) -> OAuthIDTokenClaims? {
+        guard let idToken, !idToken.isEmpty else { return nil }
+        let segments = idToken.split(separator: ".")
+        guard segments.count >= 2 else { return nil }
+
+        let normalized = segments[1]
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let padded = normalized.padding(
+            toLength: ((normalized.count + 3) / 4) * 4,
+            withPad: "=",
+            startingAt: 0
+        )
+
+        guard let data = Data(base64Encoded: padded),
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+
+        let subject = payload["sub"] as? String
+        let accountID = (payload["account_id"] as? String) ?? (payload["accountId"] as? String)
+        let email = payload["email"] as? String
+        return OAuthIDTokenClaims(subject: subject, accountID: accountID, email: email)
+    }
+}
+
 enum OAuthLoginError: Error, LocalizedError, Equatable {
     case invalidAuthorizeURL
     case invalidRedirectURI

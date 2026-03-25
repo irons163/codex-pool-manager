@@ -675,12 +675,51 @@ struct ContentView: View {
 
         do {
             let tokens = try await OAuthLoginService().signIn(configuration: configuration)
-            let accountName = oauthAccountName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let claims = OAuthIDTokenClaimsParser.parse(tokens.idToken)
+
+            var resolvedAccountID = claims?.accountID ?? claims?.subject
+            var resolvedEmail = claims?.email
+            var resolvedQuota = oauthAccountQuota
+            var resolvedUsedUnits = 0
+            var resolvedWindowName: String?
+            var resolvedWindowResetAt: Date?
+
+            if let accountID = resolvedAccountID, !accountID.isEmpty {
+                do {
+                    let usage = try await OpenAICodexUsageClient().fetchUsage(
+                        accessToken: tokens.accessToken,
+                        accountID: accountID
+                    )
+                    resolvedAccountID = usage.accountID ?? resolvedAccountID
+                    resolvedEmail = usage.accountEmail ?? resolvedEmail
+                    resolvedQuota = usage.quota
+                    resolvedUsedUnits = usage.usedUnits
+                    resolvedWindowName = usage.usageWindowName
+                    resolvedWindowResetAt = usage.usageWindowResetAt
+                } catch {
+                    // Keep account creation flow robust; user can sync again later.
+                }
+            }
+
+            let accountNameInput = oauthAccountName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let accountName = accountNameInput.isEmpty
+                ? (resolvedEmail ?? "OAuth Account")
+                : accountNameInput
+
             let newAccountID = state.addAccount(
-                name: accountName.isEmpty ? "OAuth Account" : accountName,
-                quota: oauthAccountQuota
+                name: accountName,
+                quota: resolvedQuota,
+                usedUnits: resolvedUsedUnits,
+                chatGPTAccountID: resolvedAccountID,
+                usageWindowName: resolvedWindowName,
+                usageWindowResetAt: resolvedWindowResetAt
             )
-            state.updateAccount(newAccountID, apiToken: tokens.accessToken)
+            state.updateAccount(
+                newAccountID,
+                apiToken: tokens.accessToken,
+                chatGPTAccountID: resolvedAccountID,
+                now: .now
+            )
             oauthSuccessMessage = "登入成功，已新增帳號"
             oauthAccountName = ""
             refreshLocalOAuthAccounts()
