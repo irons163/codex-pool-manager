@@ -2106,6 +2106,55 @@ extension AIAgentPoolTests {
 
         #expect(message == "目前帳號剩餘用量偏低。")
     }
+
+    @Test
+    func poolDashboardBackupCoordinatorImportSnapshotStateReturnsFailureForInvalidJSON() {
+        let coordinator = PoolDashboardBackupCoordinator()
+
+        let result = coordinator.importSnapshotState(from: "{ invalid-json }")
+
+        #expect(result.state == nil)
+        #expect(result.errorMessage?.hasPrefix("匯入失敗：") == true)
+    }
+
+    @Test
+    func poolDashboardActionCoordinatorSimulateUsageUsesDefaultUnits50() {
+        let id = UUID()
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: id, name: "A", usedUnits: 0, quota: 100)],
+            mode: .manual
+        )
+        state.selectManualAccount(id)
+        state.evaluate()
+        let coordinator = PoolDashboardActionCoordinator()
+
+        coordinator.simulateUsage(state: &state)
+
+        #expect(state.accounts[0].usedUnits == 50)
+    }
+
+    @Test
+    func poolDashboardViewStateDefaultsMatchExpected() {
+        let viewState = PoolDashboardViewState()
+
+        #expect(viewState.showLowUsageAlert == false)
+        #expect(viewState.isSyncingUsage == false)
+        #expect(viewState.isSigningInOAuth == false)
+        #expect(viewState.backupJSON.isEmpty)
+        #expect(viewState.syncError == nil)
+        #expect(viewState.oauthError == nil)
+        #expect(viewState.lastSwitchLaunchLog.isEmpty)
+    }
+
+    @Test
+    func poolDashboardFormStateDefaultsMatchExpected() {
+        let formState = PoolDashboardFormState()
+
+        #expect(formState.newAccountName.isEmpty)
+        #expect(formState.newAccountQuota == 1000)
+        #expect(formState.oauthAccountName.isEmpty)
+        #expect(formState.oauthAccountQuota == 1000)
+    }
 }
 
 extension AIAgentPoolTests {
