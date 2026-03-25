@@ -31,6 +31,8 @@
 		4AB61EDD2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EDC2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift */; };
 		4AB61EDF2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EDE2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift */; };
 		4AB61EE12F73E9FF001AC4CB /* AccountUsagePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE02F73E9FF001AC4CB /* AccountUsagePanelView.swift */; };
+		4AB61EE32F73EAF7001AC4CB /* ActiveAccountPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE22F73EAF7001AC4CB /* ActiveAccountPanelView.swift */; };
+		4AB61EE52F73EB04001AC4CB /* ActivityLogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,6 +77,8 @@
 		4AB61EDC2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardDataFlowCoordinator.swift; sourceTree = "<group>"; };
 		4AB61EDE2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthFileAccessService.swift; sourceTree = "<group>"; };
 		4AB61EE02F73E9FF001AC4CB /* AccountUsagePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountUsagePanelView.swift; sourceTree = "<group>"; };
+		4AB61EE22F73EAF7001AC4CB /* ActiveAccountPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAccountPanelView.swift; sourceTree = "<group>"; };
+		4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogPanelView.swift; sourceTree = "<group>"; };
 		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -210,6 +214,8 @@
 				4AB61EBF2F73A0BB001AC4CB /* DebugToolsPanelView.swift */,
 				4AB61EC12F73A0BB001AC4CB /* BackupRestorePanelView.swift */,
 				4AB61EE02F73E9FF001AC4CB /* AccountUsagePanelView.swift */,
+				4AB61EE22F73EAF7001AC4CB /* ActiveAccountPanelView.swift */,
+				4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -402,7 +408,9 @@
 				4AB61EDF2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift in Sources */,
 				4AB61EBA2F739E92001AC4CB /* SyncToolbarView.swift in Sources */,
 				4AB61E9D2F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift in Sources */,
+				4AB61EE32F73EAF7001AC4CB /* ActiveAccountPanelView.swift in Sources */,
 				4AB61EB12F739CED001AC4CB /* ContentView.swift in Sources */,
+				4AB61EE52F73EB04001AC4CB /* ActivityLogPanelView.swift in Sources */,
 				4AB61ED92F73E2DE001AC4CB /* CodexAuthSwitchService.swift in Sources */,
 				4AB61E9E2F738FCF001AC4CB /* LocalOAuthImportViewModel.swift in Sources */,
 				4AB61EDB2F73E46A001AC4CB /* PoolDashboardAuthFlowCoordinator.swift in Sources */,

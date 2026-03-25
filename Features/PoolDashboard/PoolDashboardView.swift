@@ -284,48 +284,19 @@ struct PoolDashboardView: View {
                 }
             }
 
-            GroupBox("目前使用帳號") {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let active = state.activeAccount {
-                        HStack {
-                            Text(active.name)
-                                .font(.headline)
-                            Spacer()
-                            Text("剩餘 \(active.remainingUnits)")
-                                .font(.headline)
-                        }
-
-                        ProgressView(value: active.usageRatio)
-
-                        if state.isFocusLockActive {
-                            Text("專注模式鎖定中")
-                                .font(.subheadline)
-                                .foregroundStyle(.blue)
-                        }
-
-                        if state.mode == .focus && state.hasLowUsageWarning {
-                            Text("低剩餘用量提醒：目前帳號剩餘不足 \(Int(state.lowUsageThresholdRatio * 100))%")
-                                .font(.subheadline)
-                                .foregroundStyle(.orange)
-                        }
-
-                        HStack {
-                            Button("模擬使用 +50") {
-                                state.recordUsage(units: 50)
-                            }
-                            .buttonStyle(.borderedProminent)
-
-                            Button("重新評估切換") {
-                                state.evaluate()
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    } else {
-                        Text("目前沒有可用帳號")
-                    }
+            ActiveAccountPanelView(
+                activeAccount: state.activeAccount,
+                mode: state.mode,
+                isFocusLockActive: state.isFocusLockActive,
+                hasLowUsageWarning: state.hasLowUsageWarning,
+                lowUsageThresholdRatio: state.lowUsageThresholdRatio,
+                onSimulateUsage: {
+                    state.recordUsage(units: 50)
+                },
+                onEvaluateSwitch: {
+                    state.evaluate()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            )
 
             AccountUsagePanelView(
                 newAccountName: $newAccountName,
@@ -366,29 +337,12 @@ struct PoolDashboardView: View {
                 }
             )
 
-            GroupBox("近期活動") {
-                if state.activities.isEmpty {
-                    Text("目前沒有活動紀錄")
-                        .foregroundStyle(.secondary)
-                } else {
-                    HStack {
-                        Spacer()
-                        Button("清除活動紀錄", role: .destructive) {
-                            state.clearActivities()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    List(state.activities.prefix(8)) { activity in
-                        HStack {
-                            Text(activity.timestamp, format: Date.FormatStyle(date: .omitted, time: .standard))
-                                .foregroundStyle(.secondary)
-                            Text(activity.message)
-                        }
-                    }
-                    .listStyle(.plain)
-                    .frame(minHeight: 160)
+            ActivityLogPanelView(
+                activities: state.activities,
+                onClearActivities: {
+                    state.clearActivities()
                 }
-            }
+            )
 
             BackupRestorePanelView(
                 backupJSON: $backupJSON,
