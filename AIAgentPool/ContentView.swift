@@ -488,17 +488,32 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
 
+                        Button("匯出（可重抓）") {
+                            do {
+                                backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot, redactSensitive: false)
+                                backupError = nil
+                            } catch {
+                                backupError = "匯出失敗：\(error.localizedDescription)"
+                            }
+                        }
+                        .buttonStyle(.bordered)
+
                         Button("匯入 JSON") {
                             do {
                                 let snapshot = try AccountPoolSnapshotCodec.importJSON(backupJSON)
                                 state = AccountPoolState(snapshot: snapshot)
                                 backupError = nil
+                                Task { await syncCodexUsage() }
                             } catch {
                                 backupError = "匯入失敗：\(error.localizedDescription)"
                             }
                         }
                         .buttonStyle(.borderedProminent)
                     }
+
+                    Text("警告：匯出（可重抓）會包含 access token 與 account id，僅限你自己保管，勿分享。")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
 
                     TextEditor(text: $backupJSON)
                         .font(.system(.body, design: .monospaced))
@@ -881,21 +896,43 @@ struct ContentView: View {
             let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
             let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? name) : name
             let resolvedAccountID = usage.accountID ?? chatGPTAccountID
-            let newAccountID = state.addAccount(
-                name: resolvedName,
-                quota: usage.quota,
-                usedUnits: usage.usedUnits,
+
+            let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
+                in: state.accounts,
                 chatGPTAccountID: resolvedAccountID,
-                usageWindowName: usage.usageWindowName,
-                usageWindowResetAt: usage.usageWindowResetAt
+                accessToken: accessToken,
+                email: normalizedEmail
             )
-            state.updateAccount(
-                newAccountID,
-                apiToken: accessToken,
-                chatGPTAccountID: resolvedAccountID,
-                usageWindowName: usage.usageWindowName,
-                usageWindowResetAt: usage.usageWindowResetAt
-            )
+
+            if let existingAccountID {
+                state.updateAccount(
+                    existingAccountID,
+                    name: resolvedName,
+                    quota: usage.quota,
+                    usedUnits: usage.usedUnits,
+                    apiToken: accessToken,
+                    chatGPTAccountID: resolvedAccountID,
+                    usageWindowName: usage.usageWindowName,
+                    usageWindowResetAt: usage.usageWindowResetAt
+                )
+            } else {
+                let newAccountID = state.addAccount(
+                    name: resolvedName,
+                    quota: usage.quota,
+                    usedUnits: usage.usedUnits,
+                    chatGPTAccountID: resolvedAccountID,
+                    usageWindowName: usage.usageWindowName,
+                    usageWindowResetAt: usage.usageWindowResetAt
+                )
+                state.updateAccount(
+                    newAccountID,
+                    apiToken: accessToken,
+                    chatGPTAccountID: resolvedAccountID,
+                    usageWindowName: usage.usageWindowName,
+                    usageWindowResetAt: usage.usageWindowResetAt
+                )
+            }
+
             localOAuthImportViewModel.errorMessage = nil
             syncError = nil
         } catch {

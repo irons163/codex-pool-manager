@@ -34,8 +34,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
-        usedUnits = try container.decode(Int.self, forKey: .usedUnits)
-        quota = try container.decode(Int.self, forKey: .quota)
+        usedUnits = try container.decodeIfPresent(Int.self, forKey: .usedUnits) ?? 0
+        quota = try container.decodeIfPresent(Int.self, forKey: .quota) ?? 100
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
         usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)

@@ -4,7 +4,6 @@ struct LocalOAuthImportViewModel {
     enum ImportDecision: Equatable {
         case importAccount(name: String, accessToken: String, chatGPTAccountID: String)
         case missingAccountID
-        case duplicate
     }
 
     var accounts: [LocalCodexOAuthAccount] = []
@@ -44,15 +43,12 @@ struct LocalOAuthImportViewModel {
         _ account: LocalCodexOAuthAccount,
         existingAccessTokens: Set<String>
     ) -> ImportDecision {
+        _ = existingAccessTokens
         guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
             errorMessage = "auth.json 缺少 ChatGPT Account ID，無法查詢用量"
             return .missingAccountID
         }
-        if existingAccessTokens.contains(account.accessToken) {
-            errorMessage = "此帳號已在帳號池"
-            return .duplicate
-        }
-
+        // Duplicates are resolved by upsert in ContentView import flow.
         errorMessage = nil
         let name = account.email ?? account.displayName
         return .importAccount(name: name, accessToken: account.accessToken, chatGPTAccountID: chatGPTAccountID)

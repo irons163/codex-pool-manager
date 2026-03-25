@@ -34,14 +34,20 @@ struct LocalOAuthImportViewModelTests {
     }
 
     @Test
-    func prepareImportDuplicateReturnsDuplicateDecision() {
+    func prepareImportDuplicateTokenStillReturnsImportDecisionForUpsert() {
         var viewModel = LocalOAuthImportViewModel()
         let account = sampleAccount(email: "dup@example.com", token: "sk-dup-token")
 
         let decision = viewModel.prepareImport(account, existingAccessTokens: ["sk-dup-token"])
 
-        #expect(decision == .duplicate)
-        #expect(viewModel.errorMessage == "此帳號已在帳號池")
+        #expect(
+            decision == .importAccount(
+                name: "dup@example.com",
+                accessToken: "sk-dup-token",
+                chatGPTAccountID: "account-123"
+            )
+        )
+        #expect(viewModel.errorMessage == nil)
     }
 
     @Test

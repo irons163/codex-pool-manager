@@ -625,6 +625,87 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func snapshotExportOmitsUsageFieldsForRefetchableAccounts() throws {
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: UUID(),
+                    name: "refetch@example.com",
+                    usedUnits: 88,
+                    quota: 777,
+                    apiToken: "token-refetch",
+                    chatGPTAccountID: "acct-refetch",
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
+            ],
+            activities: [],
+            mode: .intelligent,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0.05,
+            lastSwitchAt: nil,
+            lastUsageSyncAt: nil
+        )
+
+        let json = try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
+
+        #expect(!json.contains("\"usedUnits\""))
+        #expect(!json.contains("\"quota\""))
+        #expect(!json.contains("\"usageWindowName\""))
+        #expect(!json.contains("\"usageWindowResetAt\""))
+    }
+
+    @Test
+    func snapshotImportResetsUsageForAccountsThatCanRefetch() throws {
+        let accountID = UUID()
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "refetch@example.com",
+                    usedUnits: 77,
+                    quota: 999,
+                    apiToken: "token-refetch",
+                    chatGPTAccountID: "acct-refetch",
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+                ),
+                AgentAccount(
+                    id: UUID(),
+                    name: "manual",
+                    usedUnits: 20,
+                    quota: 300,
+                    apiToken: "",
+                    chatGPTAccountID: nil
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0.05,
+            lastSwitchAt: nil,
+            lastUsageSyncAt: nil
+        )
+
+        let normalized = AccountPoolSnapshotCodec.prepareForUsageRefetch(snapshot)
+
+        #expect(normalized.accounts[0].usedUnits == 0)
+        #expect(normalized.accounts[0].quota == 100)
+        #expect(normalized.accounts[0].usageWindowName == nil)
+        #expect(normalized.accounts[0].usageWindowResetAt == nil)
+        #expect(normalized.accounts[1].usedUnits == 20)
+        #expect(normalized.accounts[1].quota == 300)
+    }
+
+    @Test
     func snapshotCodecCanEncodeAndDecodeRoundTrip() throws {
         let snapshot = AccountPoolSnapshot(
             accounts: [
@@ -753,6 +834,38 @@ struct AIAgentPoolTests {
 
         #expect(state.accounts[0].usedUnits == 10)
         #expect(state.accounts[0].quota == 1000)
+    }
+
+    @Test
+    func snapshotExportCanIncludeApiTokenForRefetchExport() throws {
+        let token = "sk-test-secret"
+        let accountID = "acct-refetch"
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: UUID(),
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 1000,
+                    apiToken: token,
+                    chatGPTAccountID: accountID
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        let json = try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
+
+        #expect(json.contains(token))
+        #expect(json.contains(accountID))
     }
 
     @Test
