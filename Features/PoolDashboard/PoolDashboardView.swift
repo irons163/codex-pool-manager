@@ -346,52 +346,17 @@ struct PoolDashboardView: View {
         )
     }
 
-    private func loadLocalOAuthAccounts(from url: URL) {
-        sessionAuthorizedAuthFileURL = url
-        localAccountsCoordinator.loadLocalOAuthAccounts(
-            from: url,
-            state: &state,
-            viewModel: &localOAuthImportViewModel,
-            authFileAccessService: authFileAccessService
-        )
-    }
-
-    private func saveAuthFileBookmark(for url: URL) {
-        localAccountsCoordinator.saveAuthFileBookmark(
-            for: url,
-            viewModel: &localOAuthImportViewModel,
-            authFileAccessService: authFileAccessService
-        )
-    }
-
-    @discardableResult
-    private func loadLocalOAuthAccountsFromBookmark() -> Bool {
-        let result = localAccountsCoordinator.loadLocalOAuthAccountsFromBookmark(
-            state: &state,
-            viewModel: &localOAuthImportViewModel,
-            authFileAccessService: authFileAccessService,
-            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
-        )
-        sessionAuthorizedAuthFileURL = result.authorizedURL
-        return result.didLoadAccounts
-    }
-
-    private func hasSavedAuthFileBookmark() -> Bool {
-        localAccountsCoordinator.hasSavedAuthFileBookmark(authFileAccessService: authFileAccessService)
-    }
-
     @MainActor
     @discardableResult
     private func openAuthFilePanel() -> URL? {
-        guard let url = CodexAuthFilePanelService().pickAuthFileURL() else {
-#if !canImport(AppKit)
-            localOAuthImportViewModel.errorMessage = "目前平台不支援檔案面板"
-#endif
+        guard let url = localAccountsCoordinator.openAuthFilePanelAndLoad(
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            authFileAccessService: authFileAccessService
+        ) else {
             return nil
         }
-
-        saveAuthFileBookmark(for: url)
-        loadLocalOAuthAccounts(from: url)
+        sessionAuthorizedAuthFileURL = url
         return url
     }
 

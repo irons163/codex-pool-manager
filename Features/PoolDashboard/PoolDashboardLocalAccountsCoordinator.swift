@@ -94,6 +94,33 @@ struct PoolDashboardLocalAccountsCoordinator {
         authFileAccessService.hasSavedBookmark()
     }
 
+    @MainActor
+    func openAuthFilePanelAndLoad(
+        state: inout AccountPoolState,
+        viewModel: inout LocalOAuthImportViewModel,
+        authFileAccessService: CodexAuthFileAccessService
+    ) -> URL? {
+        guard let url = CodexAuthFilePanelService().pickAuthFileURL() else {
+#if !canImport(AppKit)
+            viewModel.errorMessage = "目前平台不支援檔案面板"
+#endif
+            return nil
+        }
+
+        saveAuthFileBookmark(
+            for: url,
+            viewModel: &viewModel,
+            authFileAccessService: authFileAccessService
+        )
+        loadLocalOAuthAccounts(
+            from: url,
+            state: &state,
+            viewModel: &viewModel,
+            authFileAccessService: authFileAccessService
+        )
+        return url
+    }
+
     func normalizeStoredImportedAccountNames(
         state: inout AccountPoolState,
         localAccounts: [LocalCodexOAuthAccount]
