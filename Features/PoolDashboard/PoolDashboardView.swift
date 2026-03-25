@@ -34,6 +34,7 @@ struct PoolDashboardView: View {
     private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
     private let lifecycleCoordinator = PoolDashboardLifecycleCoordinator()
     private let mutationCoordinator = PoolDashboardMutationCoordinator()
+    private let actionCoordinator = PoolDashboardActionCoordinator()
     private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
     private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
@@ -151,7 +152,7 @@ struct PoolDashboardView: View {
                 resetAllButtonTitle: resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量",
                 onResetAll: {
                     if resetAllLatch.confirmOrArm() {
-                        state.resetAllUsage()
+                        actionCoordinator.resetAllUsage(state: &state)
                     }
                 }
             )
@@ -163,10 +164,10 @@ struct PoolDashboardView: View {
                 hasLowUsageWarning: state.hasLowUsageWarning,
                 lowUsageThresholdRatio: state.lowUsageThresholdRatio,
                 onSimulateUsage: {
-                    state.recordUsage(units: 50)
+                    actionCoordinator.simulateUsage(state: &state)
                 },
                 onEvaluateSwitch: {
-                    state.evaluate()
+                    actionCoordinator.evaluateSwitch(state: &state)
                 }
             )
 
@@ -175,13 +176,13 @@ struct PoolDashboardView: View {
                 newAccountQuota: $newAccountQuota,
                 accounts: state.accounts,
                 onAddAccount: { name, quota in
-                    state.addAccount(name: name, quota: quota)
+                    actionCoordinator.addAccount(state: &state, name: name, quota: quota)
                 },
                 onSwitchAndLaunch: { account in
                     await switchAndLaunchCodex(using: account)
                 },
                 onRemoveAccount: { accountID in
-                    state.removeAccount(accountID)
+                    actionCoordinator.removeAccount(state: &state, accountID: accountID)
                 },
                 accountNameBinding: { accountID in
                     accountBindings.nameBinding(for: accountID)
@@ -212,7 +213,7 @@ struct PoolDashboardView: View {
             ActivityLogPanelView(
                 activities: state.activities,
                 onClearActivities: {
-                    state.clearActivities()
+                    actionCoordinator.clearActivities(state: &state)
                 }
             )
 

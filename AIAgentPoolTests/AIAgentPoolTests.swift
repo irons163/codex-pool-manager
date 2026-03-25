@@ -1974,6 +1974,72 @@ extension AIAgentPoolTests {
         #expect(viewModel.errorMessage == "switch-failed")
         #expect(authorizedURL == expectedURL)
     }
+
+    @Test
+    func poolDashboardActionCoordinatorAddAndRemoveAccount() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        let coordinator = PoolDashboardActionCoordinator()
+
+        coordinator.addAccount(state: &state, name: "Added", quota: 123)
+        let addedID = state.accounts[0].id
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].name == "Added")
+        #expect(state.accounts[0].quota == 123)
+
+        coordinator.removeAccount(state: &state, accountID: addedID)
+        #expect(state.accounts.isEmpty)
+    }
+
+    @Test
+    func poolDashboardActionCoordinatorResetAllUsage() {
+        let a = UUID()
+        let b = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 30, quota: 100),
+                AgentAccount(id: b, name: "B", usedUnits: 50, quota: 100)
+            ],
+            mode: .manual
+        )
+        let coordinator = PoolDashboardActionCoordinator()
+
+        coordinator.resetAllUsage(state: &state)
+
+        #expect(state.accounts[0].usedUnits == 0)
+        #expect(state.accounts[1].usedUnits == 0)
+    }
+
+    @Test
+    func poolDashboardActionCoordinatorSimulateUsageAndEvaluate() {
+        let id = UUID()
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: id, name: "A", usedUnits: 0, quota: 100)],
+            mode: .manual
+        )
+        state.selectManualAccount(id)
+        let coordinator = PoolDashboardActionCoordinator()
+
+        coordinator.evaluateSwitch(state: &state)
+        coordinator.simulateUsage(state: &state, units: 17)
+
+        #expect(state.activeAccount?.id == id)
+        #expect(state.accounts[0].usedUnits == 17)
+    }
+
+    @Test
+    func poolDashboardActionCoordinatorClearActivities() {
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 100)],
+            mode: .manual
+        )
+        state.addActivity("x")
+        #expect(!state.activities.isEmpty)
+        let coordinator = PoolDashboardActionCoordinator()
+
+        coordinator.clearActivities(state: &state)
+
+        #expect(state.activities.isEmpty)
+    }
 }
 
 extension AIAgentPoolTests {
