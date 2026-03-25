@@ -24,10 +24,13 @@ struct ContentView: View {
     @State private var syncError: String?
     @State private var lastUsageRawJSON = ""
     @State private var showUsageRawJSON = false
+    @State private var lastSwitchLaunchLog = ""
+    @State private var showSwitchLaunchLog = false
     @State private var isSigningInOAuth = false
     @State private var oauthError: String?
     @State private var oauthSuccessMessage: String?
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
+    @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -78,21 +81,41 @@ struct ContentView: View {
             }
 
             GroupBox("Debug") {
-                DisclosureGroup("Last Usage Raw JSON", isExpanded: $showUsageRawJSON) {
-                    if lastUsageRawJSON.isEmpty {
-                        Text("尚未捕捉到 usage response")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        TextEditor(text: $lastUsageRawJSON)
-                            .font(.system(.footnote, design: .monospaced))
-                            .frame(minHeight: 120)
-                        HStack {
-                            Button("清除") {
-                                lastUsageRawJSON = ""
+                VStack(alignment: .leading, spacing: 8) {
+                    DisclosureGroup("Last Usage Raw JSON", isExpanded: $showUsageRawJSON) {
+                        if lastUsageRawJSON.isEmpty {
+                            Text("尚未捕捉到 usage response")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            TextEditor(text: $lastUsageRawJSON)
+                                .font(.system(.footnote, design: .monospaced))
+                                .frame(minHeight: 120)
+                            HStack {
+                                Button("清除") {
+                                    lastUsageRawJSON = ""
+                                }
+                                .buttonStyle(.bordered)
+                                Spacer()
                             }
-                            .buttonStyle(.bordered)
-                            Spacer()
+                        }
+                    }
+                    DisclosureGroup("Last Switch Launch Log", isExpanded: $showSwitchLaunchLog) {
+                        if lastSwitchLaunchLog.isEmpty {
+                            Text("尚未執行切換並啟動")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            TextEditor(text: $lastSwitchLaunchLog)
+                                .font(.system(.footnote, design: .monospaced))
+                                .frame(minHeight: 120)
+                            HStack {
+                                Button("清除") {
+                                    lastSwitchLaunchLog = ""
+                                }
+                                .buttonStyle(.bordered)
+                                Spacer()
+                            }
                         }
                     }
                 }
@@ -366,6 +389,12 @@ struct ContentView: View {
                                         }
                                     }
                                     Spacer()
+                                    Button("切換並啟動") {
+                                        Task {
+                                            await switchAndLaunchCodex(using: account)
+                                        }
+                                    }
+                                    .buttonStyle(.borderedProminent)
                                     Button("刪除", role: .destructive) {
                                         state.removeAccount(account.id)
                                     }
@@ -661,6 +690,7 @@ struct ContentView: View {
     }
 
     private func loadLocalOAuthAccounts(from url: URL) {
+        sessionAuthorizedAuthFileURL = url
         let hasSecurityScope = url.startAccessingSecurityScopedResource()
         defer {
             if hasSecurityScope {
@@ -705,6 +735,7 @@ struct ContentView: View {
             if isStale {
                 saveAuthFileBookmark(for: url)
             }
+            sessionAuthorizedAuthFileURL = url
             loadLocalOAuthAccounts(from: url)
             return !localOAuthImportViewModel.accounts.isEmpty
         } catch {
@@ -718,7 +749,8 @@ struct ContentView: View {
     }
 
     @MainActor
-    private func openAuthFilePanel() {
+    @discardableResult
+    private func openAuthFilePanel() -> Bool {
 #if canImport(AppKit)
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -735,9 +767,12 @@ struct ContentView: View {
         if panel.runModal() == .OK, let url = panel.url {
             saveAuthFileBookmark(for: url)
             loadLocalOAuthAccounts(from: url)
+            return true
         }
+        return false
 #else
         localOAuthImportViewModel.errorMessage = "目前平台不支援檔案面板"
+        return false
 #endif
     }
 
@@ -864,6 +899,208 @@ struct ContentView: View {
             let improvedName = localAccount.email ?? localAccount.displayName
             guard !improvedName.isEmpty, improvedName != persisted.name else { continue }
             state.updateAccount(persisted.id, name: improvedName)
+        }
+    }
+
+    @MainActor
+    private func switchAndLaunchCodex(using account: AgentAccount) async {
+        lastSwitchLaunchLog = "開始切換：\(account.name)\n"
+        guard !account.apiToken.isEmpty else {
+            localOAuthImportViewModel.errorMessage = "此帳號沒有可用 token，無法切換"
+            appendSwitchLaunchLog("失敗：沒有 token")
+            return
+        }
+        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+            localOAuthImportViewModel.errorMessage = "此帳號缺少 Account ID，無法切換"
+            appendSwitchLaunchLog("失敗：沒有 account_id")
+            return
+        }
+
+        do {
+            try await performSwitchAndLaunch(
+                account: account,
+                chatGPTAccountID: chatGPTAccountID
+            )
+            return
+        } catch let error as NSError where error.domain == "CodexSwitch" && error.code == 1 {
+            appendSwitchLaunchLog("尚未授權 auth.json，啟動選檔流程")
+            let didAuthorize = openAuthFilePanel()
+
+            guard didAuthorize else {
+                appendSwitchLaunchLog("使用者未完成 auth.json 授權")
+                localOAuthImportViewModel.errorMessage = "請先完成 auth.json 授權，才能切換並啟動"
+                return
+            }
+
+            do {
+                appendSwitchLaunchLog("已取得授權，重試切換")
+                try await performSwitchAndLaunch(
+                    account: account,
+                    chatGPTAccountID: chatGPTAccountID
+                )
+                return
+            } catch {
+                appendSwitchLaunchLog("重試失敗：\(error.localizedDescription)")
+                localOAuthImportViewModel.errorMessage = "切換失敗：\(error.localizedDescription)"
+                return
+            }
+        } catch {
+            appendSwitchLaunchLog("錯誤：\(error.localizedDescription)")
+            localOAuthImportViewModel.errorMessage = "切換失敗：\(error.localizedDescription)"
+        }
+    }
+
+    @MainActor
+    private func performSwitchAndLaunch(account: AgentAccount, chatGPTAccountID: String) async throws {
+        do {
+            let authFileURL = try resolveAuthFileURLForSwitch()
+            appendSwitchLaunchLog("使用 auth.json：\(authFileURL.path)")
+            let hasSecurityScope = authFileURL.startAccessingSecurityScopedResource()
+            defer {
+                if hasSecurityScope {
+                    authFileURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let originalData = try Data(contentsOf: authFileURL)
+            let rewrittenData = try CodexAuthFileSwitcher.rewriteAuthJSON(
+                originalData,
+                accessToken: account.apiToken,
+                accountID: chatGPTAccountID,
+                email: account.name.contains("@") ? account.name : nil
+            )
+            try rewrittenData.write(to: authFileURL, options: .atomic)
+            appendSwitchLaunchLog("auth.json 已改寫")
+
+            try await relaunchCodexApp()
+            appendSwitchLaunchLog("啟動完成")
+            localOAuthImportViewModel.errorMessage = nil
+        } catch {
+            throw error
+        }
+    }
+
+    private func resolveAuthFileURLForSwitch() throws -> URL {
+        if let sessionAuthorizedAuthFileURL {
+            return sessionAuthorizedAuthFileURL
+        }
+
+        if let bookmark = UserDefaults.standard.data(forKey: Self.codexAuthBookmarkKey) {
+            var isStale = false
+            let url = try URL(
+                resolvingBookmarkData: bookmark,
+                options: [.withSecurityScope],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            )
+            if isStale {
+                saveAuthFileBookmark(for: url)
+            }
+            sessionAuthorizedAuthFileURL = url
+            return url
+        }
+
+        let fallback = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex/auth.json")
+        if FileManager.default.fileExists(atPath: fallback.path) {
+            return fallback
+        }
+
+        throw NSError(
+            domain: "CodexSwitch",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "找不到 auth.json，請先按「選擇 auth.json」授權"]
+        )
+    }
+
+    private func relaunchCodexApp() async throws {
+#if canImport(AppKit)
+        let workspace = NSWorkspace.shared
+
+        let running = workspace.runningApplications
+        appendSwitchLaunchLog("目前執行中 app 數量：\(running.count)")
+
+        if let existing = running.first(where: { ($0.bundleIdentifier ?? "") == "com.openai.chatgpt" }) {
+            appendSwitchLaunchLog("命中已開啟：com.openai.chatgpt，嘗試前景化")
+            _ = existing.activate(options: [.activateIgnoringOtherApps])
+            return
+        }
+        if let existing = running.first(where: { ($0.bundleIdentifier ?? "") == "com.openai.codex" }) {
+            appendSwitchLaunchLog("命中已開啟：com.openai.codex，嘗試前景化")
+            _ = existing.activate(options: [.activateIgnoringOtherApps])
+            return
+        }
+
+        if try await launchApp(bundleIdentifier: "com.openai.chatgpt") {
+            appendSwitchLaunchLog("啟動成功：com.openai.chatgpt")
+            return
+        }
+        appendSwitchLaunchLog("找不到或啟動失敗：com.openai.chatgpt")
+        if try await launchApp(bundleIdentifier: "com.openai.codex") {
+            appendSwitchLaunchLog("啟動成功：com.openai.codex")
+            return
+        }
+        appendSwitchLaunchLog("找不到或啟動失敗：com.openai.codex")
+        if try await launchApp(at: URL(fileURLWithPath: "/Applications/ChatGPT.app")) {
+            appendSwitchLaunchLog("啟動成功：/Applications/ChatGPT.app")
+            return
+        }
+        appendSwitchLaunchLog("找不到或啟動失敗：/Applications/ChatGPT.app")
+        if try await launchApp(at: URL(fileURLWithPath: "/Applications/Codex.app")) {
+            appendSwitchLaunchLog("啟動成功：/Applications/Codex.app")
+            return
+        }
+        appendSwitchLaunchLog("找不到或啟動失敗：/Applications/Codex.app")
+
+        throw NSError(
+            domain: "CodexSwitch",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "已切換 auth.json，但找不到可啟動的 Codex/ChatGPT App"]
+        )
+#else
+        throw NSError(
+            domain: "CodexSwitch",
+            code: 3,
+            userInfo: [NSLocalizedDescriptionKey: "目前平台不支援啟動 Codex App"]
+        )
+#endif
+    }
+
+    private func launchApp(bundleIdentifier: String) async throws -> Bool {
+#if canImport(AppKit)
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            return false
+        }
+        appendSwitchLaunchLog("找到 bundle id \(bundleIdentifier) -> \(url.path)")
+        return try await launchApp(at: url)
+#else
+        return false
+#endif
+    }
+
+    private func launchApp(at url: URL) async throws -> Bool {
+#if canImport(AppKit)
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        return try await withCheckedThrowingContinuation { continuation in
+            NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: true)
+                }
+            }
+        }
+#else
+        return false
+#endif
+    }
+
+    private func appendSwitchLaunchLog(_ line: String) {
+        if lastSwitchLaunchLog.isEmpty {
+            lastSwitchLaunchLog = line
+        } else {
+            lastSwitchLaunchLog += "\n\(line)"
         }
     }
 }

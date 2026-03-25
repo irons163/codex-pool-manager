@@ -1128,6 +1128,56 @@ struct AIAgentPoolTests {
         #expect(accounts[0].displayName == "Deep User")
         #expect(accounts[0].chatGPTAccountID == "acct-deep")
     }
+
+    @Test
+    func codexAuthFileSwitcherRewritesKnownFieldsInNestedJSON() throws {
+        let json = """
+        {
+          "session": {
+            "access_token": "old-token",
+            "profile": {
+              "email": "old@example.com"
+            },
+            "account_id": "old-account"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "new-token",
+            accountID: "new-account",
+            email: "new@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let session = try #require(object["session"] as? [String: Any])
+        let profile = try #require(session["profile"] as? [String: Any])
+
+        #expect(session["access_token"] as? String == "new-token")
+        #expect(session["account_id"] as? String == "new-account")
+        #expect(profile["email"] as? String == "new@example.com")
+    }
+
+    @Test
+    func codexAuthFileSwitcherAddsFieldsWhenMissing() throws {
+        let json = """
+        {
+          "plan_type": "free"
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "added-token",
+            accountID: "added-account",
+            email: "added@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+
+        #expect(object["access_token"] as? String == "added-token")
+        #expect(object["account_id"] as? String == "added-account")
+        #expect(object["email"] as? String == "added@example.com")
+    }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
