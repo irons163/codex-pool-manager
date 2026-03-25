@@ -2076,6 +2076,36 @@ extension AIAgentPoolTests {
 
         #expect(state.activities.isEmpty)
     }
+
+    @Test
+    func poolDashboardAlertPresenterBuildsLowUsageMessageForActiveAccount() {
+        let presenter = PoolDashboardAlertPresenter()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Codex A",
+            usedUnits: 90,
+            quota: 100
+        )
+
+        let message = presenter.lowUsageAlertMessage(
+            activeAccount: account,
+            thresholdRatio: 0.15
+        )
+
+        #expect(message == "Codex A 剩餘 10，已低於 15% 門檻。")
+    }
+
+    @Test
+    func poolDashboardAlertPresenterBuildsFallbackMessageWhenNoActiveAccount() {
+        let presenter = PoolDashboardAlertPresenter()
+
+        let message = presenter.lowUsageAlertMessage(
+            activeAccount: nil,
+            thresholdRatio: 0.15
+        )
+
+        #expect(message == "目前帳號剩餘用量偏低。")
+    }
 }
 
 extension AIAgentPoolTests {

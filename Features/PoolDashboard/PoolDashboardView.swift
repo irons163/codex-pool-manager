@@ -25,6 +25,7 @@ struct PoolDashboardView: View {
     private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
     private let usagePresenter = PoolAccountUsagePresenter()
+    private let alertPresenter = PoolDashboardAlertPresenter()
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -236,11 +237,12 @@ struct PoolDashboardView: View {
         .alert("低剩餘用量提醒", isPresented: $viewState.showLowUsageAlert) {
             Button("知道了", role: .cancel) { }
         } message: {
-            if let active = state.activeAccount {
-                Text("\(active.name) 剩餘 \(active.remainingUnits)，已低於 \(Int(state.lowUsageThresholdRatio * 100))% 門檻。")
-            } else {
-                Text("目前帳號剩餘用量偏低。")
-            }
+            Text(
+                alertPresenter.lowUsageAlertMessage(
+                    activeAccount: state.activeAccount,
+                    thresholdRatio: state.lowUsageThresholdRatio
+                )
+            )
         }
     }
 
