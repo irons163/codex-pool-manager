@@ -2307,4 +2307,121 @@ extension AIAgentPoolTests {
         #expect(!second)
     }
 
+    @Test
+    func poolDashboardMutationCoordinatorApplySyncOutputUpdatesStateAndRawAndError() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        let accountID = UUID()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var lastUsageRawJSON = ""
+        var syncError: String? = nil
+        let output = PoolDashboardRuntimeCoordinator.SyncOutput(
+            state: AccountPoolState(
+                accounts: [AgentAccount(id: accountID, name: "Synced", usedUnits: 10, quota: 100)],
+                mode: .manual
+            ),
+            syncError: "同步失敗：x",
+            lastUsageRawJSON: "{\"ok\":true}"
+        )
+
+        coordinator.applySyncOutput(
+            output,
+            state: &state,
+            lastUsageRawJSON: &lastUsageRawJSON,
+            syncError: &syncError
+        )
+
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].name == "Synced")
+        #expect(lastUsageRawJSON == "{\"ok\":true}")
+        #expect(syncError == "同步失敗：x")
+    }
+
+    @Test
+    func poolDashboardMutationCoordinatorApplyOAuthOutputReturnsRefreshFlagAndWritesFields() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var oauthError: String? = nil
+        var oauthSuccessMessage: String? = nil
+        var oauthAccountName = "old"
+        let output = PoolDashboardRuntimeCoordinator.OAuthSignInOutput(
+            state: AccountPoolState(
+                accounts: [AgentAccount(id: UUID(), name: "OAuth", usedUnits: 0, quota: 100)],
+                mode: .manual
+            ),
+            oauthError: nil,
+            oauthSuccessMessage: "success",
+            nextOAuthAccountName: "",
+            shouldRefreshLocalOAuthAccounts: true
+        )
+
+        let shouldRefresh = coordinator.applyOAuthOutput(
+            output,
+            state: &state,
+            oauthError: &oauthError,
+            oauthSuccessMessage: &oauthSuccessMessage,
+            oauthAccountName: &oauthAccountName
+        )
+
+        #expect(shouldRefresh)
+        #expect(state.accounts.count == 1)
+        #expect(oauthError == nil)
+        #expect(oauthSuccessMessage == "success")
+        #expect(oauthAccountName == "")
+    }
+
+    @Test
+    func poolDashboardMutationCoordinatorApplyLocalImportOutputClearsSyncErrorWhenImported() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewModel = LocalOAuthImportViewModel()
+        var syncError: String? = "舊錯誤"
+        let output = PoolDashboardLocalImportCoordinator.Output(
+            state: AccountPoolState(
+                accounts: [AgentAccount(id: UUID(), name: "Imported", usedUnits: 1, quota: 100)],
+                mode: .manual
+            ),
+            viewModel: {
+                var vm = LocalOAuthImportViewModel()
+                vm.errorMessage = nil
+                return vm
+            }(),
+            didImport: true
+        )
+
+        coordinator.applyLocalImportOutput(
+            output,
+            state: &state,
+            viewModel: &viewModel,
+            syncError: &syncError
+        )
+
+        #expect(state.accounts.count == 1)
+        #expect(syncError == nil)
+    }
+
+    @Test
+    func poolDashboardMutationCoordinatorApplySwitchOutputWritesLogErrorAndSessionURL() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var viewModel = LocalOAuthImportViewModel()
+        var log = ""
+        var url: URL? = nil
+        let expectedURL = URL(string: "file:///tmp/auth.json")
+        let output = PoolDashboardSwitchLaunchCoordinator.Output(
+            switchLaunchLog: "log-line",
+            errorMessage: "err",
+            sessionAuthorizedAuthFileURL: expectedURL
+        )
+
+        coordinator.applySwitchOutput(
+            output,
+            viewModel: &viewModel,
+            lastSwitchLaunchLog: &log,
+            sessionAuthorizedAuthFileURL: &url
+        )
+
+        #expect(log == "log-line")
+        #expect(viewModel.errorMessage == "err")
+        #expect(url == expectedURL)
+    }
+
 }

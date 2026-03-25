@@ -47,6 +47,7 @@
 		4AB61EFF2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EFE2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift */; };
 		4AB61F012F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */; };
 		4AB61F132F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */; };
+		4AB61F152F741395001AC4CB /* PoolDashboardMutationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,6 +108,7 @@
 		4AB61EFE2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardRuntimeCoordinator.swift; sourceTree = "<group>"; };
 		4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardBackupCoordinator.swift; sourceTree = "<group>"; };
 		4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLifecycleCoordinator.swift; sourceTree = "<group>"; };
+		4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardMutationCoordinator.swift; sourceTree = "<group>"; };
 		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -232,6 +234,7 @@
 				4AB61EFE2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift */,
 				4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */,
 				4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */,
+				4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */,
 			);
 			path = PoolDashboard;
 			sourceTree = "<group>";
@@ -454,6 +457,7 @@
 				4AB61EB52F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift in Sources */,
 				4AB61EE72F73ECBA001AC4CB /* OAuthLoginPanelView.swift in Sources */,
 				4AB61E9A2F738FCF001AC4CB /* CodexUsageSyncService.swift in Sources */,
+				4AB61F152F741395001AC4CB /* PoolDashboardMutationCoordinator.swift in Sources */,
 				4AB61EEF2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift in Sources */,
 				4AB61ED72F73A98B001AC4CB /* PoolAccountUpsertCoordinator.swift in Sources */,
 				4AB61E9B2F738FCF001AC4CB /* PoolDashboardView.swift in Sources */,

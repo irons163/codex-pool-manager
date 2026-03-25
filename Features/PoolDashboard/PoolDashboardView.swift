@@ -33,6 +33,7 @@ struct PoolDashboardView: View {
     private let backupCoordinator = PoolDashboardBackupCoordinator()
     private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
     private let lifecycleCoordinator = PoolDashboardLifecycleCoordinator()
+    private let mutationCoordinator = PoolDashboardMutationCoordinator()
     private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
     private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
@@ -299,11 +300,12 @@ struct PoolDashboardView: View {
         defer { isSyncingUsage = false }
 
         let output = await runtimeCoordinator.syncCodexUsage(from: state)
-        state = output.state
-        if let rawResponse = output.lastUsageRawJSON {
-            lastUsageRawJSON = rawResponse
-        }
-        syncError = output.syncError
+        mutationCoordinator.applySyncOutput(
+            output,
+            state: &state,
+            lastUsageRawJSON: &lastUsageRawJSON,
+            syncError: &syncError
+        )
     }
 
     @MainActor
@@ -328,11 +330,14 @@ struct PoolDashboardView: View {
                 fallbackQuota: oauthAccountQuota
             )
         )
-        state = output.state
-        oauthError = output.oauthError
-        oauthSuccessMessage = output.oauthSuccessMessage
-        oauthAccountName = output.nextOAuthAccountName
-        if output.shouldRefreshLocalOAuthAccounts {
+        let shouldRefresh = mutationCoordinator.applyOAuthOutput(
+            output,
+            state: &state,
+            oauthError: &oauthError,
+            oauthSuccessMessage: &oauthSuccessMessage,
+            oauthAccountName: &oauthAccountName
+        )
+        if shouldRefresh {
             refreshLocalOAuthAccounts()
         }
     }
@@ -370,11 +375,12 @@ struct PoolDashboardView: View {
                 lastUsageRawJSON = raw
             }
         )
-        state = output.state
-        localOAuthImportViewModel = output.viewModel
-        if output.didImport {
-            syncError = nil
-        }
+        mutationCoordinator.applyLocalImportOutput(
+            output,
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            syncError: &syncError
+        )
     }
 
     @MainActor
@@ -387,9 +393,12 @@ struct PoolDashboardView: View {
                 openAuthFilePanel()
             }
         )
-        lastSwitchLaunchLog = output.switchLaunchLog
-        localOAuthImportViewModel.errorMessage = output.errorMessage
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+        mutationCoordinator.applySwitchOutput(
+            output,
+            viewModel: &localOAuthImportViewModel,
+            lastSwitchLaunchLog: &lastSwitchLaunchLog,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
     }
 }
 
