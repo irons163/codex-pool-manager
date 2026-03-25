@@ -45,6 +45,8 @@
 		4AB61EFB2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EFA2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift */; };
 		4AB61EFD2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EFC2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift */; };
 		4AB61EFF2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EFE2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift */; };
+		4AB61F012F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */; };
+		4AB61F132F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +105,8 @@
 		4AB61EFA2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardAccountBindingAdapter.swift; sourceTree = "<group>"; };
 		4AB61EFC2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardStrategyBindingAdapter.swift; sourceTree = "<group>"; };
 		4AB61EFE2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardRuntimeCoordinator.swift; sourceTree = "<group>"; };
+		4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardBackupCoordinator.swift; sourceTree = "<group>"; };
+		4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLifecycleCoordinator.swift; sourceTree = "<group>"; };
 		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -226,6 +230,8 @@
 				4AB61EFA2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift */,
 				4AB61EFC2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift */,
 				4AB61EFE2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift */,
+				4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */,
+				4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */,
 			);
 			path = PoolDashboard;
 			sourceTree = "<group>";
@@ -427,7 +433,9 @@
 			files = (
 				4AB61EBE2F739F12001AC4CB /* PoolDashboardTheme.swift in Sources */,
 				4AB61EB82F739E92001AC4CB /* DashboardHeaderSectionView.swift in Sources */,
+				4AB61F132F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift in Sources */,
 				4AB61EEB2F73ED9E001AC4CB /* StrategySettingsPanelView.swift in Sources */,
+				4AB61F012F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift in Sources */,
 				4AB61E942F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift in Sources */,
 				4AB61EE12F73E9FF001AC4CB /* AccountUsagePanelView.swift in Sources */,
 				4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */,

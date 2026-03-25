@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import AIAgentPool
 
@@ -1464,6 +1465,355 @@ struct AIAgentPoolTests {
 extension AIAgentPoolTests {
 
     @Test
+    func poolDashboardBackupCoordinatorExportSnapshotRedactsToken() throws {
+        let coordinator = PoolDashboardBackupCoordinator()
+        let accountID = UUID()
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Redact Me",
+                    usedUnits: 44,
+                    quota: 100,
+                    apiToken: "token-secret",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        let exported = try #require(coordinator.exportSnapshot(from: snapshot).json)
+        let object = try #require(JSONSerialization.jsonObject(with: Data(exported.utf8)) as? [String: Any])
+        let accounts = try #require(object["accounts"] as? [[String: Any]])
+        let first = try #require(accounts.first)
+
+        #expect(first["apiToken"] as? String == "")
+        #expect(first["quota"] as? Int == 100)
+        #expect(first["usedUnits"] as? Int == 44)
+    }
+
+    @Test
+    func poolDashboardBackupCoordinatorExportRefetchableKeepsTokenAndDropsUsageFields() throws {
+        let coordinator = PoolDashboardBackupCoordinator()
+        let accountID = UUID()
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Refetch",
+                    usedUnits: 88,
+                    quota: 100,
+                    apiToken: "token-keep",
+                    chatGPTAccountID: "acct-2",
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        let exported = try #require(coordinator.exportRefetchableSnapshot(from: snapshot).json)
+        let object = try #require(JSONSerialization.jsonObject(with: Data(exported.utf8)) as? [String: Any])
+        let accounts = try #require(object["accounts"] as? [[String: Any]])
+        let first = try #require(accounts.first)
+
+        #expect(first["apiToken"] as? String == "token-keep")
+        #expect(first["quota"] == nil)
+        #expect(first["usedUnits"] == nil)
+        #expect(first["usageWindowName"] == nil)
+        #expect(first["usageWindowResetAt"] == nil)
+    }
+
+    @Test
+    func poolDashboardBackupCoordinatorImportNormalizesRefetchableUsage() throws {
+        let coordinator = PoolDashboardBackupCoordinator()
+        let accountID = UUID()
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Import",
+                    usedUnits: 99,
+                    quota: 1000,
+                    apiToken: "token-import",
+                    chatGPTAccountID: "acct-import",
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+        let json = try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
+
+        let importedState = try #require(coordinator.importSnapshotState(from: json).state)
+        let importedAccount = try #require(importedState.accounts.first)
+
+        #expect(importedAccount.usedUnits == 0)
+        #expect(importedAccount.quota == 100)
+        #expect(importedAccount.apiToken == "token-import")
+        #expect(importedAccount.chatGPTAccountID == "acct-import")
+        #expect(importedAccount.usageWindowName == nil)
+    }
+
+    @Test
+    func poolAccountUsagePresenterLabelsForPercentUsageAccount() {
+        let presenter = PoolAccountUsagePresenter()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Percent",
+            usedUnits: 11,
+            quota: 100,
+            apiToken: "token",
+            chatGPTAccountID: "acct-1"
+        )
+
+        #expect(presenter.isPercentUsageAccount(account))
+        #expect(presenter.usageSourceLabel(for: account) == "用量來源：response.rate_limit.primary_window.used_percent")
+        #expect(presenter.remainingLabel(for: account) == "剩餘 89%")
+    }
+
+    @Test
+    func poolAccountUsagePresenterLabelsForLocalAccount() {
+        let presenter = PoolAccountUsagePresenter()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Local",
+            usedUnits: 12,
+            quota: 1000,
+            apiToken: nil,
+            chatGPTAccountID: nil
+        )
+
+        #expect(!presenter.isPercentUsageAccount(account))
+        #expect(presenter.usageSourceLabel(for: account) == "用量來源：手動/本地設定")
+        #expect(presenter.usageWindowDetailLabel(for: account) == nil)
+        #expect(presenter.remainingLabel(for: account) == "剩餘 988")
+    }
+
+    @Test
+    func poolAccountUsagePresenterBuildsUsageWindowDetail() {
+        let presenter = PoolAccountUsagePresenter()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Window",
+            usedUnits: 20,
+            quota: 100,
+            apiToken: "token",
+            chatGPTAccountID: "acct",
+            usageWindowName: "primary_window",
+            usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+
+        let label = presenter.usageWindowDetailLabel(for: account)
+
+        #expect(label?.contains("視窗：primary_window") == true)
+        #expect(label?.contains("重置：") == true)
+    }
+
+    @Test
+    func poolDashboardAccountBindingAdapterUpdatesNameAndQuotaAndUsed() {
+        let id = UUID()
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: id, name: "Old", usedUnits: 10, quota: 100)],
+            mode: .manual
+        )
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardAccountBindingAdapter(state: binding)
+
+        adapter.nameBinding(for: id).wrappedValue = "New"
+        adapter.quotaBinding(for: id).wrappedValue = 200
+        adapter.usedBinding(for: id).wrappedValue = 25
+
+        #expect(state.accounts.first?.name == "New")
+        #expect(state.accounts.first?.quota == 200)
+        #expect(state.accounts.first?.usedUnits == 25)
+    }
+
+    @Test
+    func poolDashboardAccountBindingAdapterReturnsDefaultsForMissingAccount() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardAccountBindingAdapter(state: binding)
+        let unknownID = UUID()
+
+        #expect(adapter.nameBinding(for: unknownID).wrappedValue == "")
+        #expect(adapter.quotaBinding(for: unknownID).wrappedValue == 100)
+        #expect(adapter.usedBinding(for: unknownID).wrappedValue == 0)
+    }
+
+    @Test
+    func poolDashboardStrategyBindingAdapterUpdatesStateViaBindings() {
+        let id = UUID()
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: id, name: "A", usedUnits: 0, quota: 100)],
+            mode: .manual,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0.05
+        )
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardStrategyBindingAdapter(state: binding)
+
+        adapter.mode.wrappedValue = .focus
+        adapter.manualSelection.wrappedValue = id
+        adapter.minSwitchInterval.wrappedValue = 420
+        adapter.lowThreshold.wrappedValue = 0.2
+        adapter.minUsageDelta.wrappedValue = 0.1
+
+        #expect(state.mode == .focus)
+        #expect(state.manualAccountID == id)
+        #expect(state.minSwitchInterval == 420)
+        #expect(state.lowUsageThresholdRatio == 0.2)
+        #expect(state.minUsageRatioDeltaToSwitch == 0.1)
+    }
+
+    @Test
+    func poolDashboardStrategyBindingAdapterManualSelectionFallsBackToFirstAccount() {
+        let firstID = UUID()
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: firstID, name: "First", usedUnits: 0, quota: 100)],
+            mode: .manual
+        )
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardStrategyBindingAdapter(state: binding)
+
+        #expect(adapter.manualSelection.wrappedValue == firstID)
+    }
+
+    @Test
+    func poolDashboardBackupCoordinatorImportSnapshotStateReturnsFailureOnInvalidJSON() {
+        let coordinator = PoolDashboardBackupCoordinator()
+
+        let result = coordinator.importSnapshotState(from: "{invalid-json")
+
+        #expect(result.state == nil)
+        #expect(result.errorMessage?.hasPrefix("匯入失敗：") == true)
+    }
+
+    @Test
+    func poolAccountUsagePresenterProgressColorThresholds() {
+        let presenter = PoolAccountUsagePresenter()
+        let low = AgentAccount(id: UUID(), name: "Low", usedUnits: 10, quota: 100)
+        let medium = AgentAccount(id: UUID(), name: "Medium", usedUnits: 75, quota: 100)
+        let high = AgentAccount(id: UUID(), name: "High", usedUnits: 95, quota: 100)
+
+        #expect(presenter.usageProgressColor(for: low) == .blue)
+        #expect(presenter.usageProgressColor(for: medium) == .orange)
+        #expect(presenter.usageProgressColor(for: high) == .red)
+    }
+
+    @Test
+    func poolDashboardSwitchLaunchCoordinatorReturnsErrorWhenAccountHasNoToken() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "NoToken",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "",
+            chatGPTAccountID: "acct-1"
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: account,
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "test_no_token"),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.errorMessage == "此帳號沒有可用 token，無法切換")
+        #expect(output.switchLaunchLog.contains("失敗：沒有 token"))
+    }
+
+    @Test
+    func poolDashboardSwitchLaunchCoordinatorReturnsErrorWhenAccountMissingAccountID() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "NoAccountID",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "token-ok",
+            chatGPTAccountID: nil
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: account,
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "test_no_account_id"),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.errorMessage == "此帳號缺少 Account ID，無法切換")
+        #expect(output.switchLaunchLog.contains("失敗：沒有 account_id"))
+    }
+
+    @Test
+    func poolDashboardRuntimeCoordinatorOAuthReturnsErrorForInvalidIssuer() async {
+        let coordinator = PoolDashboardRuntimeCoordinator()
+        let state = AccountPoolState(accounts: [], mode: .manual)
+
+        let output = await coordinator.signInWithOAuth(
+            from: state,
+            input: .init(
+                issuer: "not-a-valid-url",
+                clientID: "client",
+                scopes: "openid profile email",
+                redirectURI: "http://localhost:1455/auth/callback",
+                originator: "codex_cli_rs",
+                workspaceID: "",
+                accountNameInput: "Name",
+                fallbackQuota: 1000
+            )
+        )
+
+        #expect(output.state.accounts.isEmpty)
+        #expect(output.oauthSuccessMessage == nil)
+        #expect(output.oauthError != nil)
+        #expect(output.nextOAuthAccountName == "Name")
+        #expect(output.shouldRefreshLocalOAuthAccounts == false)
+    }
+}
+
+extension AIAgentPoolTests {
+
+    @Test
     func oauthAuthorizeURLContainsRequiredParameters() throws {
         let config = OAuthClientConfiguration(
             issuer: URL(string: "https://auth.example.com")!,
@@ -1914,6 +2264,47 @@ extension AIAgentPoolTests {
         #expect(state.accounts[0].apiToken == "token-new")
         #expect(state.accounts[0].usedUnits == 42)
         #expect(state.accounts[0].usageWindowName == "primary_window")
+    }
+
+    @Test
+    func poolDashboardLifecycleCoordinatorOnAppearEvaluatesState() {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 90, quota: 100),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 10, quota: 100)
+            ],
+            mode: .intelligent
+        )
+        var policy = LowUsageAlertPolicy()
+        let coordinator = PoolDashboardLifecycleCoordinator()
+
+        coordinator.onAppear(state: &state, lowUsageAlertPolicy: &policy)
+
+        #expect(state.activeAccount?.name == "B")
+    }
+
+    @Test
+    func poolDashboardLifecycleCoordinatorShouldShowLowUsageAlertTriggersOnce() {
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 95, quota: 100)],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.15
+        )
+        state.evaluate()
+        var policy = LowUsageAlertPolicy()
+        let coordinator = PoolDashboardLifecycleCoordinator()
+
+        let first = coordinator.shouldShowLowUsageAlert(
+            state: state,
+            lowUsageAlertPolicy: &policy
+        )
+        let second = coordinator.shouldShowLowUsageAlert(
+            state: state,
+            lowUsageAlertPolicy: &policy
+        )
+
+        #expect(first)
+        #expect(!second)
     }
 
 }

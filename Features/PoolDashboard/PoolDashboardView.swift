@@ -30,8 +30,9 @@ struct PoolDashboardView: View {
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
-    private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
+    private let backupCoordinator = PoolDashboardBackupCoordinator()
     private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
+    private let lifecycleCoordinator = PoolDashboardLifecycleCoordinator()
     private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
     private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
@@ -229,13 +230,18 @@ struct PoolDashboardView: View {
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
-            state.evaluate()
-            _ = lowUsageAlertPolicy.shouldTriggerAlert(mode: state.mode, hasLowUsageWarning: state.hasLowUsageWarning)
+            lifecycleCoordinator.onAppear(
+                state: &state,
+                lowUsageAlertPolicy: &lowUsageAlertPolicy
+            )
             refreshLocalOAuthAccounts()
         }
         .onChange(of: state.snapshot) { _, snapshot in
             store.save(snapshot)
-            if lowUsageAlertPolicy.shouldTriggerAlert(mode: state.mode, hasLowUsageWarning: state.hasLowUsageWarning) {
+            if lifecycleCoordinator.shouldShowLowUsageAlert(
+                state: state,
+                lowUsageAlertPolicy: &lowUsageAlertPolicy
+            ) {
                 showLowUsageAlert = true
             }
         }
@@ -251,30 +257,33 @@ struct PoolDashboardView: View {
     }
 
     private func exportSnapshot() {
-        do {
-            backupJSON = try dataFlowCoordinator.exportSnapshotJSON(state.snapshot)
+        let result = backupCoordinator.exportSnapshot(from: state.snapshot)
+        if let json = result.json {
+            backupJSON = json
             backupError = nil
-        } catch {
-            backupError = "匯出失敗：\(error.localizedDescription)"
+        } else if let message = result.errorMessage {
+            backupError = message
         }
     }
 
     private func exportRefetchableSnapshot() {
-        do {
-            backupJSON = try dataFlowCoordinator.exportRefetchableSnapshotJSON(state.snapshot)
+        let result = backupCoordinator.exportRefetchableSnapshot(from: state.snapshot)
+        if let json = result.json {
+            backupJSON = json
             backupError = nil
-        } catch {
-            backupError = "匯出失敗：\(error.localizedDescription)"
+        } else if let message = result.errorMessage {
+            backupError = message
         }
     }
 
     private func importSnapshot() {
-        do {
-            state = try dataFlowCoordinator.importState(from: backupJSON)
+        let result = backupCoordinator.importSnapshotState(from: backupJSON)
+        if let importedState = result.state {
+            state = importedState
             backupError = nil
             Task { await syncCodexUsage() }
-        } catch {
-            backupError = "匯入失敗：\(error.localizedDescription)"
+        } else if let message = result.errorMessage {
+            backupError = message
         }
     }
 
