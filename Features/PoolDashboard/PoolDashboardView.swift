@@ -36,6 +36,9 @@ struct PoolDashboardView: View {
     private let store: AccountPoolStoring
     private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
+    private var authFileAccessService: CodexAuthFileAccessService {
+        CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
+    }
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
         self.store = store
@@ -653,16 +656,8 @@ struct PoolDashboardView: View {
 
     private func loadLocalOAuthAccounts(from url: URL) {
         sessionAuthorizedAuthFileURL = url
-        let hasSecurityScope = url.startAccessingSecurityScopedResource()
-        defer {
-            if hasSecurityScope {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
         do {
-            let data = try Data(contentsOf: url)
-            let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: url.path)
+            let accounts = try authFileAccessService.loadAccounts(from: url)
             localOAuthImportViewModel.applyLoadedAccountsFromFile(accounts)
             normalizeStoredImportedAccountNames()
         } catch {
@@ -672,8 +667,7 @@ struct PoolDashboardView: View {
 
     private func saveAuthFileBookmark(for url: URL) {
         do {
-            let bookmark = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-            UserDefaults.standard.set(bookmark, forKey: Self.codexAuthBookmarkKey)
+            try authFileAccessService.saveBookmark(for: url)
         } catch {
             localOAuthImportViewModel.applyBookmarkSaveFailure(error)
         }
@@ -681,24 +675,17 @@ struct PoolDashboardView: View {
 
     @discardableResult
     private func loadLocalOAuthAccountsFromBookmark() -> Bool {
-        guard let bookmark = UserDefaults.standard.data(forKey: Self.codexAuthBookmarkKey) else {
+        guard authFileAccessService.hasSavedBookmark() else {
             return false
         }
 
         do {
-            var isStale = false
-            let url = try URL(
-                resolvingBookmarkData: bookmark,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
-            )
-
-            if isStale {
-                saveAuthFileBookmark(for: url)
+            let resolved = try authFileAccessService.loadAuthorizedURLFromBookmark()
+            if resolved.wasStale {
+                saveAuthFileBookmark(for: resolved.url)
             }
-            sessionAuthorizedAuthFileURL = url
-            loadLocalOAuthAccounts(from: url)
+            sessionAuthorizedAuthFileURL = resolved.url
+            loadLocalOAuthAccounts(from: resolved.url)
             return !localOAuthImportViewModel.accounts.isEmpty
         } catch {
             localOAuthImportViewModel.applyBookmarkInvalid()
@@ -707,7 +694,7 @@ struct PoolDashboardView: View {
     }
 
     private func hasSavedAuthFileBookmark() -> Bool {
-        UserDefaults.standard.data(forKey: Self.codexAuthBookmarkKey) != nil
+        authFileAccessService.hasSavedBookmark()
     }
 
     @MainActor
@@ -896,35 +883,19 @@ struct PoolDashboardView: View {
     }
 
     private func resolveAuthFileURLForSwitch() throws -> URL {
-        if let sessionAuthorizedAuthFileURL {
-            return sessionAuthorizedAuthFileURL
-        }
-
-        if let bookmark = UserDefaults.standard.data(forKey: Self.codexAuthBookmarkKey) {
-            var isStale = false
-            let url = try URL(
-                resolvingBookmarkData: bookmark,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
+        do {
+            let resolved = try authFileAccessService.resolveAuthFileURLForSwitch(
+                sessionAuthorizedURL: sessionAuthorizedAuthFileURL
             )
-            if isStale {
-                saveAuthFileBookmark(for: url)
-            }
-            sessionAuthorizedAuthFileURL = url
-            return url
+            sessionAuthorizedAuthFileURL = resolved
+            return resolved
+        } catch {
+            throw NSError(
+                domain: "CodexSwitch",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "找不到 auth.json，請先按「選擇 auth.json」授權"]
+            )
         }
-
-        let fallback = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex/auth.json")
-        if FileManager.default.fileExists(atPath: fallback.path) {
-            return fallback
-        }
-
-        throw NSError(
-            domain: "CodexSwitch",
-            code: 1,
-            userInfo: [NSLocalizedDescriptionKey: "找不到 auth.json，請先按「選擇 auth.json」授權"]
-        )
     }
 
     private func appendSwitchLaunchLog(_ line: String) {
