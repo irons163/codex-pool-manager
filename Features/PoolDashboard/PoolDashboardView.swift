@@ -30,8 +30,8 @@ struct PoolDashboardView: View {
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
-    private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
+    private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
     private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
     private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
@@ -289,16 +289,12 @@ struct PoolDashboardView: View {
         isSyncingUsage = true
         defer { isSyncingUsage = false }
 
-        do {
-            let result = try await dataFlowCoordinator.syncState(from: state)
-            state = result.state
-            if let rawResponse = result.rawResponse {
-                lastUsageRawJSON = rawResponse
-            }
-            syncError = nil
-        } catch {
-            syncError = "同步失敗：\(error.localizedDescription)"
+        let output = await runtimeCoordinator.syncCodexUsage(from: state)
+        state = output.state
+        if let rawResponse = output.lastUsageRawJSON {
+            lastUsageRawJSON = rawResponse
         }
+        syncError = output.syncError
     }
 
     @MainActor
@@ -310,31 +306,25 @@ struct PoolDashboardView: View {
         oauthError = nil
         oauthSuccessMessage = nil
 
-        do {
-            let configuration = try authFlowCoordinator.buildConfiguration(
+        let output = await runtimeCoordinator.signInWithOAuth(
+            from: state,
+            input: .init(
                 issuer: oauthIssuer,
                 clientID: oauthClientID,
                 scopes: oauthScopes,
                 redirectURI: oauthRedirectURI,
                 originator: oauthOriginator,
-                workspaceID: oauthWorkspaceID
-            )
-
-            let context = try await authFlowCoordinator.fetchOAuthSignInContext(
-                configuration: configuration,
-                loginService: OAuthLoginService(),
-                usageClient: OpenAICodexUsageClient()
-            )
-            oauthSuccessMessage = authFlowCoordinator.applyOAuthSignIn(
-                state: &state,
-                context: context,
+                workspaceID: oauthWorkspaceID,
                 accountNameInput: oauthAccountName,
                 fallbackQuota: oauthAccountQuota
             )
-            oauthAccountName = ""
+        )
+        state = output.state
+        oauthError = output.oauthError
+        oauthSuccessMessage = output.oauthSuccessMessage
+        oauthAccountName = output.nextOAuthAccountName
+        if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
-        } catch {
-            oauthError = error.localizedDescription
         }
     }
 
