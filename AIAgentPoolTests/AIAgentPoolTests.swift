@@ -1858,6 +1858,66 @@ extension AIAgentPoolTests {
     }
 
     @Test
+    func poolDashboardLifecycleFlowCoordinatorOnAppearPrimesLowUsagePolicy() {
+        final class SpyStore: AccountPoolStoring {
+            var savedSnapshots: [AccountPoolSnapshot] = []
+
+            func load() -> AccountPoolSnapshot? { nil }
+
+            func save(_ snapshot: AccountPoolSnapshot) {
+                savedSnapshots.append(snapshot)
+            }
+        }
+
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 95, quota: 100)],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.15
+        )
+        state.evaluate()
+
+        let coordinator = PoolDashboardLifecycleFlowCoordinator()
+        let authFileAccessService = CodexAuthFileAccessService(bookmarkKey: "test-bookmark-\(UUID().uuidString)")
+        let onAppearOutput = coordinator.onAppear(
+            state: state,
+            lowUsageAlertPolicy: LowUsageAlertPolicy(),
+            viewModel: LocalOAuthImportViewModel(),
+            authFileAccessService: authFileAccessService,
+            currentAuthorizedAuthFileURL: nil
+        )
+
+        let store = SpyStore()
+        let onChangeOutput = coordinator.onSnapshotChanged(
+            snapshot: onAppearOutput.state.snapshot,
+            state: onAppearOutput.state,
+            lowUsageAlertPolicy: onAppearOutput.lowUsageAlertPolicy,
+            viewState: PoolDashboardViewState(),
+            store: store
+        )
+
+        #expect(store.savedSnapshots.count == 1)
+        #expect(!onChangeOutput.viewState.showLowUsageAlert)
+    }
+
+    @Test
+    func poolDashboardLifecycleFlowCoordinatorOnAppearKeepsSessionURLWhenNoBookmark() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        state.evaluate()
+
+        let coordinator = PoolDashboardLifecycleFlowCoordinator()
+        let authFileAccessService = CodexAuthFileAccessService(bookmarkKey: "test-bookmark-\(UUID().uuidString)")
+        let output = coordinator.onAppear(
+            state: state,
+            lowUsageAlertPolicy: LowUsageAlertPolicy(),
+            viewModel: LocalOAuthImportViewModel(),
+            authFileAccessService: authFileAccessService,
+            currentAuthorizedAuthFileURL: nil
+        )
+
+        #expect(output.sessionAuthorizedAuthFileURL == nil)
+    }
+
+    @Test
     func poolDashboardLifecycleFlowCoordinatorOnSnapshotChangedSavesSnapshotAndShowsAlert() {
         final class SpyStore: AccountPoolStoring {
             var savedSnapshots: [AccountPoolSnapshot] = []
@@ -1923,6 +1983,103 @@ extension AIAgentPoolTests {
 
         #expect(store.savedSnapshots.count == 1)
         #expect(!output.viewState.showLowUsageAlert)
+    }
+
+    @Test
+    func poolDashboardUsageSyncFlowCoordinatorSyncWithEmptyStateClearsSyncError() async {
+        let coordinator = PoolDashboardUsageSyncFlowCoordinator()
+        let state = AccountPoolState(accounts: [], mode: .manual)
+        var viewState = PoolDashboardViewState()
+        viewState.syncError = "old"
+
+        let output = await coordinator.syncCodexUsage(from: state, viewState: viewState)
+
+        #expect(output.state.accounts.isEmpty)
+        #expect(output.viewState.syncError == nil)
+    }
+
+    @Test
+    func poolDashboardOAuthSignInFlowCoordinatorInvalidIssuerReturnsError() async {
+        let coordinator = PoolDashboardOAuthSignInFlowCoordinator()
+        let state = AccountPoolState(accounts: [], mode: .manual)
+        let viewState = PoolDashboardViewState()
+
+        let output = await coordinator.signInWithOAuth(
+            from: state,
+            viewState: viewState,
+            oauthAccountName: "OAuth",
+            input: .init(
+                issuer: "not-a-valid-url",
+                clientID: "client",
+                scopes: "openid",
+                redirectURI: "http://localhost:1455/auth/callback",
+                originator: "codex_cli_rs",
+                workspaceID: "",
+                fallbackQuota: 100
+            )
+        )
+
+        #expect(!output.shouldRefreshLocalOAuthAccounts)
+        #expect(output.oauthAccountName == "OAuth")
+        #expect(output.viewState.oauthError != nil)
+    }
+
+    @Test @MainActor
+    func poolDashboardLocalImportFlowCoordinatorMissingAccountIDPreservesSyncError() async {
+        let coordinator = PoolDashboardLocalImportFlowCoordinator()
+        let state = AccountPoolState(accounts: [], mode: .manual)
+        let viewModel = LocalOAuthImportViewModel()
+        var viewState = PoolDashboardViewState()
+        viewState.syncError = "keep"
+        let localAccount = LocalCodexOAuthAccount(
+            id: "local-1",
+            displayName: "Local",
+            email: "local@example.com",
+            source: "test",
+            accessToken: "sk-local",
+            chatGPTAccountID: nil
+        )
+
+        let output = await coordinator.importLocalOAuthAccount(
+            localAccount,
+            from: state,
+            viewModel: viewModel,
+            viewState: viewState,
+            onRawResponse: { _ in }
+        )
+
+        #expect(output.state.accounts.isEmpty)
+        #expect(output.viewState.syncError == "keep")
+        #expect(output.viewModel.errorMessage == "auth.json 缺少 ChatGPT Account ID，無法查詢用量")
+    }
+
+    @Test @MainActor
+    func poolDashboardSwitchLaunchFlowCoordinatorMissingTokenWritesError() async {
+        let coordinator = PoolDashboardSwitchLaunchFlowCoordinator()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "NoToken",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "",
+            chatGPTAccountID: "acct"
+        )
+        let viewModel = LocalOAuthImportViewModel()
+        let viewState = PoolDashboardViewState()
+        let authFileAccessService = CodexAuthFileAccessService(bookmarkKey: "test-bookmark-key")
+
+        let output = await coordinator.switchAndLaunch(
+            using: account,
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: authFileAccessService,
+            viewModel: viewModel,
+            viewState: viewState,
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.viewModel.errorMessage == "此帳號沒有可用 token，無法切換")
+        #expect(output.sessionAuthorizedAuthFileURL == nil)
+        #expect(output.viewState.lastSwitchLaunchLog.contains("失敗：沒有 token"))
     }
 
     @Test

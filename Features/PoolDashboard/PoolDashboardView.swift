@@ -63,21 +63,45 @@ struct PoolDashboardView: View {
 
             ScrollView {
                 GlassPanel {
-                    VStack(alignment: .leading, spacing: 16) {
-                DashboardHeaderSectionView(
-                    accountCount: state.accounts.count,
-                    availableCount: state.availableAccountsCount,
-                    overallUsagePercent: Int(state.overallUsageRatio * 100),
-                    modeTitle: state.mode.rawValue
-                )
-
-                SyncToolbarView(
-                    isSyncing: viewState.isSyncingUsage,
-                    lastSyncAt: state.lastUsageSyncAt,
-                    errorText: viewState.syncError
-                ) {
-                    Task { await syncCodexUsage() }
+                    dashboardContent
                 }
+            }
+        }
+        .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
+        .onAppear {
+            handleOnAppear()
+        }
+        .onChange(of: state.snapshot) { _, snapshot in
+            handleSnapshotChange(snapshot)
+        }
+        .alert("低剩餘用量提醒", isPresented: $viewState.showLowUsageAlert) {
+            Button("知道了", role: .cancel) { }
+        } message: {
+            Text(
+                alertPresenter.lowUsageAlertMessage(
+                    activeAccount: state.activeAccount,
+                    thresholdRatio: state.lowUsageThresholdRatio
+                )
+            )
+        }
+    }
+
+    private var dashboardContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            DashboardHeaderSectionView(
+                accountCount: state.accounts.count,
+                availableCount: state.availableAccountsCount,
+                overallUsagePercent: Int(state.overallUsageRatio * 100),
+                modeTitle: state.mode.rawValue
+            )
+
+            SyncToolbarView(
+                isSyncing: viewState.isSyncingUsage,
+                lastSyncAt: state.lastUsageSyncAt,
+                errorText: viewState.syncError
+            ) {
+                Task { await syncCodexUsage() }
+            }
 
             DebugToolsPanelView(
                 showUsageRawJSON: $viewState.showUsageRawJSON,
@@ -211,48 +235,40 @@ struct PoolDashboardView: View {
                 onExportRefetchable: exportRefetchableSnapshot,
                 onImport: importSnapshot
             )
-                }
-                .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
-                .padding(20)
-            }
         }
-        }
-        .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
-        .onAppear {
-            let output = lifecycleFlowCoordinator.onAppear(
-                state: state,
-                lowUsageAlertPolicy: lowUsageAlertPolicy,
-                viewModel: localOAuthImportViewModel,
-                authFileAccessService: authFileAccessService,
-                currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
-            )
-            state = output.state
-            lowUsageAlertPolicy = output.lowUsageAlertPolicy
-            localOAuthImportViewModel = output.viewModel
-            sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
-        }
-        .onChange(of: state.snapshot) { _, snapshot in
-            let output = lifecycleFlowCoordinator.onSnapshotChanged(
-                snapshot: snapshot,
-                state: state,
-                lowUsageAlertPolicy: lowUsageAlertPolicy,
-                viewState: viewState,
-                store: store
-            )
-            lowUsageAlertPolicy = output.lowUsageAlertPolicy
-            viewState = output.viewState
-        }
-        .alert("低剩餘用量提醒", isPresented: $viewState.showLowUsageAlert) {
-            Button("知道了", role: .cancel) { }
-        } message: {
-            Text(
-                alertPresenter.lowUsageAlertMessage(
-                    activeAccount: state.activeAccount,
-                    thresholdRatio: state.lowUsageThresholdRatio
-                )
-            )
-        }
+        .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
+        .padding(20)
     }
+
+    // MARK: - Lifecycle
+
+    private func handleOnAppear() {
+        let output = lifecycleFlowCoordinator.onAppear(
+            state: state,
+            lowUsageAlertPolicy: lowUsageAlertPolicy,
+            viewModel: localOAuthImportViewModel,
+            authFileAccessService: authFileAccessService,
+            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+        )
+        state = output.state
+        lowUsageAlertPolicy = output.lowUsageAlertPolicy
+        localOAuthImportViewModel = output.viewModel
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+    }
+
+    private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
+        let output = lifecycleFlowCoordinator.onSnapshotChanged(
+            snapshot: snapshot,
+            state: state,
+            lowUsageAlertPolicy: lowUsageAlertPolicy,
+            viewState: viewState,
+            store: store
+        )
+        lowUsageAlertPolicy = output.lowUsageAlertPolicy
+        viewState = output.viewState
+    }
+
+    // MARK: - Backup
 
     private func exportSnapshot() {
         backupFlowCoordinator.exportSnapshot(from: state, viewState: &viewState)
@@ -277,6 +293,8 @@ struct PoolDashboardView: View {
         return state.accounts.first(where: { $0.id == candidateID })?.name
     }
 
+    // MARK: - Usage Sync
+
     @MainActor
     private func syncCodexUsage() async {
         guard !viewState.isSyncingUsage else { return }
@@ -290,6 +308,8 @@ struct PoolDashboardView: View {
         state = output.state
         viewState = output.viewState
     }
+
+    // MARK: - OAuth
 
     @MainActor
     private func signInWithOAuth() async {
@@ -321,6 +341,8 @@ struct PoolDashboardView: View {
             refreshLocalOAuthAccounts()
         }
     }
+
+    // MARK: - Local Accounts
 
     private func refreshLocalOAuthAccounts() {
         let output = localAccountsFlowCoordinator.refreshLocalOAuthAccounts(
@@ -364,6 +386,8 @@ struct PoolDashboardView: View {
         localOAuthImportViewModel = output.viewModel
         viewState = output.viewState
     }
+
+    // MARK: - Switch & Launch
 
     @MainActor
     private func switchAndLaunchCodex(using account: AgentAccount) async {
