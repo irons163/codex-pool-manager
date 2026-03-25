@@ -8,8 +8,10 @@ struct ContentView: View {
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = ""
-    @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access"
-    @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "aiaagentpool://oauth/callback"
+    @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
+    @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
+    @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
+    @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
     @State private var state: AccountPoolState
     @State private var newAccountName = ""
     @State private var newAccountQuota = 1000
@@ -133,6 +135,10 @@ struct ContentView: View {
                             TextField("Scopes", text: $oauthScopes)
                                 .textFieldStyle(.roundedBorder)
                             TextField("Redirect URI", text: $oauthRedirectURI)
+                                .textFieldStyle(.roundedBorder)
+                            TextField("Originator", text: $oauthOriginator)
+                                .textFieldStyle(.roundedBorder)
+                            TextField("Allowed Workspace ID（可留空）", text: $oauthWorkspaceID)
                                 .textFieldStyle(.roundedBorder)
                         }
                         .padding(.top, 4)
@@ -660,7 +666,11 @@ struct ContentView: View {
             issuer: issuerURL,
             clientID: oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines),
             scopes: oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines),
-            redirectURI: oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines)
+            redirectURI: oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines),
+            originator: oauthOriginator.trimmingCharacters(in: .whitespacesAndNewlines),
+            forcedWorkspaceID: oauthWorkspaceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : oauthWorkspaceID.trimmingCharacters(in: .whitespacesAndNewlines)
         )
 
         do {
