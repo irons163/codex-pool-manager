@@ -1164,6 +1164,306 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func localCodexDiscoveryParsesNestedOAuthAccounts() {
+        let json = """
+        {
+          "profiles": [
+            {
+              "name": "Phil",
+              "email": "phil@example.com",
+              "account_id": "acct-phil",
+              "access_token": "sk-local-token-111111"
+            },
+            {
+              "session": {
+                "display_name": "Teammate",
+                "user_email": "team@example.com",
+                "account_id": "acct-team",
+                "accessToken": "sk-local-token-222222"
+              }
+            }
+          ]
+        }
+        """
+
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 2)
+        #expect(accounts[0].displayName == "Phil")
+        #expect(accounts[1].email == "team@example.com")
+        #expect(accounts[0].chatGPTAccountID == "acct-phil")
+    }
+
+    @Test
+    func localCodexDiscoveryDeduplicatesSameToken() {
+        let json = """
+        {
+          "items": [
+            {
+              "name": "A",
+              "email": "same@example.com",
+              "access_token": "sk-dup-token"
+            },
+            {
+              "name": "B",
+              "email": "same@example.com",
+              "accessToken": "sk-dup-token"
+            }
+          ]
+        }
+        """
+
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 1)
+    }
+
+    @Test
+    func localCodexDiscoveryFindsEmailWhenTokenAndProfileAreInDifferentLevels() {
+        let json = """
+        {
+          "session": {
+            "token": "sk-deep-token-123",
+            "profile": {
+              "email": "deep@example.com",
+              "name": "Deep User"
+            },
+            "account": {
+              "account_id": "acct-deep"
+            }
+          }
+        }
+        """
+
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 1)
+        #expect(accounts[0].email == "deep@example.com")
+        #expect(accounts[0].displayName == "Deep User")
+        #expect(accounts[0].chatGPTAccountID == "acct-deep")
+    }
+
+    @Test
+    func codexAuthFileSwitcherRewritesKnownFieldsInNestedJSON() throws {
+        let json = """
+        {
+          "session": {
+            "access_token": "old-token",
+            "profile": {
+              "email": "old@example.com"
+            },
+            "account_id": "old-account"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "new-token",
+            accountID: "new-account",
+            email: "new@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let session = try #require(object["session"] as? [String: Any])
+        let profile = try #require(session["profile"] as? [String: Any])
+
+        #expect(session["access_token"] as? String == "new-token")
+        #expect(session["account_id"] as? String == "new-account")
+        #expect(profile["email"] as? String == "new@example.com")
+    }
+
+    @Test
+    func codexAuthFileSwitcherAddsFieldsWhenMissing() throws {
+        let json = """
+        {
+          "plan_type": "free"
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "added-token",
+            accountID: "added-account",
+            email: "added@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+
+        #expect(object["access_token"] as? String == "added-token")
+        #expect(object["account_id"] as? String == "added-account")
+        #expect(object["email"] as? String == "added@example.com")
+    }
+
+    @Test
+    func codexAuthFileSwitcherThrowsOnInvalidJSON() {
+        let invalidData = Data("not-json".utf8)
+
+        #expect(throws: CodexAuthFileSwitcher.SwitchError.invalidJSON) {
+            _ = try CodexAuthFileSwitcher.rewriteAuthJSON(
+                invalidData,
+                accessToken: "token",
+                accountID: "account",
+                email: "user@example.com"
+            )
+        }
+    }
+
+    @Test
+    func codexAuthFileSwitcherDoesNotAddEmailWhenInputEmailIsEmpty() throws {
+        let json = """
+        {
+          "plan_type": "free"
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "added-token",
+            accountID: "added-account",
+            email: ""
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+
+        #expect(object["access_token"] as? String == "added-token")
+        #expect(object["account_id"] as? String == "added-account")
+        #expect(object["email"] == nil)
+    }
+
+    @Test
+    func localCodexDiscoveryReturnsEmptyForInvalidJSON() {
+        let data = Data("not-json".utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.isEmpty)
+    }
+
+    @Test
+    func localCodexDiscoveryIgnoresPlainTokenWithoutAccessTokenKey() {
+        let json = """
+        {
+          "session": {
+            "token": "plain-token",
+            "email": "user@example.com"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.isEmpty)
+    }
+
+    @Test
+    func localCodexDiscoveryAcceptsAccessTokenEvenWithoutSkPrefix() {
+        let json = """
+        {
+          "session": {
+            "access_token": "non-sk-token",
+            "email": "user@example.com",
+            "account_id": "acct-1"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 1)
+        #expect(accounts[0].accessToken == "non-sk-token")
+        #expect(accounts[0].email == "user@example.com")
+    }
+
+    @Test
+    func localCodexOAuthAccountMaskedTokenHandlesShortAndLongToken() {
+        let short = LocalCodexOAuthAccount(
+            id: "1",
+            displayName: "A",
+            email: nil,
+            source: "test",
+            accessToken: "short",
+            chatGPTAccountID: nil
+        )
+        let long = LocalCodexOAuthAccount(
+            id: "2",
+            displayName: "B",
+            email: nil,
+            source: "test",
+            accessToken: "sk-abcdefghijklmnopqrstuvwxyz",
+            chatGPTAccountID: nil
+        )
+
+        #expect(short.maskedToken == "********")
+        #expect(long.maskedToken.hasPrefix("sk-abc"))
+        #expect(long.maskedToken.hasSuffix("wxyz"))
+        #expect(long.maskedToken.contains("..."))
+    }
+
+    @Test
+    func userDefaultsStoreLoadReturnsNilForCorruptedSnapshotData() {
+        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(Data("not-json".utf8), forKey: "snapshot")
+        let store = UserDefaultsAccountPoolStore(
+            defaults: defaults,
+            key: "snapshot",
+            tokenVault: InMemoryAccountTokenVault()
+        )
+
+        let loaded = store.load()
+        #expect(loaded == nil)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
+    func userDefaultsStoreSaveRemovesTokenWhenAccountTokenIsEmpty() throws {
+        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let accountID = UUID()
+        vault.setToken("existing-token", for: accountID)
+
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+
+        #expect(vault.token(for: accountID) == nil)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+}
+
+extension AIAgentPoolTests {
+
+    @Test
     func oauthAuthorizeURLContainsRequiredParameters() throws {
         let config = OAuthClientConfiguration(
             issuer: URL(string: "https://auth.example.com")!,
@@ -1477,302 +1777,5 @@ struct AIAgentPoolTests {
         #expect(form.contains("code=code-xyz"))
         #expect(form.contains("redirect_uri=aiaagentpool://oauth/callback"))
         #expect(form.contains("code_verifier=verifier-123"))
-    }
-
-    @Test
-    func localCodexDiscoveryParsesNestedOAuthAccounts() {
-        let json = """
-        {
-          "profiles": [
-            {
-              "name": "Phil",
-              "email": "phil@example.com",
-              "account_id": "acct-phil",
-              "access_token": "sk-local-token-111111"
-            },
-            {
-              "session": {
-                "display_name": "Teammate",
-                "user_email": "team@example.com",
-                "account_id": "acct-team",
-                "accessToken": "sk-local-token-222222"
-              }
-            }
-          ]
-        }
-        """
-
-        let data = Data(json.utf8)
-        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
-
-        #expect(accounts.count == 2)
-        #expect(accounts[0].displayName == "Phil")
-        #expect(accounts[1].email == "team@example.com")
-        #expect(accounts[0].chatGPTAccountID == "acct-phil")
-    }
-
-    @Test
-    func localCodexDiscoveryDeduplicatesSameToken() {
-        let json = """
-        {
-          "items": [
-            {
-              "name": "A",
-              "email": "same@example.com",
-              "access_token": "sk-dup-token"
-            },
-            {
-              "name": "B",
-              "email": "same@example.com",
-              "accessToken": "sk-dup-token"
-            }
-          ]
-        }
-        """
-
-        let data = Data(json.utf8)
-        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
-
-        #expect(accounts.count == 1)
-    }
-
-    @Test
-    func localCodexDiscoveryFindsEmailWhenTokenAndProfileAreInDifferentLevels() {
-        let json = """
-        {
-          "session": {
-            "token": "sk-deep-token-123",
-            "profile": {
-              "email": "deep@example.com",
-              "name": "Deep User"
-            },
-            "account": {
-              "account_id": "acct-deep"
-            }
-          }
-        }
-        """
-
-        let data = Data(json.utf8)
-        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
-
-        #expect(accounts.count == 1)
-        #expect(accounts[0].email == "deep@example.com")
-        #expect(accounts[0].displayName == "Deep User")
-        #expect(accounts[0].chatGPTAccountID == "acct-deep")
-    }
-
-    @Test
-    func codexAuthFileSwitcherRewritesKnownFieldsInNestedJSON() throws {
-        let json = """
-        {
-          "session": {
-            "access_token": "old-token",
-            "profile": {
-              "email": "old@example.com"
-            },
-            "account_id": "old-account"
-          }
-        }
-        """
-        let data = Data(json.utf8)
-        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
-            data,
-            accessToken: "new-token",
-            accountID: "new-account",
-            email: "new@example.com"
-        )
-        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
-        let session = try #require(object["session"] as? [String: Any])
-        let profile = try #require(session["profile"] as? [String: Any])
-
-        #expect(session["access_token"] as? String == "new-token")
-        #expect(session["account_id"] as? String == "new-account")
-        #expect(profile["email"] as? String == "new@example.com")
-    }
-
-    @Test
-    func codexAuthFileSwitcherAddsFieldsWhenMissing() throws {
-        let json = """
-        {
-          "plan_type": "free"
-        }
-        """
-        let data = Data(json.utf8)
-        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
-            data,
-            accessToken: "added-token",
-            accountID: "added-account",
-            email: "added@example.com"
-        )
-        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
-
-        #expect(object["access_token"] as? String == "added-token")
-        #expect(object["account_id"] as? String == "added-account")
-        #expect(object["email"] as? String == "added@example.com")
-    }
-
-    @Test
-    func codexAuthFileSwitcherThrowsOnInvalidJSON() {
-        let invalidData = Data("not-json".utf8)
-
-        #expect(throws: CodexAuthFileSwitcher.SwitchError.invalidJSON) {
-            _ = try CodexAuthFileSwitcher.rewriteAuthJSON(
-                invalidData,
-                accessToken: "token",
-                accountID: "account",
-                email: "user@example.com"
-            )
-        }
-    }
-
-    @Test
-    func codexAuthFileSwitcherDoesNotAddEmailWhenInputEmailIsEmpty() throws {
-        let json = """
-        {
-          "plan_type": "free"
-        }
-        """
-        let data = Data(json.utf8)
-        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
-            data,
-            accessToken: "added-token",
-            accountID: "added-account",
-            email: ""
-        )
-        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
-
-        #expect(object["access_token"] as? String == "added-token")
-        #expect(object["account_id"] as? String == "added-account")
-        #expect(object["email"] == nil)
-    }
-
-    @Test
-    func localCodexDiscoveryReturnsEmptyForInvalidJSON() {
-        let data = Data("not-json".utf8)
-        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
-
-        #expect(accounts.isEmpty)
-    }
-
-    @Test
-    func localCodexDiscoveryIgnoresPlainTokenWithoutAccessTokenKey() {
-        let json = """
-        {
-          "session": {
-            "token": "plain-token",
-            "email": "user@example.com"
-          }
-        }
-        """
-        let data = Data(json.utf8)
-        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
-
-        #expect(accounts.isEmpty)
-    }
-
-    @Test
-    func localCodexDiscoveryAcceptsAccessTokenEvenWithoutSkPrefix() {
-        let json = """
-        {
-          "session": {
-            "access_token": "non-sk-token",
-            "email": "user@example.com",
-            "account_id": "acct-1"
-          }
-        }
-        """
-        let data = Data(json.utf8)
-        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
-
-        #expect(accounts.count == 1)
-        #expect(accounts[0].accessToken == "non-sk-token")
-        #expect(accounts[0].email == "user@example.com")
-    }
-
-    @Test
-    func localCodexOAuthAccountMaskedTokenHandlesShortAndLongToken() {
-        let short = LocalCodexOAuthAccount(
-            id: "1",
-            displayName: "A",
-            email: nil,
-            source: "test",
-            accessToken: "short",
-            chatGPTAccountID: nil
-        )
-        let long = LocalCodexOAuthAccount(
-            id: "2",
-            displayName: "B",
-            email: nil,
-            source: "test",
-            accessToken: "sk-abcdefghijklmnopqrstuvwxyz",
-            chatGPTAccountID: nil
-        )
-
-        #expect(short.maskedToken == "********")
-        #expect(long.maskedToken.hasPrefix("sk-abc"))
-        #expect(long.maskedToken.hasSuffix("wxyz"))
-        #expect(long.maskedToken.contains("..."))
-    }
-
-    @Test
-    func userDefaultsStoreLoadReturnsNilForCorruptedSnapshotData() {
-        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            Issue.record("Cannot create UserDefaults suite")
-            return
-        }
-        defaults.removePersistentDomain(forName: suiteName)
-        defaults.set(Data("not-json".utf8), forKey: "snapshot")
-        let store = UserDefaultsAccountPoolStore(
-            defaults: defaults,
-            key: "snapshot",
-            tokenVault: InMemoryAccountTokenVault()
-        )
-
-        let loaded = store.load()
-        #expect(loaded == nil)
-        defaults.removePersistentDomain(forName: suiteName)
-    }
-
-    @Test
-    func userDefaultsStoreSaveRemovesTokenWhenAccountTokenIsEmpty() throws {
-        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            Issue.record("Cannot create UserDefaults suite")
-            return
-        }
-        defaults.removePersistentDomain(forName: suiteName)
-        let vault = InMemoryAccountTokenVault()
-        let accountID = UUID()
-        vault.setToken("existing-token", for: accountID)
-
-        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
-        let snapshot = AccountPoolSnapshot(
-            accounts: [
-                AgentAccount(
-                    id: accountID,
-                    name: "A",
-                    usedUnits: 10,
-                    quota: 100,
-                    apiToken: "",
-                    chatGPTAccountID: "acct-1"
-                )
-            ],
-            activities: [],
-            mode: .manual,
-            activeAccountID: accountID,
-            manualAccountID: accountID,
-            focusLockedAccountID: nil,
-            minSwitchInterval: 300,
-            lowUsageThresholdRatio: 0.15,
-            minUsageRatioDeltaToSwitch: 0,
-            lastSwitchAt: nil
-        )
-
-        store.save(snapshot)
-
-        #expect(vault.token(for: accountID) == nil)
-        defaults.removePersistentDomain(forName: suiteName)
     }
 }

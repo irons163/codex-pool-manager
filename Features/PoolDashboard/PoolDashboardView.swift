@@ -78,46 +78,12 @@ struct PoolDashboardView: View {
                     Task { await syncCodexUsage() }
                 }
 
-            GroupBox("Debug") {
-                VStack(alignment: .leading, spacing: 8) {
-                    DisclosureGroup("Last Usage Raw JSON", isExpanded: $showUsageRawJSON) {
-                        if lastUsageRawJSON.isEmpty {
-                            Text("尚未捕捉到 usage response")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            TextEditor(text: $lastUsageRawJSON)
-                                .font(.system(.footnote, design: .monospaced))
-                                .frame(minHeight: 120)
-                            HStack {
-                                Button("清除") {
-                                    lastUsageRawJSON = ""
-                                }
-                                .buttonStyle(.bordered)
-                                Spacer()
-                            }
-                        }
-                    }
-                    DisclosureGroup("Last Switch Launch Log", isExpanded: $showSwitchLaunchLog) {
-                        if lastSwitchLaunchLog.isEmpty {
-                            Text("尚未執行切換並啟動")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            TextEditor(text: $lastSwitchLaunchLog)
-                                .font(.system(.footnote, design: .monospaced))
-                                .frame(minHeight: 120)
-                            HStack {
-                                Button("清除") {
-                                    lastSwitchLaunchLog = ""
-                                }
-                                .buttonStyle(.bordered)
-                                Spacer()
-                            }
-                        }
-                    }
-                }
-            }
+            DebugToolsPanelView(
+                showUsageRawJSON: $showUsageRawJSON,
+                lastUsageRawJSON: $lastUsageRawJSON,
+                showSwitchLaunchLog: $showSwitchLaunchLog,
+                lastSwitchLaunchLog: $lastSwitchLaunchLog
+            )
 
             GroupBox("OAuth 登入（你自行填 client_id）") {
                 VStack(alignment: .leading, spacing: 10) {
@@ -471,57 +437,13 @@ struct PoolDashboardView: View {
                 }
             }
 
-            GroupBox("備份與還原") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Button("匯出 JSON") {
-                            do {
-                                backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot)
-                                backupError = nil
-                            } catch {
-                                backupError = "匯出失敗：\(error.localizedDescription)"
-                            }
-                        }
-                        .buttonStyle(.bordered)
-
-                        Button("匯出（可重抓）") {
-                            do {
-                                backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot, redactSensitive: false)
-                                backupError = nil
-                            } catch {
-                                backupError = "匯出失敗：\(error.localizedDescription)"
-                            }
-                        }
-                        .buttonStyle(.bordered)
-
-                        Button("匯入 JSON") {
-                            do {
-                                let snapshot = try AccountPoolSnapshotCodec.importJSON(backupJSON)
-                                state = AccountPoolState(snapshot: snapshot)
-                                backupError = nil
-                                Task { await syncCodexUsage() }
-                            } catch {
-                                backupError = "匯入失敗：\(error.localizedDescription)"
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-
-                    Text("警告：匯出（可重抓）會包含 access token 與 account id，僅限你自己保管，勿分享。")
-                        .font(.footnote)
-                        .foregroundStyle(.orange)
-
-                    TextEditor(text: $backupJSON)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 140)
-
-                    if let backupError {
-                        Text(backupError)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-                    }
+            BackupRestorePanelView(
+                backupJSON: $backupJSON,
+                backupError: $backupError,
+                onExport: exportSnapshot,
+                onExportRefetchable: exportRefetchableSnapshot,
+                onImport: importSnapshot
+            )
                 }
                 .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
                 .padding(20)
@@ -548,6 +470,35 @@ struct PoolDashboardView: View {
             } else {
                 Text("目前帳號剩餘用量偏低。")
             }
+        }
+    }
+
+    private func exportSnapshot() {
+        do {
+            backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot)
+            backupError = nil
+        } catch {
+            backupError = "匯出失敗：\(error.localizedDescription)"
+        }
+    }
+
+    private func exportRefetchableSnapshot() {
+        do {
+            backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot, redactSensitive: false)
+            backupError = nil
+        } catch {
+            backupError = "匯出失敗：\(error.localizedDescription)"
+        }
+    }
+
+    private func importSnapshot() {
+        do {
+            let snapshot = try AccountPoolSnapshotCodec.importJSON(backupJSON)
+            state = AccountPoolState(snapshot: snapshot)
+            backupError = nil
+            Task { await syncCodexUsage() }
+        } catch {
+            backupError = "匯入失敗：\(error.localizedDescription)"
         }
     }
 
