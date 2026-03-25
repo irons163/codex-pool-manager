@@ -248,32 +248,23 @@ struct PoolDashboardView: View {
 
     private func exportSnapshot() {
         let result = backupCoordinator.exportSnapshot(from: state.snapshot)
-        if let json = result.json {
-            viewState.backupJSON = json
-            viewState.backupError = nil
-        } else if let message = result.errorMessage {
-            viewState.backupError = message
-        }
+        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
     }
 
     private func exportRefetchableSnapshot() {
         let result = backupCoordinator.exportRefetchableSnapshot(from: state.snapshot)
-        if let json = result.json {
-            viewState.backupJSON = json
-            viewState.backupError = nil
-        } else if let message = result.errorMessage {
-            viewState.backupError = message
-        }
+        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
     }
 
     private func importSnapshot() {
         let result = backupCoordinator.importSnapshotState(from: viewState.backupJSON)
-        if let importedState = result.state {
-            state = importedState
-            viewState.backupError = nil
+        let shouldSyncUsage = mutationCoordinator.applyBackupImportResult(
+            result,
+            state: &state,
+            viewState: &viewState
+        )
+        if shouldSyncUsage {
             Task { await syncCodexUsage() }
-        } else if let message = result.errorMessage {
-            viewState.backupError = message
         }
     }
 

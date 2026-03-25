@@ -2736,4 +2736,68 @@ extension AIAgentPoolTests {
         #expect(url == expectedURL)
     }
 
+    @Test
+    func poolDashboardMutationCoordinatorApplyBackupExportResultWritesJSONAndClearsError() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var viewState = PoolDashboardViewState()
+        viewState.backupError = "old"
+
+        coordinator.applyBackupExportResult((json: "{\"ok\":true}", errorMessage: nil), viewState: &viewState)
+
+        #expect(viewState.backupJSON == "{\"ok\":true}")
+        #expect(viewState.backupError == nil)
+    }
+
+    @Test
+    func poolDashboardMutationCoordinatorApplyBackupExportResultWritesErrorWhenFailed() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var viewState = PoolDashboardViewState()
+
+        coordinator.applyBackupExportResult((json: nil, errorMessage: "匯出失敗"), viewState: &viewState)
+
+        #expect(viewState.backupError == "匯出失敗")
+    }
+
+    @Test
+    func poolDashboardMutationCoordinatorApplyBackupImportResultWritesStateAndReturnsTrue() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        let accountID = UUID()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewState = PoolDashboardViewState()
+        viewState.backupError = "old"
+
+        let shouldSync = coordinator.applyBackupImportResult(
+            (
+                state: AccountPoolState(
+                    accounts: [AgentAccount(id: accountID, name: "Imported", usedUnits: 0, quota: 200)],
+                    mode: .manual
+                ),
+                errorMessage: nil
+            ),
+            state: &state,
+            viewState: &viewState
+        )
+
+        #expect(shouldSync)
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].name == "Imported")
+        #expect(viewState.backupError == nil)
+    }
+
+    @Test
+    func poolDashboardMutationCoordinatorApplyBackupImportResultWritesErrorAndReturnsFalse() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewState = PoolDashboardViewState()
+
+        let shouldSync = coordinator.applyBackupImportResult(
+            (state: nil, errorMessage: "匯入失敗"),
+            state: &state,
+            viewState: &viewState
+        )
+
+        #expect(!shouldSync)
+        #expect(viewState.backupError == "匯入失敗")
+    }
+
 }
