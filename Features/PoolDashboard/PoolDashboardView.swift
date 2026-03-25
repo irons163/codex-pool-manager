@@ -33,6 +33,7 @@ struct PoolDashboardView: View {
     private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
     private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
+    private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
     private let usagePresenter = PoolAccountUsagePresenter()
     private var authFileAccessService: CodexAuthFileAccessService {
@@ -474,34 +475,18 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
-        let existingAccessTokens = Set(state.accounts.compactMap(\.apiToken))
-        let decision = localOAuthImportViewModel.prepareImport(
+        let output = await localImportCoordinator.importLocalOAuthAccount(
             localAccount,
-            existingAccessTokens: existingAccessTokens
+            state: state,
+            viewModel: localOAuthImportViewModel,
+            onRawResponse: { raw in
+                lastUsageRawJSON = raw
+            }
         )
-
-        guard case .importAccount = decision else {
-            return
-        }
-
-        do {
-            let client = OpenAICodexUsageClient(
-                onRawResponse: { raw in
-                    Task { @MainActor in
-                        lastUsageRawJSON = raw
-                    }
-                }
-            )
-            let context = try await authFlowCoordinator.fetchLocalImportContext(
-                decision: decision,
-                usageClient: client
-            )
-            authFlowCoordinator.applyLocalImport(state: &state, context: context)
-
-            localOAuthImportViewModel.errorMessage = nil
+        state = output.state
+        localOAuthImportViewModel = output.viewModel
+        if output.didImport {
             syncError = nil
-        } catch {
-            localOAuthImportViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(authFlowCoordinator.localizedSyncError(error))"
         }
     }
 
