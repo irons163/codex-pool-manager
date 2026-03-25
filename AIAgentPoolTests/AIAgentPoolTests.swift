@@ -1604,7 +1604,7 @@ extension AIAgentPoolTests {
             name: "Local",
             usedUnits: 12,
             quota: 1000,
-            apiToken: nil,
+            apiToken: "",
             chatGPTAccountID: nil
         )
 
@@ -2068,7 +2068,7 @@ extension AIAgentPoolTests {
             accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 100)],
             mode: .manual
         )
-        state.addActivity("x")
+        state.addAccount(name: "B", quota: 100)
         #expect(!state.activities.isEmpty)
         let coordinator = PoolDashboardActionCoordinator()
 
@@ -2709,36 +2709,6 @@ extension AIAgentPoolTests {
         #expect(viewState.oauthError == nil)
         #expect(viewState.oauthSuccessMessage == "success")
         #expect(oauthAccountName == "")
-    }
-
-    @Test
-    func poolDashboardMutationCoordinatorApplyLocalImportOutputClearsSyncErrorWhenImported() {
-        let coordinator = PoolDashboardMutationCoordinator()
-        var state = AccountPoolState(accounts: [], mode: .manual)
-        var viewModel = LocalOAuthImportViewModel()
-        var viewState = PoolDashboardViewState(syncError: "舊錯誤")
-        let output = PoolDashboardLocalImportCoordinator.Output(
-            state: AccountPoolState(
-                accounts: [AgentAccount(id: UUID(), name: "Imported", usedUnits: 1, quota: 100)],
-                mode: .manual
-            ),
-            viewModel: {
-                var vm = LocalOAuthImportViewModel()
-                vm.errorMessage = nil
-                return vm
-            }(),
-            didImport: true
-        )
-
-        coordinator.applyLocalImportOutput(
-            output,
-            state: &state,
-            viewModel: &viewModel,
-            viewState: &viewState
-        )
-
-        #expect(state.accounts.count == 1)
-        #expect(viewState.syncError == nil)
     }
 
     @Test

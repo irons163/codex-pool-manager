@@ -1,7 +1,7 @@
 import Foundation
 @testable import AIAgentPool
 
-private struct MockCodexUsageClient: CodexUsageClient {
+struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]
     var shouldThrow: Bool = false
     var shouldThrowError: Error?
@@ -17,7 +17,7 @@ private struct MockCodexUsageClient: CodexUsageClient {
     }
 }
 
-private func makeMockedURLSession(
+func makeMockedURLSession(
     endpoint: URL,
     statusCode: Int,
     data: Data,
@@ -34,7 +34,7 @@ private func makeMockedURLSession(
     return URLSession(configuration: configuration)
 }
 
-private final class MockUsageURLProtocol: URLProtocol {
+final class MockUsageURLProtocol: URLProtocol {
     private static let lock = NSLock()
     private static var responseByURL: [String: (statusCode: Int, data: Data)] = [:]
     private static var observerByURL: [String: (URLRequest) -> Void] = [:]
@@ -92,7 +92,7 @@ private final class MockUsageURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-private final class LockedValue<Value> {
+final class LockedValue<Value> {
     private let lock = NSLock()
     private var _value: Value
 
@@ -113,7 +113,7 @@ private final class LockedValue<Value> {
     }
 }
 
-private actor FlakyCodexUsageClient: CodexUsageClient {
+actor FlakyCodexUsageClient: CodexUsageClient {
     var failuresBeforeSuccess: Int
     let successUsage: CodexUsage
 
