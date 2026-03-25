@@ -19,8 +19,7 @@ struct PoolDashboardView: View {
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
     private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
-    private let lifecycleCoordinator = PoolDashboardLifecycleCoordinator()
-    private let mutationCoordinator = PoolDashboardMutationCoordinator()
+    private let lifecycleFlowCoordinator = PoolDashboardLifecycleFlowCoordinator()
     private let actionCoordinator = PoolDashboardActionCoordinator()
     private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
     private let localImportFlowCoordinator = PoolDashboardLocalImportFlowCoordinator()
@@ -220,20 +219,28 @@ struct PoolDashboardView: View {
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
-            lifecycleCoordinator.onAppear(
-                state: &state,
-                lowUsageAlertPolicy: &lowUsageAlertPolicy
+            let output = lifecycleFlowCoordinator.onAppear(
+                state: state,
+                lowUsageAlertPolicy: lowUsageAlertPolicy,
+                viewModel: localOAuthImportViewModel,
+                authFileAccessService: authFileAccessService,
+                currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
             )
-            refreshLocalOAuthAccounts()
+            state = output.state
+            lowUsageAlertPolicy = output.lowUsageAlertPolicy
+            localOAuthImportViewModel = output.viewModel
+            sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
         }
         .onChange(of: state.snapshot) { _, snapshot in
-            store.save(snapshot)
-            if lifecycleCoordinator.shouldShowLowUsageAlert(
+            let output = lifecycleFlowCoordinator.onSnapshotChanged(
+                snapshot: snapshot,
                 state: state,
-                lowUsageAlertPolicy: &lowUsageAlertPolicy
-            ) {
-                viewState.showLowUsageAlert = true
-            }
+                lowUsageAlertPolicy: lowUsageAlertPolicy,
+                viewState: viewState,
+                store: store
+            )
+            lowUsageAlertPolicy = output.lowUsageAlertPolicy
+            viewState = output.viewState
         }
         .alert("低剩餘用量提醒", isPresented: $viewState.showLowUsageAlert) {
             Button("知道了", role: .cancel) { }

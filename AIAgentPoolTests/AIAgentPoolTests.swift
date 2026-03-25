@@ -1858,6 +1858,74 @@ extension AIAgentPoolTests {
     }
 
     @Test
+    func poolDashboardLifecycleFlowCoordinatorOnSnapshotChangedSavesSnapshotAndShowsAlert() {
+        final class SpyStore: AccountPoolStoring {
+            var savedSnapshots: [AccountPoolSnapshot] = []
+
+            func load() -> AccountPoolSnapshot? { nil }
+
+            func save(_ snapshot: AccountPoolSnapshot) {
+                savedSnapshots.append(snapshot)
+            }
+        }
+
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 95, quota: 100)],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.15
+        )
+        state.evaluate()
+        let snapshot = state.snapshot
+        let coordinator = PoolDashboardLifecycleFlowCoordinator()
+        let store = SpyStore()
+
+        let output = coordinator.onSnapshotChanged(
+            snapshot: snapshot,
+            state: state,
+            lowUsageAlertPolicy: LowUsageAlertPolicy(),
+            viewState: PoolDashboardViewState(),
+            store: store
+        )
+
+        #expect(store.savedSnapshots.count == 1)
+        #expect(output.viewState.showLowUsageAlert)
+    }
+
+    @Test
+    func poolDashboardLifecycleFlowCoordinatorOnSnapshotChangedSavesSnapshotWithoutAlertWhenSafe() {
+        final class SpyStore: AccountPoolStoring {
+            var savedSnapshots: [AccountPoolSnapshot] = []
+
+            func load() -> AccountPoolSnapshot? { nil }
+
+            func save(_ snapshot: AccountPoolSnapshot) {
+                savedSnapshots.append(snapshot)
+            }
+        }
+
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 100)],
+            mode: .manual,
+            lowUsageThresholdRatio: 0.15
+        )
+        state.evaluate()
+        let snapshot = state.snapshot
+        let coordinator = PoolDashboardLifecycleFlowCoordinator()
+        let store = SpyStore()
+
+        let output = coordinator.onSnapshotChanged(
+            snapshot: snapshot,
+            state: state,
+            lowUsageAlertPolicy: LowUsageAlertPolicy(),
+            viewState: PoolDashboardViewState(),
+            store: store
+        )
+
+        #expect(store.savedSnapshots.count == 1)
+        #expect(!output.viewState.showLowUsageAlert)
+    }
+
+    @Test
     func poolDashboardMutationCoordinatorApplySyncOutputUpdatesAllFields() {
         let id = UUID()
         var state = AccountPoolState(
