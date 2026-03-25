@@ -16,8 +16,9 @@ struct PoolDashboardView: View {
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
-    private let backupCoordinator = PoolDashboardBackupCoordinator()
-    private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
+    private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
+    private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
+    private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
     private let lifecycleCoordinator = PoolDashboardLifecycleCoordinator()
     private let mutationCoordinator = PoolDashboardMutationCoordinator()
     private let actionCoordinator = PoolDashboardActionCoordinator()
@@ -247,19 +248,15 @@ struct PoolDashboardView: View {
     }
 
     private func exportSnapshot() {
-        let result = backupCoordinator.exportSnapshot(from: state.snapshot)
-        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
+        backupFlowCoordinator.exportSnapshot(from: state, viewState: &viewState)
     }
 
     private func exportRefetchableSnapshot() {
-        let result = backupCoordinator.exportRefetchableSnapshot(from: state.snapshot)
-        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
+        backupFlowCoordinator.exportRefetchableSnapshot(from: state, viewState: &viewState)
     }
 
     private func importSnapshot() {
-        let result = backupCoordinator.importSnapshotState(from: viewState.backupJSON)
-        let shouldSyncUsage = mutationCoordinator.applyBackupImportResult(
-            result,
+        let shouldSyncUsage = backupFlowCoordinator.importSnapshot(
             state: &state,
             viewState: &viewState
         )
@@ -279,12 +276,12 @@ struct PoolDashboardView: View {
         viewState.isSyncingUsage = true
         defer { viewState.isSyncingUsage = false }
 
-        let output = await runtimeCoordinator.syncCodexUsage(from: state)
-        mutationCoordinator.applySyncOutput(
-            output,
-            state: &state,
-            viewState: &viewState
+        let output = await usageSyncFlowCoordinator.syncCodexUsage(
+            from: state,
+            viewState: viewState
         )
+        state = output.state
+        viewState = output.viewState
     }
 
     @MainActor
@@ -296,8 +293,10 @@ struct PoolDashboardView: View {
         viewState.oauthError = nil
         viewState.oauthSuccessMessage = nil
 
-        let output = await runtimeCoordinator.signInWithOAuth(
+        let output = await oauthSignInFlowCoordinator.signInWithOAuth(
             from: state,
+            viewState: viewState,
+            oauthAccountName: formState.oauthAccountName,
             input: .init(
                 issuer: oauthIssuer,
                 clientID: oauthClientID,
@@ -305,17 +304,13 @@ struct PoolDashboardView: View {
                 redirectURI: oauthRedirectURI,
                 originator: oauthOriginator,
                 workspaceID: oauthWorkspaceID,
-                accountNameInput: formState.oauthAccountName,
                 fallbackQuota: formState.oauthAccountQuota
             )
         )
-        let shouldRefresh = mutationCoordinator.applyOAuthOutput(
-            output,
-            state: &state,
-            viewState: &viewState,
-            oauthAccountName: &formState.oauthAccountName
-        )
-        if shouldRefresh {
+        state = output.state
+        viewState = output.viewState
+        formState.oauthAccountName = output.oauthAccountName
+        if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
         }
     }
