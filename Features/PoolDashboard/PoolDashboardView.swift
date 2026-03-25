@@ -327,96 +327,44 @@ struct PoolDashboardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            GroupBox("帳號用量") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        TextField("新帳號名稱", text: $newAccountName)
-                            .textFieldStyle(.roundedBorder)
-                        Stepper("配額 \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
-                        Button("新增帳號") {
-                            state.addAccount(name: newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), quota: newAccountQuota)
-                            newAccountName = ""
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-
-                    List {
-                        ForEach(state.accounts) { account in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        TextField("帳號名稱", text: accountNameBinding(accountID: account.id))
-                                            .textFieldStyle(.roundedBorder)
-                                        if let chatGPTAccountID = account.chatGPTAccountID {
-                                            Text("Account ID: \(chatGPTAccountID)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Text(usageSourceLabel(for: account))
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        if let usageWindowDetail = usageWindowDetailLabel(for: account) {
-                                            Text(usageWindowDetail)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                    Button("切換並啟動") {
-                                        Task {
-                                            await switchAndLaunchCodex(using: account)
-                                        }
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    Button("刪除", role: .destructive) {
-                                        state.removeAccount(account.id)
-                                    }
-                                }
-
-                                if isPercentUsageAccount(account) {
-                                    HStack {
-                                        Text("已用 \(account.usedUnits)%")
-                                        Spacer()
-                                        Text("剩餘 \(account.remainingUnits)%")
-                                    }
-                                    .font(.subheadline)
-                                } else {
-                                    HStack {
-                                        Stepper(
-                                            "已用 \(account.usedUnits)",
-                                            value: accountUsedBinding(accountID: account.id),
-                                            in: 0...account.quota,
-                                            step: 50
-                                        )
-                                        Stepper(
-                                            "配額 \(account.quota)",
-                                            value: accountQuotaBinding(accountID: account.id),
-                                            in: 100...20_000,
-                                            step: 100
-                                        )
-                                    }
-                                }
-
-                                HStack {
-                                    Text(remainingLabel(for: account))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text("\(Int(account.usageRatio * 100))%")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                ProgressView(value: account.usageRatio)
-                                    .tint(usageProgressColor(for: account))
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    .listStyle(.plain)
-                    .frame(minHeight: 220)
+            AccountUsagePanelView(
+                newAccountName: $newAccountName,
+                newAccountQuota: $newAccountQuota,
+                accounts: state.accounts,
+                onAddAccount: { name, quota in
+                    state.addAccount(name: name, quota: quota)
+                },
+                onSwitchAndLaunch: { account in
+                    await switchAndLaunchCodex(using: account)
+                },
+                onRemoveAccount: { accountID in
+                    state.removeAccount(accountID)
+                },
+                accountNameBinding: { accountID in
+                    accountNameBinding(accountID: accountID)
+                },
+                accountQuotaBinding: { accountID in
+                    accountQuotaBinding(accountID: accountID)
+                },
+                accountUsedBinding: { accountID in
+                    accountUsedBinding(accountID: accountID)
+                },
+                usageSourceLabel: { account in
+                    usageSourceLabel(for: account)
+                },
+                usageWindowDetailLabel: { account in
+                    usageWindowDetailLabel(for: account)
+                },
+                isPercentUsageAccount: { account in
+                    isPercentUsageAccount(account)
+                },
+                remainingLabel: { account in
+                    remainingLabel(for: account)
+                },
+                usageProgressColor: { account in
+                    usageProgressColor(for: account)
                 }
-            }
+            )
 
             GroupBox("近期活動") {
                 if state.activities.isEmpty {
