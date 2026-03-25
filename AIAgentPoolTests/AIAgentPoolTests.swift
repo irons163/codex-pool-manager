@@ -1778,4 +1778,141 @@ extension AIAgentPoolTests {
         #expect(form.contains("redirect_uri=aiaagentpool://oauth/callback"))
         #expect(form.contains("code_verifier=verifier-123"))
     }
+
+    @Test
+    func poolAccountUpsertOAuthSignInAddsNewAccountWhenNoMatch() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        let coordinator = PoolAccountUpsertCoordinator()
+        let tokens = OAuthTokens(accessToken: "token-new", refreshToken: nil, idToken: nil)
+        let claims = OAuthIDTokenClaims(subject: "user-1", accountID: "acct-1", email: "new@example.com")
+
+        let message = coordinator.applyOAuthSignIn(
+            state: &state,
+            tokens: tokens,
+            claims: claims,
+            usage: nil,
+            accountNameInput: "",
+            fallbackQuota: 1000
+        )
+
+        #expect(message == "登入成功，已新增帳號")
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].name == "new@example.com")
+        #expect(state.accounts[0].apiToken == "token-new")
+        #expect(state.accounts[0].chatGPTAccountID == "acct-1")
+        #expect(state.accounts[0].quota == 1000)
+        #expect(state.accounts[0].usedUnits == 0)
+    }
+
+    @Test
+    func poolAccountUpsertOAuthSignInUpdatesPlaceholderNameWhenMatched() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "OAuth Account",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "token-old",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            mode: .manual
+        )
+        let coordinator = PoolAccountUpsertCoordinator()
+        let tokens = OAuthTokens(accessToken: "token-new", refreshToken: nil, idToken: nil)
+        let claims = OAuthIDTokenClaims(subject: "user-1", accountID: "acct-1", email: "real@example.com")
+
+        let message = coordinator.applyOAuthSignIn(
+            state: &state,
+            tokens: tokens,
+            claims: claims,
+            usage: CodexUsage(usedUnits: 11, quota: 100, accountID: "acct-1", accountEmail: "real@example.com"),
+            accountNameInput: "",
+            fallbackQuota: 1000
+        )
+
+        #expect(message == "登入成功，已更新既有帳號")
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].id == accountID)
+        #expect(state.accounts[0].name == "real@example.com")
+        #expect(state.accounts[0].apiToken == "token-new")
+        #expect(state.accounts[0].usedUnits == 11)
+        #expect(state.accounts[0].quota == 100)
+    }
+
+    @Test
+    func poolAccountUpsertOAuthSignInKeepsExistingCustomNameWhenInputIsEmpty() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Custom Name",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "token-old",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            mode: .manual
+        )
+        let coordinator = PoolAccountUpsertCoordinator()
+        let tokens = OAuthTokens(accessToken: "token-new", refreshToken: nil, idToken: nil)
+        let claims = OAuthIDTokenClaims(subject: "user-1", accountID: "acct-1", email: "real@example.com")
+
+        _ = coordinator.applyOAuthSignIn(
+            state: &state,
+            tokens: tokens,
+            claims: claims,
+            usage: CodexUsage(usedUnits: 5, quota: 100),
+            accountNameInput: "",
+            fallbackQuota: 1000
+        )
+
+        #expect(state.accounts[0].name == "Custom Name")
+    }
+
+    @Test
+    func poolAccountUpsertLocalImportUpdatesExistingAccountByAccountID() {
+        let existingID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: existingID,
+                    name: "old@example.com",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "token-old",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            mode: .manual
+        )
+        let coordinator = PoolAccountUpsertCoordinator()
+        let usage = CodexUsage(
+            usedUnits: 42,
+            quota: 100,
+            usageWindowName: "primary_window",
+            usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000),
+            accountID: "acct-1",
+            accountEmail: "new@example.com"
+        )
+
+        coordinator.applyLocalImport(
+            state: &state,
+            usage: usage,
+            fallbackName: "fallback",
+            accessToken: "token-new",
+            chatGPTAccountID: "acct-1"
+        )
+
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].id == existingID)
+        #expect(state.accounts[0].name == "new@example.com")
+        #expect(state.accounts[0].apiToken == "token-new")
+        #expect(state.accounts[0].usedUnits == 42)
+        #expect(state.accounts[0].usageWindowName == "primary_window")
+    }
 }

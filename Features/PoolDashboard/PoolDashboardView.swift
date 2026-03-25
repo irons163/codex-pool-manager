@@ -641,79 +641,26 @@ struct PoolDashboardView: View {
             let tokens = try await OAuthLoginService().signIn(configuration: configuration)
             let claims = OAuthIDTokenClaimsParser.parse(tokens.idToken)
 
-            var resolvedAccountID = claims?.accountID ?? claims?.subject
-            var resolvedEmail = claims?.email
-            var resolvedQuota = oauthAccountQuota
-            var resolvedUsedUnits = 0
-            var resolvedWindowName: String?
-            var resolvedWindowResetAt: Date?
-
-            if let accountID = resolvedAccountID, !accountID.isEmpty {
+            var usage: CodexUsage?
+            if let accountID = (claims?.accountID ?? claims?.subject), !accountID.isEmpty {
                 do {
-                    let usage = try await OpenAICodexUsageClient().fetchUsage(
+                    usage = try await OpenAICodexUsageClient().fetchUsage(
                         accessToken: tokens.accessToken,
                         accountID: accountID
                     )
-                    resolvedAccountID = usage.accountID ?? resolvedAccountID
-                    resolvedEmail = usage.accountEmail ?? resolvedEmail
-                    resolvedQuota = usage.quota
-                    resolvedUsedUnits = usage.usedUnits
-                    resolvedWindowName = usage.usageWindowName
-                    resolvedWindowResetAt = usage.usageWindowResetAt
                 } catch {
                     // Keep account creation flow robust; user can sync again later.
                 }
             }
 
-            let accountNameInput = oauthAccountName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let resolvedAccountName = accountNameInput.isEmpty
-                ? (resolvedEmail ?? "OAuth Account")
-                : accountNameInput
-
-            let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
-                in: state.accounts,
-                chatGPTAccountID: resolvedAccountID,
-                accessToken: tokens.accessToken,
-                email: resolvedEmail
+            oauthSuccessMessage = PoolAccountUpsertCoordinator().applyOAuthSignIn(
+                state: &state,
+                tokens: tokens,
+                claims: claims,
+                usage: usage,
+                accountNameInput: oauthAccountName,
+                fallbackQuota: oauthAccountQuota
             )
-
-            if let existingAccountID {
-                let existingAccount = state.accounts.first(where: { $0.id == existingAccountID })
-                let shouldReplacePlaceholderName = accountNameInput.isEmpty
-                    && (existingAccount?.name == "OAuth Account" || existingAccount?.name.isEmpty == true)
-                let updatedName = accountNameInput.isEmpty
-                    ? (shouldReplacePlaceholderName ? resolvedAccountName : (existingAccount?.name ?? resolvedAccountName))
-                    : resolvedAccountName
-
-                state.updateAccount(
-                    existingAccountID,
-                    name: updatedName,
-                    quota: resolvedQuota,
-                    usedUnits: resolvedUsedUnits,
-                    apiToken: tokens.accessToken,
-                    chatGPTAccountID: resolvedAccountID,
-                    usageWindowName: resolvedWindowName,
-                    usageWindowResetAt: resolvedWindowResetAt,
-                    now: .now
-                )
-                oauthSuccessMessage = "登入成功，已更新既有帳號"
-            } else {
-                let newAccountID = state.addAccount(
-                    name: resolvedAccountName,
-                    quota: resolvedQuota,
-                    usedUnits: resolvedUsedUnits,
-                    chatGPTAccountID: resolvedAccountID,
-                    usageWindowName: resolvedWindowName,
-                    usageWindowResetAt: resolvedWindowResetAt
-                )
-                state.updateAccount(
-                    newAccountID,
-                    apiToken: tokens.accessToken,
-                    chatGPTAccountID: resolvedAccountID,
-                    now: .now
-                )
-                oauthSuccessMessage = "登入成功，已新增帳號"
-            }
             oauthAccountName = ""
             refreshLocalOAuthAccounts()
         } catch {
@@ -842,45 +789,13 @@ struct PoolDashboardView: View {
                 accessToken: accessToken,
                 accountID: chatGPTAccountID
             )
-            let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? name) : name
-            let resolvedAccountID = usage.accountID ?? chatGPTAccountID
-
-            let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
-                in: state.accounts,
-                chatGPTAccountID: resolvedAccountID,
+            PoolAccountUpsertCoordinator().applyLocalImport(
+                state: &state,
+                usage: usage,
+                fallbackName: name,
                 accessToken: accessToken,
-                email: normalizedEmail
+                chatGPTAccountID: chatGPTAccountID
             )
-
-            if let existingAccountID {
-                state.updateAccount(
-                    existingAccountID,
-                    name: resolvedName,
-                    quota: usage.quota,
-                    usedUnits: usage.usedUnits,
-                    apiToken: accessToken,
-                    chatGPTAccountID: resolvedAccountID,
-                    usageWindowName: usage.usageWindowName,
-                    usageWindowResetAt: usage.usageWindowResetAt
-                )
-            } else {
-                let newAccountID = state.addAccount(
-                    name: resolvedName,
-                    quota: usage.quota,
-                    usedUnits: usage.usedUnits,
-                    chatGPTAccountID: resolvedAccountID,
-                    usageWindowName: usage.usageWindowName,
-                    usageWindowResetAt: usage.usageWindowResetAt
-                )
-                state.updateAccount(
-                    newAccountID,
-                    apiToken: accessToken,
-                    chatGPTAccountID: resolvedAccountID,
-                    usageWindowName: usage.usageWindowName,
-                    usageWindowResetAt: usage.usageWindowResetAt
-                )
-            }
 
             localOAuthImportViewModel.errorMessage = nil
             syncError = nil

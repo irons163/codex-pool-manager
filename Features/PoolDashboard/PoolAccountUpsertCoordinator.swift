@@ -1,0 +1,135 @@
+import Foundation
+
+struct PoolAccountUpsertCoordinator {
+    func applyOAuthSignIn(
+        state: inout AccountPoolState,
+        tokens: OAuthTokens,
+        claims: OAuthIDTokenClaims?,
+        usage: CodexUsage?,
+        accountNameInput: String,
+        fallbackQuota: Int,
+        now: Date = .now
+    ) -> String {
+        var resolvedAccountID = claims?.accountID ?? claims?.subject
+        var resolvedEmail = claims?.email
+        var resolvedQuota = fallbackQuota
+        var resolvedUsedUnits = 0
+        var resolvedWindowName: String?
+        var resolvedWindowResetAt: Date?
+
+        if let usage {
+            resolvedAccountID = usage.accountID ?? resolvedAccountID
+            resolvedEmail = usage.accountEmail ?? resolvedEmail
+            resolvedQuota = usage.quota
+            resolvedUsedUnits = usage.usedUnits
+            resolvedWindowName = usage.usageWindowName
+            resolvedWindowResetAt = usage.usageWindowResetAt
+        }
+
+        let trimmedInput = accountNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedAccountName = trimmedInput.isEmpty
+            ? (resolvedEmail ?? "OAuth Account")
+            : trimmedInput
+
+        let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: state.accounts,
+            chatGPTAccountID: resolvedAccountID,
+            accessToken: tokens.accessToken,
+            email: resolvedEmail
+        )
+
+        if let existingAccountID {
+            let existingAccount = state.accounts.first(where: { $0.id == existingAccountID })
+            let shouldReplacePlaceholderName = trimmedInput.isEmpty
+                && (existingAccount?.name == "OAuth Account" || existingAccount?.name.isEmpty == true)
+            let updatedName = trimmedInput.isEmpty
+                ? (shouldReplacePlaceholderName ? resolvedAccountName : (existingAccount?.name ?? resolvedAccountName))
+                : resolvedAccountName
+
+            state.updateAccount(
+                existingAccountID,
+                name: updatedName,
+                quota: resolvedQuota,
+                usedUnits: resolvedUsedUnits,
+                apiToken: tokens.accessToken,
+                chatGPTAccountID: resolvedAccountID,
+                usageWindowName: resolvedWindowName,
+                usageWindowResetAt: resolvedWindowResetAt,
+                now: now
+            )
+            return "登入成功，已更新既有帳號"
+        }
+
+        let newAccountID = state.addAccount(
+            name: resolvedAccountName,
+            quota: resolvedQuota,
+            usedUnits: resolvedUsedUnits,
+            chatGPTAccountID: resolvedAccountID,
+            usageWindowName: resolvedWindowName,
+            usageWindowResetAt: resolvedWindowResetAt,
+            now: now
+        )
+        state.updateAccount(
+            newAccountID,
+            apiToken: tokens.accessToken,
+            chatGPTAccountID: resolvedAccountID,
+            usageWindowName: resolvedWindowName,
+            usageWindowResetAt: resolvedWindowResetAt,
+            now: now
+        )
+        return "登入成功，已新增帳號"
+    }
+
+    func applyLocalImport(
+        state: inout AccountPoolState,
+        usage: CodexUsage,
+        fallbackName: String,
+        accessToken: String,
+        chatGPTAccountID: String,
+        now: Date = .now
+    ) {
+        let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? fallbackName) : fallbackName
+        let resolvedAccountID = usage.accountID ?? chatGPTAccountID
+
+        let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: state.accounts,
+            chatGPTAccountID: resolvedAccountID,
+            accessToken: accessToken,
+            email: normalizedEmail
+        )
+
+        if let existingAccountID {
+            state.updateAccount(
+                existingAccountID,
+                name: resolvedName,
+                quota: usage.quota,
+                usedUnits: usage.usedUnits,
+                apiToken: accessToken,
+                chatGPTAccountID: resolvedAccountID,
+                usageWindowName: usage.usageWindowName,
+                usageWindowResetAt: usage.usageWindowResetAt,
+                now: now
+            )
+            return
+        }
+
+        let newAccountID = state.addAccount(
+            name: resolvedName,
+            quota: usage.quota,
+            usedUnits: usage.usedUnits,
+            chatGPTAccountID: resolvedAccountID,
+            usageWindowName: usage.usageWindowName,
+            usageWindowResetAt: usage.usageWindowResetAt,
+            now: now
+        )
+        state.updateAccount(
+            newAccountID,
+            apiToken: accessToken,
+            chatGPTAccountID: resolvedAccountID,
+            usageWindowName: usage.usageWindowName,
+            usageWindowResetAt: usage.usageWindowResetAt,
+            now: now
+        )
+    }
+}
