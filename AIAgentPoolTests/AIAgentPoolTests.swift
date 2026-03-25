@@ -1864,8 +1864,17 @@ extension AIAgentPoolTests {
             accounts: [AgentAccount(id: id, name: "Old", usedUnits: 1, quota: 100)],
             mode: .manual
         )
-        var rawJSON = ""
-        var syncError: String? = "old"
+        var viewState = PoolDashboardViewState(
+            backupJSON: "",
+            backupError: nil,
+            syncError: "old",
+            lastUsageRawJSON: "",
+            showUsageRawJSON: false,
+            oauthError: nil,
+            oauthSuccessMessage: nil,
+            lastSwitchLaunchLog: "",
+            showSwitchLaunchLog: false
+        )
         var nextState = state
         nextState.updateAccount(id, usedUnits: 77)
         let output = PoolDashboardRuntimeCoordinator.SyncOutput(
@@ -1878,13 +1887,12 @@ extension AIAgentPoolTests {
         coordinator.applySyncOutput(
             output,
             state: &state,
-            lastUsageRawJSON: &rawJSON,
-            syncError: &syncError
+            viewState: &viewState
         )
 
         #expect(state.accounts[0].usedUnits == 77)
-        #expect(rawJSON == "{\"ok\":true}")
-        #expect(syncError == nil)
+        #expect(viewState.lastUsageRawJSON == "{\"ok\":true}")
+        #expect(viewState.syncError == nil)
     }
 
     @Test
@@ -1894,8 +1902,17 @@ extension AIAgentPoolTests {
             accounts: [AgentAccount(id: id, name: "Old", usedUnits: 1, quota: 100)],
             mode: .manual
         )
-        var oauthError: String? = "old-error"
-        var oauthSuccess: String? = nil
+        var viewState = PoolDashboardViewState(
+            backupJSON: "",
+            backupError: nil,
+            syncError: nil,
+            lastUsageRawJSON: "",
+            showUsageRawJSON: false,
+            oauthError: "old-error",
+            oauthSuccessMessage: nil,
+            lastSwitchLaunchLog: "",
+            showSwitchLaunchLog: false
+        )
         var oauthAccountName = "before"
         var updatedState = state
         updatedState.updateAccount(id, name: "Updated")
@@ -1911,15 +1928,14 @@ extension AIAgentPoolTests {
         let shouldRefresh = coordinator.applyOAuthOutput(
             output,
             state: &state,
-            oauthError: &oauthError,
-            oauthSuccessMessage: &oauthSuccess,
+            viewState: &viewState,
             oauthAccountName: &oauthAccountName
         )
 
         #expect(shouldRefresh)
         #expect(state.accounts[0].name == "Updated")
-        #expect(oauthError == nil)
-        #expect(oauthSuccess == "ok")
+        #expect(viewState.oauthError == nil)
+        #expect(viewState.oauthSuccessMessage == "ok")
         #expect(oauthAccountName.isEmpty)
     }
 
@@ -1927,7 +1943,17 @@ extension AIAgentPoolTests {
     func poolDashboardMutationCoordinatorApplyLocalImportOutputClearsSyncErrorWhenImported() {
         var state = AccountPoolState(accounts: [], mode: .manual)
         var viewModel = LocalOAuthImportViewModel()
-        var syncError: String? = "previous"
+        var viewState = PoolDashboardViewState(
+            backupJSON: "",
+            backupError: nil,
+            syncError: "previous",
+            lastUsageRawJSON: "",
+            showUsageRawJSON: false,
+            oauthError: nil,
+            oauthSuccessMessage: nil,
+            lastSwitchLaunchLog: "",
+            showSwitchLaunchLog: false
+        )
         var nextState = state
         nextState.addAccount(name: "Imported", quota: 100)
         var nextViewModel = viewModel
@@ -1943,17 +1969,27 @@ extension AIAgentPoolTests {
             output,
             state: &state,
             viewModel: &viewModel,
-            syncError: &syncError
+            viewState: &viewState
         )
 
         #expect(state.accounts.count == 1)
-        #expect(syncError == nil)
+        #expect(viewState.syncError == nil)
     }
 
     @Test
     func poolDashboardMutationCoordinatorApplySwitchOutputUpdatesViewModelAndLog() {
         var viewModel = LocalOAuthImportViewModel()
-        var log = ""
+        var viewState = PoolDashboardViewState(
+            backupJSON: "",
+            backupError: nil,
+            syncError: nil,
+            lastUsageRawJSON: "",
+            showUsageRawJSON: false,
+            oauthError: nil,
+            oauthSuccessMessage: nil,
+            lastSwitchLaunchLog: "",
+            showSwitchLaunchLog: false
+        )
         var authorizedURL: URL? = nil
         let expectedURL = URL(string: "file:///tmp/auth.json")
         let output = PoolDashboardSwitchLaunchCoordinator.Output(
@@ -1966,11 +2002,11 @@ extension AIAgentPoolTests {
         coordinator.applySwitchOutput(
             output,
             viewModel: &viewModel,
-            lastSwitchLaunchLog: &log,
+            viewState: &viewState,
             sessionAuthorizedAuthFileURL: &authorizedURL
         )
 
-        #expect(log == "line-1")
+        #expect(viewState.lastSwitchLaunchLog == "line-1")
         #expect(viewModel.errorMessage == "switch-failed")
         #expect(authorizedURL == expectedURL)
     }
@@ -2543,8 +2579,7 @@ extension AIAgentPoolTests {
         let coordinator = PoolDashboardMutationCoordinator()
         let accountID = UUID()
         var state = AccountPoolState(accounts: [], mode: .manual)
-        var lastUsageRawJSON = ""
-        var syncError: String? = nil
+        var viewState = PoolDashboardViewState()
         let output = PoolDashboardRuntimeCoordinator.SyncOutput(
             state: AccountPoolState(
                 accounts: [AgentAccount(id: accountID, name: "Synced", usedUnits: 10, quota: 100)],
@@ -2557,22 +2592,20 @@ extension AIAgentPoolTests {
         coordinator.applySyncOutput(
             output,
             state: &state,
-            lastUsageRawJSON: &lastUsageRawJSON,
-            syncError: &syncError
+            viewState: &viewState
         )
 
         #expect(state.accounts.count == 1)
         #expect(state.accounts[0].name == "Synced")
-        #expect(lastUsageRawJSON == "{\"ok\":true}")
-        #expect(syncError == "同步失敗：x")
+        #expect(viewState.lastUsageRawJSON == "{\"ok\":true}")
+        #expect(viewState.syncError == "同步失敗：x")
     }
 
     @Test
     func poolDashboardMutationCoordinatorApplyOAuthOutputReturnsRefreshFlagAndWritesFields() {
         let coordinator = PoolDashboardMutationCoordinator()
         var state = AccountPoolState(accounts: [], mode: .manual)
-        var oauthError: String? = nil
-        var oauthSuccessMessage: String? = nil
+        var viewState = PoolDashboardViewState()
         var oauthAccountName = "old"
         let output = PoolDashboardRuntimeCoordinator.OAuthSignInOutput(
             state: AccountPoolState(
@@ -2588,15 +2621,14 @@ extension AIAgentPoolTests {
         let shouldRefresh = coordinator.applyOAuthOutput(
             output,
             state: &state,
-            oauthError: &oauthError,
-            oauthSuccessMessage: &oauthSuccessMessage,
+            viewState: &viewState,
             oauthAccountName: &oauthAccountName
         )
 
         #expect(shouldRefresh)
         #expect(state.accounts.count == 1)
-        #expect(oauthError == nil)
-        #expect(oauthSuccessMessage == "success")
+        #expect(viewState.oauthError == nil)
+        #expect(viewState.oauthSuccessMessage == "success")
         #expect(oauthAccountName == "")
     }
 
@@ -2605,7 +2637,7 @@ extension AIAgentPoolTests {
         let coordinator = PoolDashboardMutationCoordinator()
         var state = AccountPoolState(accounts: [], mode: .manual)
         var viewModel = LocalOAuthImportViewModel()
-        var syncError: String? = "舊錯誤"
+        var viewState = PoolDashboardViewState(syncError: "舊錯誤")
         let output = PoolDashboardLocalImportCoordinator.Output(
             state: AccountPoolState(
                 accounts: [AgentAccount(id: UUID(), name: "Imported", usedUnits: 1, quota: 100)],
@@ -2623,18 +2655,18 @@ extension AIAgentPoolTests {
             output,
             state: &state,
             viewModel: &viewModel,
-            syncError: &syncError
+            viewState: &viewState
         )
 
         #expect(state.accounts.count == 1)
-        #expect(syncError == nil)
+        #expect(viewState.syncError == nil)
     }
 
     @Test
     func poolDashboardMutationCoordinatorApplySwitchOutputWritesLogErrorAndSessionURL() {
         let coordinator = PoolDashboardMutationCoordinator()
         var viewModel = LocalOAuthImportViewModel()
-        var log = ""
+        var viewState = PoolDashboardViewState()
         var url: URL? = nil
         let expectedURL = URL(string: "file:///tmp/auth.json")
         let output = PoolDashboardSwitchLaunchCoordinator.Output(
@@ -2646,11 +2678,11 @@ extension AIAgentPoolTests {
         coordinator.applySwitchOutput(
             output,
             viewModel: &viewModel,
-            lastSwitchLaunchLog: &log,
+            viewState: &viewState,
             sessionAuthorizedAuthFileURL: &url
         )
 
-        #expect(log == "log-line")
+        #expect(viewState.lastSwitchLaunchLog == "log-line")
         #expect(viewModel.errorMessage == "err")
         #expect(url == expectedURL)
     }

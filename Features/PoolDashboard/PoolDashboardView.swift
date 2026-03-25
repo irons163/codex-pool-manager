@@ -14,19 +14,11 @@ struct PoolDashboardView: View {
     @State private var oauthAccountName = ""
     @State private var oauthAccountQuota = 1000
     @State private var resetAllLatch = DestructiveActionLatch()
-    @State private var backupJSON = ""
-    @State private var backupError: String?
+    @State private var viewState = PoolDashboardViewState()
     @State private var showLowUsageAlert = false
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     @State private var isSyncingUsage = false
-    @State private var syncError: String?
-    @State private var lastUsageRawJSON = ""
-    @State private var showUsageRawJSON = false
-    @State private var lastSwitchLaunchLog = ""
-    @State private var showSwitchLaunchLog = false
     @State private var isSigningInOAuth = false
-    @State private var oauthError: String?
-    @State private var oauthSuccessMessage: String?
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
@@ -87,16 +79,16 @@ struct PoolDashboardView: View {
                 SyncToolbarView(
                     isSyncing: isSyncingUsage,
                     lastSyncAt: state.lastUsageSyncAt,
-                    errorText: syncError
+                    errorText: viewState.syncError
                 ) {
                     Task { await syncCodexUsage() }
                 }
 
             DebugToolsPanelView(
-                showUsageRawJSON: $showUsageRawJSON,
-                lastUsageRawJSON: $lastUsageRawJSON,
-                showSwitchLaunchLog: $showSwitchLaunchLog,
-                lastSwitchLaunchLog: $lastSwitchLaunchLog
+                showUsageRawJSON: $viewState.showUsageRawJSON,
+                lastUsageRawJSON: $viewState.lastUsageRawJSON,
+                showSwitchLaunchLog: $viewState.showSwitchLaunchLog,
+                lastSwitchLaunchLog: $viewState.lastSwitchLaunchLog
             )
 
             OAuthLoginPanelView(
@@ -109,8 +101,8 @@ struct PoolDashboardView: View {
                 oauthAccountName: $oauthAccountName,
                 oauthAccountQuota: $oauthAccountQuota,
                 isSigningInOAuth: isSigningInOAuth,
-                oauthSuccessMessage: oauthSuccessMessage,
-                oauthError: oauthError,
+                oauthSuccessMessage: viewState.oauthSuccessMessage,
+                oauthError: viewState.oauthError,
                 onSignIn: {
                     await signInWithOAuth()
                 }
@@ -218,8 +210,8 @@ struct PoolDashboardView: View {
             )
 
             BackupRestorePanelView(
-                backupJSON: $backupJSON,
-                backupError: $backupError,
+                backupJSON: $viewState.backupJSON,
+                backupError: $viewState.backupError,
                 onExport: exportSnapshot,
                 onExportRefetchable: exportRefetchableSnapshot,
                 onImport: importSnapshot
@@ -261,31 +253,31 @@ struct PoolDashboardView: View {
     private func exportSnapshot() {
         let result = backupCoordinator.exportSnapshot(from: state.snapshot)
         if let json = result.json {
-            backupJSON = json
-            backupError = nil
+            viewState.backupJSON = json
+            viewState.backupError = nil
         } else if let message = result.errorMessage {
-            backupError = message
+            viewState.backupError = message
         }
     }
 
     private func exportRefetchableSnapshot() {
         let result = backupCoordinator.exportRefetchableSnapshot(from: state.snapshot)
         if let json = result.json {
-            backupJSON = json
-            backupError = nil
+            viewState.backupJSON = json
+            viewState.backupError = nil
         } else if let message = result.errorMessage {
-            backupError = message
+            viewState.backupError = message
         }
     }
 
     private func importSnapshot() {
-        let result = backupCoordinator.importSnapshotState(from: backupJSON)
+        let result = backupCoordinator.importSnapshotState(from: viewState.backupJSON)
         if let importedState = result.state {
             state = importedState
-            backupError = nil
+            viewState.backupError = nil
             Task { await syncCodexUsage() }
         } else if let message = result.errorMessage {
-            backupError = message
+            viewState.backupError = message
         }
     }
 
@@ -304,8 +296,7 @@ struct PoolDashboardView: View {
         mutationCoordinator.applySyncOutput(
             output,
             state: &state,
-            lastUsageRawJSON: &lastUsageRawJSON,
-            syncError: &syncError
+            viewState: &viewState
         )
     }
 
@@ -315,8 +306,8 @@ struct PoolDashboardView: View {
         isSigningInOAuth = true
         defer { isSigningInOAuth = false }
 
-        oauthError = nil
-        oauthSuccessMessage = nil
+        viewState.oauthError = nil
+        viewState.oauthSuccessMessage = nil
 
         let output = await runtimeCoordinator.signInWithOAuth(
             from: state,
@@ -334,8 +325,7 @@ struct PoolDashboardView: View {
         let shouldRefresh = mutationCoordinator.applyOAuthOutput(
             output,
             state: &state,
-            oauthError: &oauthError,
-            oauthSuccessMessage: &oauthSuccessMessage,
+            viewState: &viewState,
             oauthAccountName: &oauthAccountName
         )
         if shouldRefresh {
@@ -373,14 +363,14 @@ struct PoolDashboardView: View {
             state: state,
             viewModel: localOAuthImportViewModel,
             onRawResponse: { raw in
-                lastUsageRawJSON = raw
+                viewState.lastUsageRawJSON = raw
             }
         )
         mutationCoordinator.applyLocalImportOutput(
             output,
             state: &state,
             viewModel: &localOAuthImportViewModel,
-            syncError: &syncError
+            viewState: &viewState
         )
     }
 
@@ -397,7 +387,7 @@ struct PoolDashboardView: View {
         mutationCoordinator.applySwitchOutput(
             output,
             viewModel: &localOAuthImportViewModel,
-            lastSwitchLaunchLog: &lastSwitchLaunchLog,
+            viewState: &viewState,
             sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
         )
     }
