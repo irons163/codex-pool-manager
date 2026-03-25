@@ -1097,37 +1097,21 @@ struct ContentView: View {
         let running = workspace.runningApplications
         appendSwitchLaunchLog("目前執行中 app 數量：\(running.count)")
 
-        if let existing = running.first(where: { ($0.bundleIdentifier ?? "") == "com.openai.chatgpt" }) {
-            appendSwitchLaunchLog("命中已開啟：com.openai.chatgpt，嘗試前景化")
-            _ = existing.activate(options: [.activateIgnoringOtherApps])
-            return
-        }
-        if let existing = running.first(where: { ($0.bundleIdentifier ?? "") == "com.openai.codex" }) {
-            appendSwitchLaunchLog("命中已開啟：com.openai.codex，嘗試前景化")
-            _ = existing.activate(options: [.activateIgnoringOtherApps])
-            return
+        let knownBundleIDs = ["com.openai.chatgpt", "com.openai.codex"]
+        for bundleIdentifier in knownBundleIDs {
+            let closed = await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
+            if !closed {
+                throw NSError(
+                    domain: "CodexSwitch",
+                    code: 4,
+                    userInfo: [NSLocalizedDescriptionKey: "偵測到 \(bundleIdentifier) 仍在執行。Sandbox 模式無法自動關閉其他 App，請先手動關閉後再試。"]
+                )
+            }
         }
 
-        if try await launchApp(bundleIdentifier: "com.openai.chatgpt") {
-            appendSwitchLaunchLog("啟動成功：com.openai.chatgpt")
+        if try await launchCodexAppWithRetry() {
             return
         }
-        appendSwitchLaunchLog("找不到或啟動失敗：com.openai.chatgpt")
-        if try await launchApp(bundleIdentifier: "com.openai.codex") {
-            appendSwitchLaunchLog("啟動成功：com.openai.codex")
-            return
-        }
-        appendSwitchLaunchLog("找不到或啟動失敗：com.openai.codex")
-        if try await launchApp(at: URL(fileURLWithPath: "/Applications/ChatGPT.app")) {
-            appendSwitchLaunchLog("啟動成功：/Applications/ChatGPT.app")
-            return
-        }
-        appendSwitchLaunchLog("找不到或啟動失敗：/Applications/ChatGPT.app")
-        if try await launchApp(at: URL(fileURLWithPath: "/Applications/Codex.app")) {
-            appendSwitchLaunchLog("啟動成功：/Applications/Codex.app")
-            return
-        }
-        appendSwitchLaunchLog("找不到或啟動失敗：/Applications/Codex.app")
 
         throw NSError(
             domain: "CodexSwitch",
@@ -1143,9 +1127,90 @@ struct ContentView: View {
 #endif
     }
 
+    private func closeAppIfRunning(bundleIdentifier: String) async -> Bool {
+#if canImport(AppKit)
+        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+        guard !runningApps.isEmpty else {
+            appendSwitchLaunchLog("未偵測到執行中：\(bundleIdentifier)")
+            return true
+        }
+
+        appendSwitchLaunchLog("偵測到執行中：\(bundleIdentifier)（\(runningApps.count)）")
+
+        if isSandboxedEnvironment {
+            appendSwitchLaunchLog("Sandbox 模式下無法自動關閉其他 App，請手動關閉後再切換")
+            return false
+        }
+
+        for runningApp in runningApps {
+            let pid = runningApp.processIdentifier
+            let didTerminate = runningApp.terminate()
+            appendSwitchLaunchLog("嘗試關閉 pid=\(pid) -> \(didTerminate ? "terminate" : "terminate failed")")
+            if !didTerminate {
+                let didForceTerminate = runningApp.forceTerminate()
+                appendSwitchLaunchLog("嘗試強制關閉 pid=\(pid) -> \(didForceTerminate ? "forceTerminate" : "forceTerminate failed")")
+            }
+        }
+
+        let didExit = await waitUntilAppExits(bundleIdentifier: bundleIdentifier, timeoutNanoseconds: 8_000_000_000)
+        if didExit {
+            appendSwitchLaunchLog("已關閉：\(bundleIdentifier)")
+            return true
+        }
+
+        appendSwitchLaunchLog("仍在執行：\(bundleIdentifier)（可能受權限限制）")
+        return false
+#else
+        return true
+#endif
+    }
+
+    private func launchCodexAppWithRetry(maxAttempts: Int = 6) async throws -> Bool {
+        for attempt in 1...maxAttempts {
+            appendSwitchLaunchLog("啟動嘗試 #\(attempt)")
+            if try await launchApp(bundleIdentifier: "com.openai.chatgpt") {
+                appendSwitchLaunchLog("啟動成功：com.openai.chatgpt")
+                return true
+            }
+            if try await launchApp(bundleIdentifier: "com.openai.codex") {
+                appendSwitchLaunchLog("啟動成功：com.openai.codex")
+                return true
+            }
+            if try await launchApp(at: URL(fileURLWithPath: "/Applications/ChatGPT.app")) {
+                appendSwitchLaunchLog("啟動成功：/Applications/ChatGPT.app")
+                return true
+            }
+            if try await launchApp(at: URL(fileURLWithPath: "/Applications/Codex.app")) {
+                appendSwitchLaunchLog("啟動成功：/Applications/Codex.app")
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        appendSwitchLaunchLog("多次嘗試後仍無法啟動 Codex/ChatGPT")
+        return false
+    }
+
+    private func waitUntilAppExits(bundleIdentifier: String, timeoutNanoseconds: UInt64) async -> Bool {
+#if canImport(AppKit)
+        let interval: UInt64 = 200_000_000
+        var waited: UInt64 = 0
+        while waited < timeoutNanoseconds {
+            if NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty {
+                return true
+            }
+            try? await Task.sleep(nanoseconds: interval)
+            waited += interval
+        }
+        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
+#else
+        return true
+#endif
+    }
+
     private func launchApp(bundleIdentifier: String) async throws -> Bool {
 #if canImport(AppKit)
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            appendSwitchLaunchLog("找不到 bundle id：\(bundleIdentifier)")
             return false
         }
         appendSwitchLaunchLog("找到 bundle id \(bundleIdentifier) -> \(url.path)")
@@ -1172,6 +1237,10 @@ struct ContentView: View {
 #else
         return false
 #endif
+    }
+
+    private var isSandboxedEnvironment: Bool {
+        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }
 
     private func appendSwitchLaunchLog(_ line: String) {
