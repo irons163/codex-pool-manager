@@ -1915,4 +1915,5 @@ extension AIAgentPoolTests {
         #expect(state.accounts[0].usedUnits == 42)
         #expect(state.accounts[0].usageWindowName == "primary_window")
     }
+
 }

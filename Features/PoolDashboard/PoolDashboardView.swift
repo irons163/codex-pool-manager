@@ -1,8 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
-#if canImport(AppKit)
-import AppKit
-#endif
 
 struct PoolDashboardView: View {
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
@@ -36,6 +32,8 @@ struct PoolDashboardView: View {
     private let store: AccountPoolStoring
     private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
+    private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
+    private let usagePresenter = PoolAccountUsagePresenter()
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -90,199 +88,63 @@ struct PoolDashboardView: View {
                 lastSwitchLaunchLog: $lastSwitchLaunchLog
             )
 
-            GroupBox("OAuth 登入（你自行填 client_id）") {
-                VStack(alignment: .leading, spacing: 10) {
-                    TextField("Client ID", text: $oauthClientID)
-                        .textFieldStyle(.roundedBorder)
+            OAuthLoginPanelView(
+                oauthIssuer: $oauthIssuer,
+                oauthClientID: $oauthClientID,
+                oauthScopes: $oauthScopes,
+                oauthRedirectURI: $oauthRedirectURI,
+                oauthOriginator: $oauthOriginator,
+                oauthWorkspaceID: $oauthWorkspaceID,
+                oauthAccountName: $oauthAccountName,
+                oauthAccountQuota: $oauthAccountQuota,
+                isSigningInOAuth: isSigningInOAuth,
+                oauthSuccessMessage: oauthSuccessMessage,
+                oauthError: oauthError,
+                onSignIn: {
+                    await signInWithOAuth()
+                }
+            )
 
-                    DisclosureGroup("進階設定（一般情況不用改）") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            TextField("Issuer (例如 https://auth.openai.com)", text: $oauthIssuer)
-                                .textFieldStyle(.roundedBorder)
-                            TextField("Scopes", text: $oauthScopes)
-                                .textFieldStyle(.roundedBorder)
-                            TextField("Redirect URI", text: $oauthRedirectURI)
-                                .textFieldStyle(.roundedBorder)
-                            TextField("Originator", text: $oauthOriginator)
-                                .textFieldStyle(.roundedBorder)
-                            TextField("Allowed Workspace ID（可留空）", text: $oauthWorkspaceID)
-                                .textFieldStyle(.roundedBorder)
-                        }
-                        .padding(.top, 4)
-                    }
+            LocalOAuthAccountsPanelView(
+                accounts: localOAuthImportViewModel.accounts,
+                errorMessage: localOAuthImportViewModel.errorMessage,
+                onScan: {
+                    refreshLocalOAuthAccounts()
+                },
+                onChooseAuthFile: {
+                    _ = openAuthFilePanel()
+                },
+                onImport: { account in
+                    await importLocalOAuthAccount(account)
+                }
+            )
 
-                    HStack {
-                        TextField("登入後帳號名稱", text: $oauthAccountName)
-                            .textFieldStyle(.roundedBorder)
-                        Stepper("配額 \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
-                    }
+            StrategySettingsPanelView(
+                mode: state.mode,
+                accounts: state.accounts,
+                intelligentCandidateName: intelligentCandidateName,
+                canIntelligentSwitch: state.canIntelligentSwitch(),
+                intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
+                modeBinding: modeBinding,
+                manualSelectionBinding: manualSelectionBinding,
+                minSwitchIntervalBinding: minSwitchIntervalBinding,
+                lowThresholdBinding: lowThresholdBinding,
+                minUsageDeltaBinding: minUsageDeltaBinding
+            )
 
-                    HStack {
-                        Button(isSigningInOAuth ? "OAuth 登入中..." : "OAuth 登入並新增帳號") {
-                            Task { await signInWithOAuth() }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(isSigningInOAuth)
-
-                        if let oauthSuccessMessage {
-                            Text(oauthSuccessMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.green)
-                        }
-                        if let oauthError {
-                            Text(oauthError)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        }
+            OverallUsagePanelView(
+                totalUsedUnits: state.totalUsedUnits,
+                totalQuota: state.totalQuota,
+                overallUsageRatio: state.overallUsageRatio,
+                availableAccountsCount: state.availableAccountsCount,
+                isPoolExhausted: state.isPoolExhausted,
+                resetAllButtonTitle: resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量",
+                onResetAll: {
+                    if resetAllLatch.confirmOrArm() {
+                        state.resetAllUsage()
                     }
                 }
-            }
-
-            GroupBox("本機已登入 OAuth 帳號") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Button("掃描本機登入") {
-                            refreshLocalOAuthAccounts()
-                        }
-                        .buttonStyle(.bordered)
-
-                        Button("選擇 auth.json") {
-                            openAuthFilePanel()
-                        }
-                        .buttonStyle(.bordered)
-
-                        if let localOAuthError = localOAuthImportViewModel.errorMessage {
-                            Text(localOAuthError)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        } else {
-                            Text("找到 \(localOAuthImportViewModel.accounts.count) 個帳號")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if localOAuthImportViewModel.accounts.isEmpty {
-                        Text("尚未找到本機 OAuth 帳號。若你已登入 Codex，請點「選擇 auth.json」並選擇 ~/.codex/auth.json")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(localOAuthImportViewModel.accounts) { account in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(account.displayName)
-                                    if let email = account.email {
-                                        Text(email)
-                                            .font(.footnote)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Text(account.maskedToken)
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                    if let chatGPTAccountID = account.chatGPTAccountID {
-                                        Text("Account ID: \(chatGPTAccountID)")
-                                            .font(.footnote)
-                                            .foregroundStyle(.secondary)
-                                    } else {
-                                        Text("缺少 Account ID，無法查詢用量")
-                                            .font(.footnote)
-                                            .foregroundStyle(.orange)
-                                    }
-                                }
-                                Spacer()
-                                Button("匯入") {
-                                    Task {
-                                        await importLocalOAuthAccount(account)
-                                    }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(account.chatGPTAccountID == nil)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                }
-            }
-
-            Picker("切換模式", selection: modeBinding) {
-                ForEach(SwitchMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            GroupBox("策略設定") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Stepper(
-                        "最小切換間隔 \(Int(state.minSwitchInterval)) 秒",
-                        value: minSwitchIntervalBinding,
-                        in: 30...1800,
-                        step: 30
-                    )
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("低用量提醒門檻 \(Int(state.lowUsageThresholdRatio * 100))%")
-                        Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("智能切換最小改善 \(Int(state.minUsageRatioDeltaToSwitch * 100))%")
-                        Slider(value: minUsageDeltaBinding, in: 0...0.2, step: 0.01)
-                    }
-                    if state.mode == .intelligent {
-                        if let candidateID = state.intelligentCandidateID,
-                           let candidate = state.accounts.first(where: { $0.id == candidateID }) {
-                            Text("推薦切換帳號：\(candidate.name)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        if state.canIntelligentSwitch() {
-                            Text("目前可切換帳號")
-                                .font(.subheadline)
-                                .foregroundStyle(.green)
-                        } else {
-                            Text("冷卻中，\(state.intelligentSwitchCooldownRemaining()) 秒後可切換")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-
-            GroupBox("整體用量") {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("總用量 \(state.totalUsedUnits)/\(state.totalQuota)")
-                        Spacer()
-                        Text("\(Int(state.overallUsageRatio * 100))%")
-                            .foregroundStyle(.secondary)
-                    }
-                    ProgressView(value: state.overallUsageRatio)
-                    Button(resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量") {
-                        if resetAllLatch.confirmOrArm() {
-                            state.resetAllUsage()
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    HStack {
-                        Text("可用帳號數 \(state.availableAccountsCount)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    if state.isPoolExhausted {
-                        Text("所有帳號用量已耗盡，請補充配額或重設用量。")
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-
-            if state.mode == .manual, !state.accounts.isEmpty {
-                Picker("手動帳號", selection: manualSelectionBinding) {
-                    ForEach(state.accounts) { account in
-                        Text(account.name).tag(account.id)
-                    }
-                }
-            }
+            )
 
             ActiveAccountPanelView(
                 activeAccount: state.activeAccount,
@@ -321,19 +183,19 @@ struct PoolDashboardView: View {
                     accountUsedBinding(accountID: accountID)
                 },
                 usageSourceLabel: { account in
-                    usageSourceLabel(for: account)
+                    usagePresenter.usageSourceLabel(for: account)
                 },
                 usageWindowDetailLabel: { account in
-                    usageWindowDetailLabel(for: account)
+                    usagePresenter.usageWindowDetailLabel(for: account)
                 },
                 isPercentUsageAccount: { account in
-                    isPercentUsageAccount(account)
+                    usagePresenter.isPercentUsageAccount(account)
                 },
                 remainingLabel: { account in
-                    remainingLabel(for: account)
+                    usagePresenter.remainingLabel(for: account)
                 },
                 usageProgressColor: { account in
-                    usageProgressColor(for: account)
+                    usagePresenter.usageProgressColor(for: account)
                 }
             )
 
@@ -406,6 +268,11 @@ struct PoolDashboardView: View {
         } catch {
             backupError = "匯入失敗：\(error.localizedDescription)"
         }
+    }
+
+    private var intelligentCandidateName: String? {
+        guard let candidateID = state.intelligentCandidateID else { return nil }
+        return state.accounts.first(where: { $0.id == candidateID })?.name
     }
 
     private var modeBinding: Binding<SwitchMode> {
@@ -601,30 +468,17 @@ struct PoolDashboardView: View {
 
     @MainActor
     @discardableResult
-    private func openAuthFilePanel() -> Bool {
-#if canImport(AppKit)
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json]
-        panel.prompt = "選擇"
-        panel.message = "請選擇 ~/.codex/auth.json"
-
-        let codexDirectory = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex")
-        panel.directoryURL = codexDirectory
-        panel.nameFieldStringValue = "auth.json"
-
-        if panel.runModal() == .OK, let url = panel.url {
-            saveAuthFileBookmark(for: url)
-            loadLocalOAuthAccounts(from: url)
-            return true
-        }
-        return false
-#else
-        localOAuthImportViewModel.errorMessage = "目前平台不支援檔案面板"
-        return false
+    private func openAuthFilePanel() -> URL? {
+        guard let url = CodexAuthFilePanelService().pickAuthFileURL() else {
+#if !canImport(AppKit)
+            localOAuthImportViewModel.errorMessage = "目前平台不支援檔案面板"
 #endif
+            return nil
+        }
+
+        saveAuthFileBookmark(for: url)
+        loadLocalOAuthAccounts(from: url)
+        return url
     }
 
     @MainActor
@@ -660,49 +514,6 @@ struct PoolDashboardView: View {
         }
     }
 
-    private func usageSourceLabel(for account: AgentAccount) -> String {
-        if account.chatGPTAccountID != nil, account.quota == 100 {
-            return "用量來源：response.rate_limit.primary_window.used_percent"
-        }
-        if account.chatGPTAccountID != nil {
-            return "用量來源：response.used_units / quota"
-        }
-        return "用量來源：手動/本地設定"
-    }
-
-    private func isPercentUsageAccount(_ account: AgentAccount) -> Bool {
-        account.chatGPTAccountID != nil && account.quota == 100
-    }
-
-    private func remainingLabel(for account: AgentAccount) -> String {
-        if isPercentUsageAccount(account) {
-            return "剩餘 \(account.remainingUnits)%"
-        }
-        return "剩餘 \(account.remainingUnits)"
-    }
-
-    private func usageWindowDetailLabel(for account: AgentAccount) -> String? {
-        guard account.chatGPTAccountID != nil else { return nil }
-
-        var segments: [String] = []
-        if let usageWindowName = account.usageWindowName, !usageWindowName.isEmpty {
-            segments.append("視窗：\(usageWindowName)")
-        }
-        if let resetAt = account.usageWindowResetAt {
-            segments.append(
-                "重置：\(resetAt.formatted(.dateTime.month().day().hour().minute()))"
-            )
-        }
-        return segments.isEmpty ? nil : segments.joined(separator: " · ")
-    }
-
-    private func usageProgressColor(for account: AgentAccount) -> Color {
-        let ratio = account.usageRatio
-        if ratio >= 0.9 { return .red }
-        if ratio >= 0.7 { return .orange }
-        return .blue
-    }
-
     private func normalizeStoredImportedAccountNames() {
         for localAccount in localOAuthImportViewModel.accounts {
             guard let chatGPTAccountID = localAccount.chatGPTAccountID else { continue }
@@ -717,95 +528,17 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func switchAndLaunchCodex(using account: AgentAccount) async {
-        lastSwitchLaunchLog = "開始切換：\(account.name)\n"
-        guard !account.apiToken.isEmpty else {
-            localOAuthImportViewModel.errorMessage = "此帳號沒有可用 token，無法切換"
-            appendSwitchLaunchLog("失敗：沒有 token")
-            return
-        }
-        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
-            localOAuthImportViewModel.errorMessage = "此帳號缺少 Account ID，無法切換"
-            appendSwitchLaunchLog("失敗：沒有 account_id")
-            return
-        }
-
-        do {
-            let authFileURL = try resolveAuthFileURLForSwitch()
-            try await performSwitchAndLaunch(
-                authFileURL: authFileURL,
-                account: account,
-                chatGPTAccountID: chatGPTAccountID
-            )
-            return
-        } catch let error as NSError where error.domain == "CodexSwitch" && error.code == 1 {
-            appendSwitchLaunchLog("尚未授權 auth.json，啟動選檔流程")
-            let didAuthorize = openAuthFilePanel()
-
-            guard didAuthorize else {
-                appendSwitchLaunchLog("使用者未完成 auth.json 授權")
-                localOAuthImportViewModel.errorMessage = "請先完成 auth.json 授權，才能切換並啟動"
-                return
-            }
-
-            do {
-                appendSwitchLaunchLog("已取得授權，重試切換")
-                let authFileURL = try resolveAuthFileURLForSwitch()
-                try await performSwitchAndLaunch(
-                    authFileURL: authFileURL,
-                    account: account,
-                    chatGPTAccountID: chatGPTAccountID
-                )
-                return
-            } catch {
-                appendSwitchLaunchLog("重試失敗：\(error.localizedDescription)")
-                localOAuthImportViewModel.errorMessage = "切換失敗：\(error.localizedDescription)"
-                return
-            }
-        } catch {
-            appendSwitchLaunchLog("錯誤：\(error.localizedDescription)")
-            localOAuthImportViewModel.errorMessage = "切換失敗：\(error.localizedDescription)"
-        }
-    }
-
-    @MainActor
-    private func performSwitchAndLaunch(
-        authFileURL: URL,
-        account: AgentAccount,
-        chatGPTAccountID: String
-    ) async throws {
-        let service = CodexAuthSwitchService { line in
-            appendSwitchLaunchLog(line)
-        }
-        try await service.performSwitchAndLaunch(
-            authFileURL: authFileURL,
+        let output = await switchLaunchCoordinator.switchAndLaunch(
             account: account,
-            chatGPTAccountID: chatGPTAccountID
+            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
+            authFileAccessService: authFileAccessService,
+            authorizeAuthFile: {
+                openAuthFilePanel()
+            }
         )
-        localOAuthImportViewModel.errorMessage = nil
-    }
-
-    private func resolveAuthFileURLForSwitch() throws -> URL {
-        do {
-            let resolved = try authFileAccessService.resolveAuthFileURLForSwitch(
-                sessionAuthorizedURL: sessionAuthorizedAuthFileURL
-            )
-            sessionAuthorizedAuthFileURL = resolved
-            return resolved
-        } catch {
-            throw NSError(
-                domain: "CodexSwitch",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "找不到 auth.json，請先按「選擇 auth.json」授權"]
-            )
-        }
-    }
-
-    private func appendSwitchLaunchLog(_ line: String) {
-        if lastSwitchLaunchLog.isEmpty {
-            lastSwitchLaunchLog = line
-        } else {
-            lastSwitchLaunchLog += "\n\(line)"
-        }
+        lastSwitchLaunchLog = output.switchLaunchLog
+        localOAuthImportViewModel.errorMessage = output.errorMessage
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
     }
 }
 
