@@ -1059,6 +1059,27 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func oauthLocalhostCallbackConfigParsesPortAndPath() throws {
+        let redirectURI = try #require(URL(string: "http://localhost:1455/auth/callback"))
+
+        let config = try #require(LocalhostOAuthCallbackConfig(redirectURI: redirectURI))
+
+        #expect(config.host == "localhost")
+        #expect(config.port == 1455)
+        #expect(config.callbackPath == "/auth/callback")
+    }
+
+    @Test
+    func oauthLocalhostCallbackExtractorParsesCodeAndStateFromRequestLine() throws {
+        let config = LocalhostOAuthCallbackConfig(host: "localhost", port: 1455, callbackPath: "/auth/callback")
+        let request = "GET /auth/callback?code=abc123&state=s1 HTTP/1.1\r\nHost: localhost:1455\r\n\r\n"
+
+        let callbackURL = try #require(LocalhostOAuthCallbackExtractor.callbackURL(fromRequest: request, config: config))
+
+        #expect(callbackURL.absoluteString == "http://localhost:1455/auth/callback?code=abc123&state=s1")
+    }
+
+    @Test
     func oauthTokenRequestBodyContainsExpectedFields() {
         let body = OAuthTokenRequestBuilder.authorizationCodeBody(
             clientID: "client-123",

@@ -2,6 +2,7 @@ import Foundation
 import AuthenticationServices
 import CryptoKit
 import Security
+import Network
 #if canImport(AppKit)
 import AppKit
 #endif
@@ -142,6 +143,8 @@ enum OAuthLoginError: Error, LocalizedError, Equatable {
     case invalidRedirectURI
     case browserStartFailed
     case invalidCallback
+    case localhostCallbackStartFailed(String)
+    case localhostCallbackTimedOut
     case authorizationFailed(String)
     case missingCode
     case stateMismatch
@@ -157,6 +160,10 @@ enum OAuthLoginError: Error, LocalizedError, Equatable {
             return "無法開啟 OAuth 登入頁"
         case .invalidCallback:
             return "回呼資料無效"
+        case .localhostCallbackStartFailed(let message):
+            return "本機回呼服務啟動失敗：\(message)"
+        case .localhostCallbackTimedOut:
+            return "等待本機回呼逾時，請重新登入"
         case .authorizationFailed(let message):
             return "授權失敗：\(message)"
         case .missingCode:
@@ -200,6 +207,7 @@ struct PKCECodes {
 final class OAuthLoginService: NSObject {
     private let session: URLSession
     private var webAuthenticationSession: ASWebAuthenticationSession?
+    private let localhostCallbackServer = LocalhostOAuthCallbackServer()
     private let presentationContextProvider = OAuthPresentationContextProvider()
 
     init(session: URLSession = .shared) {
@@ -207,10 +215,6 @@ final class OAuthLoginService: NSObject {
     }
 
     func signIn(configuration: OAuthClientConfiguration) async throws -> OAuthTokens {
-        guard let callbackScheme = configuration.callbackURLScheme else {
-            throw OAuthLoginError.invalidRedirectURI
-        }
-
         let pkce = PKCECodes.make()
         let state = UUID().uuidString
         let request = OAuthAuthorizationRequest(state: state, codeChallenge: pkce.codeChallenge)
@@ -219,10 +223,22 @@ final class OAuthLoginService: NSObject {
             request: request
         )
 
-        let callbackURL = try await beginWebAuthentication(
-            authorizeURL: authorizeURL,
-            callbackScheme: callbackScheme
-        )
+        let callbackURL: URL
+        if let redirectURL = URL(string: configuration.redirectURI),
+           let localhostConfig = LocalhostOAuthCallbackConfig(redirectURI: redirectURL) {
+            callbackURL = try await beginLocalhostBrowserAuthentication(
+                authorizeURL: authorizeURL,
+                callbackConfig: localhostConfig
+            )
+        } else {
+            guard let callbackScheme = configuration.callbackURLScheme else {
+                throw OAuthLoginError.invalidRedirectURI
+            }
+            callbackURL = try await beginWebAuthentication(
+                authorizeURL: authorizeURL,
+                callbackScheme: callbackScheme
+            )
+        }
         let payload = try OAuthCallbackParser.parse(callbackURL: callbackURL)
         guard payload.state == state else {
             throw OAuthLoginError.stateMismatch
@@ -270,6 +286,26 @@ final class OAuthLoginService: NSObject {
                 resumeOnce(.failure(OAuthLoginError.browserStartFailed))
                 return
             }
+        }
+    }
+
+    private func beginLocalhostBrowserAuthentication(
+        authorizeURL: URL,
+        callbackConfig: LocalhostOAuthCallbackConfig
+    ) async throws -> URL {
+        try await localhostCallbackServer.waitForCallback(config: callbackConfig) {
+            #if canImport(AppKit)
+            if Thread.isMainThread {
+                return NSWorkspace.shared.open(authorizeURL)
+            }
+            var opened = false
+            DispatchQueue.main.sync {
+                opened = NSWorkspace.shared.open(authorizeURL)
+            }
+            return opened
+            #else
+            return false
+            #endif
         }
     }
 
@@ -328,6 +364,202 @@ private final class OAuthPresentationContextProvider: NSObject, ASWebAuthenticat
         #else
         return ASPresentationAnchor()
         #endif
+    }
+}
+
+struct LocalhostOAuthCallbackConfig: Equatable {
+    let host: String
+    let port: UInt16
+    let callbackPath: String
+
+    init?(redirectURI: URL) {
+        guard let scheme = redirectURI.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              let host = redirectURI.host?.lowercased(),
+              host == "localhost" || host == "127.0.0.1" || host == "::1" else {
+            return nil
+        }
+
+        let port: Int
+        if let explicitPort = redirectURI.port {
+            port = explicitPort
+        } else {
+            port = scheme == "https" ? 443 : 80
+        }
+        guard (1...65535).contains(port), let validPort = UInt16(exactly: port) else {
+            return nil
+        }
+
+        let path = redirectURI.path.isEmpty ? "/" : redirectURI.path
+        self.host = host
+        self.port = validPort
+        self.callbackPath = path
+    }
+
+    init(host: String, port: UInt16, callbackPath: String) {
+        self.host = host
+        self.port = port
+        self.callbackPath = callbackPath
+    }
+}
+
+enum LocalhostOAuthCallbackExtractor {
+    static func callbackURL(fromRequest request: String, config: LocalhostOAuthCallbackConfig) -> URL? {
+        guard let firstLine = request.split(separator: "\r\n", omittingEmptySubsequences: false).first else {
+            return nil
+        }
+
+        let parts = firstLine.split(separator: " ")
+        guard parts.count >= 2, parts[0] == "GET" else {
+            return nil
+        }
+
+        let target = String(parts[1])
+        let pieces = target.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        let path = String(pieces[0])
+        guard path == config.callbackPath else {
+            return nil
+        }
+
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = config.host
+        components.port = Int(config.port)
+        components.percentEncodedPath = path
+        if pieces.count > 1 {
+            components.percentEncodedQuery = String(pieces[1])
+        }
+        return components.url
+    }
+}
+
+final class LocalhostOAuthCallbackServer {
+    private let queue = DispatchQueue(label: "AIAgentPool.LocalhostOAuthCallbackServer")
+
+    func waitForCallback(
+        config: LocalhostOAuthCallbackConfig,
+        timeoutNanoseconds: UInt64 = 120_000_000_000,
+        onReadyToReceiveCallback: @escaping () -> Bool = { true }
+    ) async throws -> URL {
+        final class ContinuationState {
+            private let lock = NSLock()
+            private var continuation: CheckedContinuation<URL, Error>?
+            private var completed = false
+            private var readySignaled = false
+            var listener: NWListener?
+
+            init(_ continuation: CheckedContinuation<URL, Error>) {
+                self.continuation = continuation
+            }
+
+            func complete(with result: Result<URL, Error>) {
+                lock.lock()
+                guard !completed, let continuation else {
+                    lock.unlock()
+                    return
+                }
+                completed = true
+                self.continuation = nil
+                let listener = self.listener
+                self.listener = nil
+                lock.unlock()
+
+                listener?.cancel()
+                continuation.resume(with: result)
+            }
+
+            func runReadyAction(_ action: () -> Void) {
+                lock.lock()
+                guard !completed, !readySignaled else {
+                    lock.unlock()
+                    return
+                }
+                readySignaled = true
+                lock.unlock()
+                action()
+            }
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let state = ContinuationState(continuation)
+
+            let listener: NWListener
+            do {
+                let port = NWEndpoint.Port(rawValue: config.port)
+                guard let port else {
+                    throw OAuthLoginError.localhostCallbackStartFailed("port 無效")
+                }
+                listener = try NWListener(using: .tcp, on: port)
+            } catch {
+                state.complete(with: .failure(OAuthLoginError.localhostCallbackStartFailed(error.localizedDescription)))
+                return
+            }
+
+            state.listener = listener
+
+            listener.stateUpdateHandler = { newState in
+                switch newState {
+                case .ready:
+                    state.runReadyAction {
+                        if !onReadyToReceiveCallback() {
+                            state.complete(with: .failure(OAuthLoginError.browserStartFailed))
+                        }
+                    }
+                case .failed(let error):
+                    state.complete(with: .failure(OAuthLoginError.localhostCallbackStartFailed(error.localizedDescription)))
+                default:
+                    break
+                }
+            }
+
+            listener.newConnectionHandler = { connection in
+                connection.start(queue: self.queue)
+                connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { data, _, _, error in
+                    defer { connection.cancel() }
+
+                    if let error {
+                        state.complete(with: .failure(OAuthLoginError.localhostCallbackStartFailed(error.localizedDescription)))
+                        return
+                    }
+
+                    let requestString = String(data: data ?? Data(), encoding: .utf8) ?? ""
+                    guard let callbackURL = LocalhostOAuthCallbackExtractor.callbackURL(fromRequest: requestString, config: config) else {
+                        self.sendHTTPResponse(
+                            status: "404 Not Found",
+                            body: "<html><body><h3>Invalid callback path</h3></body></html>",
+                            on: connection
+                        )
+                        return
+                    }
+
+                    self.sendHTTPResponse(
+                        status: "200 OK",
+                        body: "<html><body><h3>Login complete. You can return to the app.</h3></body></html>",
+                        on: connection
+                    )
+                    state.complete(with: .success(callbackURL))
+                }
+            }
+
+            listener.start(queue: queue)
+
+            Task {
+                try? await Task.sleep(nanoseconds: timeoutNanoseconds)
+                state.complete(with: .failure(OAuthLoginError.localhostCallbackTimedOut))
+            }
+        }
+    }
+
+    private func sendHTTPResponse(status: String, body: String, on connection: NWConnection) {
+        let payload = """
+        HTTP/1.1 \(status)\r
+        Content-Type: text/html; charset=utf-8\r
+        Content-Length: \(body.utf8.count)\r
+        Connection: close\r
+        \r
+        \(body)
+        """
+        connection.send(content: payload.data(using: .utf8), completion: .contentProcessed { _ in })
     }
 }
 
