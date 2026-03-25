@@ -1015,6 +1015,35 @@ struct AIAgentPoolTests {
         #expect(items["state"] == "test-state")
         #expect(items["code_challenge"] == "challenge-abc")
         #expect(items["code_challenge_method"] == "S256")
+        #expect(items["id_token_add_organizations"] == "true")
+        #expect(items["codex_cli_simplified_flow"] == "true")
+        #expect(items["originator"] == "codex_cli_rs")
+        #expect(items["allowed_workspace_id"] == nil)
+    }
+
+    @Test
+    func oauthAuthorizeURLIncludesAllowedWorkspaceIDWhenProvided() throws {
+        let config = OAuthClientConfiguration(
+            issuer: URL(string: "https://auth.example.com")!,
+            clientID: "client-123",
+            scopes: "openid profile email",
+            redirectURI: "aiaagentpool://oauth/callback",
+            originator: "codex_cli_rs",
+            forcedWorkspaceID: "ws-001"
+        )
+        let request = OAuthAuthorizationRequest(
+            state: "state-2",
+            codeChallenge: "challenge-2"
+        )
+
+        let url = try OAuthAuthorizationRequestBuilder.makeAuthorizeURL(
+            config: config,
+            request: request
+        )
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+
+        #expect(items["allowed_workspace_id"] == "ws-001")
     }
 
     @Test

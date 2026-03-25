@@ -11,6 +11,24 @@ struct OAuthClientConfiguration: Equatable, Codable {
     let clientID: String
     let scopes: String
     let redirectURI: String
+    let originator: String
+    let forcedWorkspaceID: String?
+
+    init(
+        issuer: URL,
+        clientID: String,
+        scopes: String,
+        redirectURI: String,
+        originator: String = "codex_cli_rs",
+        forcedWorkspaceID: String? = nil
+    ) {
+        self.issuer = issuer
+        self.clientID = clientID
+        self.scopes = scopes
+        self.redirectURI = redirectURI
+        self.originator = originator
+        self.forcedWorkspaceID = forcedWorkspaceID
+    }
 
     var authorizationEndpoint: URL {
         endpointURL(path: "/oauth/authorize")
@@ -47,8 +65,14 @@ enum OAuthAuthorizationRequestBuilder {
             URLQueryItem(name: "scope", value: config.scopes),
             URLQueryItem(name: "code_challenge", value: request.codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
-            URLQueryItem(name: "state", value: request.state)
+            URLQueryItem(name: "id_token_add_organizations", value: "true"),
+            URLQueryItem(name: "codex_cli_simplified_flow", value: "true"),
+            URLQueryItem(name: "state", value: request.state),
+            URLQueryItem(name: "originator", value: config.originator)
         ]
+        if let forcedWorkspaceID = config.forcedWorkspaceID, !forcedWorkspaceID.isEmpty {
+            components?.queryItems?.append(URLQueryItem(name: "allowed_workspace_id", value: forcedWorkspaceID))
+        }
 
         guard let url = components?.url else {
             throw OAuthLoginError.invalidAuthorizeURL
