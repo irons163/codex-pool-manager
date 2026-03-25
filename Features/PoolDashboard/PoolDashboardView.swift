@@ -9,10 +9,7 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
     @State private var state: AccountPoolState
-    @State private var newAccountName = ""
-    @State private var newAccountQuota = 1000
-    @State private var oauthAccountName = ""
-    @State private var oauthAccountQuota = 1000
+    @State private var formState = PoolDashboardFormState()
     @State private var resetAllLatch = DestructiveActionLatch()
     @State private var viewState = PoolDashboardViewState()
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
@@ -95,8 +92,8 @@ struct PoolDashboardView: View {
                 oauthRedirectURI: $oauthRedirectURI,
                 oauthOriginator: $oauthOriginator,
                 oauthWorkspaceID: $oauthWorkspaceID,
-                oauthAccountName: $oauthAccountName,
-                oauthAccountQuota: $oauthAccountQuota,
+                oauthAccountName: $formState.oauthAccountName,
+                oauthAccountQuota: $formState.oauthAccountQuota,
                 isSigningInOAuth: viewState.isSigningInOAuth,
                 oauthSuccessMessage: viewState.oauthSuccessMessage,
                 oauthError: viewState.oauthError,
@@ -161,8 +158,8 @@ struct PoolDashboardView: View {
             )
 
             AccountUsagePanelView(
-                newAccountName: $newAccountName,
-                newAccountQuota: $newAccountQuota,
+                newAccountName: $formState.newAccountName,
+                newAccountQuota: $formState.newAccountQuota,
                 accounts: state.accounts,
                 onAddAccount: { name, quota in
                     actionCoordinator.addAccount(state: &state, name: name, quota: quota)
@@ -315,15 +312,15 @@ struct PoolDashboardView: View {
                 redirectURI: oauthRedirectURI,
                 originator: oauthOriginator,
                 workspaceID: oauthWorkspaceID,
-                accountNameInput: oauthAccountName,
-                fallbackQuota: oauthAccountQuota
+                accountNameInput: formState.oauthAccountName,
+                fallbackQuota: formState.oauthAccountQuota
             )
         )
         let shouldRefresh = mutationCoordinator.applyOAuthOutput(
             output,
             state: &state,
             viewState: &viewState,
-            oauthAccountName: &oauthAccountName
+            oauthAccountName: &formState.oauthAccountName
         )
         if shouldRefresh {
             refreshLocalOAuthAccounts()
