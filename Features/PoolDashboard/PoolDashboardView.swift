@@ -35,6 +35,7 @@ struct PoolDashboardView: View {
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
     private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
+    private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
         self.store = store
@@ -476,7 +477,7 @@ struct PoolDashboardView: View {
 
     private func exportSnapshot() {
         do {
-            backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot)
+            backupJSON = try dataFlowCoordinator.exportSnapshotJSON(state.snapshot)
             backupError = nil
         } catch {
             backupError = "匯出失敗：\(error.localizedDescription)"
@@ -485,7 +486,7 @@ struct PoolDashboardView: View {
 
     private func exportRefetchableSnapshot() {
         do {
-            backupJSON = try AccountPoolSnapshotCodec.exportJSON(state.snapshot, redactSensitive: false)
+            backupJSON = try dataFlowCoordinator.exportRefetchableSnapshotJSON(state.snapshot)
             backupError = nil
         } catch {
             backupError = "匯出失敗：\(error.localizedDescription)"
@@ -494,8 +495,7 @@ struct PoolDashboardView: View {
 
     private func importSnapshot() {
         do {
-            let snapshot = try AccountPoolSnapshotCodec.importJSON(backupJSON)
-            state = AccountPoolState(snapshot: snapshot)
+            state = try dataFlowCoordinator.importState(from: backupJSON)
             backupError = nil
             Task { await syncCodexUsage() }
         } catch {
@@ -593,17 +593,11 @@ struct PoolDashboardView: View {
         defer { isSyncingUsage = false }
 
         do {
-            let client = OpenAICodexUsageClient(
-                onRawResponse: { raw in
-                    Task { @MainActor in
-                        lastUsageRawJSON = raw
-                    }
-                }
-            )
-            let service = CodexUsageSyncService(client: client)
-            var nextState = state
-            try await service.sync(state: &nextState)
-            state = nextState
+            let result = try await dataFlowCoordinator.syncState(from: state)
+            state = result.state
+            if let rawResponse = result.rawResponse {
+                lastUsageRawJSON = rawResponse
+            }
             syncError = nil
         } catch {
             syncError = "同步失敗：\(error.localizedDescription)"
