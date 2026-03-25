@@ -32,6 +32,7 @@ struct PoolDashboardView: View {
     private let store: AccountPoolStoring
     private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
+    private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
     private let usagePresenter = PoolAccountUsagePresenter()
     private var authFileAccessService: CodexAuthFileAccessService {
@@ -414,56 +415,46 @@ struct PoolDashboardView: View {
     }
 
     private func refreshLocalOAuthAccounts() {
-        if loadLocalOAuthAccountsFromBookmark() {
-            return
-        }
-
-        let discovered = LocalCodexAccountDiscovery.discover()
-        localOAuthImportViewModel.applyAutomaticScanResult(discovered)
-        normalizeStoredImportedAccountNames()
+        sessionAuthorizedAuthFileURL = localAccountsCoordinator.refreshLocalOAuthAccounts(
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            authFileAccessService: authFileAccessService,
+            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+        )
     }
 
     private func loadLocalOAuthAccounts(from url: URL) {
         sessionAuthorizedAuthFileURL = url
-        do {
-            let accounts = try authFileAccessService.loadAccounts(from: url)
-            localOAuthImportViewModel.applyLoadedAccountsFromFile(accounts)
-            normalizeStoredImportedAccountNames()
-        } catch {
-            localOAuthImportViewModel.applyReadFailure(error)
-        }
+        localAccountsCoordinator.loadLocalOAuthAccounts(
+            from: url,
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            authFileAccessService: authFileAccessService
+        )
     }
 
     private func saveAuthFileBookmark(for url: URL) {
-        do {
-            try authFileAccessService.saveBookmark(for: url)
-        } catch {
-            localOAuthImportViewModel.applyBookmarkSaveFailure(error)
-        }
+        localAccountsCoordinator.saveAuthFileBookmark(
+            for: url,
+            viewModel: &localOAuthImportViewModel,
+            authFileAccessService: authFileAccessService
+        )
     }
 
     @discardableResult
     private func loadLocalOAuthAccountsFromBookmark() -> Bool {
-        guard authFileAccessService.hasSavedBookmark() else {
-            return false
-        }
-
-        do {
-            let resolved = try authFileAccessService.loadAuthorizedURLFromBookmark()
-            if resolved.wasStale {
-                saveAuthFileBookmark(for: resolved.url)
-            }
-            sessionAuthorizedAuthFileURL = resolved.url
-            loadLocalOAuthAccounts(from: resolved.url)
-            return !localOAuthImportViewModel.accounts.isEmpty
-        } catch {
-            localOAuthImportViewModel.applyBookmarkInvalid()
-            return false
-        }
+        let result = localAccountsCoordinator.loadLocalOAuthAccountsFromBookmark(
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            authFileAccessService: authFileAccessService,
+            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+        )
+        sessionAuthorizedAuthFileURL = result.authorizedURL
+        return result.didLoadAccounts
     }
 
     private func hasSavedAuthFileBookmark() -> Bool {
-        authFileAccessService.hasSavedBookmark()
+        localAccountsCoordinator.hasSavedAuthFileBookmark(authFileAccessService: authFileAccessService)
     }
 
     @MainActor
@@ -511,18 +502,6 @@ struct PoolDashboardView: View {
             syncError = nil
         } catch {
             localOAuthImportViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(authFlowCoordinator.localizedSyncError(error))"
-        }
-    }
-
-    private func normalizeStoredImportedAccountNames() {
-        for localAccount in localOAuthImportViewModel.accounts {
-            guard let chatGPTAccountID = localAccount.chatGPTAccountID else { continue }
-            guard let persisted = state.accounts.first(where: { $0.chatGPTAccountID == chatGPTAccountID }) else { continue }
-            guard persisted.name == "Codex OAuth" else { continue }
-
-            let improvedName = localAccount.email ?? localAccount.displayName
-            guard !improvedName.isEmpty, improvedName != persisted.name else { continue }
-            state.updateAccount(persisted.id, name: improvedName)
         }
     }
 
