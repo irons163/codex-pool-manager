@@ -43,6 +43,7 @@
 		4AB61EF72F73F51E001AC4CB /* PoolDashboardLocalAccountsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EF62F73F51E001AC4CB /* PoolDashboardLocalAccountsCoordinator.swift */; };
 		4AB61EF92F73F624001AC4CB /* PoolDashboardLocalImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EF82F73F624001AC4CB /* PoolDashboardLocalImportCoordinator.swift */; };
 		4AB61EFB2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EFA2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift */; };
+		4AB61EFD2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EFC2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +100,7 @@
 		4AB61EF62F73F51E001AC4CB /* PoolDashboardLocalAccountsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLocalAccountsCoordinator.swift; sourceTree = "<group>"; };
 		4AB61EF82F73F624001AC4CB /* PoolDashboardLocalImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLocalImportCoordinator.swift; sourceTree = "<group>"; };
 		4AB61EFA2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardAccountBindingAdapter.swift; sourceTree = "<group>"; };
+		4AB61EFC2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardStrategyBindingAdapter.swift; sourceTree = "<group>"; };
 		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -220,6 +222,7 @@
 				4AB61EF62F73F51E001AC4CB /* PoolDashboardLocalAccountsCoordinator.swift */,
 				4AB61EF82F73F624001AC4CB /* PoolDashboardLocalImportCoordinator.swift */,
 				4AB61EFA2F73F7C8001AC4CB /* PoolDashboardAccountBindingAdapter.swift */,
+				4AB61EFC2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift */,
 			);
 			path = PoolDashboard;
 			sourceTree = "<group>";
@@ -429,6 +432,7 @@
 				4AB61EF52F73F160001AC4CB /* CodexAuthFilePanelService.swift in Sources */,
 				4AB61EC02F73A0BB001AC4CB /* DebugToolsPanelView.swift in Sources */,
 				4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */,
+				4AB61EFD2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift in Sources */,
 				4AB61EC22F73A0BB001AC4CB /* BackupRestorePanelView.swift in Sources */,
 				4AB61EED2F73ED9E001AC4CB /* OverallUsagePanelView.swift in Sources */,
 				4AB61EDD2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift in Sources */,

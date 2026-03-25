@@ -42,6 +42,9 @@ struct PoolDashboardView: View {
     private var accountBindings: PoolDashboardAccountBindingAdapter {
         PoolDashboardAccountBindingAdapter(state: $state)
     }
+    private var strategyBindings: PoolDashboardStrategyBindingAdapter {
+        PoolDashboardStrategyBindingAdapter(state: $state)
+    }
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
         self.store = store
@@ -130,11 +133,11 @@ struct PoolDashboardView: View {
                 intelligentCandidateName: intelligentCandidateName,
                 canIntelligentSwitch: state.canIntelligentSwitch(),
                 intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
-                modeBinding: modeBinding,
-                manualSelectionBinding: manualSelectionBinding,
-                minSwitchIntervalBinding: minSwitchIntervalBinding,
-                lowThresholdBinding: lowThresholdBinding,
-                minUsageDeltaBinding: minUsageDeltaBinding
+                modeBinding: strategyBindings.mode,
+                manualSelectionBinding: strategyBindings.manualSelection,
+                minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
+                lowThresholdBinding: strategyBindings.lowThreshold,
+                minUsageDeltaBinding: strategyBindings.minUsageDelta
             )
 
             OverallUsagePanelView(
@@ -278,56 +281,6 @@ struct PoolDashboardView: View {
     private var intelligentCandidateName: String? {
         guard let candidateID = state.intelligentCandidateID else { return nil }
         return state.accounts.first(where: { $0.id == candidateID })?.name
-    }
-
-    private var modeBinding: Binding<SwitchMode> {
-        Binding(
-            get: { state.mode },
-            set: { newMode in
-                state.setMode(newMode)
-            }
-        )
-    }
-
-    private var manualSelectionBinding: Binding<UUID> {
-        Binding(
-            get: {
-                if let manualID = state.manualAccountID {
-                    return manualID
-                }
-                return state.accounts.first?.id ?? UUID()
-            },
-            set: { newID in
-                state.selectManualAccount(newID)
-            }
-        )
-    }
-
-    private var minSwitchIntervalBinding: Binding<Double> {
-        Binding(
-            get: { state.minSwitchInterval },
-            set: { newValue in
-                state.updateSwitchSettings(minSwitchInterval: newValue)
-            }
-        )
-    }
-
-    private var lowThresholdBinding: Binding<Double> {
-        Binding(
-            get: { state.lowUsageThresholdRatio },
-            set: { newValue in
-                state.updateSwitchSettings(lowUsageThresholdRatio: newValue)
-            }
-        )
-    }
-
-    private var minUsageDeltaBinding: Binding<Double> {
-        Binding(
-            get: { state.minUsageRatioDeltaToSwitch },
-            set: { newValue in
-                state.updateSwitchSettings(minUsageRatioDeltaToSwitch: newValue)
-            }
-        )
     }
 
     @MainActor
