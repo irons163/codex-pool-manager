@@ -1097,6 +1097,78 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func oauthAccountUpsertResolverMatchesByChatGPTAccountID() {
+        let existingID = UUID()
+        let accounts = [
+            AgentAccount(
+                id: existingID,
+                name: "existing@example.com",
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "old-token",
+                chatGPTAccountID: "acct-123"
+            )
+        ]
+
+        let matched = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: accounts,
+            chatGPTAccountID: "acct-123",
+            accessToken: "new-token",
+            email: "existing@example.com"
+        )
+
+        #expect(matched == existingID)
+    }
+
+    @Test
+    func oauthAccountUpsertResolverMatchesByAccessTokenWhenAccountIDMissing() {
+        let existingID = UUID()
+        let accounts = [
+            AgentAccount(
+                id: existingID,
+                name: "existing@example.com",
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "same-token",
+                chatGPTAccountID: nil
+            )
+        ]
+
+        let matched = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: accounts,
+            chatGPTAccountID: nil,
+            accessToken: "same-token",
+            email: nil
+        )
+
+        #expect(matched == existingID)
+    }
+
+    @Test
+    func oauthAccountUpsertResolverMatchesByEmailNameAsFallback() {
+        let existingID = UUID()
+        let accounts = [
+            AgentAccount(
+                id: existingID,
+                name: "existing@example.com",
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "other-token",
+                chatGPTAccountID: nil
+            )
+        ]
+
+        let matched = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: accounts,
+            chatGPTAccountID: nil,
+            accessToken: "new-token",
+            email: "existing@example.com"
+        )
+
+        #expect(matched == existingID)
+    }
+
+    @Test
     func oauthTokenRequestBodyContainsExpectedFields() {
         let body = OAuthTokenRequestBuilder.authorizationCodeBody(
             clientID: "client-123",

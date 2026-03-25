@@ -702,25 +702,54 @@ struct ContentView: View {
             }
 
             let accountNameInput = oauthAccountName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let accountName = accountNameInput.isEmpty
+            let resolvedAccountName = accountNameInput.isEmpty
                 ? (resolvedEmail ?? "OAuth Account")
                 : accountNameInput
 
-            let newAccountID = state.addAccount(
-                name: accountName,
-                quota: resolvedQuota,
-                usedUnits: resolvedUsedUnits,
+            let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
+                in: state.accounts,
                 chatGPTAccountID: resolvedAccountID,
-                usageWindowName: resolvedWindowName,
-                usageWindowResetAt: resolvedWindowResetAt
+                accessToken: tokens.accessToken,
+                email: resolvedEmail
             )
-            state.updateAccount(
-                newAccountID,
-                apiToken: tokens.accessToken,
-                chatGPTAccountID: resolvedAccountID,
-                now: .now
-            )
-            oauthSuccessMessage = "登入成功，已新增帳號"
+
+            if let existingAccountID {
+                let existingAccount = state.accounts.first(where: { $0.id == existingAccountID })
+                let shouldReplacePlaceholderName = accountNameInput.isEmpty
+                    && (existingAccount?.name == "OAuth Account" || existingAccount?.name.isEmpty == true)
+                let updatedName = accountNameInput.isEmpty
+                    ? (shouldReplacePlaceholderName ? resolvedAccountName : (existingAccount?.name ?? resolvedAccountName))
+                    : resolvedAccountName
+
+                state.updateAccount(
+                    existingAccountID,
+                    name: updatedName,
+                    quota: resolvedQuota,
+                    usedUnits: resolvedUsedUnits,
+                    apiToken: tokens.accessToken,
+                    chatGPTAccountID: resolvedAccountID,
+                    usageWindowName: resolvedWindowName,
+                    usageWindowResetAt: resolvedWindowResetAt,
+                    now: .now
+                )
+                oauthSuccessMessage = "登入成功，已更新既有帳號"
+            } else {
+                let newAccountID = state.addAccount(
+                    name: resolvedAccountName,
+                    quota: resolvedQuota,
+                    usedUnits: resolvedUsedUnits,
+                    chatGPTAccountID: resolvedAccountID,
+                    usageWindowName: resolvedWindowName,
+                    usageWindowResetAt: resolvedWindowResetAt
+                )
+                state.updateAccount(
+                    newAccountID,
+                    apiToken: tokens.accessToken,
+                    chatGPTAccountID: resolvedAccountID,
+                    now: .now
+                )
+                oauthSuccessMessage = "登入成功，已新增帳號"
+            }
             oauthAccountName = ""
             refreshLocalOAuthAccounts()
         } catch {
@@ -1151,6 +1180,33 @@ struct ContentView: View {
         } else {
             lastSwitchLaunchLog += "\n\(line)"
         }
+    }
+}
+
+enum OAuthAccountUpsertResolver {
+    static func resolveExistingAccountID(
+        in accounts: [AgentAccount],
+        chatGPTAccountID: String?,
+        accessToken: String,
+        email: String?
+    ) -> UUID? {
+        if let chatGPTAccountID,
+           !chatGPTAccountID.isEmpty,
+           let byAccountID = accounts.first(where: { $0.chatGPTAccountID == chatGPTAccountID }) {
+            return byAccountID.id
+        }
+
+        if let byToken = accounts.first(where: { !$0.apiToken.isEmpty && $0.apiToken == accessToken }) {
+            return byToken.id
+        }
+
+        if let email,
+           !email.isEmpty,
+           let byEmailName = accounts.first(where: { $0.name.caseInsensitiveCompare(email) == .orderedSame }) {
+            return byEmailName.id
+        }
+
+        return nil
     }
 }
 
