@@ -1101,6 +1101,69 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func snapshotExportKeepsUsageFieldsForNonRefetchableAccounts() throws {
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: UUID(),
+                    name: "local-only",
+                    usedUnits: 12,
+                    quota: 345,
+                    apiToken: "",
+                    chatGPTAccountID: nil
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil,
+            lastUsageSyncAt: nil
+        )
+
+        let json = try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
+
+        #expect(json.contains("\"usedUnits\""))
+        #expect(json.contains("\"quota\""))
+    }
+
+    @Test
+    func snapshotImportJSONSupportsMissingUsageFieldsWithDefaults() throws {
+        let json = """
+        {
+          "accounts": [
+            {
+              "id": "00000000-0000-0000-0000-0000000000A1",
+              "name": "imported",
+              "apiToken": "token-a",
+              "chatGPTAccountID": "acct-a"
+            }
+          ],
+          "activities": [],
+          "mode": "手動切換",
+          "activeAccountID": null,
+          "manualAccountID": null,
+          "focusLockedAccountID": null,
+          "minSwitchInterval": 300,
+          "lowUsageThresholdRatio": 0.15,
+          "minUsageRatioDeltaToSwitch": 0,
+          "lastSwitchAt": null,
+          "lastUsageSyncAt": null
+        }
+        """
+
+        let snapshot = try AccountPoolSnapshotCodec.importJSON(json)
+        let account = try #require(snapshot.accounts.first)
+
+        #expect(account.usedUnits == 0)
+        #expect(account.quota == 100)
+    }
+
+    @Test
     func oauthAuthorizeURLContainsRequiredParameters() throws {
         let config = OAuthClientConfiguration(
             issuer: URL(string: "https://auth.example.com")!,
@@ -1172,6 +1235,51 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func oauthCallbackParserThrowsAuthorizationFailedWhenErrorPresent() throws {
+        let callbackURL = try #require(
+            URL(string: "aiaagentpool://oauth/callback?error=access_denied")
+        )
+
+        #expect(throws: OAuthLoginError.authorizationFailed("access_denied")) {
+            _ = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+        }
+    }
+
+    @Test
+    func oauthCallbackParserThrowsMissingCodeWhenCodeMissing() throws {
+        let callbackURL = try #require(
+            URL(string: "aiaagentpool://oauth/callback?state=s1")
+        )
+
+        #expect(throws: OAuthLoginError.missingCode) {
+            _ = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+        }
+    }
+
+    @Test
+    func oauthCallbackParserThrowsStateMismatchWhenStateMissing() throws {
+        let callbackURL = try #require(
+            URL(string: "aiaagentpool://oauth/callback?code=abc123")
+        )
+
+        #expect(throws: OAuthLoginError.stateMismatch) {
+            _ = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+        }
+    }
+
+    @Test
+    func oauthCallbackParserParsesCodeAndStateForCustomScheme() throws {
+        let callbackURL = try #require(
+            URL(string: "aiaagentpool://oauth/callback?code=abc123&state=s1")
+        )
+
+        let callback = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+
+        #expect(callback.code == "abc123")
+        #expect(callback.state == "s1")
+    }
+
+    @Test
     func oauthLocalhostCallbackConfigParsesPortAndPath() throws {
         let redirectURI = try #require(URL(string: "http://localhost:1455/auth/callback"))
 
@@ -1183,6 +1291,29 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func oauthLocalhostCallbackConfigUsesDefaultPortWhenMissing() throws {
+        let redirectURI = try #require(URL(string: "http://localhost/auth/callback"))
+
+        let config = try #require(LocalhostOAuthCallbackConfig(redirectURI: redirectURI))
+
+        #expect(config.port == 80)
+    }
+
+    @Test
+    func oauthLocalhostCallbackConfigRejectsNonLocalhostHost() throws {
+        let redirectURI = try #require(URL(string: "http://example.com/auth/callback"))
+
+        #expect(LocalhostOAuthCallbackConfig(redirectURI: redirectURI) == nil)
+    }
+
+    @Test
+    func oauthLocalhostCallbackConfigRejectsNonHttpScheme() throws {
+        let redirectURI = try #require(URL(string: "aiaagentpool://oauth/callback"))
+
+        #expect(LocalhostOAuthCallbackConfig(redirectURI: redirectURI) == nil)
+    }
+
+    @Test
     func oauthLocalhostCallbackExtractorParsesCodeAndStateFromRequestLine() throws {
         let config = LocalhostOAuthCallbackConfig(host: "localhost", port: 1455, callbackPath: "/auth/callback")
         let request = "GET /auth/callback?code=abc123&state=s1 HTTP/1.1\r\nHost: localhost:1455\r\n\r\n"
@@ -1190,6 +1321,26 @@ struct AIAgentPoolTests {
         let callbackURL = try #require(LocalhostOAuthCallbackExtractor.callbackURL(fromRequest: request, config: config))
 
         #expect(callbackURL.absoluteString == "http://localhost:1455/auth/callback?code=abc123&state=s1")
+    }
+
+    @Test
+    func oauthLocalhostCallbackExtractorReturnsNilForWrongPath() {
+        let config = LocalhostOAuthCallbackConfig(host: "localhost", port: 1455, callbackPath: "/auth/callback")
+        let request = "GET /wrong/path?code=abc&state=s1 HTTP/1.1\r\nHost: localhost:1455\r\n\r\n"
+
+        let callbackURL = LocalhostOAuthCallbackExtractor.callbackURL(fromRequest: request, config: config)
+
+        #expect(callbackURL == nil)
+    }
+
+    @Test
+    func oauthLocalhostCallbackExtractorReturnsNilForNonGetMethod() {
+        let config = LocalhostOAuthCallbackConfig(host: "localhost", port: 1455, callbackPath: "/auth/callback")
+        let request = "POST /auth/callback?code=abc&state=s1 HTTP/1.1\r\nHost: localhost:1455\r\n\r\n"
+
+        let callbackURL = LocalhostOAuthCallbackExtractor.callbackURL(fromRequest: request, config: config)
+
+        #expect(callbackURL == nil)
     }
 
     @Test
@@ -1207,6 +1358,13 @@ struct AIAgentPoolTests {
         #expect(claims.subject == "user-123")
         #expect(claims.accountID == "acct-123")
         #expect(claims.email == "demo@example.com")
+    }
+
+    @Test
+    func oauthIDTokenClaimsParserReturnsNilForMalformedToken() {
+        #expect(OAuthIDTokenClaimsParser.parse("not.a.jwt") == nil)
+        #expect(OAuthIDTokenClaimsParser.parse("header.invalid_base64.sig") == nil)
+        #expect(OAuthIDTokenClaimsParser.parse(nil) == nil)
     }
 
     @Test
@@ -1282,6 +1440,29 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func oauthAccountUpsertResolverReturnsNilWhenNoCandidateMatches() {
+        let accounts = [
+            AgentAccount(
+                id: UUID(),
+                name: "someone@example.com",
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "token-a",
+                chatGPTAccountID: "acct-a"
+            )
+        ]
+
+        let matched = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: accounts,
+            chatGPTAccountID: "acct-b",
+            accessToken: "token-b",
+            email: "other@example.com"
+        )
+
+        #expect(matched == nil)
+    }
+
+    @Test
     func oauthTokenRequestBodyContainsExpectedFields() {
         let body = OAuthTokenRequestBuilder.authorizationCodeBody(
             clientID: "client-123",
@@ -1294,7 +1475,7 @@ struct AIAgentPoolTests {
         #expect(form.contains("grant_type=authorization_code"))
         #expect(form.contains("client_id=client-123"))
         #expect(form.contains("code=code-xyz"))
-        #expect(form.contains("redirect_uri=aiaagentpool%3A%2F%2Foauth%2Fcallback"))
+        #expect(form.contains("redirect_uri=aiaagentpool://oauth/callback"))
         #expect(form.contains("code_verifier=verifier-123"))
     }
 
@@ -1429,6 +1610,170 @@ struct AIAgentPoolTests {
         #expect(object["access_token"] as? String == "added-token")
         #expect(object["account_id"] as? String == "added-account")
         #expect(object["email"] as? String == "added@example.com")
+    }
+
+    @Test
+    func codexAuthFileSwitcherThrowsOnInvalidJSON() {
+        let invalidData = Data("not-json".utf8)
+
+        #expect(throws: CodexAuthFileSwitcher.SwitchError.invalidJSON) {
+            _ = try CodexAuthFileSwitcher.rewriteAuthJSON(
+                invalidData,
+                accessToken: "token",
+                accountID: "account",
+                email: "user@example.com"
+            )
+        }
+    }
+
+    @Test
+    func codexAuthFileSwitcherDoesNotAddEmailWhenInputEmailIsEmpty() throws {
+        let json = """
+        {
+          "plan_type": "free"
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "added-token",
+            accountID: "added-account",
+            email: ""
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+
+        #expect(object["access_token"] as? String == "added-token")
+        #expect(object["account_id"] as? String == "added-account")
+        #expect(object["email"] == nil)
+    }
+
+    @Test
+    func localCodexDiscoveryReturnsEmptyForInvalidJSON() {
+        let data = Data("not-json".utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.isEmpty)
+    }
+
+    @Test
+    func localCodexDiscoveryIgnoresPlainTokenWithoutAccessTokenKey() {
+        let json = """
+        {
+          "session": {
+            "token": "plain-token",
+            "email": "user@example.com"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.isEmpty)
+    }
+
+    @Test
+    func localCodexDiscoveryAcceptsAccessTokenEvenWithoutSkPrefix() {
+        let json = """
+        {
+          "session": {
+            "access_token": "non-sk-token",
+            "email": "user@example.com",
+            "account_id": "acct-1"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
+
+        #expect(accounts.count == 1)
+        #expect(accounts[0].accessToken == "non-sk-token")
+        #expect(accounts[0].email == "user@example.com")
+    }
+
+    @Test
+    func localCodexOAuthAccountMaskedTokenHandlesShortAndLongToken() {
+        let short = LocalCodexOAuthAccount(
+            id: "1",
+            displayName: "A",
+            email: nil,
+            source: "test",
+            accessToken: "short",
+            chatGPTAccountID: nil
+        )
+        let long = LocalCodexOAuthAccount(
+            id: "2",
+            displayName: "B",
+            email: nil,
+            source: "test",
+            accessToken: "sk-abcdefghijklmnopqrstuvwxyz",
+            chatGPTAccountID: nil
+        )
+
+        #expect(short.maskedToken == "********")
+        #expect(long.maskedToken.hasPrefix("sk-abc"))
+        #expect(long.maskedToken.hasSuffix("wxyz"))
+        #expect(long.maskedToken.contains("..."))
+    }
+
+    @Test
+    func userDefaultsStoreLoadReturnsNilForCorruptedSnapshotData() {
+        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(Data("not-json".utf8), forKey: "snapshot")
+        let store = UserDefaultsAccountPoolStore(
+            defaults: defaults,
+            key: "snapshot",
+            tokenVault: InMemoryAccountTokenVault()
+        )
+
+        let loaded = store.load()
+        #expect(loaded == nil)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
+    func userDefaultsStoreSaveRemovesTokenWhenAccountTokenIsEmpty() throws {
+        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let accountID = UUID()
+        vault.setToken("existing-token", for: accountID)
+
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+
+        #expect(vault.token(for: accountID) == nil)
+        defaults.removePersistentDomain(forName: suiteName)
     }
 }
 private struct MockCodexUsageClient: CodexUsageClient {
