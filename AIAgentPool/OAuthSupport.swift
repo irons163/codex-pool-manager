@@ -567,9 +567,10 @@ final class LocalhostOAuthCallbackServer {
 
                     self.sendHTTPResponse(
                         status: "200 OK",
-                        body: "<html><body><h3>Login complete. You can return to the app.</h3></body></html>",
+                        body: self.successCallbackHTML(),
                         on: connection
                     )
+                    self.activateHostApp()
                     state.complete(with: .success(callbackURL))
                 }
             }
@@ -593,6 +594,31 @@ final class LocalhostOAuthCallbackServer {
         \(body)
         """
         connection.send(content: payload.data(using: .utf8), completion: .contentProcessed { _ in })
+    }
+
+    private func successCallbackHTML() -> String {
+        """
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Login complete</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+        <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;line-height:1.5;">
+          <h3>Login complete. You can return to the app.</h3>
+          <p>This tab can be closed now.</p>
+        </body>
+        </html>
+        """
+    }
+
+    private func activateHostApp() {
+        #if canImport(AppKit)
+        DispatchQueue.main.async {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+        #endif
     }
 }
 
