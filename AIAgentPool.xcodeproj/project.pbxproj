@@ -6,6 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4AB61E942F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */; };
+		4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */; };
+		4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */; };
+		4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E892F738FCF001AC4CB /* AgentPool.swift */; };
+		4AB61E992F738FCF001AC4CB /* CodexAuthFileSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */; };
+		4AB61E9A2F738FCF001AC4CB /* CodexUsageSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */; };
+		4AB61E9B2F738FCF001AC4CB /* PoolDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */; };
+		4AB61E9D2F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E902F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift */; };
+		4AB61E9E2F738FCF001AC4CB /* LocalOAuthImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E912F738FCF001AC4CB /* LocalOAuthImportViewModel.swift */; };
+		4AB61E9F2F738FCF001AC4CB /* OAuthSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E922F738FCF001AC4CB /* OAuthSupport.swift */; };
+		4AB61EB12F739CED001AC4CB /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EB02F739CED001AC4CB /* ContentView.swift */; };
+		4AB61EB52F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EB42F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		4AFBA5922F72203C008D97C1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +39,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolSnapshotCodec.swift; sourceTree = "<group>"; };
+		4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolStore.swift; sourceTree = "<group>"; };
+		4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTokenVault.swift; sourceTree = "<group>"; };
+		4AB61E892F738FCF001AC4CB /* AgentPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPool.swift; sourceTree = "<group>"; };
+		4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthFileSwitcher.swift; sourceTree = "<group>"; };
+		4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageSyncService.swift; sourceTree = "<group>"; };
+		4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardView.swift; sourceTree = "<group>"; };
+		4AB61E902F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCodexAccountDiscovery.swift; sourceTree = "<group>"; };
+		4AB61E912F738FCF001AC4CB /* LocalOAuthImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOAuthImportViewModel.swift; sourceTree = "<group>"; };
+		4AB61E922F738FCF001AC4CB /* OAuthSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthSupport.swift; sourceTree = "<group>"; };
+		4AB61EB02F739CED001AC4CB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		4AB61EB42F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthAccountUpsertResolver.swift; sourceTree = "<group>"; };
 		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,6 +99,77 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4AB61EA82F739CB1001AC4CB /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61EA92F739CB1001AC4CB /* Pool */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		4AB61EA92F739CB1001AC4CB /* Pool */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61E892F738FCF001AC4CB /* AgentPool.swift */,
+				4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */,
+				4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */,
+				4AB61EB42F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift */,
+			);
+			path = Pool;
+			sourceTree = "<group>";
+		};
+		4AB61EAA2F739CB1001AC4CB /* Infrastructure */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61EAB2F739CB1001AC4CB /* Auth */,
+				4AB61EAC2F739CB1001AC4CB /* Usage */,
+			);
+			path = Infrastructure;
+			sourceTree = "<group>";
+		};
+		4AB61EAB2F739CB1001AC4CB /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */,
+				4AB61E922F738FCF001AC4CB /* OAuthSupport.swift */,
+				4AB61E902F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift */,
+				4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		4AB61EAC2F739CB1001AC4CB /* Usage */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */,
+			);
+			path = Usage;
+			sourceTree = "<group>";
+		};
+		4AB61EAD2F739CB1001AC4CB /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61EAE2F739CB1001AC4CB /* PoolDashboard */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		4AB61EAE2F739CB1001AC4CB /* PoolDashboard */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61E912F738FCF001AC4CB /* LocalOAuthImportViewModel.swift */,
+				4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */,
+			);
+			path = PoolDashboard;
+			sourceTree = "<group>";
+		};
+		4AB61EAF2F739CB1001AC4CB /* Support */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
 		4AFBA5792F72203A008D97C1 = {
 			isa = PBXGroup;
 			children = (
@@ -79,6 +177,11 @@
 				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
 				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
 				4AFBA5832F72203A008D97C1 /* Products */,
+				4AB61EA82F739CB1001AC4CB /* Domain */,
+				4AB61EAA2F739CB1001AC4CB /* Infrastructure */,
+				4AB61EAD2F739CB1001AC4CB /* Features */,
+				4AB61EAF2F739CB1001AC4CB /* Support */,
+				4AB61EB02F739CED001AC4CB /* ContentView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -236,6 +339,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4AB61E942F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift in Sources */,
+				4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */,
+				4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */,
+				4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */,
+				4AB61E992F738FCF001AC4CB /* CodexAuthFileSwitcher.swift in Sources */,
+				4AB61EB52F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift in Sources */,
+				4AB61E9A2F738FCF001AC4CB /* CodexUsageSyncService.swift in Sources */,
+				4AB61E9B2F738FCF001AC4CB /* PoolDashboardView.swift in Sources */,
+				4AB61E9D2F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift in Sources */,
+				4AB61EB12F739CED001AC4CB /* ContentView.swift in Sources */,
+				4AB61E9E2F738FCF001AC4CB /* LocalOAuthImportViewModel.swift in Sources */,
+				4AB61E9F2F738FCF001AC4CB /* OAuthSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,22 +511,14 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.AIAgentPool.oauth\";\n    CFBundleURLSchemes =     (\n        aiaagentpool\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleTypeRole = Editor;
-						CFBundleURLName = "com.irons.AIAgentPool.oauth";
-						CFBundleURLSchemes = (
-							aiaagentpool,
-						);
-					},
-				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -438,22 +545,14 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.AIAgentPool.oauth\";\n    CFBundleURLSchemes =     (\n        aiaagentpool\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleTypeRole = Editor;
-						CFBundleURLName = "com.irons.AIAgentPool.oauth";
-						CFBundleURLSchemes = (
-							aiaagentpool,
-						);
-					},
-				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

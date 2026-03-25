@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 import AppKit
 #endif
 
-struct ContentView: View {
+struct PoolDashboardView: View {
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = ""
@@ -56,11 +56,18 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-            Text("Codex 帳號池")
-                .font(.largeTitle)
-                .fontWeight(.semibold)
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.06, green: 0.10, blue: 0.18), Color(red: 0.05, green: 0.07, blue: 0.10)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                dashboardHeader
+                usageOverviewTiles
 
             HStack {
                 Button(isSyncingUsage ? "同步中..." : "同步 Codex 用量") {
@@ -528,9 +535,19 @@ struct ContentView: View {
             }
             }
             .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(.white.opacity(0.08), lineWidth: 1)
+                    )
+            )
+            .frame(maxWidth: 1160, alignment: .leading)
+            .padding(20)
         }
-        .frame(minWidth: 640, minHeight: 520)
+        }
+        .frame(minWidth: 900, minHeight: 620)
         .onAppear {
             state.evaluate()
             _ = lowUsageAlertPolicy.shouldTriggerAlert(mode: state.mode, hasLowUsageWarning: state.hasLowUsageWarning)
@@ -551,6 +568,53 @@ struct ContentView: View {
                 Text("目前帳號剩餘用量偏低。")
             }
         }
+    }
+
+    private var dashboardHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Codex Account Orchestrator")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.72))
+        }
+        .padding(.bottom, 4)
+    }
+
+    private var usageOverviewTiles: some View {
+        HStack(spacing: 12) {
+            overviewTile(title: "帳號", value: "\(state.accounts.count)", tone: .blue)
+            overviewTile(title: "可用", value: "\(state.availableAccountsCount)", tone: .green)
+            overviewTile(title: "總用量", value: "\(Int(state.overallUsageRatio * 100))%", tone: .orange)
+            overviewTile(
+                title: "模式",
+                value: state.mode.rawValue,
+                tone: state.mode == .focus ? .purple : .indigo
+            )
+        }
+    }
+
+    private func overviewTile(title: String, value: String, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.headline)
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.regularMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(tone.opacity(0.35), lineWidth: 1)
+                )
+        )
     }
 
     private var modeBinding: Binding<SwitchMode> {
@@ -1289,33 +1353,6 @@ struct ContentView: View {
     }
 }
 
-enum OAuthAccountUpsertResolver {
-    static func resolveExistingAccountID(
-        in accounts: [AgentAccount],
-        chatGPTAccountID: String?,
-        accessToken: String,
-        email: String?
-    ) -> UUID? {
-        if let chatGPTAccountID,
-           !chatGPTAccountID.isEmpty,
-           let byAccountID = accounts.first(where: { $0.chatGPTAccountID == chatGPTAccountID }) {
-            return byAccountID.id
-        }
-
-        if let byToken = accounts.first(where: { !$0.apiToken.isEmpty && $0.apiToken == accessToken }) {
-            return byToken.id
-        }
-
-        if let email,
-           !email.isEmpty,
-           let byEmailName = accounts.first(where: { $0.name.caseInsensitiveCompare(email) == .orderedSame }) {
-            return byEmailName.id
-        }
-
-        return nil
-    }
-}
-
 #Preview {
-    ContentView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
+    PoolDashboardView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
 }
