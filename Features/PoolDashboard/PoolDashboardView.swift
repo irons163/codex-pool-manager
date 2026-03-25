@@ -34,6 +34,7 @@ struct PoolDashboardView: View {
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
+    private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
         self.store = store
@@ -618,46 +619,24 @@ struct PoolDashboardView: View {
         oauthError = nil
         oauthSuccessMessage = nil
 
-        guard let issuerURL = URL(string: oauthIssuer.trimmingCharacters(in: .whitespacesAndNewlines)),
-              !oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            oauthError = "請至少填入 Client ID（其餘欄位有預設值）"
-            return
-        }
-
-        let configuration = OAuthClientConfiguration(
-            issuer: issuerURL,
-            clientID: oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines),
-            scopes: oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines),
-            redirectURI: oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines),
-            originator: oauthOriginator.trimmingCharacters(in: .whitespacesAndNewlines),
-            forcedWorkspaceID: oauthWorkspaceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? nil
-                : oauthWorkspaceID.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
-
         do {
-            let tokens = try await OAuthLoginService().signIn(configuration: configuration)
-            let claims = OAuthIDTokenClaimsParser.parse(tokens.idToken)
+            let configuration = try authFlowCoordinator.buildConfiguration(
+                issuer: oauthIssuer,
+                clientID: oauthClientID,
+                scopes: oauthScopes,
+                redirectURI: oauthRedirectURI,
+                originator: oauthOriginator,
+                workspaceID: oauthWorkspaceID
+            )
 
-            var usage: CodexUsage?
-            if let accountID = (claims?.accountID ?? claims?.subject), !accountID.isEmpty {
-                do {
-                    usage = try await OpenAICodexUsageClient().fetchUsage(
-                        accessToken: tokens.accessToken,
-                        accountID: accountID
-                    )
-                } catch {
-                    // Keep account creation flow robust; user can sync again later.
-                }
-            }
-
-            oauthSuccessMessage = PoolAccountUpsertCoordinator().applyOAuthSignIn(
+            let context = try await authFlowCoordinator.fetchOAuthSignInContext(
+                configuration: configuration,
+                loginService: OAuthLoginService(),
+                usageClient: OpenAICodexUsageClient()
+            )
+            oauthSuccessMessage = authFlowCoordinator.applyOAuthSignIn(
                 state: &state,
-                tokens: tokens,
-                claims: claims,
-                usage: usage,
+                context: context,
                 accountNameInput: oauthAccountName,
                 fallbackQuota: oauthAccountQuota
             )
@@ -773,7 +752,7 @@ struct PoolDashboardView: View {
             existingAccessTokens: existingAccessTokens
         )
 
-        guard case let .importAccount(name, accessToken, chatGPTAccountID) = decision else {
+        guard case .importAccount = decision else {
             return
         }
 
@@ -785,45 +764,17 @@ struct PoolDashboardView: View {
                     }
                 }
             )
-            let usage = try await client.fetchUsage(
-                accessToken: accessToken,
-                accountID: chatGPTAccountID
+            let context = try await authFlowCoordinator.fetchLocalImportContext(
+                decision: decision,
+                usageClient: client
             )
-            PoolAccountUpsertCoordinator().applyLocalImport(
-                state: &state,
-                usage: usage,
-                fallbackName: name,
-                accessToken: accessToken,
-                chatGPTAccountID: chatGPTAccountID
-            )
+            authFlowCoordinator.applyLocalImport(state: &state, context: context)
 
             localOAuthImportViewModel.errorMessage = nil
             syncError = nil
         } catch {
-            localOAuthImportViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(localizedCodexSyncError(error))"
+            localOAuthImportViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(authFlowCoordinator.localizedSyncError(error))"
         }
-    }
-
-    private func localizedCodexSyncError(_ error: Error) -> String {
-        if let syncError = error as? CodexSyncError {
-            return syncError.localizedDescription
-        }
-
-        if let http = error as? CodexClientHTTPError {
-            if http.statusCode == 401 || http.statusCode == 403 {
-                return CodexSyncError.unauthorized.localizedDescription
-            }
-            if http.statusCode == 429 {
-                return CodexSyncError.rateLimited.localizedDescription
-            }
-            return CodexSyncError.unknown.localizedDescription
-        }
-
-        if error is URLError {
-            return CodexSyncError.network.localizedDescription
-        }
-
-        return CodexSyncError.unknown.localizedDescription
     }
 
     private func usageSourceLabel(for account: AgentAccount) -> String {
@@ -896,7 +847,9 @@ struct PoolDashboardView: View {
         }
 
         do {
+            let authFileURL = try resolveAuthFileURLForSwitch()
             try await performSwitchAndLaunch(
+                authFileURL: authFileURL,
                 account: account,
                 chatGPTAccountID: chatGPTAccountID
             )
@@ -913,7 +866,9 @@ struct PoolDashboardView: View {
 
             do {
                 appendSwitchLaunchLog("已取得授權，重試切換")
+                let authFileURL = try resolveAuthFileURLForSwitch()
                 try await performSwitchAndLaunch(
+                    authFileURL: authFileURL,
                     account: account,
                     chatGPTAccountID: chatGPTAccountID
                 )
@@ -930,33 +885,20 @@ struct PoolDashboardView: View {
     }
 
     @MainActor
-    private func performSwitchAndLaunch(account: AgentAccount, chatGPTAccountID: String) async throws {
-        do {
-            let authFileURL = try resolveAuthFileURLForSwitch()
-            appendSwitchLaunchLog("使用 auth.json：\(authFileURL.path)")
-            let hasSecurityScope = authFileURL.startAccessingSecurityScopedResource()
-            defer {
-                if hasSecurityScope {
-                    authFileURL.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            let originalData = try Data(contentsOf: authFileURL)
-            let rewrittenData = try CodexAuthFileSwitcher.rewriteAuthJSON(
-                originalData,
-                accessToken: account.apiToken,
-                accountID: chatGPTAccountID,
-                email: account.name.contains("@") ? account.name : nil
-            )
-            try rewrittenData.write(to: authFileURL, options: .atomic)
-            appendSwitchLaunchLog("auth.json 已改寫")
-
-            try await relaunchCodexApp()
-            appendSwitchLaunchLog("啟動完成")
-            localOAuthImportViewModel.errorMessage = nil
-        } catch {
-            throw error
+    private func performSwitchAndLaunch(
+        authFileURL: URL,
+        account: AgentAccount,
+        chatGPTAccountID: String
+    ) async throws {
+        let service = CodexAuthSwitchService { line in
+            appendSwitchLaunchLog(line)
         }
+        try await service.performSwitchAndLaunch(
+            authFileURL: authFileURL,
+            account: account,
+            chatGPTAccountID: chatGPTAccountID
+        )
+        localOAuthImportViewModel.errorMessage = nil
     }
 
     private func resolveAuthFileURLForSwitch() throws -> URL {
@@ -989,159 +931,6 @@ struct PoolDashboardView: View {
             code: 1,
             userInfo: [NSLocalizedDescriptionKey: "找不到 auth.json，請先按「選擇 auth.json」授權"]
         )
-    }
-
-    private func relaunchCodexApp() async throws {
-#if canImport(AppKit)
-        let workspace = NSWorkspace.shared
-
-        let running = workspace.runningApplications
-        appendSwitchLaunchLog("目前執行中 app 數量：\(running.count)")
-
-        let knownBundleIDs = ["com.openai.chatgpt", "com.openai.codex"]
-        for bundleIdentifier in knownBundleIDs {
-            let closed = await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
-            if !closed {
-                throw NSError(
-                    domain: "CodexSwitch",
-                    code: 4,
-                    userInfo: [NSLocalizedDescriptionKey: "偵測到 \(bundleIdentifier) 仍在執行。Sandbox 模式無法自動關閉其他 App，請先手動關閉後再試。"]
-                )
-            }
-        }
-
-        if try await launchCodexAppWithRetry() {
-            return
-        }
-
-        throw NSError(
-            domain: "CodexSwitch",
-            code: 2,
-            userInfo: [NSLocalizedDescriptionKey: "已切換 auth.json，但找不到可啟動的 Codex/ChatGPT App"]
-        )
-#else
-        throw NSError(
-            domain: "CodexSwitch",
-            code: 3,
-            userInfo: [NSLocalizedDescriptionKey: "目前平台不支援啟動 Codex App"]
-        )
-#endif
-    }
-
-    private func closeAppIfRunning(bundleIdentifier: String) async -> Bool {
-#if canImport(AppKit)
-        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
-        guard !runningApps.isEmpty else {
-            appendSwitchLaunchLog("未偵測到執行中：\(bundleIdentifier)")
-            return true
-        }
-
-        appendSwitchLaunchLog("偵測到執行中：\(bundleIdentifier)（\(runningApps.count)）")
-
-        if isSandboxedEnvironment {
-            appendSwitchLaunchLog("Sandbox 模式下無法自動關閉其他 App，請手動關閉後再切換")
-            return false
-        }
-
-        for runningApp in runningApps {
-            let pid = runningApp.processIdentifier
-            let didTerminate = runningApp.terminate()
-            appendSwitchLaunchLog("嘗試關閉 pid=\(pid) -> \(didTerminate ? "terminate" : "terminate failed")")
-            if !didTerminate {
-                let didForceTerminate = runningApp.forceTerminate()
-                appendSwitchLaunchLog("嘗試強制關閉 pid=\(pid) -> \(didForceTerminate ? "forceTerminate" : "forceTerminate failed")")
-            }
-        }
-
-        let didExit = await waitUntilAppExits(bundleIdentifier: bundleIdentifier, timeoutNanoseconds: 8_000_000_000)
-        if didExit {
-            appendSwitchLaunchLog("已關閉：\(bundleIdentifier)")
-            return true
-        }
-
-        appendSwitchLaunchLog("仍在執行：\(bundleIdentifier)（可能受權限限制）")
-        return false
-#else
-        return true
-#endif
-    }
-
-    private func launchCodexAppWithRetry(maxAttempts: Int = 6) async throws -> Bool {
-        for attempt in 1...maxAttempts {
-            appendSwitchLaunchLog("啟動嘗試 #\(attempt)")
-            if try await launchApp(bundleIdentifier: "com.openai.chatgpt") {
-                appendSwitchLaunchLog("啟動成功：com.openai.chatgpt")
-                return true
-            }
-            if try await launchApp(bundleIdentifier: "com.openai.codex") {
-                appendSwitchLaunchLog("啟動成功：com.openai.codex")
-                return true
-            }
-            if try await launchApp(at: URL(fileURLWithPath: "/Applications/ChatGPT.app")) {
-                appendSwitchLaunchLog("啟動成功：/Applications/ChatGPT.app")
-                return true
-            }
-            if try await launchApp(at: URL(fileURLWithPath: "/Applications/Codex.app")) {
-                appendSwitchLaunchLog("啟動成功：/Applications/Codex.app")
-                return true
-            }
-            try? await Task.sleep(nanoseconds: 500_000_000)
-        }
-        appendSwitchLaunchLog("多次嘗試後仍無法啟動 Codex/ChatGPT")
-        return false
-    }
-
-    private func waitUntilAppExits(bundleIdentifier: String, timeoutNanoseconds: UInt64) async -> Bool {
-#if canImport(AppKit)
-        let interval: UInt64 = 200_000_000
-        var waited: UInt64 = 0
-        while waited < timeoutNanoseconds {
-            if NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty {
-                return true
-            }
-            try? await Task.sleep(nanoseconds: interval)
-            waited += interval
-        }
-        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
-#else
-        return true
-#endif
-    }
-
-    private func launchApp(bundleIdentifier: String) async throws -> Bool {
-#if canImport(AppKit)
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            appendSwitchLaunchLog("找不到 bundle id：\(bundleIdentifier)")
-            return false
-        }
-        appendSwitchLaunchLog("找到 bundle id \(bundleIdentifier) -> \(url.path)")
-        return try await launchApp(at: url)
-#else
-        return false
-#endif
-    }
-
-    private func launchApp(at url: URL) async throws -> Bool {
-#if canImport(AppKit)
-        guard FileManager.default.fileExists(atPath: url.path) else { return false }
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = true
-        return try await withCheckedThrowingContinuation { continuation in
-            NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: true)
-                }
-            }
-        }
-#else
-        return false
-#endif
-    }
-
-    private var isSandboxedEnvironment: Bool {
-        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }
 
     private func appendSwitchLaunchLog(_ line: String) {
