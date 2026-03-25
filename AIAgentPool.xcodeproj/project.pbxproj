@@ -14,6 +14,9 @@
 		4A5ECC8A2F74485000194C45 /* PoolDashboardBackupFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECC892F74485000194C45 /* PoolDashboardBackupFlowCoordinator.swift */; };
 		4A5ECC8E2F744A0500194C45 /* PoolDashboardUsageSyncFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECC8D2F744A0500194C45 /* PoolDashboardUsageSyncFlowCoordinator.swift */; };
 		4A5ECC902F744A0500194C45 /* PoolDashboardOAuthSignInFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECC8F2F744A0500194C45 /* PoolDashboardOAuthSignInFlowCoordinator.swift */; };
+		4A5ECC922F744B9000194C45 /* PoolDashboardLocalImportFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECC912F744B9000194C45 /* PoolDashboardLocalImportFlowCoordinator.swift */; };
+		4A5ECC942F744B9100194C45 /* PoolDashboardSwitchLaunchFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECC932F744B9100194C45 /* PoolDashboardSwitchLaunchFlowCoordinator.swift */; };
+		4A5ECC962F744C5C00194C45 /* PoolDashboardLocalAccountsFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECC952F744C5C00194C45 /* PoolDashboardLocalAccountsFlowCoordinator.swift */; };
 		4AB61E942F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */; };
 		4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */; };
 		4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */; };
@@ -82,6 +85,9 @@
 		4A5ECC892F74485000194C45 /* PoolDashboardBackupFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardBackupFlowCoordinator.swift; sourceTree = "<group>"; };
 		4A5ECC8D2F744A0500194C45 /* PoolDashboardUsageSyncFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardUsageSyncFlowCoordinator.swift; sourceTree = "<group>"; };
 		4A5ECC8F2F744A0500194C45 /* PoolDashboardOAuthSignInFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardOAuthSignInFlowCoordinator.swift; sourceTree = "<group>"; };
+		4A5ECC912F744B9000194C45 /* PoolDashboardLocalImportFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLocalImportFlowCoordinator.swift; sourceTree = "<group>"; };
+		4A5ECC932F744B9100194C45 /* PoolDashboardSwitchLaunchFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardSwitchLaunchFlowCoordinator.swift; sourceTree = "<group>"; };
+		4A5ECC952F744C5C00194C45 /* PoolDashboardLocalAccountsFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLocalAccountsFlowCoordinator.swift; sourceTree = "<group>"; };
 		4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolSnapshotCodec.swift; sourceTree = "<group>"; };
 		4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolStore.swift; sourceTree = "<group>"; };
 		4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTokenVault.swift; sourceTree = "<group>"; };
@@ -256,6 +262,9 @@
 				4A5ECC892F74485000194C45 /* PoolDashboardBackupFlowCoordinator.swift */,
 				4A5ECC8D2F744A0500194C45 /* PoolDashboardUsageSyncFlowCoordinator.swift */,
 				4A5ECC8F2F744A0500194C45 /* PoolDashboardOAuthSignInFlowCoordinator.swift */,
+				4A5ECC912F744B9000194C45 /* PoolDashboardLocalImportFlowCoordinator.swift */,
+				4A5ECC932F744B9100194C45 /* PoolDashboardSwitchLaunchFlowCoordinator.swift */,
+				4A5ECC952F744C5C00194C45 /* PoolDashboardLocalAccountsFlowCoordinator.swift */,
 			);
 			path = PoolDashboard;
 			sourceTree = "<group>";
@@ -466,6 +475,7 @@
 				4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */,
 				4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */,
 				4AB61EF52F73F160001AC4CB /* CodexAuthFilePanelService.swift in Sources */,
+				4A5ECC922F744B9000194C45 /* PoolDashboardLocalImportFlowCoordinator.swift in Sources */,
 				4AB61EC02F73A0BB001AC4CB /* DebugToolsPanelView.swift in Sources */,
 				4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */,
 				4AB61EFF2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift in Sources */,
@@ -476,6 +486,7 @@
 				4AB61EDD2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift in Sources */,
 				4AB61EBC2F739E92001AC4CB /* GlassPanel.swift in Sources */,
 				4AB61EF32F73F0C8001AC4CB /* PoolDashboardSwitchLaunchCoordinator.swift in Sources */,
+				4A5ECC962F744C5C00194C45 /* PoolDashboardLocalAccountsFlowCoordinator.swift in Sources */,
 				4AB61E992F738FCF001AC4CB /* CodexAuthFileSwitcher.swift in Sources */,
 				4AB61EB52F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift in Sources */,
 				4AB61EE72F73ECBA001AC4CB /* OAuthLoginPanelView.swift in Sources */,
@@ -492,6 +503,7 @@
 				4AB61EE32F73EAF7001AC4CB /* ActiveAccountPanelView.swift in Sources */,
 				4AB61EB12F739CED001AC4CB /* ContentView.swift in Sources */,
 				4AB61EE52F73EB04001AC4CB /* ActivityLogPanelView.swift in Sources */,
+				4A5ECC942F744B9100194C45 /* PoolDashboardSwitchLaunchFlowCoordinator.swift in Sources */,
 				4A5ECC8A2F74485000194C45 /* PoolDashboardBackupFlowCoordinator.swift in Sources */,
 				4AB61ED92F73E2DE001AC4CB /* CodexAuthSwitchService.swift in Sources */,
 				4AB61EF72F73F51E001AC4CB /* PoolDashboardLocalAccountsCoordinator.swift in Sources */,

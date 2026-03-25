@@ -22,9 +22,9 @@ struct PoolDashboardView: View {
     private let lifecycleCoordinator = PoolDashboardLifecycleCoordinator()
     private let mutationCoordinator = PoolDashboardMutationCoordinator()
     private let actionCoordinator = PoolDashboardActionCoordinator()
-    private let localAccountsCoordinator = PoolDashboardLocalAccountsCoordinator()
-    private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
-    private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
+    private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
+    private let localImportFlowCoordinator = PoolDashboardLocalImportFlowCoordinator()
+    private let switchLaunchFlowCoordinator = PoolDashboardSwitchLaunchFlowCoordinator()
     private let usagePresenter = PoolAccountUsagePresenter()
     private let alertPresenter = PoolDashboardAlertPresenter()
     private var authFileAccessService: CodexAuthFileAccessService {
@@ -316,62 +316,63 @@ struct PoolDashboardView: View {
     }
 
     private func refreshLocalOAuthAccounts() {
-        sessionAuthorizedAuthFileURL = localAccountsCoordinator.refreshLocalOAuthAccounts(
-            state: &state,
-            viewModel: &localOAuthImportViewModel,
+        let output = localAccountsFlowCoordinator.refreshLocalOAuthAccounts(
+            from: state,
+            viewModel: localOAuthImportViewModel,
             authFileAccessService: authFileAccessService,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
+        state = output.state
+        localOAuthImportViewModel = output.viewModel
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
     }
 
     @MainActor
     @discardableResult
     private func openAuthFilePanel() -> URL? {
-        guard let url = localAccountsCoordinator.openAuthFilePanelAndLoad(
-            state: &state,
-            viewModel: &localOAuthImportViewModel,
+        let output = localAccountsFlowCoordinator.openAuthFilePanel(
+            from: state,
+            viewModel: localOAuthImportViewModel,
+            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService
-        ) else {
-            return nil
-        }
-        sessionAuthorizedAuthFileURL = url
-        return url
+        )
+        state = output.state
+        localOAuthImportViewModel = output.viewModel
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+        return output.pickedAuthFileURL
     }
 
     @MainActor
     private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
-        let output = await localImportCoordinator.importLocalOAuthAccount(
+        let output = await localImportFlowCoordinator.importLocalOAuthAccount(
             localAccount,
-            state: state,
+            from: state,
             viewModel: localOAuthImportViewModel,
+            viewState: viewState,
             onRawResponse: { raw in
                 viewState.lastUsageRawJSON = raw
             }
         )
-        mutationCoordinator.applyLocalImportOutput(
-            output,
-            state: &state,
-            viewModel: &localOAuthImportViewModel,
-            viewState: &viewState
-        )
+        state = output.state
+        localOAuthImportViewModel = output.viewModel
+        viewState = output.viewState
     }
 
     @MainActor
     private func switchAndLaunchCodex(using account: AgentAccount) async {
-        let output = await switchLaunchCoordinator.switchAndLaunch(
-            account: account,
+        let output = await switchLaunchFlowCoordinator.switchAndLaunch(
+            using: account,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService,
+            viewModel: localOAuthImportViewModel,
+            viewState: viewState,
             authorizeAuthFile: {
                 openAuthFilePanel()
             }
         )
-        mutationCoordinator.applySwitchOutput(
-            output,
-            viewModel: &localOAuthImportViewModel,
-            viewState: &viewState,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
-        )
+        localOAuthImportViewModel = output.viewModel
+        viewState = output.viewState
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
     }
 }
 
