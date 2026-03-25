@@ -15,10 +15,7 @@ struct PoolDashboardView: View {
     @State private var oauthAccountQuota = 1000
     @State private var resetAllLatch = DestructiveActionLatch()
     @State private var viewState = PoolDashboardViewState()
-    @State private var showLowUsageAlert = false
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
-    @State private var isSyncingUsage = false
-    @State private var isSigningInOAuth = false
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     private let store: AccountPoolStoring
@@ -77,7 +74,7 @@ struct PoolDashboardView: View {
                 )
 
                 SyncToolbarView(
-                    isSyncing: isSyncingUsage,
+                    isSyncing: viewState.isSyncingUsage,
                     lastSyncAt: state.lastUsageSyncAt,
                     errorText: viewState.syncError
                 ) {
@@ -100,7 +97,7 @@ struct PoolDashboardView: View {
                 oauthWorkspaceID: $oauthWorkspaceID,
                 oauthAccountName: $oauthAccountName,
                 oauthAccountQuota: $oauthAccountQuota,
-                isSigningInOAuth: isSigningInOAuth,
+                isSigningInOAuth: viewState.isSigningInOAuth,
                 oauthSuccessMessage: viewState.oauthSuccessMessage,
                 oauthError: viewState.oauthError,
                 onSignIn: {
@@ -236,10 +233,10 @@ struct PoolDashboardView: View {
                 state: state,
                 lowUsageAlertPolicy: &lowUsageAlertPolicy
             ) {
-                showLowUsageAlert = true
+                viewState.showLowUsageAlert = true
             }
         }
-        .alert("低剩餘用量提醒", isPresented: $showLowUsageAlert) {
+        .alert("低剩餘用量提醒", isPresented: $viewState.showLowUsageAlert) {
             Button("知道了", role: .cancel) { }
         } message: {
             if let active = state.activeAccount {
@@ -288,9 +285,9 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func syncCodexUsage() async {
-        guard !isSyncingUsage else { return }
-        isSyncingUsage = true
-        defer { isSyncingUsage = false }
+        guard !viewState.isSyncingUsage else { return }
+        viewState.isSyncingUsage = true
+        defer { viewState.isSyncingUsage = false }
 
         let output = await runtimeCoordinator.syncCodexUsage(from: state)
         mutationCoordinator.applySyncOutput(
@@ -302,9 +299,9 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func signInWithOAuth() async {
-        guard !isSigningInOAuth else { return }
-        isSigningInOAuth = true
-        defer { isSigningInOAuth = false }
+        guard !viewState.isSigningInOAuth else { return }
+        viewState.isSigningInOAuth = true
+        defer { viewState.isSigningInOAuth = false }
 
         viewState.oauthError = nil
         viewState.oauthSuccessMessage = nil
