@@ -39,6 +39,9 @@ struct PoolDashboardView: View {
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
+    private var accountBindings: PoolDashboardAccountBindingAdapter {
+        PoolDashboardAccountBindingAdapter(state: $state)
+    }
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
         self.store = store
@@ -176,13 +179,13 @@ struct PoolDashboardView: View {
                     state.removeAccount(accountID)
                 },
                 accountNameBinding: { accountID in
-                    accountNameBinding(accountID: accountID)
+                    accountBindings.nameBinding(for: accountID)
                 },
                 accountQuotaBinding: { accountID in
-                    accountQuotaBinding(accountID: accountID)
+                    accountBindings.quotaBinding(for: accountID)
                 },
                 accountUsedBinding: { accountID in
-                    accountUsedBinding(accountID: accountID)
+                    accountBindings.usedBinding(for: accountID)
                 },
                 usageSourceLabel: { account in
                     usagePresenter.usageSourceLabel(for: account)
@@ -323,39 +326,6 @@ struct PoolDashboardView: View {
             get: { state.minUsageRatioDeltaToSwitch },
             set: { newValue in
                 state.updateSwitchSettings(minUsageRatioDeltaToSwitch: newValue)
-            }
-        )
-    }
-
-    private func accountNameBinding(accountID: UUID) -> Binding<String> {
-        Binding(
-            get: {
-                state.accounts.first(where: { $0.id == accountID })?.name ?? ""
-            },
-            set: { newName in
-                state.updateAccount(accountID, name: newName)
-            }
-        )
-    }
-
-    private func accountQuotaBinding(accountID: UUID) -> Binding<Int> {
-        Binding(
-            get: {
-                state.accounts.first(where: { $0.id == accountID })?.quota ?? 100
-            },
-            set: { newQuota in
-                state.updateAccount(accountID, quota: newQuota)
-            }
-        )
-    }
-
-    private func accountUsedBinding(accountID: UUID) -> Binding<Int> {
-        Binding(
-            get: {
-                state.accounts.first(where: { $0.id == accountID })?.usedUnits ?? 0
-            },
-            set: { newUsed in
-                state.updateAccount(accountID, usedUnits: newUsed)
             }
         )
     }
