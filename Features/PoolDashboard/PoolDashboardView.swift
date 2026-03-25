@@ -57,37 +57,26 @@ struct PoolDashboardView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.06, green: 0.10, blue: 0.18), Color(red: 0.05, green: 0.07, blue: 0.10)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            PoolDashboardTheme.backgroundGradient
+                .ignoresSafeArea()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                dashboardHeader
-                usageOverviewTiles
+                GlassPanel {
+                    VStack(alignment: .leading, spacing: 16) {
+                DashboardHeaderSectionView(
+                    accountCount: state.accounts.count,
+                    availableCount: state.availableAccountsCount,
+                    overallUsagePercent: Int(state.overallUsageRatio * 100),
+                    modeTitle: state.mode.rawValue
+                )
 
-            HStack {
-                Button(isSyncingUsage ? "同步中..." : "同步 Codex 用量") {
+                SyncToolbarView(
+                    isSyncing: isSyncingUsage,
+                    lastSyncAt: state.lastUsageSyncAt,
+                    errorText: syncError
+                ) {
                     Task { await syncCodexUsage() }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(isSyncingUsage)
-
-                if let last = state.lastUsageSyncAt {
-                    Text("最近同步：\(last, format: Date.FormatStyle(date: .omitted, time: .standard))")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let syncError {
-                    Text(syncError)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                }
-            }
 
             GroupBox("Debug") {
                 VStack(alignment: .leading, spacing: 8) {
@@ -532,22 +521,14 @@ struct PoolDashboardView: View {
                             .foregroundStyle(.red)
                     }
                 }
+                    }
+                }
+                .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
+                .padding(20)
             }
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(.white.opacity(0.08), lineWidth: 1)
-                    )
-            )
-            .frame(maxWidth: 1160, alignment: .leading)
-            .padding(20)
         }
         }
-        .frame(minWidth: 900, minHeight: 620)
+        .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
             state.evaluate()
             _ = lowUsageAlertPolicy.shouldTriggerAlert(mode: state.mode, hasLowUsageWarning: state.hasLowUsageWarning)
@@ -568,53 +549,6 @@ struct PoolDashboardView: View {
                 Text("目前帳號剩餘用量偏低。")
             }
         }
-    }
-
-    private var dashboardHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Codex Account Orchestrator")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.72))
-        }
-        .padding(.bottom, 4)
-    }
-
-    private var usageOverviewTiles: some View {
-        HStack(spacing: 12) {
-            overviewTile(title: "帳號", value: "\(state.accounts.count)", tone: .blue)
-            overviewTile(title: "可用", value: "\(state.availableAccountsCount)", tone: .green)
-            overviewTile(title: "總用量", value: "\(Int(state.overallUsageRatio * 100))%", tone: .orange)
-            overviewTile(
-                title: "模式",
-                value: state.mode.rawValue,
-                tone: state.mode == .focus ? .purple : .indigo
-            )
-        }
-    }
-
-    private func overviewTile(title: String, value: String, tone: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.headline)
-                .foregroundStyle(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(tone.opacity(0.35), lineWidth: 1)
-                )
-        )
     }
 
     private var modeBinding: Binding<SwitchMode> {

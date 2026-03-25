@@ -19,6 +19,10 @@
 		4AB61E9F2F738FCF001AC4CB /* OAuthSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E922F738FCF001AC4CB /* OAuthSupport.swift */; };
 		4AB61EB12F739CED001AC4CB /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EB02F739CED001AC4CB /* ContentView.swift */; };
 		4AB61EB52F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EB42F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift */; };
+		4AB61EB82F739E92001AC4CB /* DashboardHeaderSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EB72F739E92001AC4CB /* DashboardHeaderSectionView.swift */; };
+		4AB61EBA2F739E92001AC4CB /* SyncToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EB92F739E92001AC4CB /* SyncToolbarView.swift */; };
+		4AB61EBC2F739E92001AC4CB /* GlassPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EBB2F739E92001AC4CB /* GlassPanel.swift */; };
+		4AB61EBE2F739F12001AC4CB /* PoolDashboardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EBD2F739F12001AC4CB /* PoolDashboardTheme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +55,10 @@
 		4AB61E922F738FCF001AC4CB /* OAuthSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthSupport.swift; sourceTree = "<group>"; };
 		4AB61EB02F739CED001AC4CB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		4AB61EB42F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthAccountUpsertResolver.swift; sourceTree = "<group>"; };
+		4AB61EB72F739E92001AC4CB /* DashboardHeaderSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHeaderSectionView.swift; sourceTree = "<group>"; };
+		4AB61EB92F739E92001AC4CB /* SyncToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncToolbarView.swift; sourceTree = "<group>"; };
+		4AB61EBB2F739E92001AC4CB /* GlassPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassPanel.swift; sourceTree = "<group>"; };
+		4AB61EBD2F739F12001AC4CB /* PoolDashboardTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardTheme.swift; sourceTree = "<group>"; };
 		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -159,6 +167,8 @@
 			children = (
 				4AB61E912F738FCF001AC4CB /* LocalOAuthImportViewModel.swift */,
 				4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */,
+				4AB61EB62F739E92001AC4CB /* Components */,
+				4AB61EBD2F739F12001AC4CB /* PoolDashboardTheme.swift */,
 			);
 			path = PoolDashboard;
 			sourceTree = "<group>";
@@ -168,6 +178,16 @@
 			children = (
 			);
 			path = Support;
+			sourceTree = "<group>";
+		};
+		4AB61EB62F739E92001AC4CB /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				4AB61EB72F739E92001AC4CB /* DashboardHeaderSectionView.swift */,
+				4AB61EB92F739E92001AC4CB /* SyncToolbarView.swift */,
+				4AB61EBB2F739E92001AC4CB /* GlassPanel.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		4AFBA5792F72203A008D97C1 = {
@@ -339,14 +359,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4AB61EBE2F739F12001AC4CB /* PoolDashboardTheme.swift in Sources */,
+				4AB61EB82F739E92001AC4CB /* DashboardHeaderSectionView.swift in Sources */,
 				4AB61E942F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift in Sources */,
 				4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */,
 				4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */,
 				4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */,
+				4AB61EBC2F739E92001AC4CB /* GlassPanel.swift in Sources */,
 				4AB61E992F738FCF001AC4CB /* CodexAuthFileSwitcher.swift in Sources */,
 				4AB61EB52F739DB7001AC4CB /* OAuthAccountUpsertResolver.swift in Sources */,
 				4AB61E9A2F738FCF001AC4CB /* CodexUsageSyncService.swift in Sources */,
 				4AB61E9B2F738FCF001AC4CB /* PoolDashboardView.swift in Sources */,
+				4AB61EBA2F739E92001AC4CB /* SyncToolbarView.swift in Sources */,
 				4AB61E9D2F738FCF001AC4CB /* LocalCodexAccountDiscovery.swift in Sources */,
 				4AB61EB12F739CED001AC4CB /* ContentView.swift in Sources */,
 				4AB61E9E2F738FCF001AC4CB /* LocalOAuthImportViewModel.swift in Sources */,
