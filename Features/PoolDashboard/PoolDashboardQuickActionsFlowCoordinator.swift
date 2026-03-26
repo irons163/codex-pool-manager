@@ -13,16 +13,7 @@ struct PoolDashboardQuickActionsFlowCoordinator {
     private let actionFlowCoordinator = PoolDashboardActionFlowCoordinator()
 
     func apply(_ action: Action, to state: AccountPoolState) -> AccountPoolState {
-        switch action {
-        case let .removeAccount(accountID):
-            return actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
-        case let .simulateUsage(units):
-            return actionFlowCoordinator.simulateUsage(on: state, units: units)
-        case .evaluateSwitch:
-            return actionFlowCoordinator.evaluateSwitch(on: state)
-        case .clearActivities:
-            return actionFlowCoordinator.clearActivities(on: state)
-        }
+        applyAction(action, to: state)
     }
 
     func triggerResetAllUsage(
@@ -33,5 +24,18 @@ struct PoolDashboardQuickActionsFlowCoordinator {
             from: state,
             resetAllLatch: resetAllLatch
         )
+    }
+
+    private func applyAction(_ action: Action, to state: AccountPoolState) -> AccountPoolState {
+        switch action {
+        case let .removeAccount(accountID):
+            return actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
+        case let .simulateUsage(units):
+            return actionFlowCoordinator.simulateUsage(on: state, units: units)
+        case .evaluateSwitch:
+            return actionFlowCoordinator.evaluateSwitch(on: state)
+        case .clearActivities:
+            return actionFlowCoordinator.clearActivities(on: state)
+        }
     }
 }
