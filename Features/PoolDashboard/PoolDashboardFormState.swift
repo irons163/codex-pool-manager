@@ -1,13 +1,15 @@
 import Foundation
 
 struct PoolDashboardFormState {
+    static let defaultQuota = 1000
+
     var newAccountName = ""
-    var newAccountQuota = 1000
+    var newAccountQuota = Self.defaultQuota
 
     var oauthAccountName = ""
-    var oauthAccountQuota = 1000
+    var oauthAccountQuota = Self.defaultQuota
 
-    mutating func resetNewAccountInput(defaultQuota: Int = 1000) {
+    mutating func resetNewAccountInput(defaultQuota: Int = Self.defaultQuota) {
         newAccountName = ""
         newAccountQuota = defaultQuota
     }

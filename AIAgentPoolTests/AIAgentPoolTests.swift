@@ -254,7 +254,7 @@ struct AIAgentPoolTests {
         formState.resetNewAccountInput()
 
         #expect(formState.newAccountName.isEmpty)
-        #expect(formState.newAccountQuota == 1000)
+        #expect(formState.newAccountQuota == PoolDashboardFormState.defaultQuota)
     }
 
     @Test
@@ -2520,9 +2520,9 @@ extension AIAgentPoolTests {
         let formState = PoolDashboardFormState()
 
         #expect(formState.newAccountName.isEmpty)
-        #expect(formState.newAccountQuota == 1000)
+        #expect(formState.newAccountQuota == PoolDashboardFormState.defaultQuota)
         #expect(formState.oauthAccountName.isEmpty)
-        #expect(formState.oauthAccountQuota == 1000)
+        #expect(formState.oauthAccountQuota == PoolDashboardFormState.defaultQuota)
     }
 }
 

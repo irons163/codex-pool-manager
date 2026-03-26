@@ -13,7 +13,7 @@ struct PoolDashboardAccountFormFlowCoordinator {
         formState: PoolDashboardFormState,
         name: String,
         quota: Int,
-        defaultQuota: Int = 1000
+        defaultQuota: Int = PoolDashboardFormState.defaultQuota
     ) -> AddAccountOutput {
         let nextState = actionFlowCoordinator.addAccount(to: state, name: name, quota: quota)
         var nextFormState = formState
