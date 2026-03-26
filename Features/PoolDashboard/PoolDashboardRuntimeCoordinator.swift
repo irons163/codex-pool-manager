@@ -32,13 +32,13 @@ struct PoolDashboardRuntimeCoordinator {
     func syncCodexUsage(from state: AccountPoolState) async -> SyncOutput {
         do {
             let result = try await dataFlowCoordinator.syncState(from: state)
-            return makeSyncOutput(
+            return SyncOutput(
                 state: result.state,
                 syncError: nil,
                 lastUsageRawJSON: result.rawResponse
             )
         } catch {
-            return makeSyncOutput(
+            return SyncOutput(
                 state: state,
                 syncError: makeSyncFailureMessage(from: error),
                 lastUsageRawJSON: nil
@@ -74,7 +74,7 @@ struct PoolDashboardRuntimeCoordinator {
                 fallbackQuota: input.fallbackQuota
             )
 
-            return makeOAuthSignInOutput(
+            return OAuthSignInOutput(
                 state: nextState,
                 oauthError: nil,
                 oauthSuccessMessage: successMessage,
@@ -82,7 +82,7 @@ struct PoolDashboardRuntimeCoordinator {
                 shouldRefreshLocalOAuthAccounts: true
             )
         } catch {
-            return makeOAuthSignInOutput(
+            return OAuthSignInOutput(
                 state: state,
                 oauthError: error.localizedDescription,
                 oauthSuccessMessage: nil,
@@ -90,34 +90,6 @@ struct PoolDashboardRuntimeCoordinator {
                 shouldRefreshLocalOAuthAccounts: false
             )
         }
-    }
-
-    private func makeSyncOutput(
-        state: AccountPoolState,
-        syncError: String?,
-        lastUsageRawJSON: String?
-    ) -> SyncOutput {
-        SyncOutput(
-            state: state,
-            syncError: syncError,
-            lastUsageRawJSON: lastUsageRawJSON
-        )
-    }
-
-    private func makeOAuthSignInOutput(
-        state: AccountPoolState,
-        oauthError: String?,
-        oauthSuccessMessage: String?,
-        nextOAuthAccountName: String,
-        shouldRefreshLocalOAuthAccounts: Bool
-    ) -> OAuthSignInOutput {
-        OAuthSignInOutput(
-            state: state,
-            oauthError: oauthError,
-            oauthSuccessMessage: oauthSuccessMessage,
-            nextOAuthAccountName: nextOAuthAccountName,
-            shouldRefreshLocalOAuthAccounts: shouldRefreshLocalOAuthAccounts
-        )
     }
 
     private func makeOAuthLoginService() -> OAuthLoginServicing {
