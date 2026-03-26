@@ -1,21 +1,24 @@
 import Foundation
 
 struct PoolDashboardBackupCoordinator {
+    typealias ExportResult = (json: String?, errorMessage: String?)
+    typealias ImportResult = (state: AccountPoolState?, errorMessage: String?)
+
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
 
-    func exportSnapshot(from snapshot: AccountPoolSnapshot) -> (json: String?, errorMessage: String?) {
+    func exportSnapshot(from snapshot: AccountPoolSnapshot) -> ExportResult {
         export {
             try dataFlowCoordinator.exportSnapshotJSON(snapshot)
         }
     }
 
-    func exportRefetchableSnapshot(from snapshot: AccountPoolSnapshot) -> (json: String?, errorMessage: String?) {
+    func exportRefetchableSnapshot(from snapshot: AccountPoolSnapshot) -> ExportResult {
         export {
             try dataFlowCoordinator.exportRefetchableSnapshotJSON(snapshot)
         }
     }
 
-    func importSnapshotState(from json: String) -> (state: AccountPoolState?, errorMessage: String?) {
+    func importSnapshotState(from json: String) -> ImportResult {
         importSnapshot {
             try dataFlowCoordinator.importState(from: json)
         }
@@ -23,7 +26,7 @@ struct PoolDashboardBackupCoordinator {
 
     private func importSnapshot(
         _ operation: () throws -> AccountPoolState
-    ) -> (state: AccountPoolState?, errorMessage: String?) {
+    ) -> ImportResult {
         do {
             return (try operation(), nil)
         } catch {
@@ -33,7 +36,7 @@ struct PoolDashboardBackupCoordinator {
 
     private func export(
         _ operation: () throws -> String
-    ) -> (json: String?, errorMessage: String?) {
+    ) -> ExportResult {
         do {
             return (try operation(), nil)
         } catch {

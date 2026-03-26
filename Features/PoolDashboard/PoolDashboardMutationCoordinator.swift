@@ -2,7 +2,7 @@ import Foundation
 
 struct PoolDashboardMutationCoordinator {
     func applyBackupExportResult(
-        _ result: (json: String?, errorMessage: String?),
+        _ result: PoolDashboardBackupCoordinator.ExportResult,
         viewState: inout PoolDashboardViewState
     ) {
         if let json = result.json {
@@ -15,7 +15,7 @@ struct PoolDashboardMutationCoordinator {
     }
 
     func applyBackupImportResult(
-        _ result: (state: AccountPoolState?, errorMessage: String?),
+        _ result: PoolDashboardBackupCoordinator.ImportResult,
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) -> Bool {
