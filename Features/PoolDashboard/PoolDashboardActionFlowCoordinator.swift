@@ -1,6 +1,8 @@
 import Foundation
 
 struct PoolDashboardActionFlowCoordinator {
+    static let defaultSimulatedUsageUnits = 50
+
     struct ResetAllUsageOutput {
         let state: AccountPoolState
         let resetAllLatch: DestructiveActionLatch
@@ -47,7 +49,7 @@ struct PoolDashboardActionFlowCoordinator {
 
     func simulateUsage(
         on state: AccountPoolState,
-        units: Int = 50
+        units: Int = defaultSimulatedUsageUnits
     ) -> AccountPoolState {
         mutate(state) { nextState in
             actionCoordinator.simulateUsage(state: &nextState, units: units)
