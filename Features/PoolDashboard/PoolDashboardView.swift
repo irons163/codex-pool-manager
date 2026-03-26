@@ -251,13 +251,7 @@ struct PoolDashboardView: View {
             authFileAccessService: authFileAccessService,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
-        viewMutationCoordinator.applyLifecycleOnAppearOutput(
-            output,
-            state: &state,
-            lowUsageAlertPolicy: &lowUsageAlertPolicy,
-            viewModel: &localOAuthImportViewModel,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
-        )
+        applyLifecycleOnAppearOutput(output)
     }
 
     private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
@@ -268,11 +262,7 @@ struct PoolDashboardView: View {
             viewState: viewState,
             store: store
         )
-        viewMutationCoordinator.applyLifecycleSnapshotChangeOutput(
-            output,
-            lowUsageAlertPolicy: &lowUsageAlertPolicy,
-            viewState: &viewState
-        )
+        applyLifecycleSnapshotChangeOutput(output)
     }
 
     // MARK: - Account Actions
@@ -343,6 +333,45 @@ struct PoolDashboardView: View {
         }
     }
 
+    private func applyLifecycleOnAppearOutput(
+        _ output: PoolDashboardLifecycleFlowCoordinator.OnAppearOutput
+    ) {
+        viewMutationCoordinator.applyLifecycleOnAppearOutput(
+            output,
+            state: &state,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy,
+            viewModel: &localOAuthImportViewModel,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
+    }
+
+    private func applyLifecycleSnapshotChangeOutput(
+        _ output: PoolDashboardLifecycleFlowCoordinator.SnapshotChangeOutput
+    ) {
+        viewMutationCoordinator.applyLifecycleSnapshotChangeOutput(
+            output,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy,
+            viewState: &viewState
+        )
+    }
+
+    private func applyUsageSyncOutput(_ output: PoolDashboardUsageSyncFlowCoordinator.Output) {
+        viewMutationCoordinator.applyUsageSyncOutput(
+            output,
+            state: &state,
+            viewState: &viewState
+        )
+    }
+
+    private func applyOAuthSignInOutput(_ output: PoolDashboardOAuthSignInFlowCoordinator.Output) {
+        viewMutationCoordinator.applyOAuthSignInOutput(
+            output,
+            state: &state,
+            viewState: &viewState,
+            formState: &formState
+        )
+    }
+
     private var intelligentCandidateName: String? {
         guard let candidateID = state.intelligentCandidateID else { return nil }
         return state.accounts.first(where: { $0.id == candidateID })?.name
@@ -359,11 +388,7 @@ struct PoolDashboardView: View {
             from: state,
             viewState: viewState
         )
-        viewMutationCoordinator.applyUsageSyncOutput(
-            output,
-            state: &state,
-            viewState: &viewState
-        )
+        applyUsageSyncOutput(output)
     }
 
     // MARK: - OAuth
@@ -387,12 +412,7 @@ struct PoolDashboardView: View {
                 fallbackQuota: formState.oauthAccountQuota
             )
         )
-        viewMutationCoordinator.applyOAuthSignInOutput(
-            output,
-            state: &state,
-            viewState: &viewState,
-            formState: &formState
-        )
+        applyOAuthSignInOutput(output)
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
         }
@@ -431,6 +451,24 @@ struct PoolDashboardView: View {
         )
     }
 
+    private func applyLocalImportOutput(_ output: PoolDashboardLocalImportFlowCoordinator.Output) {
+        viewMutationCoordinator.applyLocalImportOutput(
+            output,
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            viewState: &viewState
+        )
+    }
+
+    private func applySwitchLaunchOutput(_ output: PoolDashboardSwitchLaunchFlowCoordinator.Output) {
+        viewMutationCoordinator.applySwitchLaunchOutput(
+            output,
+            viewModel: &localOAuthImportViewModel,
+            viewState: &viewState,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
+    }
+
     @MainActor
     private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
         let output = await localImportFlowCoordinator.importLocalOAuthAccount(
@@ -442,12 +480,7 @@ struct PoolDashboardView: View {
                 viewState.lastUsageRawJSON = raw
             }
         )
-        viewMutationCoordinator.applyLocalImportOutput(
-            output,
-            state: &state,
-            viewModel: &localOAuthImportViewModel,
-            viewState: &viewState
-        )
+        applyLocalImportOutput(output)
     }
 
     // MARK: - Switch & Launch
@@ -464,12 +497,7 @@ struct PoolDashboardView: View {
                 openAuthFilePanel()
             }
         )
-        viewMutationCoordinator.applySwitchLaunchOutput(
-            output,
-            viewModel: &localOAuthImportViewModel,
-            viewState: &viewState,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
-        )
+        applySwitchLaunchOutput(output)
     }
 }
 
