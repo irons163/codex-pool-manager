@@ -2413,6 +2413,48 @@ extension AIAgentPoolTests {
     }
 
     @Test
+    func poolDashboardAsyncStateCoordinatorBeginUsageSyncGuardsConcurrentRuns() {
+        let coordinator = PoolDashboardAsyncStateCoordinator()
+        var viewState = PoolDashboardViewState()
+
+        let first = coordinator.beginUsageSync(viewState: &viewState)
+        let second = coordinator.beginUsageSync(viewState: &viewState)
+
+        #expect(first)
+        #expect(!second)
+        #expect(viewState.isSyncingUsage)
+    }
+
+    @Test
+    func poolDashboardAsyncStateCoordinatorEndUsageSyncResetsFlag() {
+        let coordinator = PoolDashboardAsyncStateCoordinator()
+        var viewState = PoolDashboardViewState()
+        _ = coordinator.beginUsageSync(viewState: &viewState)
+
+        coordinator.endUsageSync(viewState: &viewState)
+
+        #expect(!viewState.isSyncingUsage)
+    }
+
+    @Test
+    func poolDashboardAsyncStateCoordinatorBeginAndEndOAuthSignInManagesFlagsAndMessages() {
+        let coordinator = PoolDashboardAsyncStateCoordinator()
+        var viewState = PoolDashboardViewState()
+        viewState.oauthError = "old-error"
+        viewState.oauthSuccessMessage = "old-success"
+
+        let first = coordinator.beginOAuthSignIn(viewState: &viewState)
+        let second = coordinator.beginOAuthSignIn(viewState: &viewState)
+        coordinator.endOAuthSignIn(viewState: &viewState)
+
+        #expect(first)
+        #expect(!second)
+        #expect(viewState.oauthError == nil)
+        #expect(viewState.oauthSuccessMessage == nil)
+        #expect(!viewState.isSigningInOAuth)
+    }
+
+    @Test @MainActor
     func poolDashboardViewMutationCoordinatorApplyLifecycleOnAppearOutputUpdatesAllTargets() {
         var state = AccountPoolState(accounts: [], mode: .manual)
         var policy = LowUsageAlertPolicy()
@@ -2448,7 +2490,7 @@ extension AIAgentPoolTests {
         #expect(sessionURL == expectedURL)
     }
 
-    @Test
+    @Test @MainActor
     func poolDashboardViewMutationCoordinatorApplyLocalAccountsOutputReturnsPickedURL() {
         var state = AccountPoolState(accounts: [], mode: .manual)
         var viewModel = LocalOAuthImportViewModel()
@@ -2479,7 +2521,7 @@ extension AIAgentPoolTests {
         #expect(pickedURL == expectedPickedURL)
     }
 
-    @Test
+    @Test @MainActor
     func poolDashboardViewMutationCoordinatorApplySwitchLaunchOutputUpdatesAllTargets() {
         var viewModel = LocalOAuthImportViewModel()
         var viewState = PoolDashboardViewState()

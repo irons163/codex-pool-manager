@@ -27,6 +27,7 @@ struct PoolDashboardView: View {
     private let usagePresenter = PoolAccountUsagePresenter()
     private let alertPresenter = PoolDashboardAlertPresenter()
     private let viewMutationCoordinator = PoolDashboardViewMutationCoordinator()
+    private let asyncStateCoordinator = PoolDashboardAsyncStateCoordinator()
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -311,9 +312,8 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func syncCodexUsage() async {
-        guard !viewState.isSyncingUsage else { return }
-        viewState.isSyncingUsage = true
-        defer { viewState.isSyncingUsage = false }
+        guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
+        defer { asyncStateCoordinator.endUsageSync(viewState: &viewState) }
 
         let output = await usageSyncFlowCoordinator.syncCodexUsage(
             from: state,
@@ -330,12 +330,8 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func signInWithOAuth() async {
-        guard !viewState.isSigningInOAuth else { return }
-        viewState.isSigningInOAuth = true
-        defer { viewState.isSigningInOAuth = false }
-
-        viewState.oauthError = nil
-        viewState.oauthSuccessMessage = nil
+        guard asyncStateCoordinator.beginOAuthSignIn(viewState: &viewState) else { return }
+        defer { asyncStateCoordinator.endOAuthSignIn(viewState: &viewState) }
 
         let output = await oauthSignInFlowCoordinator.signInWithOAuth(
             from: state,
