@@ -270,6 +270,16 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func poolDashboardFormStateApplyOAuthAccountNameSetsValue() {
+        var formState = PoolDashboardFormState()
+        formState.oauthAccountName = "old"
+
+        formState.applyOAuthAccountName("new")
+
+        #expect(formState.oauthAccountName == "new")
+    }
+
+    @Test
     func intelligentModeReportsSwitchCooldownAfterRecentSwitch() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
