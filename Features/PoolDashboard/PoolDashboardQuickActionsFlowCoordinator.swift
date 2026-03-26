@@ -2,6 +2,7 @@ import Foundation
 
 struct PoolDashboardQuickActionsFlowCoordinator {
     typealias ResetAllUsageOutput = PoolDashboardActionFlowCoordinator.ResetAllUsageOutput
+    static let defaultSimulatedUsageUnits = 50
 
     enum Action {
         case removeAccount(UUID)

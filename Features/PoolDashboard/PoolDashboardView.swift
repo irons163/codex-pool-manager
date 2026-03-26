@@ -293,7 +293,7 @@ struct PoolDashboardView: View {
     }
 
     private func handleSimulateUsage() {
-        applyQuickAction(.simulateUsage(50))
+        applyQuickAction(.simulateUsage(PoolDashboardQuickActionsFlowCoordinator.defaultSimulatedUsageUnits))
     }
 
     private func handleEvaluateSwitch() {
