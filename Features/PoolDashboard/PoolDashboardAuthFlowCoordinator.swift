@@ -27,6 +27,8 @@ enum PoolDashboardAuthFlowError: LocalizedError {
 }
 
 struct PoolDashboardAuthFlowCoordinator {
+    private let accountUpsertCoordinator = PoolAccountUpsertCoordinator()
+
     struct OAuthSignInContext {
         let tokens: OAuthTokens
         let claims: OAuthIDTokenClaims?
@@ -101,7 +103,7 @@ struct PoolDashboardAuthFlowCoordinator {
         accountNameInput: String,
         fallbackQuota: Int
     ) -> String {
-        PoolAccountUpsertCoordinator().applyOAuthSignIn(
+        accountUpsertCoordinator.applyOAuthSignIn(
             state: &state,
             tokens: context.tokens,
             claims: context.claims,
@@ -135,7 +137,7 @@ struct PoolDashboardAuthFlowCoordinator {
         state: inout AccountPoolState,
         context: LocalImportContext
     ) {
-        PoolAccountUpsertCoordinator().applyLocalImport(
+        accountUpsertCoordinator.applyLocalImport(
             state: &state,
             usage: context.usage,
             fallbackName: context.name,
