@@ -21,8 +21,8 @@ struct PoolDashboardSwitchLaunchCoordinator {
 
         guard !account.apiToken.isEmpty else {
             append("失敗：沒有 token")
-            return Output(
-                switchLaunchLog: logLines.joined(separator: "\n"),
+            return makeOutput(
+                logLines: logLines,
                 errorMessage: "此帳號沒有可用 token，無法切換",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
@@ -30,8 +30,8 @@ struct PoolDashboardSwitchLaunchCoordinator {
 
         guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
             append("失敗：沒有 account_id")
-            return Output(
-                switchLaunchLog: logLines.joined(separator: "\n"),
+            return makeOutput(
+                logLines: logLines,
                 errorMessage: "此帳號缺少 Account ID，無法切換",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
@@ -48,8 +48,8 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 chatGPTAccountID: chatGPTAccountID,
                 logger: append
             )
-            return Output(
-                switchLaunchLog: logLines.joined(separator: "\n"),
+            return makeOutput(
+                logLines: logLines,
                 errorMessage: nil,
                 sessionAuthorizedAuthFileURL: authFileURL
             )
@@ -57,8 +57,8 @@ struct PoolDashboardSwitchLaunchCoordinator {
             append("尚未授權 auth.json，啟動選檔流程")
             guard let authorizedURL = authorizeAuthFile() else {
                 append("使用者未完成 auth.json 授權")
-                return Output(
-                    switchLaunchLog: logLines.joined(separator: "\n"),
+                return makeOutput(
+                    logLines: logLines,
                     errorMessage: "請先完成 auth.json 授權，才能切換並啟動",
                     sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
                 )
@@ -72,23 +72,23 @@ struct PoolDashboardSwitchLaunchCoordinator {
                     chatGPTAccountID: chatGPTAccountID,
                     logger: append
                 )
-                return Output(
-                    switchLaunchLog: logLines.joined(separator: "\n"),
+                return makeOutput(
+                    logLines: logLines,
                     errorMessage: nil,
                     sessionAuthorizedAuthFileURL: authorizedURL
                 )
             } catch {
                 append("重試失敗：\(error.localizedDescription)")
-                return Output(
-                    switchLaunchLog: logLines.joined(separator: "\n"),
+                return makeOutput(
+                    logLines: logLines,
                     errorMessage: "切換失敗：\(error.localizedDescription)",
                     sessionAuthorizedAuthFileURL: authorizedURL
                 )
             }
         } catch {
             append("錯誤：\(error.localizedDescription)")
-            return Output(
-                switchLaunchLog: logLines.joined(separator: "\n"),
+            return makeOutput(
+                logLines: logLines,
                 errorMessage: "切換失敗：\(error.localizedDescription)",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
@@ -124,6 +124,18 @@ struct PoolDashboardSwitchLaunchCoordinator {
             authFileURL: authFileURL,
             account: account,
             chatGPTAccountID: chatGPTAccountID
+        )
+    }
+
+    private func makeOutput(
+        logLines: [String],
+        errorMessage: String?,
+        sessionAuthorizedAuthFileURL: URL?
+    ) -> Output {
+        Output(
+            switchLaunchLog: logLines.joined(separator: "\n"),
+            errorMessage: errorMessage,
+            sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
     }
 }
