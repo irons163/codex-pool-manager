@@ -24,7 +24,7 @@ struct PoolDashboardLocalAccountsFlowCoordinator {
             authFileAccessService: authFileAccessService,
             currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
         )
-        return makeOutput(
+        return Output(
             state: nextState,
             viewModel: nextViewModel,
             sessionAuthorizedAuthFileURL: nextSessionAuthorizedAuthFileURL,
@@ -47,25 +47,11 @@ struct PoolDashboardLocalAccountsFlowCoordinator {
             authFileAccessService: authFileAccessService
         )
         let nextSessionAuthorizedAuthFileURL = pickedURL ?? currentAuthorizedAuthFileURL
-        return makeOutput(
+        return Output(
             state: nextState,
             viewModel: nextViewModel,
             sessionAuthorizedAuthFileURL: nextSessionAuthorizedAuthFileURL,
             pickedAuthFileURL: pickedURL
-        )
-    }
-
-    private func makeOutput(
-        state: AccountPoolState,
-        viewModel: LocalOAuthImportViewModel,
-        sessionAuthorizedAuthFileURL: URL?,
-        pickedAuthFileURL: URL?
-    ) -> Output {
-        Output(
-            state: state,
-            viewModel: viewModel,
-            sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
-            pickedAuthFileURL: pickedAuthFileURL
         )
     }
 }
