@@ -31,11 +31,11 @@ struct PoolDashboardRuntimeCoordinator {
 
     func syncCodexUsage(from state: AccountPoolState) async -> SyncOutput {
         do {
-            let result = try await dataFlowCoordinator.syncState(from: state)
+            let (syncedState, rawResponse) = try await dataFlowCoordinator.syncState(from: state)
             return SyncOutput(
-                state: result.state,
+                state: syncedState,
                 syncError: nil,
-                lastUsageRawJSON: result.rawResponse
+                lastUsageRawJSON: rawResponse
             )
         } catch {
             return SyncOutput(
@@ -51,7 +51,7 @@ struct PoolDashboardRuntimeCoordinator {
         input: OAuthSignInInput
     ) async -> OAuthSignInOutput {
         do {
-            let configuration = try authFlowCoordinator.buildConfiguration(
+            let oauthConfiguration = try authFlowCoordinator.buildConfiguration(
                 issuer: input.issuer,
                 clientID: input.clientID,
                 scopes: input.scopes,
@@ -61,7 +61,7 @@ struct PoolDashboardRuntimeCoordinator {
             )
 
             let context = try await authFlowCoordinator.fetchOAuthSignInContext(
-                configuration: configuration,
+                configuration: oauthConfiguration,
                 loginService: OAuthLoginService(),
                 usageClient: OpenAICodexUsageClient()
             )
