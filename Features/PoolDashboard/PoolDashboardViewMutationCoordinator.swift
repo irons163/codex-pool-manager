@@ -8,14 +8,9 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         sessionAuthorizedAuthFileURL: inout URL?
     ) {
-        assign(
-            state: output.state,
-            viewModel: output.viewModel,
-            sessionAuthorizedAuthFileURL: output.sessionAuthorizedAuthFileURL,
-            to: &state,
-            viewModel: &viewModel,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
-        )
+        state = output.state
+        viewModel = output.viewModel
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
         lowUsageAlertPolicy = output.lowUsageAlertPolicy
     }
 
@@ -33,12 +28,8 @@ struct PoolDashboardViewMutationCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
-        assign(
-            state: output.state,
-            viewState: output.viewState,
-            to: &state,
-            and: &viewState
-        )
+        state = output.state
+        viewState = output.viewState
     }
 
     func applyOAuthSignInOutput(
@@ -47,12 +38,8 @@ struct PoolDashboardViewMutationCoordinator {
         viewState: inout PoolDashboardViewState,
         formState: inout PoolDashboardFormState
     ) {
-        assign(
-            state: output.state,
-            viewState: output.viewState,
-            to: &state,
-            and: &viewState
-        )
+        state = output.state
+        viewState = output.viewState
         formState.applyOAuthAccountName(output.oauthAccountName)
     }
 
@@ -62,14 +49,9 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         sessionAuthorizedAuthFileURL: inout URL?
     ) -> URL? {
-        assign(
-            state: output.state,
-            viewModel: output.viewModel,
-            sessionAuthorizedAuthFileURL: output.sessionAuthorizedAuthFileURL,
-            to: &state,
-            viewModel: &viewModel,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
-        )
+        state = output.state
+        viewModel = output.viewModel
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
         return output.pickedAuthFileURL
     }
 
@@ -79,12 +61,8 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         viewState: inout PoolDashboardViewState
     ) {
-        assign(
-            state: output.state,
-            viewState: output.viewState,
-            to: &state,
-            and: &viewState
-        )
+        state = output.state
+        viewState = output.viewState
         viewModel = output.viewModel
     }
 
@@ -94,49 +72,8 @@ struct PoolDashboardViewMutationCoordinator {
         viewState: inout PoolDashboardViewState,
         sessionAuthorizedAuthFileURL: inout URL?
     ) {
-        assign(
-            viewModel: output.viewModel,
-            viewState: output.viewState,
-            sessionAuthorizedAuthFileURL: output.sessionAuthorizedAuthFileURL,
-            to: &viewModel,
-            and: &viewState,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
-        )
-    }
-
-    private func assign(
-        state: AccountPoolState,
-        viewState: PoolDashboardViewState,
-        to currentState: inout AccountPoolState,
-        and currentViewState: inout PoolDashboardViewState
-    ) {
-        currentState = state
-        currentViewState = viewState
-    }
-
-    private func assign(
-        state: AccountPoolState,
-        viewModel: LocalOAuthImportViewModel,
-        sessionAuthorizedAuthFileURL: URL?,
-        to currentState: inout AccountPoolState,
-        viewModel currentViewModel: inout LocalOAuthImportViewModel,
-        sessionAuthorizedAuthFileURL currentSessionAuthorizedAuthFileURL: inout URL?
-    ) {
-        currentState = state
-        currentViewModel = viewModel
-        currentSessionAuthorizedAuthFileURL = sessionAuthorizedAuthFileURL
-    }
-
-    private func assign(
-        viewModel: LocalOAuthImportViewModel,
-        viewState: PoolDashboardViewState,
-        sessionAuthorizedAuthFileURL: URL?,
-        to currentViewModel: inout LocalOAuthImportViewModel,
-        and currentViewState: inout PoolDashboardViewState,
-        sessionAuthorizedAuthFileURL currentSessionAuthorizedAuthFileURL: inout URL?
-    ) {
-        currentViewModel = viewModel
-        currentViewState = viewState
-        currentSessionAuthorizedAuthFileURL = sessionAuthorizedAuthFileURL
+        viewModel = output.viewModel
+        viewState = output.viewState
+        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
     }
 }
