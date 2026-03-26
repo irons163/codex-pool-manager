@@ -21,7 +21,7 @@ struct PoolDashboardDataFlowCoordinator {
         let client = OpenAICodexUsageClient { raw in
             capturedRaw = raw
         }
-        let service = makeUsageSyncService(client: client)
+        let service = CodexUsageSyncService(client: client)
         var nextState = state
         try await service.sync(state: &nextState)
         return (nextState, capturedRaw)
@@ -32,11 +32,5 @@ struct PoolDashboardDataFlowCoordinator {
         redactSensitive: Bool
     ) throws -> String {
         try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: redactSensitive)
-    }
-
-    private func makeUsageSyncService(
-        client: OpenAICodexUsageClient
-    ) -> CodexUsageSyncService<OpenAICodexUsageClient> {
-        CodexUsageSyncService(client: client)
     }
 }
