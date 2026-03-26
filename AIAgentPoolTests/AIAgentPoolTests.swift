@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 @testable import AIAgentPool
 
+@MainActor
 struct AIAgentPoolTests {
 
     @Test
