@@ -469,50 +469,50 @@ enum LocalhostOAuthCallbackExtractor {
 final class LocalhostOAuthCallbackServer {
     private let queue = DispatchQueue(label: "AIAgentPool.LocalhostOAuthCallbackServer")
 
+    private final class ContinuationState {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<URL, Error>?
+        private var completed = false
+        private var readySignaled = false
+        var listener: NWListener?
+
+        init(_ continuation: CheckedContinuation<URL, Error>) {
+            self.continuation = continuation
+        }
+
+        func complete(with result: Result<URL, Error>) {
+            lock.lock()
+            guard !completed, let continuation else {
+                lock.unlock()
+                return
+            }
+            completed = true
+            self.continuation = nil
+            let listener = self.listener
+            self.listener = nil
+            lock.unlock()
+
+            listener?.cancel()
+            continuation.resume(with: result)
+        }
+
+        func runReadyAction(_ action: () -> Void) {
+            lock.lock()
+            guard !completed, !readySignaled else {
+                lock.unlock()
+                return
+            }
+            readySignaled = true
+            lock.unlock()
+            action()
+        }
+    }
+
     func waitForCallback(
         config: LocalhostOAuthCallbackConfig,
         timeoutNanoseconds: UInt64 = 120_000_000_000,
         onReadyToReceiveCallback: @escaping () -> Bool = { true }
     ) async throws -> URL {
-        final class ContinuationState {
-            private let lock = NSLock()
-            private var continuation: CheckedContinuation<URL, Error>?
-            private var completed = false
-            private var readySignaled = false
-            var listener: NWListener?
-
-            init(_ continuation: CheckedContinuation<URL, Error>) {
-                self.continuation = continuation
-            }
-
-            func complete(with result: Result<URL, Error>) {
-                lock.lock()
-                guard !completed, let continuation else {
-                    lock.unlock()
-                    return
-                }
-                completed = true
-                self.continuation = nil
-                let listener = self.listener
-                self.listener = nil
-                lock.unlock()
-
-                listener?.cancel()
-                continuation.resume(with: result)
-            }
-
-            func runReadyAction(_ action: () -> Void) {
-                lock.lock()
-                guard !completed, !readySignaled else {
-                    lock.unlock()
-                    return
-                }
-                readySignaled = true
-                lock.unlock()
-                action()
-            }
-        }
-
         return try await withCheckedThrowingContinuation { continuation in
             let state = ContinuationState(continuation)
 
@@ -533,13 +533,17 @@ final class LocalhostOAuthCallbackServer {
             listener.stateUpdateHandler = { newState in
                 switch newState {
                 case .ready:
-                    state.runReadyAction {
-                        if !onReadyToReceiveCallback() {
-                            state.complete(with: .failure(OAuthLoginError.browserStartFailed))
+                    Task { @MainActor in
+                        state.runReadyAction {
+                            if !onReadyToReceiveCallback() {
+                                state.complete(with: .failure(OAuthLoginError.browserStartFailed))
+                            }
                         }
                     }
                 case .failed(let error):
-                    state.complete(with: .failure(OAuthLoginError.localhostCallbackStartFailed(error.localizedDescription)))
+                    Task { @MainActor in
+                        state.complete(with: .failure(OAuthLoginError.localhostCallbackStartFailed(error.localizedDescription)))
+                    }
                 default:
                     break
                 }
