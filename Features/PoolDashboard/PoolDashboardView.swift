@@ -46,9 +46,9 @@ struct PoolDashboardView: View {
         } else {
             var defaultState = AccountPoolState(
                 accounts: [
-                    AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: 1000),
-                    AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: 1000),
-                    AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: 1000)
+                    AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: PoolDashboardFormState.defaultQuota),
+                    AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: PoolDashboardFormState.defaultQuota),
+                    AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: PoolDashboardFormState.defaultQuota)
                 ],
                 mode: .intelligent,
                 minSwitchInterval: 300,
