@@ -53,20 +53,40 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
         }
 
+        func attemptSwitch(
+            authFileURL: URL,
+            failureLogPrefix: String,
+            failureSessionAuthorizedAuthFileURL: URL?
+        ) async -> Output {
+            do {
+                try await performSwitchAndLaunch(
+                    authFileURL: authFileURL,
+                    account: account,
+                    chatGPTAccountID: chatGPTAccountID,
+                    logger: append
+                )
+                return output(
+                    errorMessage: nil,
+                    sessionAuthorizedAuthFileURL: authFileURL
+                )
+            } catch {
+                append("\(failureLogPrefix)：\(error.localizedDescription)")
+                return output(
+                    errorMessage: Message.switchFailurePrefix + error.localizedDescription,
+                    sessionAuthorizedAuthFileURL: failureSessionAuthorizedAuthFileURL
+                )
+            }
+        }
+
         do {
             let authFileURL = try resolveAuthFileURLForSwitch(
                 currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
                 authFileAccessService: authFileAccessService
             )
-            try await performSwitchAndLaunch(
+            return await attemptSwitch(
                 authFileURL: authFileURL,
-                account: account,
-                chatGPTAccountID: chatGPTAccountID,
-                logger: append
-            )
-            return output(
-                errorMessage: nil,
-                sessionAuthorizedAuthFileURL: authFileURL
+                failureLogPrefix: "錯誤",
+                failureSessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         } catch SwitchResolutionError.missingAuthFile {
             append("尚未授權 auth.json，啟動選檔流程")
@@ -79,24 +99,11 @@ struct PoolDashboardSwitchLaunchCoordinator {
             }
 
             append("已取得授權，重試切換")
-            do {
-                try await performSwitchAndLaunch(
-                    authFileURL: authorizedURL,
-                    account: account,
-                    chatGPTAccountID: chatGPTAccountID,
-                    logger: append
-                )
-                return output(
-                    errorMessage: nil,
-                    sessionAuthorizedAuthFileURL: authorizedURL
-                )
-            } catch {
-                append("重試失敗：\(error.localizedDescription)")
-                return output(
-                    errorMessage: Message.switchFailurePrefix + error.localizedDescription,
-                    sessionAuthorizedAuthFileURL: authorizedURL
-                )
-            }
+            return await attemptSwitch(
+                authFileURL: authorizedURL,
+                failureLogPrefix: "重試失敗",
+                failureSessionAuthorizedAuthFileURL: authorizedURL
+            )
         } catch {
             append("錯誤：\(error.localizedDescription)")
             return output(
