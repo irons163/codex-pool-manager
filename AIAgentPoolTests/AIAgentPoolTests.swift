@@ -1918,6 +1918,26 @@ extension AIAgentPoolTests {
     }
 
     @Test
+    func poolDashboardLifecycleFlowCoordinatorOnAppearKeepsExistingSessionURLWithoutBookmark() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        state.evaluate()
+
+        let coordinator = PoolDashboardLifecycleFlowCoordinator()
+        let authFileAccessService = CodexAuthFileAccessService(bookmarkKey: "test-bookmark-\(UUID().uuidString)")
+        let currentURL = URL(string: "file:///tmp/current-auth.json")
+
+        let output = coordinator.onAppear(
+            state: state,
+            lowUsageAlertPolicy: LowUsageAlertPolicy(),
+            viewModel: LocalOAuthImportViewModel(),
+            authFileAccessService: authFileAccessService,
+            currentAuthorizedAuthFileURL: currentURL
+        )
+
+        #expect(output.sessionAuthorizedAuthFileURL == currentURL)
+    }
+
+    @Test
     func poolDashboardLifecycleFlowCoordinatorOnSnapshotChangedSavesSnapshotAndShowsAlert() {
         final class SpyStore: AccountPoolStoring {
             var savedSnapshots: [AccountPoolSnapshot] = []
@@ -1983,6 +2003,49 @@ extension AIAgentPoolTests {
 
         #expect(store.savedSnapshots.count == 1)
         #expect(!output.viewState.showLowUsageAlert)
+    }
+
+    @Test
+    func poolDashboardLifecycleFlowCoordinatorOnSnapshotChangedShowsLowUsageAlertOnlyOnceForSameLowState() {
+        final class SpyStore: AccountPoolStoring {
+            var savedSnapshots: [AccountPoolSnapshot] = []
+
+            func load() -> AccountPoolSnapshot? { nil }
+
+            func save(_ snapshot: AccountPoolSnapshot) {
+                savedSnapshots.append(snapshot)
+            }
+        }
+
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 95, quota: 100)],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.15
+        )
+        state.evaluate()
+        let snapshot = state.snapshot
+        let coordinator = PoolDashboardLifecycleFlowCoordinator()
+        let store = SpyStore()
+
+        let firstOutput = coordinator.onSnapshotChanged(
+            snapshot: snapshot,
+            state: state,
+            lowUsageAlertPolicy: LowUsageAlertPolicy(),
+            viewState: PoolDashboardViewState(),
+            store: store
+        )
+
+        let secondOutput = coordinator.onSnapshotChanged(
+            snapshot: snapshot,
+            state: state,
+            lowUsageAlertPolicy: firstOutput.lowUsageAlertPolicy,
+            viewState: PoolDashboardViewState(),
+            store: store
+        )
+
+        #expect(firstOutput.viewState.showLowUsageAlert)
+        #expect(!secondOutput.viewState.showLowUsageAlert)
+        #expect(store.savedSnapshots.count == 2)
     }
 
     @Test
