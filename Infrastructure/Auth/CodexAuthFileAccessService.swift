@@ -1,6 +1,8 @@
 import Foundation
 
 struct CodexAuthFileAccessService {
+    private static let fallbackAuthRelativePath = ".codex/auth.json"
+
     enum AccessError: LocalizedError {
         case missingAuthFile
 
@@ -52,7 +54,8 @@ struct CodexAuthFileAccessService {
             return try resolveURL(from: bookmark).url
         }
 
-        let fallback = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex/auth.json")
+        let fallback = FileManager.default.homeDirectoryForCurrentUser
+            .appending(path: Self.fallbackAuthRelativePath)
         if FileManager.default.fileExists(atPath: fallback.path) {
             return fallback
         }
