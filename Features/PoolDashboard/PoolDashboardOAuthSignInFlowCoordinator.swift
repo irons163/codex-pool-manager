@@ -33,7 +33,16 @@ struct PoolDashboardOAuthSignInFlowCoordinator {
 
         let runtimeOutput = await runtimeCoordinator.signInWithOAuth(
             from: state,
-            input: makeRuntimeInput(input, oauthAccountName: oauthAccountName)
+            input: .init(
+                issuer: input.issuer,
+                clientID: input.clientID,
+                scopes: input.scopes,
+                redirectURI: input.redirectURI,
+                originator: input.originator,
+                workspaceID: input.workspaceID,
+                accountNameInput: oauthAccountName,
+                fallbackQuota: input.fallbackQuota
+            )
         )
         let shouldRefreshLocalOAuthAccounts = mutationCoordinator.applyOAuthOutput(
             runtimeOutput,
@@ -47,22 +56,6 @@ struct PoolDashboardOAuthSignInFlowCoordinator {
             viewState: nextViewState,
             oauthAccountName: nextOAuthAccountName,
             shouldRefreshLocalOAuthAccounts: shouldRefreshLocalOAuthAccounts
-        )
-    }
-
-    private func makeRuntimeInput(
-        _ input: Input,
-        oauthAccountName: String
-    ) -> PoolDashboardRuntimeCoordinator.OAuthSignInInput {
-        .init(
-            issuer: input.issuer,
-            clientID: input.clientID,
-            scopes: input.scopes,
-            redirectURI: input.redirectURI,
-            originator: input.originator,
-            workspaceID: input.workspaceID,
-            accountNameInput: oauthAccountName,
-            fallbackQuota: input.fallbackQuota
         )
     }
 }
