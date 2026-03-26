@@ -495,9 +495,7 @@ struct PoolDashboardView: View {
             authFileAccessService: authFileAccessService,
             viewModel: localOAuthImportViewModel,
             viewState: viewState,
-            authorizeAuthFile: {
-                openAuthFilePanel()
-            }
+            authorizeAuthFile: openAuthFilePanel
         )
         applySwitchLaunchOutput(output)
     }
