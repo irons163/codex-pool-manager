@@ -62,7 +62,8 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
             minSwitchInterval: snapshot.minSwitchInterval,
             lowUsageThresholdRatio: snapshot.lowUsageThresholdRatio,
             minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
-            lastSwitchAt: snapshot.lastSwitchAt
+            lastSwitchAt: snapshot.lastSwitchAt,
+            lastUsageSyncAt: snapshot.lastUsageSyncAt
         )
 
         guard let data = try? JSONEncoder().encode(redacted) else { return }

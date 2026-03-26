@@ -185,6 +185,7 @@ struct AIAgentPoolTests {
 
         let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot")
         let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let lastUsageSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         let snapshot = AccountPoolSnapshot(
             accounts: [AgentAccount(id: accountID, name: "A", usedUnits: 150, quota: 1000)],
             activities: [],
@@ -195,7 +196,8 @@ struct AIAgentPoolTests {
             minSwitchInterval: 600,
             lowUsageThresholdRatio: 0.2,
             minUsageRatioDeltaToSwitch: 0.1,
-            lastSwitchAt: nil
+            lastSwitchAt: nil,
+            lastUsageSyncAt: lastUsageSyncAt
         )
 
         store.save(snapshot)
