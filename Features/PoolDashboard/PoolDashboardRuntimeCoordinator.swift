@@ -40,7 +40,7 @@ struct PoolDashboardRuntimeCoordinator {
         } catch {
             return SyncOutput(
                 state: state,
-                syncError: makeSyncFailureMessage(from: error),
+                syncError: "同步失敗：\(error.localizedDescription)",
                 lastUsageRawJSON: nil
             )
         }
@@ -90,9 +90,5 @@ struct PoolDashboardRuntimeCoordinator {
                 shouldRefreshLocalOAuthAccounts: false
             )
         }
-    }
-
-    private func makeSyncFailureMessage(from error: Error) -> String {
-        "同步失敗：\(error.localizedDescription)"
     }
 }
