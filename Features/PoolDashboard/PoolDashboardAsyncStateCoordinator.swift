@@ -2,9 +2,10 @@ import Foundation
 
 struct PoolDashboardAsyncStateCoordinator {
     func beginUsageSync(viewState: inout PoolDashboardViewState) -> Bool {
-        guard !viewState.isSyncingUsage else { return false }
-        viewState.isSyncingUsage = true
-        return true
+        begin(
+            isRunning: viewState.isSyncingUsage,
+            setRunning: { viewState.isSyncingUsage = $0 }
+        )
     }
 
     func endUsageSync(viewState: inout PoolDashboardViewState) {
@@ -12,14 +13,28 @@ struct PoolDashboardAsyncStateCoordinator {
     }
 
     func beginOAuthSignIn(viewState: inout PoolDashboardViewState) -> Bool {
-        guard !viewState.isSigningInOAuth else { return false }
-        viewState.isSigningInOAuth = true
-        viewState.oauthError = nil
-        viewState.oauthSuccessMessage = nil
-        return true
+        begin(
+            isRunning: viewState.isSigningInOAuth,
+            setRunning: { viewState.isSigningInOAuth = $0 },
+            onStart: {
+                viewState.oauthError = nil
+                viewState.oauthSuccessMessage = nil
+            }
+        )
     }
 
     func endOAuthSignIn(viewState: inout PoolDashboardViewState) {
         viewState.isSigningInOAuth = false
+    }
+
+    private func begin(
+        isRunning: Bool,
+        setRunning: (Bool) -> Void,
+        onStart: () -> Void = {}
+    ) -> Bool {
+        guard !isRunning else { return false }
+        setRunning(true)
+        onStart()
+        return true
     }
 }
