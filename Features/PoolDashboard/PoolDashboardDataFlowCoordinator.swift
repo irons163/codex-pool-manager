@@ -2,11 +2,11 @@ import Foundation
 
 struct PoolDashboardDataFlowCoordinator {
     func exportSnapshotJSON(_ snapshot: AccountPoolSnapshot) throws -> String {
-        try AccountPoolSnapshotCodec.exportJSON(snapshot)
+        try export(snapshot, redactSensitive: true)
     }
 
     func exportRefetchableSnapshotJSON(_ snapshot: AccountPoolSnapshot) throws -> String {
-        try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
+        try export(snapshot, redactSensitive: false)
     }
 
     func importState(from json: String) throws -> AccountPoolState {
@@ -25,5 +25,12 @@ struct PoolDashboardDataFlowCoordinator {
         var nextState = state
         try await service.sync(state: &nextState)
         return (nextState, capturedRaw)
+    }
+
+    private func export(
+        _ snapshot: AccountPoolSnapshot,
+        redactSensitive: Bool
+    ) throws -> String {
+        try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: redactSensitive)
     }
 }
