@@ -116,7 +116,7 @@ struct PoolDashboardLocalAccountsCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         authFileAccessService: CodexAuthFileAccessService
     ) -> URL? {
-        guard let url = CodexAuthFilePanelService().pickAuthFileURL() else {
+        guard let url = makeAuthFilePanelService().pickAuthFileURL() else {
 #if !canImport(AppKit)
             viewModel.errorMessage = "目前平台不支援檔案面板"
 #endif
@@ -159,5 +159,9 @@ struct PoolDashboardLocalAccountsCoordinator {
     ) {
         viewModel.applyAutomaticScanResult(discovered)
         normalizeStoredImportedAccountNames(state: &state, localAccounts: viewModel.accounts)
+    }
+
+    private func makeAuthFilePanelService() -> CodexAuthFilePanelService {
+        CodexAuthFilePanelService()
     }
 }
