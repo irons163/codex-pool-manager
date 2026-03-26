@@ -953,9 +953,21 @@ struct AIAgentPoolTests {
         let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
 
         let token = "sk-live-secret"
+        let chatGPTAccountID = "acct-raw-preserve"
         let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let snapshot = AccountPoolSnapshot(
-            accounts: [AgentAccount(id: accountID, name: "A", usedUnits: 10, quota: 1000, apiToken: token)],
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 1000,
+                    apiToken: token,
+                    chatGPTAccountID: chatGPTAccountID,
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
+            ],
             activities: [],
             mode: .manual,
             activeAccountID: nil,
@@ -972,9 +984,13 @@ struct AIAgentPoolTests {
         let rawJSON = String(data: rawData, encoding: .utf8) ?? ""
 
         #expect(!rawJSON.contains(token))
+        #expect(rawJSON.contains(chatGPTAccountID))
+        #expect(rawJSON.contains("primary_window"))
 
         let loaded = try #require(store.load())
         #expect(loaded.accounts.first?.apiToken == token)
+        #expect(loaded.accounts.first?.chatGPTAccountID == chatGPTAccountID)
+        #expect(loaded.accounts.first?.usageWindowName == "primary_window")
         defaults.removePersistentDomain(forName: suiteName)
     }
 
