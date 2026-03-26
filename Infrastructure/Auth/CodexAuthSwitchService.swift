@@ -25,6 +25,9 @@ struct CodexAuthSwitchService {
 
     private let knownBundleIdentifiers = ["com.openai.chatgpt", "com.openai.codex"]
     private let knownAppPaths = ["/Applications/ChatGPT.app", "/Applications/Codex.app"]
+    private let appCloseTimeoutNanoseconds: UInt64 = 8_000_000_000
+    private let appExitPollIntervalNanoseconds: UInt64 = 200_000_000
+    private let launchRetryIntervalNanoseconds: UInt64 = 500_000_000
 
     private var isSandboxedEnvironment: Bool {
         ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
@@ -101,7 +104,10 @@ struct CodexAuthSwitchService {
             }
         }
 
-        let didExit = await waitUntilAppExits(bundleIdentifier: bundleIdentifier, timeoutNanoseconds: 8_000_000_000)
+        let didExit = await waitUntilAppExits(
+            bundleIdentifier: bundleIdentifier,
+            timeoutNanoseconds: appCloseTimeoutNanoseconds
+        )
         if didExit {
             logger("已關閉：\(bundleIdentifier)")
             return true
@@ -133,7 +139,7 @@ struct CodexAuthSwitchService {
                 }
             }
 
-            try? await Task.sleep(nanoseconds: 500_000_000)
+            try? await Task.sleep(nanoseconds: launchRetryIntervalNanoseconds)
         }
         logger("多次嘗試後仍無法啟動 Codex/ChatGPT")
         return false
@@ -141,14 +147,13 @@ struct CodexAuthSwitchService {
 
     private func waitUntilAppExits(bundleIdentifier: String, timeoutNanoseconds: UInt64) async -> Bool {
 #if canImport(AppKit)
-        let interval: UInt64 = 200_000_000
         var waited: UInt64 = 0
         while waited < timeoutNanoseconds {
             if NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty {
                 return true
             }
-            try? await Task.sleep(nanoseconds: interval)
-            waited += interval
+            try? await Task.sleep(nanoseconds: appExitPollIntervalNanoseconds)
+            waited += appExitPollIntervalNanoseconds
         }
         return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
 #else
