@@ -7,24 +7,24 @@ struct PoolDashboardBackupCoordinator {
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
 
     func exportSnapshot(from snapshot: AccountPoolSnapshot) -> ExportResult {
-        export {
+        runExportOperation {
             try dataFlowCoordinator.exportSnapshotJSON(snapshot)
         }
     }
 
     func exportRefetchableSnapshot(from snapshot: AccountPoolSnapshot) -> ExportResult {
-        export {
+        runExportOperation {
             try dataFlowCoordinator.exportRefetchableSnapshotJSON(snapshot)
         }
     }
 
     func importSnapshotState(from json: String) -> ImportResult {
-        importSnapshot {
+        runImportOperation {
             try dataFlowCoordinator.importState(from: json)
         }
     }
 
-    private func importSnapshot(
+    private func runImportOperation(
         _ operation: () throws -> AccountPoolState
     ) -> ImportResult {
         do {
@@ -34,7 +34,7 @@ struct PoolDashboardBackupCoordinator {
         }
     }
 
-    private func export(
+    private func runExportOperation(
         _ operation: () throws -> String
     ) -> ExportResult {
         do {
