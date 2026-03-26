@@ -16,12 +16,12 @@ struct PoolDashboardBackupCoordinator {
     }
 
     func importSnapshotState(from json: String) -> (state: AccountPoolState?, errorMessage: String?) {
-        `import` {
+        importSnapshot {
             try dataFlowCoordinator.importState(from: json)
         }
     }
 
-    private func `import`(
+    private func importSnapshot(
         _ operation: () throws -> AccountPoolState
     ) -> (state: AccountPoolState?, errorMessage: String?) {
         do {
