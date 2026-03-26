@@ -48,6 +48,55 @@ struct PoolDashboardAsyncStateCoordinatorTests {
 }
 
 @MainActor
+struct PoolDashboardSwitchLaunchCoordinatorTests {
+    @Test
+    func poolDashboardSwitchLaunchCoordinatorReturnsErrorWhenTokenMissing() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "NoToken",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "",
+            chatGPTAccountID: "acct_1"
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: account,
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "test.bookmark"),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.errorMessage == "此帳號沒有可用 token，無法切換")
+        #expect(output.switchLaunchLog.contains("失敗：沒有 token"))
+    }
+
+    @Test
+    func poolDashboardSwitchLaunchCoordinatorReturnsErrorWhenAccountIDMissing() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "NoAccountID",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "token",
+            chatGPTAccountID: nil
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: account,
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "test.bookmark"),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.errorMessage == "此帳號缺少 Account ID，無法切換")
+        #expect(output.switchLaunchLog.contains("失敗：沒有 account_id"))
+    }
+}
+
+@MainActor
 struct PoolDashboardViewMutationCoordinatorTests {
     @Test
     func poolDashboardViewMutationCoordinatorApplyLifecycleOnAppearOutputUpdatesAllTargets() {
