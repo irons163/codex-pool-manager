@@ -50,7 +50,7 @@ struct CodexAuthFileAccessService {
             return sessionAuthorizedURL
         }
 
-        if let bookmark = UserDefaults.standard.data(forKey: bookmarkKey) {
+        if let bookmark = try? bookmarkData() {
             return try resolveURL(from: bookmark).url
         }
 
