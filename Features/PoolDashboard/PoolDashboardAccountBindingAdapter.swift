@@ -6,7 +6,7 @@ struct PoolDashboardAccountBindingAdapter {
     func nameBinding(for accountID: UUID) -> Binding<String> {
         Binding(
             get: {
-                state.wrappedValue.accounts.first(where: { $0.id == accountID })?.name ?? ""
+                accountValue(for: accountID, defaultValue: "") { $0.name }
             },
             set: { newName in
                 state.wrappedValue.updateAccount(accountID, name: newName)
@@ -17,7 +17,7 @@ struct PoolDashboardAccountBindingAdapter {
     func quotaBinding(for accountID: UUID) -> Binding<Int> {
         Binding(
             get: {
-                state.wrappedValue.accounts.first(where: { $0.id == accountID })?.quota ?? 100
+                accountValue(for: accountID, defaultValue: 100) { $0.quota }
             },
             set: { newQuota in
                 state.wrappedValue.updateAccount(accountID, quota: newQuota)
@@ -28,11 +28,22 @@ struct PoolDashboardAccountBindingAdapter {
     func usedBinding(for accountID: UUID) -> Binding<Int> {
         Binding(
             get: {
-                state.wrappedValue.accounts.first(where: { $0.id == accountID })?.usedUnits ?? 0
+                accountValue(for: accountID, defaultValue: 0) { $0.usedUnits }
             },
             set: { newUsed in
                 state.wrappedValue.updateAccount(accountID, usedUnits: newUsed)
             }
         )
+    }
+
+    private func accountValue<T>(
+        for accountID: UUID,
+        defaultValue: T,
+        transform: (AgentAccount) -> T
+    ) -> T {
+        guard let account = state.wrappedValue.accounts.first(where: { $0.id == accountID }) else {
+            return defaultValue
+        }
+        return transform(account)
     }
 }
