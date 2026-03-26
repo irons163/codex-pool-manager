@@ -5,6 +5,29 @@ struct PoolDashboardSwitchLaunchCoordinator {
         case missingAuthFile
     }
 
+    private enum ValidationError: Error {
+        case missingToken
+        case missingAccountID
+
+        var logLine: String {
+            switch self {
+            case .missingToken:
+                return "失敗：沒有 token"
+            case .missingAccountID:
+                return "失敗：沒有 account_id"
+            }
+        }
+
+        var errorMessage: String {
+            switch self {
+            case .missingToken:
+                return Message.missingToken
+            case .missingAccountID:
+                return Message.missingAccountID
+            }
+        }
+    }
+
     private enum Message {
         static let missingToken = "此帳號沒有可用 token，無法切換"
         static let missingAccountID = "此帳號缺少 Account ID，無法切換"
@@ -37,18 +60,19 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
         }
 
-        guard !account.apiToken.isEmpty else {
-            append("失敗：沒有 token")
+        let chatGPTAccountID: String
+        do {
+            chatGPTAccountID = try validatedChatGPTAccountID(for: account)
+        } catch let validationError as ValidationError {
+            append(validationError.logLine)
             return output(
-                errorMessage: Message.missingToken,
+                errorMessage: validationError.errorMessage,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
-        }
-
-        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
-            append("失敗：沒有 account_id")
+        } catch {
+            append("錯誤：\(error.localizedDescription)")
             return output(
-                errorMessage: Message.missingAccountID,
+                errorMessage: Message.switchFailurePrefix + error.localizedDescription,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -111,6 +135,16 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
+    }
+
+    private func validatedChatGPTAccountID(for account: AgentAccount) throws -> String {
+        guard !account.apiToken.isEmpty else {
+            throw ValidationError.missingToken
+        }
+        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+            throw ValidationError.missingAccountID
+        }
+        return chatGPTAccountID
     }
 
     private func resolveAuthFileURLForSwitch(
