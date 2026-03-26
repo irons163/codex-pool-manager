@@ -56,12 +56,11 @@ struct PoolDashboardLifecycleFlowCoordinator {
 
         var nextLowUsageAlertPolicy = lowUsageAlertPolicy
         var nextViewState = viewState
-        if lifecycleCoordinator.shouldShowLowUsageAlert(
+        applyLowUsageAlertIfNeeded(
             state: state,
-            lowUsageAlertPolicy: &nextLowUsageAlertPolicy
-        ) {
-            nextViewState.showLowUsageAlert = true
-        }
+            lowUsageAlertPolicy: &nextLowUsageAlertPolicy,
+            viewState: &nextViewState
+        )
 
         return makeSnapshotChangeOutput(
             lowUsageAlertPolicy: nextLowUsageAlertPolicy,
@@ -91,5 +90,18 @@ struct PoolDashboardLifecycleFlowCoordinator {
             lowUsageAlertPolicy: lowUsageAlertPolicy,
             viewState: viewState
         )
+    }
+
+    private func applyLowUsageAlertIfNeeded(
+        state: AccountPoolState,
+        lowUsageAlertPolicy: inout LowUsageAlertPolicy,
+        viewState: inout PoolDashboardViewState
+    ) {
+        if lifecycleCoordinator.shouldShowLowUsageAlert(
+            state: state,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy
+        ) {
+            viewState.showLowUsageAlert = true
+        }
     }
 }
