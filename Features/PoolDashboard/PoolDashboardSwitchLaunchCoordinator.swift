@@ -81,7 +81,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 append("重試失敗：\(error.localizedDescription)")
                 return makeOutput(
                     logLines: logLines,
-                    errorMessage: makeSwitchFailureMessage(from: error),
+                    errorMessage: "切換失敗：\(error.localizedDescription)",
                     sessionAuthorizedAuthFileURL: authorizedURL
                 )
             }
@@ -89,7 +89,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
             append("錯誤：\(error.localizedDescription)")
             return makeOutput(
                 logLines: logLines,
-                errorMessage: makeSwitchFailureMessage(from: error),
+                errorMessage: "切換失敗：\(error.localizedDescription)",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -137,9 +137,5 @@ struct PoolDashboardSwitchLaunchCoordinator {
             errorMessage: errorMessage,
             sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
-    }
-
-    private func makeSwitchFailureMessage(from error: Error) -> String {
-        "切換失敗：\(error.localizedDescription)"
     }
 }
