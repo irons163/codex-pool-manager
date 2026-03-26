@@ -21,6 +21,7 @@ struct PoolDashboardView: View {
     private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
     private let lifecycleFlowCoordinator = PoolDashboardLifecycleFlowCoordinator()
     private let actionFlowCoordinator = PoolDashboardActionFlowCoordinator()
+    private let accountFormFlowCoordinator = PoolDashboardAccountFormFlowCoordinator()
     private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
     private let localImportFlowCoordinator = PoolDashboardLocalImportFlowCoordinator()
     private let switchLaunchFlowCoordinator = PoolDashboardSwitchLaunchFlowCoordinator()
@@ -175,10 +176,10 @@ struct PoolDashboardView: View {
                 hasLowUsageWarning: state.hasLowUsageWarning,
                 lowUsageThresholdRatio: state.lowUsageThresholdRatio,
                 onSimulateUsage: {
-                    state = actionFlowCoordinator.simulateUsage(on: state)
+                    handleSimulateUsage()
                 },
                 onEvaluateSwitch: {
-                    state = actionFlowCoordinator.evaluateSwitch(on: state)
+                    handleEvaluateSwitch()
                 }
             )
 
@@ -187,14 +188,13 @@ struct PoolDashboardView: View {
                 newAccountQuota: $formState.newAccountQuota,
                 accounts: state.accounts,
                 onAddAccount: { name, quota in
-                    state = actionFlowCoordinator.addAccount(to: state, name: name, quota: quota)
-                    formState.resetNewAccountInput()
+                    handleAddAccount(name: name, quota: quota)
                 },
                 onSwitchAndLaunch: { account in
                     await switchAndLaunchCodex(using: account)
                 },
                 onRemoveAccount: { accountID in
-                    state = actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
+                    handleRemoveAccount(accountID: accountID)
                 },
                 accountNameBinding: { accountID in
                     accountBindings.nameBinding(for: accountID)
@@ -225,7 +225,7 @@ struct PoolDashboardView: View {
             ActivityLogPanelView(
                 activities: state.activities,
                 onClearActivities: {
-                    state = actionFlowCoordinator.clearActivities(on: state)
+                    handleClearActivities()
                 }
             )
 
@@ -276,6 +276,33 @@ struct PoolDashboardView: View {
     }
 
     // MARK: - Backup
+
+    private func handleAddAccount(name: String, quota: Int) {
+        let output = accountFormFlowCoordinator.addAccount(
+            from: state,
+            formState: formState,
+            name: name,
+            quota: quota
+        )
+        state = output.state
+        formState = output.formState
+    }
+
+    private func handleRemoveAccount(accountID: UUID) {
+        state = actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
+    }
+
+    private func handleSimulateUsage() {
+        state = actionFlowCoordinator.simulateUsage(on: state)
+    }
+
+    private func handleEvaluateSwitch() {
+        state = actionFlowCoordinator.evaluateSwitch(on: state)
+    }
+
+    private func handleClearActivities() {
+        state = actionFlowCoordinator.clearActivities(on: state)
+    }
 
     private func handleResetAllUsage() {
         let output = actionFlowCoordinator.triggerResetAllUsage(
