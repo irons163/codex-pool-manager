@@ -26,7 +26,7 @@ struct PoolDashboardLocalImportCoordinator {
         )
 
         guard case .importAccount = decision else {
-            return makeOutput(state: nextState, viewModel: nextViewModel, didImport: false)
+            return Output(state: nextState, viewModel: nextViewModel, didImport: false)
         }
 
         do {
@@ -36,19 +36,11 @@ struct PoolDashboardLocalImportCoordinator {
             )
             authFlowCoordinator.applyLocalImport(state: &nextState, context: context)
             nextViewModel.errorMessage = nil
-            return makeOutput(state: nextState, viewModel: nextViewModel, didImport: true)
+            return Output(state: nextState, viewModel: nextViewModel, didImport: true)
         } catch {
             nextViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(authFlowCoordinator.localizedSyncError(error))"
-            return makeOutput(state: nextState, viewModel: nextViewModel, didImport: false)
+            return Output(state: nextState, viewModel: nextViewModel, didImport: false)
         }
-    }
-
-    private func makeOutput(
-        state: AccountPoolState,
-        viewModel: LocalOAuthImportViewModel,
-        didImport: Bool
-    ) -> Output {
-        Output(state: state, viewModel: viewModel, didImport: didImport)
     }
 
     @MainActor
