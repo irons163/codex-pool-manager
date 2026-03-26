@@ -19,10 +19,9 @@ struct PoolDashboardLocalImportCoordinator {
         var nextState = state
         var nextViewModel = viewModel
 
-        let existingAccessTokens = Set(nextState.accounts.compactMap(\.apiToken))
         let decision = nextViewModel.prepareImport(
             localAccount,
-            existingAccessTokens: existingAccessTokens
+            existingAccessTokens: Set(nextState.accounts.compactMap(\.apiToken))
         )
 
         guard case .importAccount = decision else {
@@ -44,7 +43,8 @@ struct PoolDashboardLocalImportCoordinator {
             nextViewModel.errorMessage = nil
             return Output(state: nextState, viewModel: nextViewModel, didImport: true)
         } catch {
-            nextViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(authFlowCoordinator.localizedSyncError(error))"
+            let syncErrorMessage = authFlowCoordinator.localizedSyncError(error)
+            nextViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(syncErrorMessage)"
             return Output(state: nextState, viewModel: nextViewModel, didImport: false)
         }
     }
