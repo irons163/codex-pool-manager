@@ -7,30 +7,7 @@ enum AccountPoolSnapshotCodec {
     ) throws -> String {
         let exportSnapshot: AccountPoolSnapshot
         if redactSensitive {
-            exportSnapshot = AccountPoolSnapshot(
-                accounts: snapshot.accounts.map {
-                    AgentAccount(
-                        id: $0.id,
-                        name: $0.name,
-                        usedUnits: $0.usedUnits,
-                        quota: $0.quota,
-                        apiToken: "",
-                        chatGPTAccountID: $0.chatGPTAccountID,
-                        usageWindowName: $0.usageWindowName,
-                        usageWindowResetAt: $0.usageWindowResetAt
-                    )
-                },
-                activities: snapshot.activities,
-                mode: snapshot.mode,
-                activeAccountID: snapshot.activeAccountID,
-                manualAccountID: snapshot.manualAccountID,
-                focusLockedAccountID: snapshot.focusLockedAccountID,
-                minSwitchInterval: snapshot.minSwitchInterval,
-                lowUsageThresholdRatio: snapshot.lowUsageThresholdRatio,
-                minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
-                lastSwitchAt: snapshot.lastSwitchAt,
-                lastUsageSyncAt: snapshot.lastUsageSyncAt
-            )
+            exportSnapshot = snapshot.redactingAPITokens()
         } else {
             exportSnapshot = snapshot
         }

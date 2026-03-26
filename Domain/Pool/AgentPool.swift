@@ -55,6 +55,19 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         guard quota > 0 else { return 0 }
         return Double(remainingUnits) / Double(quota)
     }
+
+    func redactingAPIToken() -> AgentAccount {
+        AgentAccount(
+            id: id,
+            name: name,
+            usedUnits: usedUnits,
+            quota: quota,
+            apiToken: "",
+            chatGPTAccountID: chatGPTAccountID,
+            usageWindowName: usageWindowName,
+            usageWindowResetAt: usageWindowResetAt
+        )
+    }
 }
 
 struct PoolActivity: Identifiable, Codable, Equatable {
@@ -173,6 +186,22 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
         lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
         lastUsageSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastUsageSyncAt)
+    }
+
+    func redactingAPITokens() -> AccountPoolSnapshot {
+        AccountPoolSnapshot(
+            accounts: accounts.map { $0.redactingAPIToken() },
+            activities: activities,
+            mode: mode,
+            activeAccountID: activeAccountID,
+            manualAccountID: manualAccountID,
+            focusLockedAccountID: focusLockedAccountID,
+            minSwitchInterval: minSwitchInterval,
+            lowUsageThresholdRatio: lowUsageThresholdRatio,
+            minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
+            lastSwitchAt: lastSwitchAt,
+            lastUsageSyncAt: lastUsageSyncAt
+        )
     }
 }
 
