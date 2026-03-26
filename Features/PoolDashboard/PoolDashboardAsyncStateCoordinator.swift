@@ -12,28 +12,14 @@ struct PoolDashboardAsyncStateCoordinator {
     }
 
     func beginOAuthSignIn(viewState: inout PoolDashboardViewState) -> Bool {
-        begin(
-            isRunning: viewState.isSigningInOAuth,
-            setRunning: { viewState.isSigningInOAuth = $0 },
-            onStart: {
-                viewState.oauthError = nil
-                viewState.oauthSuccessMessage = nil
-            }
-        )
+        guard !viewState.isSigningInOAuth else { return false }
+        viewState.isSigningInOAuth = true
+        viewState.oauthError = nil
+        viewState.oauthSuccessMessage = nil
+        return true
     }
 
     func endOAuthSignIn(viewState: inout PoolDashboardViewState) {
         viewState.isSigningInOAuth = false
-    }
-
-    private func begin(
-        isRunning: Bool,
-        setRunning: (Bool) -> Void,
-        onStart: () -> Void = {}
-    ) -> Bool {
-        guard !isRunning else { return false }
-        setRunning(true)
-        onStart()
-        return true
     }
 }
