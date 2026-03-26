@@ -11,4 +11,8 @@ struct PoolDashboardFormState {
         newAccountName = ""
         newAccountQuota = defaultQuota
     }
+
+    mutating func applyOAuthAccountName(_ name: String) {
+        oauthAccountName = name
+    }
 }

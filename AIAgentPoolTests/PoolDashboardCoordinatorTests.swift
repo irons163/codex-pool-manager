@@ -80,7 +80,8 @@ struct PoolDashboardViewMutationCoordinatorTests {
         )
 
         #expect(state.snapshot == nextState.snapshot)
-        #expect(!policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true))
+        let shouldTriggerAgain = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
+        #expect(!shouldTriggerAgain)
         #expect(viewModel.accounts.isEmpty)
         #expect(sessionURL == expectedURL)
     }
@@ -141,5 +142,38 @@ struct PoolDashboardViewMutationCoordinatorTests {
         #expect(viewModel.accounts.isEmpty)
         #expect(viewState.lastSwitchLaunchLog == "log-line")
         #expect(sessionURL == expectedSessionURL)
+    }
+
+    @Test
+    func poolDashboardViewMutationCoordinatorApplyOAuthSignInOutputUpdatesFormStateName() {
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewState = PoolDashboardViewState()
+        var formState = PoolDashboardFormState()
+        formState.oauthAccountName = "old-name"
+        var nextState = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "OAuth", usedUnits: 0, quota: 100)],
+            mode: .manual
+        )
+        nextState.evaluate()
+        var nextViewState = PoolDashboardViewState()
+        nextViewState.oauthSuccessMessage = "ok"
+        let output = PoolDashboardOAuthSignInFlowCoordinator.Output(
+            state: nextState,
+            viewState: nextViewState,
+            oauthAccountName: "new-name",
+            shouldRefreshLocalOAuthAccounts: false
+        )
+        let coordinator = PoolDashboardViewMutationCoordinator()
+
+        coordinator.applyOAuthSignInOutput(
+            output,
+            state: &state,
+            viewState: &viewState,
+            formState: &formState
+        )
+
+        #expect(state.snapshot == nextState.snapshot)
+        #expect(viewState.oauthSuccessMessage == "ok")
+        #expect(formState.oauthAccountName == "new-name")
     }
 }

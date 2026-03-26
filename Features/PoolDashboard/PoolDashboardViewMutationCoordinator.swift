@@ -36,11 +36,11 @@ struct PoolDashboardViewMutationCoordinator {
         _ output: PoolDashboardOAuthSignInFlowCoordinator.Output,
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState,
-        oauthAccountName: inout String
+        formState: inout PoolDashboardFormState
     ) {
         state = output.state
         viewState = output.viewState
-        oauthAccountName = output.oauthAccountName
+        formState.applyOAuthAccountName(output.oauthAccountName)
     }
 
     func applyLocalAccountsOutput(

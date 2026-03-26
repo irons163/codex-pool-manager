@@ -381,7 +381,7 @@ struct PoolDashboardView: View {
             output,
             state: &state,
             viewState: &viewState,
-            oauthAccountName: &formState.oauthAccountName
+            formState: &formState
         )
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
