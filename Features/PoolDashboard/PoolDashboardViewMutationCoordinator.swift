@@ -8,10 +8,15 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         sessionAuthorizedAuthFileURL: inout URL?
     ) {
-        state = output.state
+        assign(
+            state: output.state,
+            viewModel: output.viewModel,
+            sessionAuthorizedAuthFileURL: output.sessionAuthorizedAuthFileURL,
+            to: &state,
+            viewModel: &viewModel,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
         lowUsageAlertPolicy = output.lowUsageAlertPolicy
-        viewModel = output.viewModel
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
     }
 
     func applyLifecycleSnapshotChangeOutput(
@@ -57,9 +62,14 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         sessionAuthorizedAuthFileURL: inout URL?
     ) -> URL? {
-        state = output.state
-        viewModel = output.viewModel
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+        assign(
+            state: output.state,
+            viewModel: output.viewModel,
+            sessionAuthorizedAuthFileURL: output.sessionAuthorizedAuthFileURL,
+            to: &state,
+            viewModel: &viewModel,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
         return output.pickedAuthFileURL
     }
 
@@ -102,6 +112,19 @@ struct PoolDashboardViewMutationCoordinator {
     ) {
         currentState = state
         currentViewState = viewState
+    }
+
+    private func assign(
+        state: AccountPoolState,
+        viewModel: LocalOAuthImportViewModel,
+        sessionAuthorizedAuthFileURL: URL?,
+        to currentState: inout AccountPoolState,
+        viewModel currentViewModel: inout LocalOAuthImportViewModel,
+        sessionAuthorizedAuthFileURL currentSessionAuthorizedAuthFileURL: inout URL?
+    ) {
+        currentState = state
+        currentViewModel = viewModel
+        currentSessionAuthorizedAuthFileURL = sessionAuthorizedAuthFileURL
     }
 
     private func assign(
