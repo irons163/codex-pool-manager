@@ -758,7 +758,8 @@ struct AIAgentPoolTests {
             minSwitchInterval: 300,
             lowUsageThresholdRatio: 0.15,
             minUsageRatioDeltaToSwitch: 0.05,
-            lastSwitchAt: Date(timeIntervalSince1970: 2)
+            lastSwitchAt: Date(timeIntervalSince1970: 2),
+            lastUsageSyncAt: Date(timeIntervalSince1970: 3)
         )
 
         let json = try AccountPoolSnapshotCodec.exportJSON(snapshot)

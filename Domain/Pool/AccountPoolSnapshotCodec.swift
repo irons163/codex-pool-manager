@@ -25,7 +25,8 @@ enum AccountPoolSnapshotCodec {
                 minSwitchInterval: snapshot.minSwitchInterval,
                 lowUsageThresholdRatio: snapshot.lowUsageThresholdRatio,
                 minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
-                lastSwitchAt: snapshot.lastSwitchAt
+                lastSwitchAt: snapshot.lastSwitchAt,
+                lastUsageSyncAt: snapshot.lastUsageSyncAt
             )
         } else {
             exportSnapshot = snapshot
