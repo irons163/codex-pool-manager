@@ -21,13 +21,6 @@ struct PoolDashboardUsageSyncFlowCoordinator {
             state: &nextState,
             viewState: &nextViewState
         )
-        return makeOutput(state: nextState, viewState: nextViewState)
-    }
-
-    private func makeOutput(
-        state: AccountPoolState,
-        viewState: PoolDashboardViewState
-    ) -> Output {
-        Output(state: state, viewState: viewState)
+        return Output(state: nextState, viewState: nextViewState)
     }
 }
