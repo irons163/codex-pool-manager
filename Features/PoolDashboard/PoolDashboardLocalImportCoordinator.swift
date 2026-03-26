@@ -30,16 +30,9 @@ struct PoolDashboardLocalImportCoordinator {
         }
 
         do {
-            let client = OpenAICodexUsageClient(
-                onRawResponse: { raw in
-                    Task { @MainActor in
-                        onRawResponse(raw)
-                    }
-                }
-            )
             let context = try await authFlowCoordinator.fetchLocalImportContext(
                 decision: decision,
-                usageClient: client
+                usageClient: makeUsageClient(onRawResponse: onRawResponse)
             )
             authFlowCoordinator.applyLocalImport(state: &nextState, context: context)
             nextViewModel.errorMessage = nil
@@ -56,5 +49,18 @@ struct PoolDashboardLocalImportCoordinator {
         didImport: Bool
     ) -> Output {
         Output(state: state, viewModel: viewModel, didImport: didImport)
+    }
+
+    @MainActor
+    private func makeUsageClient(
+        onRawResponse: @escaping @MainActor (String) -> Void
+    ) -> CodexUsageFetching {
+        OpenAICodexUsageClient(
+            onRawResponse: { raw in
+                Task { @MainActor in
+                    onRawResponse(raw)
+                }
+            }
+        )
     }
 }
