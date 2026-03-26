@@ -24,7 +24,7 @@ final class InMemoryAccountTokenVault: AccountTokenVault {
 }
 
 final class KeychainAccountTokenVault: AccountTokenVault {
-    private let service = "com.aiaentpool.account-token"
+    private let service = "com.aiagentpool.account-token"
 
     func token(for accountID: UUID) -> String? {
         let query: [String: Any] = [
