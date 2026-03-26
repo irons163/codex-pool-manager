@@ -1,6 +1,10 @@
 import Foundation
 
 struct PoolDashboardSwitchLaunchCoordinator {
+    private enum SwitchResolutionError: Error {
+        case missingAuthFile
+    }
+
     struct Output {
         let switchLaunchLog: String
         let errorMessage: String?
@@ -57,7 +61,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 errorMessage: nil,
                 sessionAuthorizedAuthFileURL: authFileURL
             )
-        } catch let error as NSError where error.domain == "CodexSwitch" && error.code == 1 {
+        } catch SwitchResolutionError.missingAuthFile {
             append("尚未授權 auth.json，啟動選檔流程")
             guard let authorizedURL = authorizeAuthFile() else {
                 append("使用者未完成 auth.json 授權")
@@ -104,11 +108,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 sessionAuthorizedURL: currentAuthorizedAuthFileURL
             )
         } catch {
-            throw NSError(
-                domain: "CodexSwitch",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "找不到 auth.json，請先按「選擇 auth.json」授權"]
-            )
+            throw SwitchResolutionError.missingAuthFile
         }
     }
 
