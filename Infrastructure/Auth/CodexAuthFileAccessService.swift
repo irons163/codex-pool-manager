@@ -28,18 +28,8 @@ struct CodexAuthFileAccessService {
     }
 
     func loadAuthorizedURLFromBookmark() throws -> (url: URL, wasStale: Bool) {
-        guard let bookmark = UserDefaults.standard.data(forKey: bookmarkKey) else {
-            throw AccessError.missingAuthFile
-        }
-
-        var isStale = false
-        let url = try URL(
-            resolvingBookmarkData: bookmark,
-            options: [.withSecurityScope],
-            relativeTo: nil,
-            bookmarkDataIsStale: &isStale
-        )
-        return (url, isStale)
+        let bookmark = try bookmarkData()
+        return try resolveURL(from: bookmark)
     }
 
     func hasSavedBookmark() -> Bool {
@@ -59,14 +49,7 @@ struct CodexAuthFileAccessService {
         }
 
         if let bookmark = UserDefaults.standard.data(forKey: bookmarkKey) {
-            var isStale = false
-            let url = try URL(
-                resolvingBookmarkData: bookmark,
-                options: [.withSecurityScope],
-                relativeTo: nil,
-                bookmarkDataIsStale: &isStale
-            )
-            return url
+            return try resolveURL(from: bookmark).url
         }
 
         let fallback = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex/auth.json")
@@ -85,5 +68,23 @@ struct CodexAuthFileAccessService {
             }
         }
         return try body()
+    }
+
+    private func bookmarkData() throws -> Data {
+        guard let bookmark = UserDefaults.standard.data(forKey: bookmarkKey) else {
+            throw AccessError.missingAuthFile
+        }
+        return bookmark
+    }
+
+    private func resolveURL(from bookmark: Data) throws -> (url: URL, wasStale: Bool) {
+        var isStale = false
+        let url = try URL(
+            resolvingBookmarkData: bookmark,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+        return (url, isStale)
     }
 }
