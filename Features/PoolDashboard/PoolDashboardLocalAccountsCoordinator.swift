@@ -23,8 +23,11 @@ struct PoolDashboardLocalAccountsCoordinator {
         }
 
         let discovered = LocalCodexAccountDiscovery.discover()
-        viewModel.applyAutomaticScanResult(discovered)
-        normalizeStoredImportedAccountNames(state: &state, localAccounts: viewModel.accounts)
+        applyAutomaticScanResult(
+            discovered,
+            state: &state,
+            viewModel: &viewModel
+        )
         return bookmarkResult.authorizedURL
     }
 
@@ -147,5 +150,14 @@ struct PoolDashboardLocalAccountsCoordinator {
             guard !improvedName.isEmpty, improvedName != persisted.name else { continue }
             state.updateAccount(persisted.id, name: improvedName)
         }
+    }
+
+    private func applyAutomaticScanResult(
+        _ discovered: [LocalCodexOAuthAccount],
+        state: inout AccountPoolState,
+        viewModel: inout LocalOAuthImportViewModel
+    ) {
+        viewModel.applyAutomaticScanResult(discovered)
+        normalizeStoredImportedAccountNames(state: &state, localAccounts: viewModel.accounts)
     }
 }
