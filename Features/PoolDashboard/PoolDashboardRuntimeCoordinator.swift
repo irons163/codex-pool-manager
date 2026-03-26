@@ -62,8 +62,8 @@ struct PoolDashboardRuntimeCoordinator {
 
             let context = try await authFlowCoordinator.fetchOAuthSignInContext(
                 configuration: configuration,
-                loginService: OAuthLoginService(),
-                usageClient: OpenAICodexUsageClient()
+                loginService: makeOAuthLoginService(),
+                usageClient: makeUsageClient()
             )
 
             var nextState = state
@@ -118,5 +118,13 @@ struct PoolDashboardRuntimeCoordinator {
             nextOAuthAccountName: nextOAuthAccountName,
             shouldRefreshLocalOAuthAccounts: shouldRefreshLocalOAuthAccounts
         )
+    }
+
+    private func makeOAuthLoginService() -> OAuthLoginServicing {
+        OAuthLoginService()
+    }
+
+    private func makeUsageClient() -> CodexUsageFetching {
+        OpenAICodexUsageClient()
     }
 }
