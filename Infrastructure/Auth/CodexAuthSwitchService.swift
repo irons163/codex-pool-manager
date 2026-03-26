@@ -23,6 +23,9 @@ enum CodexAuthSwitchError: LocalizedError {
 struct CodexAuthSwitchService {
     var logger: (String) -> Void = { _ in }
 
+    private let knownBundleIdentifiers = ["com.openai.chatgpt", "com.openai.codex"]
+    private let knownAppPaths = ["/Applications/ChatGPT.app", "/Applications/Codex.app"]
+
     private var isSandboxedEnvironment: Bool {
         ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }
@@ -57,8 +60,7 @@ struct CodexAuthSwitchService {
 
     private func relaunchCodexApp() async throws {
 #if canImport(AppKit)
-        let knownBundleIDs = ["com.openai.chatgpt", "com.openai.codex"]
-        for bundleIdentifier in knownBundleIDs {
+        for bundleIdentifier in knownBundleIdentifiers {
             let closed = await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
             if !closed {
                 throw CodexAuthSwitchError.appStillRunning(bundleIdentifier: bundleIdentifier)
@@ -115,22 +117,22 @@ struct CodexAuthSwitchService {
     private func launchCodexAppWithRetry(maxAttempts: Int = 6) async throws -> Bool {
         for attempt in 1...maxAttempts {
             logger("啟動嘗試 #\(attempt)")
-            if try await launchApp(bundleIdentifier: "com.openai.chatgpt") {
-                logger("啟動成功：com.openai.chatgpt")
-                return true
+
+            for bundleIdentifier in knownBundleIdentifiers {
+                if try await launchApp(bundleIdentifier: bundleIdentifier) {
+                    logger("啟動成功：\(bundleIdentifier)")
+                    return true
+                }
             }
-            if try await launchApp(bundleIdentifier: "com.openai.codex") {
-                logger("啟動成功：com.openai.codex")
-                return true
+
+            for appPath in knownAppPaths {
+                let appURL = URL(fileURLWithPath: appPath)
+                if try await launchApp(at: appURL) {
+                    logger("啟動成功：\(appPath)")
+                    return true
+                }
             }
-            if try await launchApp(at: URL(fileURLWithPath: "/Applications/ChatGPT.app")) {
-                logger("啟動成功：/Applications/ChatGPT.app")
-                return true
-            }
-            if try await launchApp(at: URL(fileURLWithPath: "/Applications/Codex.app")) {
-                logger("啟動成功：/Applications/Codex.app")
-                return true
-            }
+
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
         logger("多次嘗試後仍無法啟動 Codex/ChatGPT")
