@@ -6,4 +6,9 @@ struct PoolDashboardFormState {
 
     var oauthAccountName = ""
     var oauthAccountQuota = 1000
+
+    mutating func resetNewAccountInput(defaultQuota: Int = 1000) {
+        newAccountName = ""
+        newAccountQuota = defaultQuota
+    }
 }

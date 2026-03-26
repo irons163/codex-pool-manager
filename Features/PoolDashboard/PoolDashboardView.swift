@@ -188,6 +188,7 @@ struct PoolDashboardView: View {
                 accounts: state.accounts,
                 onAddAccount: { name, quota in
                     state = actionFlowCoordinator.addAccount(to: state, name: name, quota: quota)
+                    formState.resetNewAccountInput()
                 },
                 onSwitchAndLaunch: { account in
                     await switchAndLaunchCodex(using: account)
