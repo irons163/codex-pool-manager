@@ -14,7 +14,10 @@ enum AccountPoolSnapshotCodec {
                         name: $0.name,
                         usedUnits: $0.usedUnits,
                         quota: $0.quota,
-                        apiToken: ""
+                        apiToken: "",
+                        chatGPTAccountID: $0.chatGPTAccountID,
+                        usageWindowName: $0.usageWindowName,
+                        usageWindowResetAt: $0.usageWindowResetAt
                     )
                 },
                 activities: snapshot.activities,

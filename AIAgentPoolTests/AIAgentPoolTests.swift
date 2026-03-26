@@ -909,9 +909,19 @@ struct AIAgentPoolTests {
     @Test
     func snapshotExportRedactsApiTokensByDefault() throws {
         let token = "sk-test-secret"
+        let accountID = "acct-redacted"
         let snapshot = AccountPoolSnapshot(
             accounts: [
-                AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 1000, apiToken: token)
+                AgentAccount(
+                    id: UUID(),
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 1000,
+                    apiToken: token,
+                    chatGPTAccountID: accountID,
+                    usageWindowName: "primary_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
             ],
             activities: [],
             mode: .manual,
@@ -927,6 +937,8 @@ struct AIAgentPoolTests {
         let json = try AccountPoolSnapshotCodec.exportJSON(snapshot)
 
         #expect(!json.contains(token))
+        #expect(json.contains(accountID))
+        #expect(json.contains("primary_window"))
     }
 
     @Test
