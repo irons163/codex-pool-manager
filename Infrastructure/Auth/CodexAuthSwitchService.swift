@@ -47,6 +47,21 @@ struct CodexAuthSwitchService {
             }
         }
 
+        try rewriteAuthFile(
+            authFileURL: authFileURL,
+            account: account,
+            chatGPTAccountID: chatGPTAccountID
+        )
+
+        try await relaunchCodexApp()
+        logger("啟動完成")
+    }
+
+    private func rewriteAuthFile(
+        authFileURL: URL,
+        account: AgentAccount,
+        chatGPTAccountID: String
+    ) throws {
         let originalData = try Data(contentsOf: authFileURL)
         let rewrittenData = try CodexAuthFileSwitcher.rewriteAuthJSON(
             originalData,
@@ -56,9 +71,6 @@ struct CodexAuthSwitchService {
         )
         try rewrittenData.write(to: authFileURL, options: .atomic)
         logger("auth.json 已改寫")
-
-        try await relaunchCodexApp()
-        logger("啟動完成")
     }
 
     private func relaunchCodexApp() async throws {
