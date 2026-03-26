@@ -20,8 +20,8 @@ struct PoolDashboardView: View {
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
     private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
     private let lifecycleFlowCoordinator = PoolDashboardLifecycleFlowCoordinator()
-    private let actionFlowCoordinator = PoolDashboardActionFlowCoordinator()
     private let accountFormFlowCoordinator = PoolDashboardAccountFormFlowCoordinator()
+    private let quickActionsFlowCoordinator = PoolDashboardQuickActionsFlowCoordinator()
     private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
     private let localImportFlowCoordinator = PoolDashboardLocalImportFlowCoordinator()
     private let switchLaunchFlowCoordinator = PoolDashboardSwitchLaunchFlowCoordinator()
@@ -275,7 +275,7 @@ struct PoolDashboardView: View {
         )
     }
 
-    // MARK: - Backup
+    // MARK: - Account Actions
 
     private func handleAddAccount(name: String, quota: Int) {
         let output = accountFormFlowCoordinator.addAccount(
@@ -289,29 +289,31 @@ struct PoolDashboardView: View {
     }
 
     private func handleRemoveAccount(accountID: UUID) {
-        state = actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
+        state = quickActionsFlowCoordinator.apply(.removeAccount(accountID), to: state)
     }
 
     private func handleSimulateUsage() {
-        state = actionFlowCoordinator.simulateUsage(on: state)
+        state = quickActionsFlowCoordinator.apply(.simulateUsage(50), to: state)
     }
 
     private func handleEvaluateSwitch() {
-        state = actionFlowCoordinator.evaluateSwitch(on: state)
+        state = quickActionsFlowCoordinator.apply(.evaluateSwitch, to: state)
     }
 
     private func handleClearActivities() {
-        state = actionFlowCoordinator.clearActivities(on: state)
+        state = quickActionsFlowCoordinator.apply(.clearActivities, to: state)
     }
 
     private func handleResetAllUsage() {
-        let output = actionFlowCoordinator.triggerResetAllUsage(
+        let output = quickActionsFlowCoordinator.triggerResetAllUsage(
             from: state,
             resetAllLatch: resetAllLatch
         )
         state = output.state
         resetAllLatch = output.resetAllLatch
     }
+
+    // MARK: - Backup
 
     private func exportSnapshot() {
         backupFlowCoordinator.exportSnapshot(from: state, viewState: &viewState)
