@@ -20,7 +20,7 @@ struct PoolDashboardMutationCoordinator {
         viewState: inout PoolDashboardViewState
     ) -> Bool {
         if let importedState = result.state {
-            state = importedState
+            assign(state: importedState, to: &state)
             viewState.backupError = nil
             return true
         }
@@ -35,7 +35,7 @@ struct PoolDashboardMutationCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
-        state = output.state
+        assign(state: output.state, to: &state)
         if let rawResponse = output.lastUsageRawJSON {
             viewState.lastUsageRawJSON = rawResponse
         }
@@ -48,7 +48,7 @@ struct PoolDashboardMutationCoordinator {
         viewState: inout PoolDashboardViewState,
         oauthAccountName: inout String
     ) -> Bool {
-        state = output.state
+        assign(state: output.state, to: &state)
         viewState.oauthError = output.oauthError
         viewState.oauthSuccessMessage = output.oauthSuccessMessage
         oauthAccountName = output.nextOAuthAccountName
@@ -61,7 +61,7 @@ struct PoolDashboardMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         viewState: inout PoolDashboardViewState
     ) {
-        state = output.state
+        assign(state: output.state, to: &state)
         viewModel = output.viewModel
         if output.didImport {
             viewState.syncError = nil
@@ -77,5 +77,9 @@ struct PoolDashboardMutationCoordinator {
         viewState.lastSwitchLaunchLog = output.switchLaunchLog
         viewModel.errorMessage = output.errorMessage
         sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+    }
+
+    private func assign(state: AccountPoolState, to currentState: inout AccountPoolState) {
+        currentState = state
     }
 }
