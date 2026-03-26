@@ -427,7 +427,7 @@ struct PoolDashboardView: View {
             authFileAccessService: authFileAccessService,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
-        _ = applyLocalAccountsOutput(output)
+        _ = applyAndReturnPickedAuthFileURL(output)
     }
 
     @MainActor
@@ -439,10 +439,12 @@ struct PoolDashboardView: View {
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService
         )
-        return applyLocalAccountsOutput(output)
+        return applyAndReturnPickedAuthFileURL(output)
     }
 
-    private func applyLocalAccountsOutput(_ output: PoolDashboardLocalAccountsFlowCoordinator.Output) -> URL? {
+    private func applyAndReturnPickedAuthFileURL(
+        _ output: PoolDashboardLocalAccountsFlowCoordinator.Output
+    ) -> URL? {
         viewMutationCoordinator.applyLocalAccountsOutput(
             output,
             state: &state,
