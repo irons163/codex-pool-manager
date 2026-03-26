@@ -289,19 +289,19 @@ struct PoolDashboardView: View {
     }
 
     private func handleRemoveAccount(accountID: UUID) {
-        state = quickActionsFlowCoordinator.apply(.removeAccount(accountID), to: state)
+        applyQuickAction(.removeAccount(accountID))
     }
 
     private func handleSimulateUsage() {
-        state = quickActionsFlowCoordinator.apply(.simulateUsage(50), to: state)
+        applyQuickAction(.simulateUsage(50))
     }
 
     private func handleEvaluateSwitch() {
-        state = quickActionsFlowCoordinator.apply(.evaluateSwitch, to: state)
+        applyQuickAction(.evaluateSwitch)
     }
 
     private func handleClearActivities() {
-        state = quickActionsFlowCoordinator.apply(.clearActivities, to: state)
+        applyQuickAction(.clearActivities)
     }
 
     private func handleResetAllUsage() {
@@ -309,6 +309,16 @@ struct PoolDashboardView: View {
             from: state,
             resetAllLatch: resetAllLatch
         )
+        applyResetAllUsageOutput(output)
+    }
+
+    private func applyQuickAction(_ action: PoolDashboardQuickActionsFlowCoordinator.Action) {
+        state = quickActionsFlowCoordinator.apply(action, to: state)
+    }
+
+    private func applyResetAllUsageOutput(
+        _ output: PoolDashboardQuickActionsFlowCoordinator.ResetAllUsageOutput
+    ) {
         state = output.state
         resetAllLatch = output.resetAllLatch
     }
