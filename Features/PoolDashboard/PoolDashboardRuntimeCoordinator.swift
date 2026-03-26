@@ -40,7 +40,7 @@ struct PoolDashboardRuntimeCoordinator {
         } catch {
             return makeSyncOutput(
                 state: state,
-                syncError: "同步失敗：\(error.localizedDescription)",
+                syncError: makeSyncFailureMessage(from: error),
                 lastUsageRawJSON: nil
             )
         }
@@ -126,5 +126,9 @@ struct PoolDashboardRuntimeCoordinator {
 
     private func makeUsageClient() -> CodexUsageFetching {
         OpenAICodexUsageClient()
+    }
+
+    private func makeSyncFailureMessage(from error: Error) -> String {
+        "同步失敗：\(error.localizedDescription)"
     }
 }
