@@ -38,7 +38,7 @@ struct PoolDashboardActionFlowCoordinator {
         if shouldReset {
             actionCoordinator.resetAllUsage(state: &nextState)
         }
-        return makeResetAllUsageOutput(
+        return ResetAllUsageOutput(
             state: nextState,
             resetAllLatch: nextLatch,
             didReset: shouldReset
@@ -75,15 +75,4 @@ struct PoolDashboardActionFlowCoordinator {
         return nextState
     }
 
-    private func makeResetAllUsageOutput(
-        state: AccountPoolState,
-        resetAllLatch: DestructiveActionLatch,
-        didReset: Bool
-    ) -> ResetAllUsageOutput {
-        ResetAllUsageOutput(
-            state: state,
-            resetAllLatch: resetAllLatch,
-            didReset: didReset
-        )
-    }
 }
