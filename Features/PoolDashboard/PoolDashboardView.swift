@@ -20,7 +20,7 @@ struct PoolDashboardView: View {
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
     private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
     private let lifecycleFlowCoordinator = PoolDashboardLifecycleFlowCoordinator()
-    private let actionCoordinator = PoolDashboardActionCoordinator()
+    private let actionFlowCoordinator = PoolDashboardActionFlowCoordinator()
     private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
     private let localImportFlowCoordinator = PoolDashboardLocalImportFlowCoordinator()
     private let switchLaunchFlowCoordinator = PoolDashboardSwitchLaunchFlowCoordinator()
@@ -162,9 +162,7 @@ struct PoolDashboardView: View {
                 isPoolExhausted: state.isPoolExhausted,
                 resetAllButtonTitle: resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量",
                 onResetAll: {
-                    if resetAllLatch.confirmOrArm() {
-                        actionCoordinator.resetAllUsage(state: &state)
-                    }
+                    handleResetAllUsage()
                 }
             )
 
@@ -175,10 +173,10 @@ struct PoolDashboardView: View {
                 hasLowUsageWarning: state.hasLowUsageWarning,
                 lowUsageThresholdRatio: state.lowUsageThresholdRatio,
                 onSimulateUsage: {
-                    actionCoordinator.simulateUsage(state: &state)
+                    state = actionFlowCoordinator.simulateUsage(on: state)
                 },
                 onEvaluateSwitch: {
-                    actionCoordinator.evaluateSwitch(state: &state)
+                    state = actionFlowCoordinator.evaluateSwitch(on: state)
                 }
             )
 
@@ -187,13 +185,13 @@ struct PoolDashboardView: View {
                 newAccountQuota: $formState.newAccountQuota,
                 accounts: state.accounts,
                 onAddAccount: { name, quota in
-                    actionCoordinator.addAccount(state: &state, name: name, quota: quota)
+                    state = actionFlowCoordinator.addAccount(to: state, name: name, quota: quota)
                 },
                 onSwitchAndLaunch: { account in
                     await switchAndLaunchCodex(using: account)
                 },
                 onRemoveAccount: { accountID in
-                    actionCoordinator.removeAccount(state: &state, accountID: accountID)
+                    state = actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
                 },
                 accountNameBinding: { accountID in
                     accountBindings.nameBinding(for: accountID)
@@ -224,7 +222,7 @@ struct PoolDashboardView: View {
             ActivityLogPanelView(
                 activities: state.activities,
                 onClearActivities: {
-                    actionCoordinator.clearActivities(state: &state)
+                    state = actionFlowCoordinator.clearActivities(on: state)
                 }
             )
 
@@ -269,6 +267,15 @@ struct PoolDashboardView: View {
     }
 
     // MARK: - Backup
+
+    private func handleResetAllUsage() {
+        let output = actionFlowCoordinator.triggerResetAllUsage(
+            from: state,
+            resetAllLatch: resetAllLatch
+        )
+        state = output.state
+        resetAllLatch = output.resetAllLatch
+    }
 
     private func exportSnapshot() {
         backupFlowCoordinator.exportSnapshot(from: state, viewState: &viewState)

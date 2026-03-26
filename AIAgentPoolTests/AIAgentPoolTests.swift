@@ -2366,6 +2366,53 @@ extension AIAgentPoolTests {
     }
 
     @Test
+    func poolDashboardActionFlowCoordinatorAddAndRemoveAccount() {
+        let coordinator = PoolDashboardActionFlowCoordinator()
+        let initialState = AccountPoolState(accounts: [], mode: .manual)
+
+        let addedState = coordinator.addAccount(to: initialState, name: "Added", quota: 123)
+        #expect(addedState.accounts.count == 1)
+        #expect(addedState.accounts[0].name == "Added")
+        #expect(addedState.accounts[0].quota == 123)
+
+        let removedState = coordinator.removeAccount(
+            from: addedState,
+            accountID: addedState.accounts[0].id
+        )
+        #expect(removedState.accounts.isEmpty)
+    }
+
+    @Test
+    func poolDashboardActionFlowCoordinatorResetAllUsageRequiresSecondTrigger() {
+        let coordinator = PoolDashboardActionFlowCoordinator()
+        let initialState = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 30, quota: 100),
+                AgentAccount(id: UUID(), name: "B", usedUnits: 50, quota: 100)
+            ],
+            mode: .manual
+        )
+
+        let first = coordinator.triggerResetAllUsage(
+            from: initialState,
+            resetAllLatch: DestructiveActionLatch()
+        )
+        #expect(!first.didReset)
+        #expect(first.resetAllLatch.isArmed)
+        #expect(first.state.accounts[0].usedUnits == 30)
+        #expect(first.state.accounts[1].usedUnits == 50)
+
+        let second = coordinator.triggerResetAllUsage(
+            from: first.state,
+            resetAllLatch: first.resetAllLatch
+        )
+        #expect(second.didReset)
+        #expect(!second.resetAllLatch.isArmed)
+        #expect(second.state.accounts[0].usedUnits == 0)
+        #expect(second.state.accounts[1].usedUnits == 0)
+    }
+
+    @Test
     func poolDashboardAlertPresenterBuildsLowUsageMessageForActiveAccount() {
         let presenter = PoolDashboardAlertPresenter()
         let account = AgentAccount(
