@@ -26,6 +26,7 @@ struct PoolDashboardView: View {
     private let switchLaunchFlowCoordinator = PoolDashboardSwitchLaunchFlowCoordinator()
     private let usagePresenter = PoolAccountUsagePresenter()
     private let alertPresenter = PoolDashboardAlertPresenter()
+    private let viewMutationCoordinator = PoolDashboardViewMutationCoordinator()
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -248,10 +249,13 @@ struct PoolDashboardView: View {
             authFileAccessService: authFileAccessService,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
-        state = output.state
-        lowUsageAlertPolicy = output.lowUsageAlertPolicy
-        localOAuthImportViewModel = output.viewModel
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+        viewMutationCoordinator.applyLifecycleOnAppearOutput(
+            output,
+            state: &state,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy,
+            viewModel: &localOAuthImportViewModel,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
     }
 
     private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
@@ -262,8 +266,11 @@ struct PoolDashboardView: View {
             viewState: viewState,
             store: store
         )
-        lowUsageAlertPolicy = output.lowUsageAlertPolicy
-        viewState = output.viewState
+        viewMutationCoordinator.applyLifecycleSnapshotChangeOutput(
+            output,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy,
+            viewState: &viewState
+        )
     }
 
     // MARK: - Backup
@@ -312,8 +319,11 @@ struct PoolDashboardView: View {
             from: state,
             viewState: viewState
         )
-        state = output.state
-        viewState = output.viewState
+        viewMutationCoordinator.applyUsageSyncOutput(
+            output,
+            state: &state,
+            viewState: &viewState
+        )
     }
 
     // MARK: - OAuth
@@ -341,9 +351,12 @@ struct PoolDashboardView: View {
                 fallbackQuota: formState.oauthAccountQuota
             )
         )
-        state = output.state
-        viewState = output.viewState
-        formState.oauthAccountName = output.oauthAccountName
+        viewMutationCoordinator.applyOAuthSignInOutput(
+            output,
+            state: &state,
+            viewState: &viewState,
+            oauthAccountName: &formState.oauthAccountName
+        )
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
         }
@@ -358,9 +371,12 @@ struct PoolDashboardView: View {
             authFileAccessService: authFileAccessService,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
-        state = output.state
-        localOAuthImportViewModel = output.viewModel
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+        _ = viewMutationCoordinator.applyLocalAccountsOutput(
+            output,
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
     }
 
     @MainActor
@@ -372,10 +388,12 @@ struct PoolDashboardView: View {
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService
         )
-        state = output.state
-        localOAuthImportViewModel = output.viewModel
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
-        return output.pickedAuthFileURL
+        return viewMutationCoordinator.applyLocalAccountsOutput(
+            output,
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
     }
 
     @MainActor
@@ -389,9 +407,12 @@ struct PoolDashboardView: View {
                 viewState.lastUsageRawJSON = raw
             }
         )
-        state = output.state
-        localOAuthImportViewModel = output.viewModel
-        viewState = output.viewState
+        viewMutationCoordinator.applyLocalImportOutput(
+            output,
+            state: &state,
+            viewModel: &localOAuthImportViewModel,
+            viewState: &viewState
+        )
     }
 
     // MARK: - Switch & Launch
@@ -408,9 +429,12 @@ struct PoolDashboardView: View {
                 openAuthFilePanel()
             }
         )
-        localOAuthImportViewModel = output.viewModel
-        viewState = output.viewState
-        sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+        viewMutationCoordinator.applySwitchLaunchOutput(
+            output,
+            viewModel: &localOAuthImportViewModel,
+            viewState: &viewState,
+            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
+        )
     }
 }
 
