@@ -5,6 +5,13 @@ struct PoolDashboardSwitchLaunchCoordinator {
         case missingAuthFile
     }
 
+    private enum Message {
+        static let missingToken = "此帳號沒有可用 token，無法切換"
+        static let missingAccountID = "此帳號缺少 Account ID，無法切換"
+        static let requiresAuthFilePermission = "請先完成 auth.json 授權，才能切換並啟動"
+        static let switchFailurePrefix = "切換失敗："
+    }
+
     struct Output {
         let switchLaunchLog: String
         let errorMessage: String?
@@ -33,7 +40,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         guard !account.apiToken.isEmpty else {
             append("失敗：沒有 token")
             return output(
-                errorMessage: "此帳號沒有可用 token，無法切換",
+                errorMessage: Message.missingToken,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -41,7 +48,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
             append("失敗：沒有 account_id")
             return output(
-                errorMessage: "此帳號缺少 Account ID，無法切換",
+                errorMessage: Message.missingAccountID,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -66,7 +73,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
             guard let authorizedURL = authorizeAuthFile() else {
                 append("使用者未完成 auth.json 授權")
                 return output(
-                    errorMessage: "請先完成 auth.json 授權，才能切換並啟動",
+                    errorMessage: Message.requiresAuthFilePermission,
                     sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
                 )
             }
@@ -86,14 +93,14 @@ struct PoolDashboardSwitchLaunchCoordinator {
             } catch {
                 append("重試失敗：\(error.localizedDescription)")
                 return output(
-                    errorMessage: "切換失敗：\(error.localizedDescription)",
+                    errorMessage: Message.switchFailurePrefix + error.localizedDescription,
                     sessionAuthorizedAuthFileURL: authorizedURL
                 )
             }
         } catch {
             append("錯誤：\(error.localizedDescription)")
             return output(
-                errorMessage: "切換失敗：\(error.localizedDescription)",
+                errorMessage: Message.switchFailurePrefix + error.localizedDescription,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
