@@ -8,22 +8,16 @@ struct PoolDashboardBackupFlowCoordinator {
         from state: AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
-        applyExportResult(
-            from: state,
-            viewState: &viewState,
-            exporter: backupCoordinator.exportSnapshot
-        )
+        let result = backupCoordinator.exportSnapshot(from: state.snapshot)
+        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
     }
 
     func exportRefetchableSnapshot(
         from state: AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
-        applyExportResult(
-            from: state,
-            viewState: &viewState,
-            exporter: backupCoordinator.exportRefetchableSnapshot
-        )
+        let result = backupCoordinator.exportRefetchableSnapshot(from: state.snapshot)
+        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
     }
 
     func importSnapshot(
@@ -36,14 +30,5 @@ struct PoolDashboardBackupFlowCoordinator {
             state: &state,
             viewState: &viewState
         )
-    }
-
-    private func applyExportResult(
-        from state: AccountPoolState,
-        viewState: inout PoolDashboardViewState,
-        exporter: (AccountPoolSnapshot) -> (json: String?, errorMessage: String?)
-    ) {
-        let result = exporter(state.snapshot)
-        mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
     }
 }
