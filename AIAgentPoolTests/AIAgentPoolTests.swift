@@ -3152,9 +3152,11 @@ extension AIAgentPoolTests {
     func poolDashboardMutationCoordinatorApplyBackupExportResultWritesErrorWhenFailed() {
         let coordinator = PoolDashboardMutationCoordinator()
         var viewState = PoolDashboardViewState()
+        viewState.backupJSON = "{\"stale\":true}"
 
         coordinator.applyBackupExportResult((json: nil, errorMessage: "匯出失敗"), viewState: &viewState)
 
+        #expect(viewState.backupJSON.isEmpty)
         #expect(viewState.backupError == "匯出失敗")
     }
 

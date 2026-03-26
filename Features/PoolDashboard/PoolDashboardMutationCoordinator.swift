@@ -9,6 +9,7 @@ struct PoolDashboardMutationCoordinator {
             viewState.backupJSON = json
             viewState.backupError = nil
         } else if let message = result.errorMessage {
+            viewState.backupJSON = ""
             viewState.backupError = message
         }
     }
