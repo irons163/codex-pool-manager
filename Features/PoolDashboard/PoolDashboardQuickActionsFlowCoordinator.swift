@@ -1,11 +1,7 @@
 import Foundation
 
 struct PoolDashboardQuickActionsFlowCoordinator {
-    struct ResetAllUsageOutput {
-        let state: AccountPoolState
-        let resetAllLatch: DestructiveActionLatch
-        let didReset: Bool
-    }
+    typealias ResetAllUsageOutput = PoolDashboardActionFlowCoordinator.ResetAllUsageOutput
 
     enum Action {
         case removeAccount(UUID)
@@ -33,14 +29,9 @@ struct PoolDashboardQuickActionsFlowCoordinator {
         from state: AccountPoolState,
         resetAllLatch: DestructiveActionLatch
     ) -> ResetAllUsageOutput {
-        let output = actionFlowCoordinator.triggerResetAllUsage(
+        actionFlowCoordinator.triggerResetAllUsage(
             from: state,
             resetAllLatch: resetAllLatch
-        )
-        return ResetAllUsageOutput(
-            state: output.state,
-            resetAllLatch: output.resetAllLatch,
-            didReset: output.didReset
         )
     }
 }
