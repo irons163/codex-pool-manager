@@ -62,7 +62,10 @@ struct PoolDashboardLocalAccountsCoordinator {
         currentAuthorizedAuthFileURL: URL?
     ) -> BookmarkLoadResult {
         guard authFileAccessService.hasSavedBookmark() else {
-            return BookmarkLoadResult(didLoadAccounts: false, authorizedURL: currentAuthorizedAuthFileURL)
+            return makeBookmarkLoadResult(
+                didLoadAccounts: false,
+                authorizedURL: currentAuthorizedAuthFileURL
+            )
         }
 
         do {
@@ -80,18 +83,28 @@ struct PoolDashboardLocalAccountsCoordinator {
                 viewModel: &viewModel,
                 authFileAccessService: authFileAccessService
             )
-            return BookmarkLoadResult(
+            return makeBookmarkLoadResult(
                 didLoadAccounts: !viewModel.accounts.isEmpty,
                 authorizedURL: resolved.url
             )
         } catch {
             viewModel.applyBookmarkInvalid()
-            return BookmarkLoadResult(didLoadAccounts: false, authorizedURL: currentAuthorizedAuthFileURL)
+            return makeBookmarkLoadResult(
+                didLoadAccounts: false,
+                authorizedURL: currentAuthorizedAuthFileURL
+            )
         }
     }
 
     func hasSavedAuthFileBookmark(authFileAccessService: CodexAuthFileAccessService) -> Bool {
         authFileAccessService.hasSavedBookmark()
+    }
+
+    private func makeBookmarkLoadResult(
+        didLoadAccounts: Bool,
+        authorizedURL: URL?
+    ) -> BookmarkLoadResult {
+        BookmarkLoadResult(didLoadAccounts: didLoadAccounts, authorizedURL: authorizedURL)
     }
 
     @MainActor
