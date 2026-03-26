@@ -2,10 +2,9 @@ import Foundation
 
 struct PoolDashboardAsyncStateCoordinator {
     func beginUsageSync(viewState: inout PoolDashboardViewState) -> Bool {
-        begin(
-            isRunning: viewState.isSyncingUsage,
-            setRunning: { viewState.isSyncingUsage = $0 }
-        )
+        guard !viewState.isSyncingUsage else { return false }
+        viewState.isSyncingUsage = true
+        return true
     }
 
     func endUsageSync(viewState: inout PoolDashboardViewState) {
