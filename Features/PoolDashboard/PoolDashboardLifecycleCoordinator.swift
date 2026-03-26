@@ -6,9 +6,9 @@ struct PoolDashboardLifecycleCoordinator {
         lowUsageAlertPolicy: inout LowUsageAlertPolicy
     ) {
         state.evaluate()
-        _ = triggerLowUsageAlertIfNeeded(
-            state: state,
-            lowUsageAlertPolicy: &lowUsageAlertPolicy
+        _ = lowUsageAlertPolicy.shouldTriggerAlert(
+            mode: state.mode,
+            hasLowUsageWarning: state.hasLowUsageWarning
         )
     }
 
