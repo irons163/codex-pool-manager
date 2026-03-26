@@ -16,8 +16,16 @@ struct PoolDashboardBackupCoordinator {
     }
 
     func importSnapshotState(from json: String) -> (state: AccountPoolState?, errorMessage: String?) {
+        `import` {
+            try dataFlowCoordinator.importState(from: json)
+        }
+    }
+
+    private func `import`(
+        _ operation: () throws -> AccountPoolState
+    ) -> (state: AccountPoolState?, errorMessage: String?) {
         do {
-            return (try dataFlowCoordinator.importState(from: json), nil)
+            return (try operation(), nil)
         } catch {
             return (nil, "匯入失敗：\(error.localizedDescription)")
         }
