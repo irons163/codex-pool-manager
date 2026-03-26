@@ -14,7 +14,12 @@ struct PoolDashboardStrategyBindingAdapter {
 
     var manualSelection: Binding<UUID> {
         Binding(
-            get: { preferredManualSelectionID() },
+            get: {
+                if let manualID = state.wrappedValue.manualAccountID {
+                    return manualID
+                }
+                return state.wrappedValue.accounts.first?.id ?? UUID()
+            },
             set: { newID in
                 state.wrappedValue.selectManualAccount(newID)
             }
@@ -46,12 +51,5 @@ struct PoolDashboardStrategyBindingAdapter {
                 state.wrappedValue.updateSwitchSettings(minUsageRatioDeltaToSwitch: newValue)
             }
         )
-    }
-
-    private func preferredManualSelectionID() -> UUID {
-        if let manualID = state.wrappedValue.manualAccountID {
-            return manualID
-        }
-        return state.wrappedValue.accounts.first?.id ?? UUID()
     }
 }
