@@ -51,10 +51,24 @@ struct PoolDashboardOAuthSignInFlowCoordinator {
             oauthAccountName: &nextOAuthAccountName
         )
 
-        return Output(
+        return makeOutput(
             state: nextState,
             viewState: nextViewState,
             oauthAccountName: nextOAuthAccountName,
+            shouldRefreshLocalOAuthAccounts: shouldRefreshLocalOAuthAccounts
+        )
+    }
+
+    private func makeOutput(
+        state: AccountPoolState,
+        viewState: PoolDashboardViewState,
+        oauthAccountName: String,
+        shouldRefreshLocalOAuthAccounts: Bool
+    ) -> Output {
+        Output(
+            state: state,
+            viewState: viewState,
+            oauthAccountName: oauthAccountName,
             shouldRefreshLocalOAuthAccounts: shouldRefreshLocalOAuthAccounts
         )
     }

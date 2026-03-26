@@ -36,10 +36,22 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
             sessionAuthorizedAuthFileURL: &nextSessionAuthorizedAuthFileURL
         )
 
-        return Output(
+        return makeOutput(
             viewModel: nextViewModel,
             viewState: nextViewState,
             sessionAuthorizedAuthFileURL: nextSessionAuthorizedAuthFileURL
+        )
+    }
+
+    private func makeOutput(
+        viewModel: LocalOAuthImportViewModel,
+        viewState: PoolDashboardViewState,
+        sessionAuthorizedAuthFileURL: URL?
+    ) -> Output {
+        Output(
+            viewModel: viewModel,
+            viewState: viewState,
+            sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
     }
 }
