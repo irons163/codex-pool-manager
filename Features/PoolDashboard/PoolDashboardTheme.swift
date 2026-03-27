@@ -63,6 +63,7 @@ enum PoolDashboardTheme {
     static let dashboardVerticalPadding: CGFloat = 10
     static let toolbarPadding: CGFloat = 13
     static let syncBadgeMaxWidth: CGFloat = 360
+    static let localBadgeMaxWidth: CGFloat = 380
     static let toolbarShadowRadius: CGFloat = 10
     static let panelShadowRadius: CGFloat = 28
     static let panelGlowShadowRadius: CGFloat = 20
