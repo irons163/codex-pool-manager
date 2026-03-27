@@ -15,8 +15,7 @@ struct ActivityLogPanelView: View {
                     Button("清除活動紀錄", role: .destructive) {
                         onClearActivities()
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.orange)
+                    .buttonStyle(DashboardWarningButtonStyle())
                 }
                 List(activities.prefix(8)) { activity in
                     HStack {
