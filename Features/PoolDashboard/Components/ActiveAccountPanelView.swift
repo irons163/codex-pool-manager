@@ -17,10 +17,12 @@ struct ActiveAccountPanelView: View {
                     HStack {
                         Text(activeAccount.name)
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
                         Spacer()
                         Text("剩餘 \(activeAccount.remainingUnits)")
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .monospacedDigit()
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
                     }
 
                     ProgressView(value: activeAccount.usageRatio)
@@ -57,7 +59,7 @@ struct ActiveAccountPanelView: View {
                     }
                 } else {
                     Label("目前沒有可用帳號", systemImage: "person.crop.circle.badge.exclamationmark")
-                        .foregroundStyle(.white.opacity(0.78))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
