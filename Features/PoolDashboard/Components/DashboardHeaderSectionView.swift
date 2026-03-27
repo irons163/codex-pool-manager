@@ -28,6 +28,7 @@ struct DashboardHeaderSectionView: View {
                 dashboardTile(title: "總用量", value: "\(overallUsagePercent)%", tone: .orange)
                 dashboardTile(title: "模式", value: modeTitle, tone: .indigo)
             }
+            .layoutPriority(1)
         }
     }
 
