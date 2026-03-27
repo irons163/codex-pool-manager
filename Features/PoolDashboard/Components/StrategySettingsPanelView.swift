@@ -65,12 +65,18 @@ struct StrategySettingsPanelView: View {
         .tint(PoolDashboardTheme.glowA)
 
         if mode == .manual, !accounts.isEmpty {
-            Picker("手動帳號", selection: manualSelectionBinding) {
-                ForEach(accounts) { account in
-                    Text(account.name).tag(account.id)
+            HStack(spacing: 10) {
+                Text("手動帳號")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.82))
+                Picker("手動帳號", selection: manualSelectionBinding) {
+                    ForEach(accounts) { account in
+                        Text(account.name).tag(account.id)
+                    }
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
-            .pickerStyle(.menu)
         }
     }
 }
