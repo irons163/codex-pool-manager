@@ -38,6 +38,7 @@ enum PoolDashboardTheme {
     static let sectionCardPadding: CGFloat = 12
     static let editorCornerRadius: CGFloat = 10
     static let calloutCornerRadius: CGFloat = 10
+    static let calloutBorderWidth: CGFloat = 1
     static let glowLargeSize: CGFloat = 420
     static let glowMediumSize: CGFloat = 360
     static let glowLargeBlur: CGFloat = 70
