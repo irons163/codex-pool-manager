@@ -69,6 +69,7 @@ struct StrategySettingsPanelView: View {
                     Text(account.name).tag(account.id)
                 }
             }
+            .pickerStyle(.menu)
         }
     }
 }
