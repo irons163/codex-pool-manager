@@ -21,13 +21,17 @@ struct ActivityLogPanelView: View {
                     HStack {
                         Text(activity.timestamp.formatted(date: .omitted, time: .standard))
                             .monospacedDigit()
-                            .foregroundStyle(.white.opacity(0.62))
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
                         Text(activity.message)
-                            .foregroundStyle(.white.opacity(0.90))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
                     }
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(PoolDashboardTheme.panelFill.opacity(0.60))
+                            .fill(PoolDashboardTheme.panelMutedFill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            )
                             .padding(.vertical, 2)
                     )
                 }
