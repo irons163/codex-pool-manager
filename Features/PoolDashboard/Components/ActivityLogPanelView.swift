@@ -8,7 +8,7 @@ struct ActivityLogPanelView: View {
         GroupBox("近期活動") {
             if activities.isEmpty {
                 Text("目前沒有活動紀錄")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.72))
             } else {
                 HStack {
                     Spacer()
@@ -19,14 +19,21 @@ struct ActivityLogPanelView: View {
                 }
                 List(activities.prefix(8)) { activity in
                     HStack {
-                        Text(activity.timestamp, format: Date.FormatStyle(date: .omitted, time: .standard))
-                            .foregroundStyle(.secondary)
+                        Text(activity.timestamp.formatted(date: .omitted, time: .standard))
+                            .foregroundStyle(.white.opacity(0.62))
                         Text(activity.message)
+                            .foregroundStyle(.white.opacity(0.90))
                     }
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(PoolDashboardTheme.panelFill.opacity(0.60))
+                            .padding(.vertical, 2)
+                    )
                 }
                 .listStyle(.plain)
                 .frame(minHeight: 160)
             }
         }
+        .tint(PoolDashboardTheme.glowA)
     }
 }
