@@ -33,7 +33,7 @@ struct LocalOAuthAccountsPanelView: View {
                 if accounts.isEmpty {
                     Text("尚未找到本機 OAuth 帳號。若你已登入 Codex，請點「選擇 auth.json」並選擇 ~/.codex/auth.json")
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.70))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
                 } else {
                     ForEach(accounts) { account in
                         HStack {
