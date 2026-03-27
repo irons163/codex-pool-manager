@@ -48,14 +48,12 @@ struct ActiveAccountPanelView: View {
                         Button("模擬使用 +50") {
                             onSimulateUsage()
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(PoolDashboardTheme.glowA)
+                        .buttonStyle(DashboardPrimaryButtonStyle())
 
                         Button("重新評估切換") {
                             onEvaluateSwitch()
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.white)
+                        .buttonStyle(DashboardSubtleButtonStyle())
                     }
                 } else {
                     Label("目前沒有可用帳號", systemImage: "person.crop.circle.badge.exclamationmark")
