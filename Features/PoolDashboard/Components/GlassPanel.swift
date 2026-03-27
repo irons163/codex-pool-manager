@@ -13,11 +13,20 @@ struct GlassPanel<Content: View>: View {
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.white.opacity(PoolDashboardTheme.panelTopHighlightOpacity), .clear],
+                                    colors: [
+                                        .white.opacity(PoolDashboardTheme.panelTopHighlightOpacity),
+                                        .clear,
+                                        .black.opacity(PoolDashboardTheme.panelBottomShadeOpacity)
+                                    ],
                                     startPoint: .topLeading,
-                                    endPoint: .center
+                                    endPoint: .bottomTrailing
                                 )
                             )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
+                            .stroke(.white.opacity(PoolDashboardTheme.panelSpecularOpacity), lineWidth: 0.6)
+                            .blur(radius: 0.2)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)

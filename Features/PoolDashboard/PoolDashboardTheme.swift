@@ -13,6 +13,8 @@ enum PoolDashboardTheme {
     static let panelMutedFill = Color.white.opacity(0.04)
     static let panelStrongFill = Color.white.opacity(0.11)
     static let panelTopHighlightOpacity: Double = 0.09
+    static let panelBottomShadeOpacity: Double = 0.14
+    static let panelSpecularOpacity: Double = 0.22
     static let textPrimary = Color.white
     static let textSecondary = Color.white.opacity(0.78)
     static let textMuted = Color.white.opacity(0.62)
