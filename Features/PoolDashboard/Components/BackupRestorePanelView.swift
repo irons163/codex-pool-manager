@@ -36,10 +36,10 @@ struct BackupRestorePanelView: View {
                     .frame(minHeight: 190)
                     .padding(8)
                     .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
                             .fill(PoolDashboardTheme.panelMutedFill)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
                                     .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
                             )
                     )
