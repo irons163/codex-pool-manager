@@ -51,14 +51,7 @@ struct PoolDashboardRuntimeCoordinator {
         input: OAuthSignInInput
     ) async -> OAuthSignInOutput {
         do {
-            let oauthConfiguration = try authFlowCoordinator.buildConfiguration(
-                issuer: input.issuer,
-                clientID: input.clientID,
-                scopes: input.scopes,
-                redirectURI: input.redirectURI,
-                originator: input.originator,
-                workspaceID: input.workspaceID
-            )
+            let oauthConfiguration = try makeOAuthConfiguration(input: input)
 
             let context = try await authFlowCoordinator.fetchOAuthSignInContext(
                 configuration: oauthConfiguration,
@@ -119,6 +112,19 @@ struct PoolDashboardRuntimeCoordinator {
             oauthSuccessMessage: nil,
             nextOAuthAccountName: accountNameInput,
             shouldRefreshLocalOAuthAccounts: false
+        )
+    }
+
+    private func makeOAuthConfiguration(
+        input: OAuthSignInInput
+    ) throws -> OAuthClientConfiguration {
+        try authFlowCoordinator.buildConfiguration(
+            issuer: input.issuer,
+            clientID: input.clientID,
+            scopes: input.scopes,
+            redirectURI: input.redirectURI,
+            originator: input.originator,
+            workspaceID: input.workspaceID
         )
     }
 }
