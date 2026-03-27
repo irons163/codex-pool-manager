@@ -15,9 +15,8 @@ struct SyncToolbarView: View {
             Button(isSyncing ? "同步中..." : "同步 Codex 用量") {
                 onSync()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSyncing)
-            .tint(PoolDashboardTheme.glowA)
 
             if let lastSyncAt {
                 badge(
@@ -54,7 +53,7 @@ struct SyncToolbarView: View {
                     .font(.footnote)
             }
         }
-        .foregroundStyle(.white.opacity(0.86))
+        .foregroundStyle(PoolDashboardTheme.textSecondary)
         .padding(.vertical, 5)
         .padding(.horizontal, 10)
         .background(
