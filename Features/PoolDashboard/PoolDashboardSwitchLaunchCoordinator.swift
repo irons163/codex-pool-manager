@@ -7,30 +7,9 @@ struct PoolDashboardSwitchLaunchCoordinator {
         let failureSessionAuthorizedAuthFileURL: URL?
     }
 
-    private enum ValidationError: Error {
-        case missingToken
-        case missingAccountID
-
-        var logLine: String {
-            switch self {
-            case .missingToken:
-                return "失敗：沒有 token"
-            case .missingAccountID:
-                return "失敗：沒有 account_id"
-            }
-        }
-
-        var errorMessage: String {
-            switch self {
-            case .missingToken:
-                return Message.missingToken
-            case .missingAccountID:
-                return Message.missingAccountID
-            }
-        }
-    }
-
     private enum Message {
+        static let missingTokenLog = "失敗：沒有 token"
+        static let missingAccountIDLog = "失敗：沒有 account_id"
         static let missingToken = "此帳號沒有可用 token，無法切換"
         static let missingAccountID = "此帳號缺少 Account ID，無法切換"
         static let requiresAuthFilePermission = "請先完成 auth.json 授權，才能切換並啟動"
@@ -76,19 +55,17 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
         }
 
-        let chatGPTAccountID: String
-        do {
-            chatGPTAccountID = try validatedChatGPTAccountID(for: account)
-        } catch let validationError as ValidationError {
-            append(validationError.logLine)
+        guard !account.apiToken.isEmpty else {
+            append(Message.missingTokenLog)
             return output(
-                errorMessage: validationError.errorMessage,
+                errorMessage: Message.missingToken,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
-        } catch {
-            return outputForError(
-                error,
-                logPrefix: "錯誤",
+        }
+        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+            append(Message.missingAccountIDLog)
+            return output(
+                errorMessage: Message.missingAccountID,
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -146,16 +123,6 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
-    }
-
-    private func validatedChatGPTAccountID(for account: AgentAccount) throws -> String {
-        guard !account.apiToken.isEmpty else {
-            throw ValidationError.missingToken
-        }
-        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
-            throw ValidationError.missingAccountID
-        }
-        return chatGPTAccountID
     }
 
     @MainActor
