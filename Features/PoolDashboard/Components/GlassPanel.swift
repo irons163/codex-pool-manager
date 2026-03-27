@@ -8,12 +8,12 @@ struct GlassPanel<Content: View>: View {
             .padding(PoolDashboardTheme.panelPadding)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelFill)
+                    .fill(PoolDashboardTheme.panelStrongFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.white.opacity(0.08), .clear],
+                                    colors: [.white.opacity(0.09), .clear],
                                     startPoint: .topLeading,
                                     endPoint: .center
                                 )
