@@ -65,6 +65,7 @@ enum PoolDashboardTheme {
     static let headerAccentRuleWidth: CGFloat = 180
     static let tileShadowRadius: CGFloat = 10
     static let usageListMinHeight: CGFloat = 260
+    static let activityListMinHeight: CGFloat = 200
 }
 
 private struct SectionCardStyle: ViewModifier {
