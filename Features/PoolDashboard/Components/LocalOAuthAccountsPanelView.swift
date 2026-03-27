@@ -14,11 +14,8 @@ struct LocalOAuthAccountsPanelView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                ViewThatFits(in: .horizontal) {
+                PanelAdaptiveActionRowView {
                     headerActions
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.actionRowSpacing) {
-                        headerActions
-                    }
                 }
 
                 if accounts.isEmpty {

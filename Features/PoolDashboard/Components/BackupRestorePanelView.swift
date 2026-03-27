@@ -15,19 +15,10 @@ struct BackupRestorePanelView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
-                        exportButton
-                        exportRefetchableButton
-                        importButton
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
-                            exportButton
-                            exportRefetchableButton
-                        }
-                        importButton
-                    }
+                PanelAdaptiveActionRowView {
+                    exportButton
+                    exportRefetchableButton
+                    importButton
                 }
 
                 PanelStatusCalloutView(

@@ -67,11 +67,8 @@ struct OAuthLoginPanelView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
 
-                ViewThatFits(in: .horizontal) {
+                PanelAdaptiveActionRowView {
                     actionRow
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.actionRowSpacing) {
-                        actionRow
-                    }
                 }
             }
         }

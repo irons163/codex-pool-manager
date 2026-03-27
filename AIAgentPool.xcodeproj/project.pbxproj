@@ -25,6 +25,7 @@
 		4A5ECCA42F74C4AA00194C45 /* PoolDashboardQuickActionsFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5ECCA32F74C4AA00194C45 /* PoolDashboardQuickActionsFlowCoordinator.swift */; };
 		4A6D1B842F7628D200C06009 /* PanelSectionHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6D1B832F7628D200C06009 /* PanelSectionHeaderView.swift */; };
 		4A9D86682F768B3500157EC1 /* PanelCodeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9D86672F768B3500157EC1 /* PanelCodeEditorView.swift */; };
+		4A9D866A2F768B4D00157EC1 /* PanelAdaptiveActionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9D86692F768B4D00157EC1 /* PanelAdaptiveActionRowView.swift */; };
 		4AB61E942F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */; };
 		4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */; };
 		4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */; };
@@ -104,6 +105,7 @@
 		4A5ECCA32F74C4AA00194C45 /* PoolDashboardQuickActionsFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardQuickActionsFlowCoordinator.swift; sourceTree = "<group>"; };
 		4A6D1B832F7628D200C06009 /* PanelSectionHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelSectionHeaderView.swift; sourceTree = "<group>"; };
 		4A9D86672F768B3500157EC1 /* PanelCodeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelCodeEditorView.swift; sourceTree = "<group>"; };
+		4A9D86692F768B4D00157EC1 /* PanelAdaptiveActionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelAdaptiveActionRowView.swift; sourceTree = "<group>"; };
 		4AB61E862F738FCF001AC4CB /* AccountPoolSnapshotCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolSnapshotCodec.swift; sourceTree = "<group>"; };
 		4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolStore.swift; sourceTree = "<group>"; };
 		4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTokenVault.swift; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 				4AB61EEC2F73ED9E001AC4CB /* OverallUsagePanelView.swift */,
 				4A6D1B832F7628D200C06009 /* PanelSectionHeaderView.swift */,
 				4A9D86672F768B3500157EC1 /* PanelCodeEditorView.swift */,
+				4A9D86692F768B4D00157EC1 /* PanelAdaptiveActionRowView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -488,6 +491,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4A9D866A2F768B4D00157EC1 /* PanelAdaptiveActionRowView.swift in Sources */,
 				4AB61EBE2F739F12001AC4CB /* PoolDashboardTheme.swift in Sources */,
 				4AB61EB82F739E92001AC4CB /* DashboardHeaderSectionView.swift in Sources */,
 				4A3753472F744294008F6AF6 /* PoolDashboardFormState.swift in Sources */,
