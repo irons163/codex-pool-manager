@@ -71,6 +71,7 @@ struct OAuthLoginPanelView: View {
                 }
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
     }
 }
