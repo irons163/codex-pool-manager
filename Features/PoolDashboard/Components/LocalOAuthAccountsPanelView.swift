@@ -60,10 +60,10 @@ struct LocalOAuthAccountsPanelView: View {
                         .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
                         .padding(.horizontal, 10)
                         .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
                                 .fill(PoolDashboardTheme.panelMutedFill)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
                                         .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
                                 )
                         )
