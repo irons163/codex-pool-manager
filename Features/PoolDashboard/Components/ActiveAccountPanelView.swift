@@ -57,5 +57,6 @@ struct ActiveAccountPanelView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .sectionCardStyle()
     }
 }
