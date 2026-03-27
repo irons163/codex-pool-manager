@@ -28,6 +28,7 @@ struct ActiveAccountPanelView: View {
                             .monospacedDigit()
                             .foregroundStyle(PoolDashboardTheme.textSecondary)
                     }
+                    .dashboardInfoCard()
 
                     ProgressView(value: activeAccount.usageRatio)
                         .tint(PoolDashboardTheme.glowB)

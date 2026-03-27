@@ -24,6 +24,7 @@ struct OverallUsagePanelView: View {
                         .monospacedDigit()
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                 }
+                .dashboardInfoCard()
 
                 ProgressView(value: overallUsageRatio)
                     .tint(PoolDashboardTheme.glowA)
