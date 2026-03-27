@@ -77,6 +77,12 @@ struct StrategySettingsPanelView: View {
                 .labelsHidden()
                 .pickerStyle(.menu)
             }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(PoolDashboardTheme.panelFill.opacity(0.62))
+            )
         }
     }
 }
