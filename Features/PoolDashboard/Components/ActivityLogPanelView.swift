@@ -21,6 +21,7 @@ struct ActivityLogPanelView: View {
                 List(activities.prefix(8)) { activity in
                     HStack {
                         Text(activity.timestamp.formatted(date: .omitted, time: .standard))
+                            .monospacedDigit()
                             .foregroundStyle(.white.opacity(0.62))
                         Text(activity.message)
                             .foregroundStyle(.white.opacity(0.90))
