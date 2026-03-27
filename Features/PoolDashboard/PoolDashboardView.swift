@@ -518,4 +518,5 @@ struct PoolDashboardView: View {
 
 #Preview {
     PoolDashboardView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
+        .preferredColorScheme(.dark)
 }
