@@ -484,6 +484,7 @@ struct PoolDashboardView: View {
             isFocusLockActive: state.isFocusLockActive,
             hasLowUsageWarning: state.hasLowUsageWarning,
             lowUsageThresholdRatio: state.lowUsageThresholdRatio,
+            showSimulationControl: isDeveloperBuild,
             onSimulateUsage: {
                 handleSimulateUsage()
             },

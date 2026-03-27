@@ -6,6 +6,7 @@ struct ActiveAccountPanelView: View {
     let isFocusLockActive: Bool
     let hasLowUsageWarning: Bool
     let lowUsageThresholdRatio: Double
+    let showSimulationControl: Bool
 
     let onSimulateUsage: () -> Void
     let onEvaluateSwitch: () -> Void
@@ -51,15 +52,24 @@ struct ActiveAccountPanelView: View {
                     }
 
                     HStack {
-                        Button("Simulate +50 Units") {
-                            onSimulateUsage()
+                        if showSimulationControl {
+                            Button("Simulate +50 Units") {
+                                onSimulateUsage()
+                            }
+                            .buttonStyle(DashboardPrimaryButtonStyle())
                         }
-                        .buttonStyle(DashboardPrimaryButtonStyle())
 
-                        Button("Run Switch Evaluation") {
-                            onEvaluateSwitch()
+                        if showSimulationControl {
+                            Button("Run Switch Evaluation") {
+                                onEvaluateSwitch()
+                            }
+                            .buttonStyle(DashboardSubtleButtonStyle())
+                        } else {
+                            Button("Run Switch Evaluation") {
+                                onEvaluateSwitch()
+                            }
+                            .buttonStyle(DashboardPrimaryButtonStyle())
                         }
-                        .buttonStyle(DashboardSubtleButtonStyle())
                     }
                     .dashboardInfoCard()
                 } else {
