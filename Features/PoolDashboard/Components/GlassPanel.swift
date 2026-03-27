@@ -29,7 +29,7 @@ struct GlassPanel<Content: View>: View {
                             .padding(1)
                     )
             )
-            .shadow(color: .black.opacity(0.30), radius: 24, x: 0, y: 14)
-            .shadow(color: PoolDashboardTheme.glowA.opacity(0.10), radius: 18, x: -6, y: -8)
+            .shadow(color: .black.opacity(0.32), radius: 26, x: 0, y: 16)
+            .shadow(color: PoolDashboardTheme.glowA.opacity(0.12), radius: 20, x: -6, y: -8)
     }
 }
