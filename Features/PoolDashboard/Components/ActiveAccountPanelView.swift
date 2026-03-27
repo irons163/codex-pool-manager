@@ -12,22 +12,23 @@ struct ActiveAccountPanelView: View {
 
     var body: some View {
         GroupBox("目前使用帳號") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 if let activeAccount {
                     HStack {
                         Text(activeAccount.name)
-                            .font(.headline)
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
                         Spacer()
                         Text("剩餘 \(activeAccount.remainingUnits)")
-                            .font(.headline)
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
                     }
 
                     ProgressView(value: activeAccount.usageRatio)
+                        .tint(PoolDashboardTheme.glowB)
 
                     if isFocusLockActive {
                         Text("專注模式鎖定中")
                             .font(.subheadline)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(PoolDashboardTheme.glowA)
                     }
 
                     if mode == .focus && hasLowUsageWarning {
@@ -41,14 +42,17 @@ struct ActiveAccountPanelView: View {
                             onSimulateUsage()
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(PoolDashboardTheme.glowA)
 
                         Button("重新評估切換") {
                             onEvaluateSwitch()
                         }
                         .buttonStyle(.bordered)
+                        .tint(.white)
                     }
                 } else {
                     Text("目前沒有可用帳號")
+                        .foregroundStyle(.white.opacity(0.78))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
