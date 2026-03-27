@@ -76,7 +76,7 @@ struct LocalOAuthAccountsPanelView: View {
     }
 
     private var headerActions: some View {
-        HStack {
+        HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
             Button("掃描本機登入") {
                 onScan()
             }
