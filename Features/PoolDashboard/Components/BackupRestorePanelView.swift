@@ -10,7 +10,7 @@ struct BackupRestorePanelView: View {
 
     var body: some View {
         GroupBox("備份與還原") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 10) {
                         exportButton
