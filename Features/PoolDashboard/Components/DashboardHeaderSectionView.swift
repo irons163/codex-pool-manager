@@ -47,7 +47,7 @@ struct DashboardHeaderSectionView: View {
                 .font(.caption)
                 .foregroundStyle(PoolDashboardTheme.textMuted)
             Text(value)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(.system(size: 19, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(PoolDashboardTheme.textPrimary)
         }
