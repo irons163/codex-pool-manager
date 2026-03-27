@@ -18,12 +18,13 @@ struct SyncToolbarView: View {
             if let lastSyncAt {
                 badge(
                     "最近同步：\(lastSyncAt.formatted(date: .omitted, time: .standard))",
-                    tone: .white.opacity(0.18)
+                    tone: .white.opacity(0.18),
+                    useMonospacedDigits: true
                 )
             }
 
             if let errorText {
-                badge(errorText, tone: .red.opacity(0.35))
+                badge(errorText, tone: .red.opacity(0.35), useMonospacedDigits: false)
             }
         }
         .padding(12)
@@ -33,9 +34,14 @@ struct SyncToolbarView: View {
         )
     }
 
-    private func badge(_ text: String, tone: Color) -> some View {
+    private func badge(
+        _ text: String,
+        tone: Color,
+        useMonospacedDigits: Bool
+    ) -> some View {
         Text(text)
             .font(.footnote)
+            .monospacedDigit(useMonospacedDigits)
             .foregroundStyle(.white.opacity(0.86))
             .padding(.vertical, 5)
             .padding(.horizontal, 10)
