@@ -9,6 +9,12 @@ struct DebugToolsPanelView: View {
     var body: some View {
         GroupBox("Debug Tools") {
             VStack(alignment: .leading, spacing: 12) {
+                PanelStatusCalloutView(
+                    message: "Use these tools only for diagnostics. Clear sensitive logs before sharing screenshots.",
+                    title: "Debug Data Warning",
+                    tone: .warning
+                )
+
                 debugDisclosure(
                     title: "Usage Raw JSON",
                     isExpanded: $showUsageRawJSON,
@@ -39,10 +45,11 @@ struct DebugToolsPanelView: View {
     ) -> some View {
         DisclosureGroup(title, isExpanded: isExpanded) {
             if content.wrappedValue.isEmpty {
-                Text(emptyText)
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .calloutCard(fill: PoolDashboardTheme.panelMutedFill, border: PoolDashboardTheme.panelInnerStroke)
+                PanelStatusCalloutView(
+                    message: emptyText,
+                    title: "No Data",
+                    tone: .info
+                )
             } else {
                 TextEditor(text: content)
                     .font(.system(.footnote, design: .monospaced))

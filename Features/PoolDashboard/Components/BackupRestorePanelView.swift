@@ -30,13 +30,11 @@ struct BackupRestorePanelView: View {
                     }
                 }
 
-                Text("Sensitive: refetchable export can include access token and account id.")
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.warning)
-                    .calloutCard(
-                        fill: PoolDashboardTheme.warning.opacity(0.16),
-                        border: PoolDashboardTheme.warning.opacity(0.32)
-                    )
+                PanelStatusCalloutView(
+                    message: "Refetchable exports may include access token and account id. Store only in secure internal systems.",
+                    title: "Sensitive Material",
+                    tone: .warning
+                )
 
                 TextEditor(text: $backupJSON)
                     .font(.system(.body, design: .monospaced))
@@ -52,9 +50,11 @@ struct BackupRestorePanelView: View {
                     )
 
                 if let backupError {
-                    Text(backupError)
-                        .lineLimit(2)
-                        .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
+                    PanelStatusCalloutView(
+                        message: backupError,
+                        title: "Backup Operation Failed",
+                        tone: .danger
+                    )
                 }
             }
         }
