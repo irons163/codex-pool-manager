@@ -8,7 +8,7 @@ struct ActivityLogPanelView: View {
         GroupBox("近期活動") {
             if activities.isEmpty {
                 Text("目前沒有活動紀錄")
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
             } else {
                 HStack {
                     Spacer()
