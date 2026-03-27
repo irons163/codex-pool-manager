@@ -17,7 +17,7 @@ struct OAuthLoginPanelView: View {
 
     var body: some View {
         GroupBox("OAuth 登入（你自行填 client_id）") {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 TextField("Client ID", text: $oauthClientID)
                     .textFieldStyle(.roundedBorder)
 
@@ -51,11 +51,12 @@ struct OAuthLoginPanelView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isSigningInOAuth)
+                    .tint(PoolDashboardTheme.glowA)
 
                     if let oauthSuccessMessage {
                         Text(oauthSuccessMessage)
                             .font(.footnote)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(PoolDashboardTheme.glowB)
                     }
                     if let oauthError {
                         Text(oauthError)
@@ -65,5 +66,6 @@ struct OAuthLoginPanelView: View {
                 }
             }
         }
+        .tint(PoolDashboardTheme.glowA)
     }
 }
