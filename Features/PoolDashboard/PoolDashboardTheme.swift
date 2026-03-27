@@ -74,6 +74,7 @@ enum PoolDashboardTheme {
     static let accountAddRowSpacing: CGFloat = 14
     static let localOAuthPanelSpacing: CGFloat = 14
     static let strategyPanelSpacing: CGFloat = 16
+    static let oauthPanelSpacing: CGFloat = 16
 }
 
 private struct SectionCardStyle: ViewModifier {
