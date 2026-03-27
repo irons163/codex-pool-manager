@@ -31,8 +31,7 @@ struct DebugToolsPanelView: View {
                             Button("清除") {
                                 lastUsageRawJSON = ""
                             }
-                            .buttonStyle(.bordered)
-                            .tint(.orange)
+                            .buttonStyle(DashboardWarningButtonStyle())
                             Spacer()
                         }
                     }
@@ -61,8 +60,7 @@ struct DebugToolsPanelView: View {
                             Button("清除") {
                                 lastSwitchLaunchLog = ""
                             }
-                            .buttonStyle(.bordered)
-                            .tint(.orange)
+                            .buttonStyle(DashboardWarningButtonStyle())
                             Spacer()
                         }
                     }
