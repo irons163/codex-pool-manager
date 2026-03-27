@@ -20,6 +20,7 @@ struct ActiveAccountPanelView: View {
                         Spacer()
                         Text("剩餘 \(activeAccount.remainingUnits)")
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
                     }
 
                     ProgressView(value: activeAccount.usageRatio)
