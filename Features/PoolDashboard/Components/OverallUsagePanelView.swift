@@ -11,7 +11,7 @@ struct OverallUsagePanelView: View {
 
     var body: some View {
         GroupBox("整體用量") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("總用量 \(totalUsedUnits)/\(totalQuota)")
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
