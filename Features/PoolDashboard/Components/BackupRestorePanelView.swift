@@ -36,7 +36,7 @@ struct BackupRestorePanelView: View {
 
                 TextEditor(text: $backupJSON)
                     .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 190)
+                    .frame(minHeight: PoolDashboardTheme.backupEditorMinHeight)
                     .padding(8)
                     .background(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
