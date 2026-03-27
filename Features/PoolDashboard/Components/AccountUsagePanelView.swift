@@ -26,6 +26,7 @@ struct AccountUsagePanelView: View {
                     TextField("新帳號名稱", text: $newAccountName)
                         .dashboardInputFieldStyle()
                     Stepper("配額 \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
+                        .monospacedDigit()
                     Button("新增帳號") {
                         onAddAccount(newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), newAccountQuota)
                         newAccountName = ""
