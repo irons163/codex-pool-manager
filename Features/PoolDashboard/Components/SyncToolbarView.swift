@@ -7,7 +7,7 @@ struct SyncToolbarView: View {
     let onSync: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
             Button(isSyncing ? "同步中..." : "同步 Codex 用量") {
                 onSync()
             }
