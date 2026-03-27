@@ -128,3 +128,23 @@ struct DashboardWarningButtonStyle: ButtonStyle {
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
+
+struct DashboardSubtleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(PoolDashboardTheme.panelMutedFill.opacity(configuration.isPressed ? 0.78 : 1))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+            )
+            .foregroundStyle(PoolDashboardTheme.textSecondary)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
