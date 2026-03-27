@@ -67,6 +67,7 @@ enum PoolDashboardTheme {
     static let usageListMinHeight: CGFloat = 260
     static let activityListMinHeight: CGFloat = 200
     static let backupEditorMinHeight: CGFloat = 190
+    static let debugEditorMinHeight: CGFloat = 140
 }
 
 private struct SectionCardStyle: ViewModifier {
