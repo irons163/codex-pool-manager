@@ -59,6 +59,9 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
             )
         }
+        func switchFailureMessage(_ error: Error) -> String {
+            Message.switchFailurePrefix + error.localizedDescription
+        }
 
         let chatGPTAccountID: String
         do {
@@ -72,7 +75,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         } catch {
             append("錯誤：\(error.localizedDescription)")
             return output(
-                errorMessage: Message.switchFailurePrefix + error.localizedDescription,
+                errorMessage: switchFailureMessage(error),
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -96,7 +99,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
             } catch {
                 append("\(failureLogPrefix)：\(error.localizedDescription)")
                 return output(
-                    errorMessage: Message.switchFailurePrefix + error.localizedDescription,
+                    errorMessage: switchFailureMessage(error),
                     sessionAuthorizedAuthFileURL: failureSessionAuthorizedAuthFileURL
                 )
             }
@@ -131,7 +134,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         } catch {
             append("錯誤：\(error.localizedDescription)")
             return output(
-                errorMessage: Message.switchFailurePrefix + error.localizedDescription,
+                errorMessage: switchFailureMessage(error),
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
