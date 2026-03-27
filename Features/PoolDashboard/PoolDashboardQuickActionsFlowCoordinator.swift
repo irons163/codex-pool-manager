@@ -14,6 +14,10 @@ struct PoolDashboardQuickActionsFlowCoordinator {
     private let actionFlowCoordinator = PoolDashboardActionFlowCoordinator()
 
     func apply(_ action: Action, to state: AccountPoolState) -> AccountPoolState {
+        applyAction(action, to: state)
+    }
+
+    private func applyAction(_ action: Action, to state: AccountPoolState) -> AccountPoolState {
         switch action {
         case let .removeAccount(accountID):
             return actionFlowCoordinator.removeAccount(from: state, accountID: accountID)
