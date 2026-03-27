@@ -7,7 +7,7 @@ struct DashboardHeaderSectionView: View {
     let modeTitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("AIAGENTPOOL CONTROL CENTER")
                     .font(PoolDashboardTheme.metadataFont.weight(.semibold))
@@ -16,14 +16,14 @@ struct DashboardHeaderSectionView: View {
                 Text("Codex Account Orchestrator")
                     .font(PoolDashboardTheme.titleFont)
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
-                Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
+                Text("Manage OAuth accounts, track usage posture, and control runtime switching from one dashboard.")
                     .font(PoolDashboardTheme.subtitleFont)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
                 Capsule(style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [PoolDashboardTheme.glowA.opacity(0.75), PoolDashboardTheme.glowB.opacity(0.45)],
+                            colors: [PoolDashboardTheme.glowA.opacity(0.8), PoolDashboardTheme.glowB.opacity(0.48)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -32,19 +32,20 @@ struct DashboardHeaderSectionView: View {
             }
 
             HStack(spacing: 14) {
-                dashboardTile(title: "帳號", value: "\(accountCount)", tone: .blue)
-                dashboardTile(title: "可用", value: "\(availableCount)", tone: .green)
-                dashboardTile(title: "總用量", value: "\(overallUsagePercent)%", tone: .orange)
-                dashboardTile(title: "模式", value: modeTitle, tone: .indigo)
+                dashboardTile(title: "Accounts", value: "\(accountCount)", tone: .blue)
+                dashboardTile(title: "Available", value: "\(availableCount)", tone: .green)
+                dashboardTile(title: "Pool Usage", value: "\(overallUsagePercent)%", tone: .orange)
+                dashboardTile(title: "Mode", value: modeTitle, tone: .indigo)
             }
             .layoutPriority(1)
         }
     }
 
     private func dashboardTile(title: String, value: String, tone: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title.uppercased())
+                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                .tracking(0.8)
                 .foregroundStyle(PoolDashboardTheme.textMuted)
             Text(value)
                 .font(.system(size: 19, weight: .semibold, design: .rounded))
