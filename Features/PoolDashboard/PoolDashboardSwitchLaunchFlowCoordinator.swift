@@ -29,7 +29,7 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
             authFileAccessService: authFileAccessService,
             authorizeAuthFile: authorizeAuthFile
         )
-        applySwitchOutput(
+        mutationCoordinator.applySwitchOutput(
             switchOutput,
             viewModel: &nextViewModel,
             viewState: &nextViewState,
@@ -40,20 +40,6 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
             viewModel: nextViewModel,
             viewState: nextViewState,
             sessionAuthorizedAuthFileURL: nextSessionAuthorizedAuthFileURL
-        )
-    }
-
-    private func applySwitchOutput(
-        _ output: PoolDashboardSwitchLaunchCoordinator.Output,
-        viewModel: inout LocalOAuthImportViewModel,
-        viewState: inout PoolDashboardViewState,
-        sessionAuthorizedAuthFileURL: inout URL?
-    ) {
-        mutationCoordinator.applySwitchOutput(
-            output,
-            viewModel: &viewModel,
-            viewState: &viewState,
-            sessionAuthorizedAuthFileURL: &sessionAuthorizedAuthFileURL
         )
     }
 }
