@@ -72,6 +72,11 @@ struct LocalOAuthAccountsPanelView: View {
                             .tint(PoolDashboardTheme.glowA)
                         }
                         .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(PoolDashboardTheme.panelFill.opacity(0.62))
+                        )
                     }
                 }
             }
