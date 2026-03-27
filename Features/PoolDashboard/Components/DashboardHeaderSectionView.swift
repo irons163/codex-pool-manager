@@ -19,7 +19,7 @@ struct DashboardHeaderSectionView: View {
                 Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
                     .font(PoolDashboardTheme.subtitleFont)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .frame(maxWidth: 520, alignment: .leading)
+                    .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
             }
 
             HStack(spacing: 12) {
