@@ -51,8 +51,7 @@ struct BackupRestorePanelView: View {
 
                 if let backupError {
                     Text(backupError)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
+                        .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
                 }
             }
         }
