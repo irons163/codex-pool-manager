@@ -23,18 +23,10 @@ struct LocalOAuthAccountsPanelView: View {
 
                     if let errorMessage {
                         Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.red.opacity(0.16))
-                            )
+                            .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
                     } else {
                         Text("找到 \(accounts.count) 個帳號")
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.70))
+                            .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
                     }
                 }
 
