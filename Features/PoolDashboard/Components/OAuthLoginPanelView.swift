@@ -52,19 +52,21 @@ struct OAuthLoginPanelView: View {
                 }
                 .sectionCardStyle()
 
-                PanelStatusCalloutView(
-                    message: "Workspace ID is optional for most personal flows; keep it empty unless your org requires it.",
-                    title: "Configuration Hint",
-                    tone: .info
-                )
-
                 DisclosureGroup("Advanced OAuth Parameters") {
-                    LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
-                        advancedField("Issuer", placeholder: "https://auth.openai.com", text: $oauthIssuer)
-                        advancedField("Scopes", placeholder: "openid profile ...", text: $oauthScopes)
-                        advancedField("Redirect URI", placeholder: "http://localhost:1455/auth/callback", text: $oauthRedirectURI)
-                        advancedField("Originator", placeholder: "codex_cli_rs", text: $oauthOriginator)
-                        advancedField("Workspace ID", placeholder: "Optional", text: $oauthWorkspaceID)
+                    VStack(alignment: .leading, spacing: 10) {
+                        LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
+                            advancedField("Issuer", placeholder: "https://auth.openai.com", text: $oauthIssuer)
+                            advancedField("Scopes", placeholder: "openid profile ...", text: $oauthScopes)
+                            advancedField("Redirect URI", placeholder: "http://localhost:1455/auth/callback", text: $oauthRedirectURI)
+                            advancedField("Originator", placeholder: "codex_cli_rs", text: $oauthOriginator)
+                            advancedField("Workspace ID", placeholder: "Optional", text: $oauthWorkspaceID)
+                        }
+
+                        PanelStatusCalloutView(
+                            message: "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.",
+                            title: "Workspace ID",
+                            tone: .info
+                        )
                     }
                     .padding(.top, 8)
                     .dashboardInfoCard()
