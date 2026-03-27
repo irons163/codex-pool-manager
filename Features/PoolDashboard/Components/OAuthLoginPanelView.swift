@@ -23,7 +23,7 @@ struct OAuthLoginPanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
                 TextField("Client ID", text: $oauthClientID)
-                    .textFieldStyle(.roundedBorder)
+                    .dashboardInputFieldStyle()
 
                 DisclosureGroup("進階設定（一般情況不用改）") {
                     VStack(alignment: .leading, spacing: 8) {
