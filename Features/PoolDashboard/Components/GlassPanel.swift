@@ -5,14 +5,20 @@ struct GlassPanel<Content: View>: View {
 
     var body: some View {
         content
-            .padding(20)
+            .padding(PoolDashboardTheme.panelPadding)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
+                    .fill(PoolDashboardTheme.panelFill)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(.white.opacity(0.08), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
+                            .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius - 1, style: .continuous)
+                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            .padding(1)
                     )
             )
+            .shadow(color: .black.opacity(0.30), radius: 24, x: 0, y: 14)
     }
 }
