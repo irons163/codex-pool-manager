@@ -16,6 +16,7 @@ struct ActivityLogPanelView: View {
                         onClearActivities()
                     }
                     .buttonStyle(.bordered)
+                    .tint(.orange)
                 }
                 List(activities.prefix(8)) { activity in
                     HStack {
