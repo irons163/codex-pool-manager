@@ -12,6 +12,7 @@ enum PoolDashboardTheme {
     static let tileBorderWidth: CGFloat = 1
     static let panelMutedFill = Color.white.opacity(0.04)
     static let panelStrongFill = Color.white.opacity(0.11)
+    static let panelTopHighlightOpacity: Double = 0.09
     static let textPrimary = Color.white
     static let textSecondary = Color.white.opacity(0.78)
     static let textMuted = Color.white.opacity(0.62)
