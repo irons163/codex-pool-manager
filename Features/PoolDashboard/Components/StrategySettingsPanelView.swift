@@ -21,6 +21,11 @@ struct StrategySettingsPanelView: View {
         }
         .pickerStyle(.segmented)
         .tint(PoolDashboardTheme.glowA)
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(PoolDashboardTheme.panelMutedFill)
+        )
 
         GroupBox("策略設定") {
             VStack(alignment: .leading, spacing: 10) {
