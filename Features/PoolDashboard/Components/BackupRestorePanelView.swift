@@ -58,19 +58,16 @@ struct BackupRestorePanelView: View {
 
     private var exportButton: some View {
         Button("匯出 JSON", action: onExport)
-            .buttonStyle(.bordered)
-            .tint(PoolDashboardTheme.glowA)
+            .buttonStyle(DashboardSubtleButtonStyle())
     }
 
     private var exportRefetchableButton: some View {
         Button("匯出（可重抓）", action: onExportRefetchable)
-            .buttonStyle(.bordered)
-            .tint(.orange)
+            .buttonStyle(DashboardWarningButtonStyle())
     }
 
     private var importButton: some View {
         Button("匯入 JSON", action: onImport)
-            .buttonStyle(.borderedProminent)
-            .tint(PoolDashboardTheme.glowB)
+            .buttonStyle(DashboardPrimaryButtonStyle())
     }
 }
