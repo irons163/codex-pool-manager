@@ -265,10 +265,10 @@ struct PoolDashboardView: View {
         .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
         .padding(PoolDashboardTheme.panelPadding)
         .groupBoxStyle(DashboardGroupBoxStyle())
-        .animation(.easeInOut(duration: 0.25), value: state.mode)
-        .animation(.easeInOut(duration: 0.25), value: viewState.isSyncingUsage)
-        .animation(.easeInOut(duration: 0.20), value: viewState.showUsageRawJSON)
-        .animation(.easeInOut(duration: 0.20), value: viewState.showSwitchLaunchLog)
+        .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: state.mode)
+        .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: viewState.isSyncingUsage)
+        .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showUsageRawJSON)
+        .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showSwitchLaunchLog)
     }
 
     // MARK: - Lifecycle
