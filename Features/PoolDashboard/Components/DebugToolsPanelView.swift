@@ -51,18 +51,11 @@ struct DebugToolsPanelView: View {
                     tone: .info
                 )
             } else {
-                TextEditor(text: content)
-                    .font(.system(.footnote, design: .monospaced))
-                    .frame(minHeight: PoolDashboardTheme.debugEditorMinHeight)
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                            .fill(PoolDashboardTheme.panelMutedFill)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                            )
-                    )
+                PanelCodeEditorView(
+                    text: content,
+                    minimumHeight: PoolDashboardTheme.debugEditorMinHeight,
+                    font: .system(.footnote, design: .monospaced)
+                )
 
                 HStack {
                     Button("Clear") {

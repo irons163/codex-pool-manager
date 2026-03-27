@@ -36,18 +36,11 @@ struct BackupRestorePanelView: View {
                     tone: .warning
                 )
 
-                TextEditor(text: $backupJSON)
-                    .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: PoolDashboardTheme.backupEditorMinHeight)
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                            .fill(PoolDashboardTheme.panelMutedFill)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                            )
-                    )
+                PanelCodeEditorView(
+                    text: $backupJSON,
+                    minimumHeight: PoolDashboardTheme.backupEditorMinHeight,
+                    font: .system(.body, design: .monospaced)
+                )
 
                 if let backupError {
                     PanelStatusCalloutView(
