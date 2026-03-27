@@ -76,11 +76,12 @@ struct PoolDashboardView: View {
                 .offset(x: 340, y: 220)
                 .allowsHitTesting(false)
 
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 GlassPanel {
                     dashboardContent
                 }
             }
+            .padding(.vertical, 8)
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
