@@ -57,6 +57,7 @@ struct BackupRestorePanelView: View {
                 }
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
     }
 }
