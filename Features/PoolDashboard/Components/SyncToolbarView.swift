@@ -53,12 +53,6 @@ struct SyncToolbarView: View {
                     .font(.footnote)
             }
         }
-        .foregroundStyle(PoolDashboardTheme.textSecondary)
-        .padding(.vertical, 5)
-        .padding(.horizontal, 10)
-        .background(
-            Capsule(style: .continuous)
-                .fill(tone)
-        )
+        .statusBadge(tone: tone)
     }
 }
