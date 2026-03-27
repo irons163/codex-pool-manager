@@ -11,7 +11,7 @@ struct DashboardHeaderSectionView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("AIAGENTPOOL CONTROL CENTER")
                     .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                    .tracking(1.2)
+                    .tracking(PoolDashboardTheme.metadataTracking)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                 Text("Codex Account Orchestrator")
                     .font(PoolDashboardTheme.titleFont)
