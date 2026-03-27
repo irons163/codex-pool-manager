@@ -9,7 +9,7 @@ struct LocalOAuthAccountsPanelView: View {
 
     var body: some View {
         GroupBox("本機已登入 OAuth 帳號") {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: PoolDashboardTheme.localOAuthPanelSpacing) {
                 ViewThatFits(in: .horizontal) {
                     headerActions
                     VStack(alignment: .leading, spacing: 8) {
