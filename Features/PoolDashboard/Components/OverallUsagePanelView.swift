@@ -39,6 +39,12 @@ struct OverallUsagePanelView: View {
                     Text("所有帳號用量已耗盡，請補充配額或重設用量。")
                         .font(.subheadline)
                         .foregroundStyle(.red)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.red.opacity(0.18))
+                        )
                 }
             }
         }
