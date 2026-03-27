@@ -16,6 +16,7 @@ struct OverallUsagePanelView: View {
                     Text("總用量 \(totalUsedUnits)/\(totalQuota)")
                     Spacer()
                     Text("\(Int(overallUsageRatio * 100))%")
+                        .monospacedDigit()
                         .foregroundStyle(.white.opacity(0.70))
                 }
 
