@@ -21,7 +21,11 @@ struct DebugToolsPanelView: View {
                             .padding(8)
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(PoolDashboardTheme.panelFill)
+                                    .fill(PoolDashboardTheme.panelMutedFill)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                    )
                             )
                         HStack {
                             Button("清除") {
@@ -47,7 +51,11 @@ struct DebugToolsPanelView: View {
                             .padding(8)
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(PoolDashboardTheme.panelFill)
+                                    .fill(PoolDashboardTheme.panelMutedFill)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                    )
                             )
                         HStack {
                             Button("清除") {
