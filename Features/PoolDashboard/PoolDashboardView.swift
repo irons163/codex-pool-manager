@@ -63,6 +63,18 @@ struct PoolDashboardView: View {
         ZStack {
             PoolDashboardTheme.backgroundGradient
                 .ignoresSafeArea()
+            Circle()
+                .fill(PoolDashboardTheme.glowA.opacity(0.30))
+                .frame(width: 420, height: 420)
+                .blur(radius: 70)
+                .offset(x: -300, y: -260)
+                .allowsHitTesting(false)
+            Circle()
+                .fill(PoolDashboardTheme.glowB.opacity(0.22))
+                .frame(width: 360, height: 360)
+                .blur(radius: 60)
+                .offset(x: 340, y: 220)
+                .allowsHitTesting(false)
 
             ScrollView {
                 GlassPanel {
@@ -90,7 +102,7 @@ struct PoolDashboardView: View {
     }
 
     private var dashboardContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
             DashboardHeaderSectionView(
                 accountCount: state.accounts.count,
                 availableCount: state.availableAccountsCount,
@@ -238,7 +250,7 @@ struct PoolDashboardView: View {
             )
         }
         .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
-        .padding(20)
+        .padding(PoolDashboardTheme.panelPadding)
     }
 
     // MARK: - Lifecycle
