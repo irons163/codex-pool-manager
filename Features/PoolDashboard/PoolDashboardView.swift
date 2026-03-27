@@ -43,7 +43,7 @@ struct PoolDashboardView: View {
 
     private var isDeveloperBuild: Bool {
         #if DEBUG
-        true
+        ProcessInfo.processInfo.arguments.contains("--developer-mode")
         #else
         false
         #endif
