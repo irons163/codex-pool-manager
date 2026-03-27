@@ -29,12 +29,8 @@ struct OverallUsagePanelView: View {
                 }
                 .buttonStyle(DashboardWarningButtonStyle())
 
-                HStack {
-                    Text("可用帳號數 \(availableAccountsCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    Spacer()
-                }
+                Text("可用帳號數 \(availableAccountsCount)")
+                    .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
 
                 if isPoolExhausted {
                     Text("所有帳號用量已耗盡，請補充配額或重設用量。")
