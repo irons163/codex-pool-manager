@@ -39,23 +39,24 @@ struct LocalOAuthAccountsPanelView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(account.displayName)
+                                    .foregroundStyle(PoolDashboardTheme.textPrimary)
                                 if let email = account.email {
                                     Text(email)
                                         .font(.footnote)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(PoolDashboardTheme.textSecondary)
                                 }
                                 Text(account.maskedToken)
                                     .font(.footnote)
                                     .monospaced()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(PoolDashboardTheme.textMuted)
                                 if let chatGPTAccountID = account.chatGPTAccountID {
                                     Text("Account ID: \(chatGPTAccountID)")
                                         .font(.footnote)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(PoolDashboardTheme.textMuted)
                                 } else {
                                     Text("缺少 Account ID，無法查詢用量")
                                         .font(.footnote)
-                                        .foregroundStyle(.orange)
+                                        .foregroundStyle(PoolDashboardTheme.warning)
                                 }
                             }
                             Spacer()
@@ -64,15 +65,18 @@ struct LocalOAuthAccountsPanelView: View {
                                     await onImport(account)
                                 }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(DashboardPrimaryButtonStyle())
                             .disabled(account.chatGPTAccountID == nil)
-                            .tint(PoolDashboardTheme.glowA)
                         }
                         .padding(.vertical, 6)
                         .padding(.horizontal, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(PoolDashboardTheme.panelFill.opacity(0.62))
+                                .fill(PoolDashboardTheme.panelMutedFill)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                )
                         )
                     }
                 }
