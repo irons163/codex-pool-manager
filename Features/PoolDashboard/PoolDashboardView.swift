@@ -75,6 +75,17 @@ struct PoolDashboardView: View {
                 .blur(radius: PoolDashboardTheme.glowMediumBlur)
                 .offset(x: 340, y: 220)
                 .allowsHitTesting(false)
+            Rectangle()
+                .fill(
+                    RadialGradient(
+                        colors: [.clear, Color.black.opacity(0.24)],
+                        center: .center,
+                        startRadius: 120,
+                        endRadius: 920
+                    )
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             ScrollView(showsIndicators: false) {
                 GlassPanel {
