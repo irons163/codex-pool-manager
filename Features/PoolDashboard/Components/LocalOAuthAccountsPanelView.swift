@@ -27,6 +27,12 @@ struct LocalOAuthAccountsPanelView: View {
                         Text(errorMessage)
                             .font(.footnote)
                             .foregroundStyle(.red)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.red.opacity(0.16))
+                            )
                     } else {
                         Text("找到 \(accounts.count) 個帳號")
                             .font(.footnote)
