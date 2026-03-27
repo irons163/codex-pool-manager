@@ -27,8 +27,7 @@ struct OverallUsagePanelView: View {
                 Button(resetAllButtonTitle) {
                     onResetAll()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .buttonStyle(DashboardWarningButtonStyle())
 
                 HStack {
                     Text("可用帳號數 \(availableAccountsCount)")
