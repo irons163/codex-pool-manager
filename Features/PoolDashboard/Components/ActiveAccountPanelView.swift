@@ -35,12 +35,12 @@ struct ActiveAccountPanelView: View {
                     if mode == .focus && hasLowUsageWarning {
                         Text("低剩餘用量提醒：目前帳號剩餘不足 \(Int(lowUsageThresholdRatio * 100))%")
                             .font(.subheadline)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(PoolDashboardTheme.warning)
                             .padding(.vertical, 4)
                             .padding(.horizontal, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.orange.opacity(0.18))
+                                    .fill(PoolDashboardTheme.warning.opacity(0.18))
                             )
                     }
 
