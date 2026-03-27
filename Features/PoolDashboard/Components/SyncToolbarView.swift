@@ -17,7 +17,7 @@ struct SyncToolbarView: View {
                 toolbarRow
             }
         }
-        .padding(12)
+        .padding(13)
         .background(
             RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
                 .fill(PoolDashboardTheme.panelStrongFill)
