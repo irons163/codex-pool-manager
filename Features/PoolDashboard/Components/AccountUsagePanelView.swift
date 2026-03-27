@@ -44,15 +44,15 @@ struct AccountUsagePanelView: View {
                                     if let chatGPTAccountID = account.chatGPTAccountID {
                                         Text("Account ID: \(chatGPTAccountID)")
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.white.opacity(0.62))
                                     }
                                     Text(usageSourceLabel(account))
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.white.opacity(0.62))
                                     if let usageWindowDetail = usageWindowDetailLabel(account) {
                                         Text(usageWindowDetail)
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.white.opacity(0.62))
                                     }
                                 }
                                 Spacer()
@@ -95,11 +95,11 @@ struct AccountUsagePanelView: View {
                             HStack {
                                 Text(remainingLabel(account))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.66))
                                 Spacer()
                                 Text("\(Int(account.usageRatio * 100))%")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.66))
                             }
 
                             ProgressView(value: account.usageRatio)
