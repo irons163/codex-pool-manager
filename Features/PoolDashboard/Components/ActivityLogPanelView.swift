@@ -38,7 +38,7 @@ struct ActivityLogPanelView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .frame(minHeight: 200)
+                .frame(minHeight: PoolDashboardTheme.activityListMinHeight)
             }
         }
         .sectionCardStyle()
