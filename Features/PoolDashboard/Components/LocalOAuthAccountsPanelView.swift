@@ -10,23 +10,10 @@ struct LocalOAuthAccountsPanelView: View {
     var body: some View {
         GroupBox("本機已登入 OAuth 帳號") {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Button("掃描本機登入") {
-                        onScan()
-                    }
-                    .buttonStyle(DashboardSubtleButtonStyle())
-
-                    Button("選擇 auth.json") {
-                        onChooseAuthFile()
-                    }
-                    .buttonStyle(DashboardSubtleButtonStyle())
-
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
-                    } else {
-                        Text("找到 \(accounts.count) 個帳號")
-                            .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
+                ViewThatFits(in: .horizontal) {
+                    headerActions
+                    VStack(alignment: .leading, spacing: 8) {
+                        headerActions
                     }
                 }
 
@@ -84,5 +71,27 @@ struct LocalOAuthAccountsPanelView: View {
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var headerActions: some View {
+        HStack {
+            Button("掃描本機登入") {
+                onScan()
+            }
+            .buttonStyle(DashboardSubtleButtonStyle())
+
+            Button("選擇 auth.json") {
+                onChooseAuthFile()
+            }
+            .buttonStyle(DashboardSubtleButtonStyle())
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
+            } else {
+                Text("找到 \(accounts.count) 個帳號")
+                    .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
+            }
+        }
     }
 }
