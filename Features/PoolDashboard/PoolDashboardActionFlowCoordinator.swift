@@ -36,14 +36,14 @@ struct PoolDashboardActionFlowCoordinator {
     ) -> ResetAllUsageOutput {
         var nextState = state
         var nextLatch = resetAllLatch
-        let shouldReset = nextLatch.confirmOrArm()
-        if shouldReset {
+        let didReset = nextLatch.confirmOrArm()
+        if didReset {
             actionCoordinator.resetAllUsage(state: &nextState)
         }
         return makeResetAllUsageOutput(
             state: nextState,
             resetAllLatch: nextLatch,
-            didReset: shouldReset
+            didReset: didReset
         )
     }
 
