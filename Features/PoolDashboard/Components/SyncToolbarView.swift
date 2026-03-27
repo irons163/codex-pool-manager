@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SyncToolbarView: View {
     private enum Layout {
-        static let spacing: CGFloat = 12
+        static let spacing: CGFloat = 10
     }
 
     let isSyncing: Bool
