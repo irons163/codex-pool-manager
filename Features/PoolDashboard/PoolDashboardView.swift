@@ -102,8 +102,8 @@ struct PoolDashboardView: View {
         .onChange(of: state.snapshot) { _, snapshot in
             handleSnapshotChange(snapshot)
         }
-        .alert("低剩餘用量提醒", isPresented: $viewState.showLowUsageAlert) {
-            Button("知道了", role: .cancel) { }
+        .alert("Low Usage Warning", isPresented: $viewState.showLowUsageAlert) {
+            Button("Dismiss", role: .cancel) { }
         } message: {
             Text(
                 alertPresenter.lowUsageAlertMessage(
@@ -231,7 +231,7 @@ struct PoolDashboardView: View {
             overallUsageRatio: state.overallUsageRatio,
             availableAccountsCount: state.availableAccountsCount,
             isPoolExhausted: state.isPoolExhausted,
-            resetAllButtonTitle: resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量",
+            resetAllButtonTitle: resetAllLatch.isArmed ? "Confirm Reset All Usage" : "Reset All Usage",
             onResetAll: {
                 handleResetAllUsage()
             }
