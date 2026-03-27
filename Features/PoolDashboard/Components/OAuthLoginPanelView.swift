@@ -49,6 +49,7 @@ struct OAuthLoginPanelView: View {
                             )
                     )
                 }
+                .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
 
                 HStack(alignment: .center, spacing: 12) {
