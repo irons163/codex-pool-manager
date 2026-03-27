@@ -16,6 +16,7 @@ enum PoolDashboardTheme {
     static let textPrimary = Color.white
     static let textSecondary = Color.white.opacity(0.78)
     static let textMuted = Color.white.opacity(0.62)
+    static let groupLabelOpacity: Double = 0.92
     static let success = Color(red: 0.22, green: 0.84, blue: 0.66)
     static let warning = Color(red: 0.98, green: 0.64, blue: 0.26)
     static let danger = Color(red: 0.95, green: 0.37, blue: 0.40)
