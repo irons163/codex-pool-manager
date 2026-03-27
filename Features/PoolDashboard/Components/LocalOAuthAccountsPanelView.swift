@@ -14,14 +14,12 @@ struct LocalOAuthAccountsPanelView: View {
                     Button("掃描本機登入") {
                         onScan()
                     }
-                    .buttonStyle(.bordered)
-                    .tint(PoolDashboardTheme.glowA)
+                    .buttonStyle(DashboardSubtleButtonStyle())
 
                     Button("選擇 auth.json") {
                         onChooseAuthFile()
                     }
-                    .buttonStyle(.bordered)
-                    .tint(PoolDashboardTheme.glowB)
+                    .buttonStyle(DashboardSubtleButtonStyle())
 
                     if let errorMessage {
                         Text(errorMessage)
