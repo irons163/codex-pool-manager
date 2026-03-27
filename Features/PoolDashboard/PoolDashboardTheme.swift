@@ -26,6 +26,9 @@ enum PoolDashboardTheme {
     static let glowMediumSize: CGFloat = 360
     static let glowLargeBlur: CGFloat = 70
     static let glowMediumBlur: CGFloat = 60
+    static let titleFont = Font.system(size: 34, weight: .bold, design: .rounded)
+    static let subtitleFont = Font.system(size: 13, weight: .medium, design: .rounded)
+    static let metadataFont = Font.system(size: 12, weight: .regular, design: .rounded)
 
     static let contentWidth: CGFloat = 1180
     static let minWidth: CGFloat = 860
