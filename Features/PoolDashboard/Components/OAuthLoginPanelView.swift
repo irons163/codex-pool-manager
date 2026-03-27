@@ -58,27 +58,36 @@ struct OAuthLoginPanelView: View {
                         .monospacedDigit()
                 }
 
-                HStack {
-                    Button(isSigningInOAuth ? "OAuth 登入中..." : "OAuth 登入並新增帳號") {
-                        Task {
-                            await onSignIn()
-                        }
-                    }
-                    .buttonStyle(DashboardPrimaryButtonStyle())
-                    .disabled(isSigningInOAuth)
-
-                    if let oauthSuccessMessage {
-                        Text(oauthSuccessMessage)
-                            .statusBadge(tone: PoolDashboardTheme.success.opacity(0.26))
-                    }
-                    if let oauthError {
-                        Text(oauthError)
-                            .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.26))
+                ViewThatFits(in: .horizontal) {
+                    oauthActionRow
+                    VStack(alignment: .leading, spacing: 8) {
+                        oauthActionRow
                     }
                 }
             }
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var oauthActionRow: some View {
+        HStack {
+            Button(isSigningInOAuth ? "OAuth 登入中..." : "OAuth 登入並新增帳號") {
+                Task {
+                    await onSignIn()
+                }
+            }
+            .buttonStyle(DashboardPrimaryButtonStyle())
+            .disabled(isSigningInOAuth)
+
+            if let oauthSuccessMessage {
+                Text(oauthSuccessMessage)
+                    .statusBadge(tone: PoolDashboardTheme.success.opacity(0.26))
+            }
+            if let oauthError {
+                Text(oauthError)
+                    .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.26))
+            }
+        }
     }
 }
