@@ -8,6 +8,7 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
+    @AppStorage("developer_mode_enabled") private var isDeveloperModeEnabled = false
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
     @State private var resetAllLatch = DestructiveActionLatch()
@@ -46,6 +47,7 @@ struct PoolDashboardView: View {
         case capacity
         case operations
         case safety
+        case developer
 
         var id: String { rawValue }
 
@@ -55,7 +57,8 @@ struct PoolDashboardView: View {
             case .runtime: "Runtime Strategy"
             case .capacity: "Capacity"
             case .operations: "Operations"
-            case .safety: "Safety & Debug"
+            case .safety: "Safety"
+            case .developer: "Developer"
             }
         }
 
@@ -66,6 +69,7 @@ struct PoolDashboardView: View {
             case .capacity: "Track aggregate pool usage posture and enforce reset controls when exhausted."
             case .operations: "Track account usage and recent activity in one place."
             case .safety: "Backup state and inspect raw diagnostics."
+            case .developer: "Developer-only diagnostics and raw payload inspection."
             }
         }
 
@@ -76,6 +80,7 @@ struct PoolDashboardView: View {
             case .capacity: "gauge.with.dots.needle.bottom.50percent"
             case .operations: "list.bullet.rectangle"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
+            case .developer: "wrench.and.screwdriver"
             }
         }
     }
@@ -141,6 +146,11 @@ struct PoolDashboardView: View {
         .onChange(of: state.snapshot) { _, snapshot in
             handleSnapshotChange(snapshot)
         }
+        .onChange(of: isDeveloperModeEnabled) { _, isEnabled in
+            if !isEnabled && selectedWorkspace == .developer {
+                selectedWorkspace = .operations
+            }
+        }
         .alert("Low Usage Warning", isPresented: $viewState.showLowUsageAlert) {
             Button("Dismiss", role: .cancel) { }
         } message: {
@@ -163,6 +173,8 @@ struct PoolDashboardView: View {
             )
 
             syncToolbarPanel
+
+            developerModePanel
 
             HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
                 workspaceSidebar
@@ -191,7 +203,7 @@ struct PoolDashboardView: View {
                 .foregroundStyle(PoolDashboardTheme.textMuted)
                 .padding(.horizontal, 8)
 
-            ForEach(Workspace.allCases) { workspace in
+            ForEach(visibleWorkspaces) { workspace in
                 workspaceButton(for: workspace)
             }
 
@@ -207,6 +219,15 @@ struct PoolDashboardView: View {
                         .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
                 )
         )
+    }
+
+    private var visibleWorkspaces: [Workspace] {
+        Workspace.allCases.filter { workspace in
+            if workspace == .developer {
+                return isDeveloperModeEnabled
+            }
+            return true
+        }
     }
 
     private var workspaceContent: some View {
@@ -247,6 +268,8 @@ struct PoolDashboardView: View {
             accountUsagePanel
         case .safety:
             backupRestorePanel
+        case .developer:
+            debugToolsPanel
         }
     }
 
@@ -262,7 +285,9 @@ struct PoolDashboardView: View {
         case .operations:
             activityLogPanel
         case .safety:
-            debugToolsPanel
+            safetyContextPanel
+        case .developer:
+            developerContextPanel
         }
     }
 
@@ -297,6 +322,44 @@ struct PoolDashboardView: View {
                         tone: .success
                     )
                 }
+            }
+        }
+        .sectionCardStyle()
+    }
+
+    private var safetyContextPanel: some View {
+        GroupBox("Safety Signals") {
+            VStack(alignment: .leading, spacing: 10) {
+                PanelStatusCalloutView(
+                    message: "Backup and restore tools stay available in standard mode. Developer diagnostics are separated.",
+                    title: "Operational Safety",
+                    tone: .info
+                )
+
+                if isDeveloperModeEnabled {
+                    Text("Developer workspace is enabled.")
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .dashboardInfoCard()
+                } else {
+                    Text("Enable Developer Mode to access debug payload tools.")
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .dashboardInfoCard()
+                }
+            }
+        }
+        .sectionCardStyle()
+    }
+
+    private var developerContextPanel: some View {
+        GroupBox("Developer Diagnostics") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Use this workspace only for development troubleshooting and payload inspection.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                activityLogPanel
             }
         }
         .sectionCardStyle()
@@ -348,6 +411,21 @@ struct PoolDashboardView: View {
         ) {
             Task { await syncCodexUsage() }
         }
+    }
+
+    private var developerModePanel: some View {
+        GroupBox("Developer Mode") {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Enable developer-only diagnostics and raw payload views", isOn: $isDeveloperModeEnabled)
+                    .toggleStyle(.switch)
+
+                Text("When off, debug workspace and raw inspection tools are hidden from daily operation view.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            }
+        }
+        .sectionCardStyle()
+        .tint(PoolDashboardTheme.glowA)
     }
 
     private var oauthLoginPanel: some View {
