@@ -97,11 +97,19 @@ struct LocalOAuthAccountsPanelView: View {
 
             Spacer()
 
-            Button("Import") {
-                Task { await onImport(account) }
+            VStack(alignment: .trailing, spacing: 6) {
+                Button("Import") {
+                    Task { await onImport(account) }
+                }
+                .buttonStyle(DashboardPrimaryButtonStyle())
+                .disabled(account.chatGPTAccountID == nil)
+
+                if account.chatGPTAccountID == nil {
+                    Text("Usage sync unavailable")
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
             }
-            .buttonStyle(DashboardPrimaryButtonStyle())
-            .disabled(account.chatGPTAccountID == nil)
         }
         .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
         .padding(.horizontal, 10)

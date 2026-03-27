@@ -53,6 +53,12 @@ struct OAuthLoginPanelView: View {
                 }
                 .sectionCardStyle()
 
+                PanelStatusCalloutView(
+                    message: "Workspace ID is optional for most personal flows; keep it empty unless your org requires it.",
+                    title: "Configuration Hint",
+                    tone: .info
+                )
+
                 DisclosureGroup("Advanced OAuth Parameters") {
                     LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
                         advancedField("Issuer", placeholder: "https://auth.openai.com", text: $oauthIssuer)
@@ -82,7 +88,7 @@ struct OAuthLoginPanelView: View {
                 Task { await onSignIn() }
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
-            .disabled(isSigningInOAuth)
+            .disabled(isSigningInOAuth || oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             if let oauthSuccessMessage {
                 PanelStatusCalloutView(
