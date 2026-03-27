@@ -15,31 +15,52 @@ struct OAuthLoginPanelView: View {
     let oauthError: String?
     let onSignIn: () async -> Void
 
+    private let advancedColumns = [
+        GridItem(.flexible(minimum: 220), spacing: 12),
+        GridItem(.flexible(minimum: 220), spacing: 12)
+    ]
+
     var body: some View {
-        GroupBox("OAuth 登入（你自行填 client_id）") {
+        GroupBox("OAuth Sign-In") {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.oauthPanelSpacing) {
-                Text("輸入 Client ID 後可直接登入，進階參數通常維持預設即可。")
+                Text("Use your own client ID to sign in, then import the account directly into the pool.")
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
 
-                TextField("Client ID", text: $oauthClientID)
-                    .dashboardInputFieldStyle()
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Client ID")
+                        .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    TextField("Paste OAuth client ID", text: $oauthClientID)
+                        .dashboardInputFieldStyle()
+                }
 
-                DisclosureGroup("進階設定（一般情況不用改）") {
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                        TextField("Issuer (例如 https://auth.openai.com)", text: $oauthIssuer)
-                            .dashboardInputFieldStyle()
-                        TextField("Scopes", text: $oauthScopes)
-                            .dashboardInputFieldStyle()
-                        TextField("Redirect URI", text: $oauthRedirectURI)
-                            .dashboardInputFieldStyle()
-                        TextField("Originator", text: $oauthOriginator)
-                            .dashboardInputFieldStyle()
-                        TextField("Allowed Workspace ID（可留空）", text: $oauthWorkspaceID)
-                            .dashboardInputFieldStyle()
+                GroupBox("Import Target") {
+                    HStack(alignment: .center, spacing: PoolDashboardTheme.accountAddRowSpacing) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Account Name")
+                                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            TextField("Name after sign-in", text: $oauthAccountName)
+                                .dashboardInputFieldStyle()
+                        }
+                        Stepper("Quota \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
+                            .monospacedDigit()
+                            .frame(maxWidth: 260, alignment: .leading)
                     }
-                    .padding(.top, 6)
+                }
+                .sectionCardStyle()
+
+                DisclosureGroup("Advanced OAuth Parameters") {
+                    LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
+                        advancedField("Issuer", placeholder: "https://auth.openai.com", text: $oauthIssuer)
+                        advancedField("Scopes", placeholder: "openid profile ...", text: $oauthScopes)
+                        advancedField("Redirect URI", placeholder: "http://localhost:1455/auth/callback", text: $oauthRedirectURI)
+                        advancedField("Originator", placeholder: "codex_cli_rs", text: $oauthOriginator)
+                        advancedField("Workspace ID", placeholder: "Optional", text: $oauthWorkspaceID)
+                    }
+                    .padding(.top, 8)
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
@@ -53,17 +74,10 @@ struct OAuthLoginPanelView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
 
-                HStack(alignment: .center, spacing: 12) {
-                    TextField("登入後帳號名稱", text: $oauthAccountName)
-                        .dashboardInputFieldStyle()
-                    Stepper("配額 \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
-                        .monospacedDigit()
-                }
-
                 ViewThatFits(in: .horizontal) {
-                    oauthActionRow
-                    VStack(alignment: .leading, spacing: 8) {
-                        oauthActionRow
+                    actionRow
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.actionRowSpacing) {
+                        actionRow
                     }
                 }
             }
@@ -72,9 +86,9 @@ struct OAuthLoginPanelView: View {
         .tint(PoolDashboardTheme.glowA)
     }
 
-    private var oauthActionRow: some View {
+    private var actionRow: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
-            Button(isSigningInOAuth ? "OAuth 登入中..." : "OAuth 登入並新增帳號") {
+            Button(isSigningInOAuth ? "Signing In..." : "Sign In and Import") {
                 Task {
                     await onSignIn()
                 }
@@ -84,12 +98,25 @@ struct OAuthLoginPanelView: View {
 
             if let oauthSuccessMessage {
                 Text(oauthSuccessMessage)
+                    .lineLimit(1)
                     .statusBadge(tone: PoolDashboardTheme.success.opacity(0.26))
             }
+
             if let oauthError {
                 Text(oauthError)
+                    .lineLimit(1)
                     .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.26))
             }
+        }
+    }
+
+    private func advancedField(_ title: String, placeholder: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            TextField(placeholder, text: text)
+                .dashboardInputFieldStyle()
         }
     }
 }

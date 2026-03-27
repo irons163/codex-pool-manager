@@ -8,65 +8,26 @@ struct LocalOAuthAccountsPanelView: View {
     let onImport: (LocalCodexOAuthAccount) async -> Void
 
     var body: some View {
-        GroupBox("本機已登入 OAuth 帳號") {
+        GroupBox("Local OAuth Sessions") {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.localOAuthPanelSpacing) {
+                Text("Discover signed-in Codex sessions from your local auth file and import them as managed accounts.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
                 ViewThatFits(in: .horizontal) {
                     headerActions
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.actionRowSpacing) {
                         headerActions
                     }
                 }
 
                 if accounts.isEmpty {
-                    Text("尚未找到本機 OAuth 帳號。若你已登入 Codex，請點「選擇 auth.json」並選擇 ~/.codex/auth.json")
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    emptyState
                 } else {
-                    ForEach(accounts) { account in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(account.displayName)
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(PoolDashboardTheme.textPrimary)
-                                if let email = account.email {
-                                    Text(email)
-                                        .font(.footnote)
-                                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                                }
-                                Text(account.maskedToken)
-                                    .font(.footnote)
-                                    .monospaced()
-                                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                                    .lineLimit(1)
-                                if let chatGPTAccountID = account.chatGPTAccountID {
-                                    Text("Account ID: \(chatGPTAccountID)")
-                                        .font(.footnote)
-                                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                                } else {
-                                    Text("缺少 Account ID，無法查詢用量")
-                                        .font(.footnote)
-                                        .foregroundStyle(PoolDashboardTheme.warning)
-                                }
-                            }
-                            Spacer()
-                            Button("匯入") {
-                                Task {
-                                    await onImport(account)
-                                }
-                            }
-                            .buttonStyle(DashboardPrimaryButtonStyle())
-                            .disabled(account.chatGPTAccountID == nil)
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(accounts) { account in
+                            accountRow(account)
                         }
-                        .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
-                        .padding(.horizontal, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                                .fill(PoolDashboardTheme.panelMutedFill)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                                )
-                        )
                     }
                 }
             }
@@ -77,12 +38,12 @@ struct LocalOAuthAccountsPanelView: View {
 
     private var headerActions: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
-            Button("掃描本機登入") {
+            Button("Scan Local Sessions") {
                 onScan()
             }
             .buttonStyle(DashboardSubtleButtonStyle())
 
-            Button("選擇 auth.json") {
+            Button("Choose auth.json") {
                 onChooseAuthFile()
             }
             .buttonStyle(DashboardSubtleButtonStyle())
@@ -93,9 +54,68 @@ struct LocalOAuthAccountsPanelView: View {
                     .frame(maxWidth: PoolDashboardTheme.localBadgeMaxWidth, alignment: .leading)
                     .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
             } else {
-                Text("找到 \(accounts.count) 個帳號")
+                Text("\(accounts.count) session(s) found")
                     .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
             }
         }
+    }
+
+    private var emptyState: some View {
+        Text("No local OAuth session was found. If Codex is signed in, choose `~/.codex/auth.json` manually.")
+            .font(.footnote)
+            .foregroundStyle(PoolDashboardTheme.textSecondary)
+            .calloutCard(fill: PoolDashboardTheme.panelMutedFill, border: PoolDashboardTheme.panelInnerStroke)
+    }
+
+    private func accountRow(_ account: LocalCodexOAuthAccount) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(account.displayName)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                if let email = account.email {
+                    Text(email)
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                }
+
+                Text(account.maskedToken)
+                    .font(.footnote)
+                    .monospaced()
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                    .lineLimit(1)
+
+                if let chatGPTAccountID = account.chatGPTAccountID {
+                    Text("Account ID: \(chatGPTAccountID)")
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                } else {
+                    Text("Missing Account ID: usage sync unavailable")
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.warning)
+                }
+            }
+
+            Spacer()
+
+            Button("Import") {
+                Task {
+                    await onImport(account)
+                }
+            }
+            .buttonStyle(DashboardPrimaryButtonStyle())
+            .disabled(account.chatGPTAccountID == nil)
+        }
+        .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
+        .padding(.horizontal, 10)
+        .background(
+            RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
+                .fill(PoolDashboardTheme.panelMutedFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
+                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                )
+        )
     }
 }
