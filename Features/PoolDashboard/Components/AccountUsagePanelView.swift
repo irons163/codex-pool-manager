@@ -24,7 +24,7 @@ struct AccountUsagePanelView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
                     TextField("新帳號名稱", text: $newAccountName)
-                        .textFieldStyle(.roundedBorder)
+                        .dashboardInputFieldStyle()
                     Stepper("配額 \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
                     Button("新增帳號") {
                         onAddAccount(newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), newAccountQuota)
