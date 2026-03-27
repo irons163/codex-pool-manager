@@ -67,6 +67,7 @@ struct SyncToolbarView: View {
             }
         }
         .lineLimit(1)
+        .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)
         .statusBadge(tone: tone)
     }
 }
