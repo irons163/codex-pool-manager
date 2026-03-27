@@ -217,25 +217,89 @@ struct PoolDashboardView: View {
                 symbolName: selectedWorkspace.symbolName
             )
 
-            workspacePanel
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                    workspaceMainPanel
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    workspaceContextPanel
+                        .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
+                }
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                    workspaceMainPanel
+                    workspaceContextPanel
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
-    private var workspacePanel: some View {
+    private var workspaceMainPanel: some View {
         switch selectedWorkspace {
         case .authentication:
-            pairedPanels(primary: oauthLoginPanel, secondary: localOAuthAccountsPanel)
+            oauthLoginPanel
         case .runtime:
-            pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
+            strategySettingsPanel
         case .capacity:
             overallUsagePanel
         case .operations:
-            pairedPanels(primary: accountUsagePanel, secondary: activityLogPanel)
+            accountUsagePanel
         case .safety:
-            pairedPanels(primary: backupRestorePanel, secondary: debugToolsPanel)
+            backupRestorePanel
         }
+    }
+
+    @ViewBuilder
+    private var workspaceContextPanel: some View {
+        switch selectedWorkspace {
+        case .authentication:
+            localOAuthAccountsPanel
+        case .runtime:
+            activeAccountPanel
+        case .capacity:
+            capacityContextPanel
+        case .operations:
+            activityLogPanel
+        case .safety:
+            debugToolsPanel
+        }
+    }
+
+    private var capacityContextPanel: some View {
+        GroupBox("Pool Signals") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Active account: \(state.activeAccount?.name ?? "None")")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    .dashboardInfoCard()
+
+                Text("Available accounts: \(state.availableAccountsCount)")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    .dashboardInfoCard()
+
+                Text("Overall usage: \(Int(state.overallUsageRatio * 100))%")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    .dashboardInfoCard()
+
+                if state.isPoolExhausted {
+                    PanelStatusCalloutView(
+                        message: "Pool capacity is exhausted. Reset usage or raise quota before next switch.",
+                        title: "Action Required",
+                        tone: .danger
+                    )
+                } else {
+                    PanelStatusCalloutView(
+                        message: "Pool still has headroom for continued routing.",
+                        title: "Healthy Capacity",
+                        tone: .success
+                    )
+                }
+            }
+        }
+        .sectionCardStyle()
     }
 
     private func workspaceButton(for workspace: Workspace) -> some View {
