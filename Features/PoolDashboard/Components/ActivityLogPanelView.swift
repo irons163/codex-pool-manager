@@ -36,6 +36,7 @@ struct ActivityLogPanelView: View {
                 .frame(minHeight: 160)
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
     }
 }
