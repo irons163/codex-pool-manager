@@ -56,7 +56,7 @@ enum PoolDashboardTheme {
 private struct SectionCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(12)
+            .padding(PoolDashboardTheme.sectionCardPadding)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
                     .fill(PoolDashboardTheme.panelFill.opacity(0.58))
