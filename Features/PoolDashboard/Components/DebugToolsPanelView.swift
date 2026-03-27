@@ -60,6 +60,7 @@ struct DebugToolsPanelView: View {
                 }
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
     }
 }
