@@ -13,7 +13,7 @@ struct GlassPanel<Content: View>: View {
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.white.opacity(0.09), .clear],
+                                    colors: [.white.opacity(PoolDashboardTheme.panelTopHighlightOpacity), .clear],
                                     startPoint: .topLeading,
                                     endPoint: .center
                                 )
