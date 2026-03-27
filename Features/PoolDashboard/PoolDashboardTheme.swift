@@ -73,6 +73,7 @@ enum PoolDashboardTheme {
     static let debugEditorMinHeight: CGFloat = 140
     static let accountAddRowSpacing: CGFloat = 14
     static let localOAuthPanelSpacing: CGFloat = 14
+    static let strategyPanelSpacing: CGFloat = 16
 }
 
 private struct SectionCardStyle: ViewModifier {
