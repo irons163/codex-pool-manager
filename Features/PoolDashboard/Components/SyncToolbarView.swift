@@ -17,7 +17,7 @@ struct SyncToolbarView: View {
 
             if let lastSyncAt {
                 badge(
-                    "最近同步：\(lastSyncAt, format: Date.FormatStyle(date: .omitted, time: .standard))",
+                    "最近同步：\(lastSyncAt.formatted(date: .omitted, time: .standard))",
                     tone: .white.opacity(0.18)
                 )
             }
