@@ -22,15 +22,17 @@ struct PoolDashboardMutationCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) -> Bool {
-        if let importedState = result.state {
+        switch (result.state, result.errorMessage) {
+        case let (importedState?, _):
             state = importedState
             viewState.backupError = nil
             return true
-        }
-        if let message = result.errorMessage {
+        case let (_, message?):
             viewState.backupError = message
+            return false
+        case (nil, nil):
+            return false
         }
-        return false
     }
 
     func applySyncOutput(
