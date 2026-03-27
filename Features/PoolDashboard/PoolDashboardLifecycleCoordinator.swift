@@ -6,13 +6,20 @@ struct PoolDashboardLifecycleCoordinator {
         lowUsageAlertPolicy: inout LowUsageAlertPolicy
     ) {
         state.evaluate()
-        _ = lowUsageAlertPolicy.shouldTriggerAlert(
-            mode: state.mode,
-            hasLowUsageWarning: state.hasLowUsageWarning
-        )
+        _ = shouldTriggerLowUsageAlert(state: state, lowUsageAlertPolicy: &lowUsageAlertPolicy)
     }
 
     func shouldShowLowUsageAlert(
+        state: AccountPoolState,
+        lowUsageAlertPolicy: inout LowUsageAlertPolicy
+    ) -> Bool {
+        shouldTriggerLowUsageAlert(
+            state: state,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy
+        )
+    }
+
+    private func shouldTriggerLowUsageAlert(
         state: AccountPoolState,
         lowUsageAlertPolicy: inout LowUsageAlertPolicy
     ) -> Bool {
