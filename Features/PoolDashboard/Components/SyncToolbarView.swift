@@ -13,7 +13,7 @@ struct SyncToolbarView: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             toolbarRow
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 toolbarRow
             }
         }
@@ -35,7 +35,16 @@ struct SyncToolbarView: View {
     }
 
     private var toolbarRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Layout.spacing) {
+        HStack(alignment: .center, spacing: Layout.spacing) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Usage Sync")
+                    .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                Text(isSyncing ? "Sync in progress" : "Manual refresh available")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+            }
+
             Button(isSyncing ? "同步中..." : "同步 Codex 用量") {
                 onSync()
             }
@@ -44,7 +53,7 @@ struct SyncToolbarView: View {
 
             if let lastSyncAt {
                 badge(
-                    "最近同步：\(lastSyncAt.formatted(date: .omitted, time: .standard))",
+                    "Last: \(lastSyncAt.formatted(date: .omitted, time: .standard))",
                     tone: PoolDashboardTheme.panelMutedFill,
                     useMonospacedDigits: true
                 )

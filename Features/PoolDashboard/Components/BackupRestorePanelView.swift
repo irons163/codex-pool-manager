@@ -9,16 +9,20 @@ struct BackupRestorePanelView: View {
     let onImport: () -> Void
 
     var body: some View {
-        GroupBox("備份與還原") {
+        GroupBox("Backup & Restore") {
             VStack(alignment: .leading, spacing: 14) {
+                Text("Export snapshots for recovery and migration. Keep refetchable exports private.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
                         exportButton
                         exportRefetchableButton
                         importButton
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
                             exportButton
                             exportRefetchableButton
                         }
@@ -26,7 +30,7 @@ struct BackupRestorePanelView: View {
                     }
                 }
 
-                Text("警告：匯出（可重抓）會包含 access token 與 account id，僅限你自己保管，勿分享。")
+                Text("Sensitive: refetchable export can include access token and account id.")
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.warning)
                     .calloutCard(
@@ -49,6 +53,7 @@ struct BackupRestorePanelView: View {
 
                 if let backupError {
                     Text(backupError)
+                        .lineLimit(2)
                         .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
                 }
             }
@@ -58,17 +63,17 @@ struct BackupRestorePanelView: View {
     }
 
     private var exportButton: some View {
-        Button("匯出 JSON", action: onExport)
+        Button("Export JSON", action: onExport)
             .buttonStyle(DashboardSubtleButtonStyle())
     }
 
     private var exportRefetchableButton: some View {
-        Button("匯出（可重抓）", action: onExportRefetchable)
+        Button("Export Refetchable", action: onExportRefetchable)
             .buttonStyle(DashboardWarningButtonStyle())
     }
 
     private var importButton: some View {
-        Button("匯入 JSON", action: onImport)
+        Button("Import JSON", action: onImport)
             .buttonStyle(DashboardPrimaryButtonStyle())
     }
 }
