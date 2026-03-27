@@ -53,7 +53,7 @@ struct OAuthLoginPanelView: View {
 
                 HStack(alignment: .center, spacing: 12) {
                     TextField("登入後帳號名稱", text: $oauthAccountName)
-                        .textFieldStyle(.roundedBorder)
+                        .dashboardInputFieldStyle()
                     Stepper("配額 \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
                         .monospacedDigit()
                 }
