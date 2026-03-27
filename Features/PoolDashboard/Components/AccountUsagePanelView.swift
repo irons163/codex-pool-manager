@@ -30,8 +30,7 @@ struct AccountUsagePanelView: View {
                         onAddAccount(newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), newAccountQuota)
                         newAccountName = ""
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(PoolDashboardTheme.glowA)
+                    .buttonStyle(DashboardPrimaryButtonStyle())
                 }
 
                 List {
