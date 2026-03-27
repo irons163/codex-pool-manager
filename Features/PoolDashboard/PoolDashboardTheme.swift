@@ -9,6 +9,14 @@ enum PoolDashboardTheme {
     static let panelStroke = Color.white.opacity(0.14)
     static let panelInnerStroke = Color.white.opacity(0.08)
     static let panelBorderWidth: CGFloat = 1
+    static let panelMutedFill = Color.white.opacity(0.04)
+    static let panelStrongFill = Color.white.opacity(0.11)
+    static let textPrimary = Color.white
+    static let textSecondary = Color.white.opacity(0.78)
+    static let textMuted = Color.white.opacity(0.62)
+    static let success = Color(red: 0.22, green: 0.84, blue: 0.66)
+    static let warning = Color(red: 0.98, green: 0.64, blue: 0.26)
+    static let danger = Color(red: 0.95, green: 0.37, blue: 0.40)
 
     static let backgroundGradient = LinearGradient(
         colors: [
@@ -23,6 +31,7 @@ enum PoolDashboardTheme {
     static let panelPadding: CGFloat = 24
     static let panelCornerRadius: CGFloat = 20
     static let tileCornerRadius: CGFloat = 14
+    static let badgeCornerRadius: CGFloat = 999
     static let glowLargeSize: CGFloat = 420
     static let glowMediumSize: CGFloat = 360
     static let glowLargeBlur: CGFloat = 70
