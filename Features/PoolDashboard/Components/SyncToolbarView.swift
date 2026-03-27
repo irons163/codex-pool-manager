@@ -1,13 +1,17 @@
 import SwiftUI
 
 struct SyncToolbarView: View {
+    private enum Layout {
+        static let spacing: CGFloat = 12
+    }
+
     let isSyncing: Bool
     let lastSyncAt: Date?
     let errorText: String?
     let onSync: () -> Void
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: Layout.spacing) {
             Button(isSyncing ? "同步中..." : "同步 Codex 用量") {
                 onSync()
             }
