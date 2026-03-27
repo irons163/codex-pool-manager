@@ -33,7 +33,7 @@ struct BackupRestorePanelView: View {
 
                 TextEditor(text: $backupJSON)
                     .font(.system(.body, design: .monospaced))
-                    .frame(minHeight: 160)
+                    .frame(minHeight: 190)
                     .padding(8)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
