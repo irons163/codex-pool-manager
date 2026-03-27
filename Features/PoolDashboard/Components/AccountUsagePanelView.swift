@@ -108,10 +108,10 @@ struct AccountUsagePanelView: View {
                         }
                         .padding(.vertical, 4)
                         .listRowBackground(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
                                 .fill(PoolDashboardTheme.panelMutedFill)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
                                         .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
                                 )
                                 .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
