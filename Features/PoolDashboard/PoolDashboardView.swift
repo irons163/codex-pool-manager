@@ -127,31 +127,36 @@ struct PoolDashboardView: View {
 
             PanelSectionHeaderView(
                 title: "Authentication",
-                subtitle: "Manage sign-in flows and import local Codex sessions."
+                subtitle: "Manage sign-in flows and import local Codex sessions.",
+                symbolName: "person.badge.key"
             )
             pairedPanels(primary: oauthLoginPanel, secondary: localOAuthAccountsPanel)
 
             PanelSectionHeaderView(
                 title: "Runtime Strategy",
-                subtitle: "Configure switching policy and monitor active execution account."
+                subtitle: "Configure switching policy and monitor active execution account.",
+                symbolName: "dial.medium"
             )
             pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
 
             PanelSectionHeaderView(
                 title: "Capacity",
-                subtitle: "Track aggregate pool usage posture and enforce reset controls when exhausted."
+                subtitle: "Track aggregate pool usage posture and enforce reset controls when exhausted.",
+                symbolName: "gauge.with.dots.needle.bottom.50percent"
             )
             overallUsagePanel
 
             PanelSectionHeaderView(
                 title: "Operations",
-                subtitle: "Track account usage and recent activity in one place."
+                subtitle: "Track account usage and recent activity in one place.",
+                symbolName: "list.bullet.rectangle"
             )
             pairedPanels(primary: accountUsagePanel, secondary: activityLogPanel)
 
             PanelSectionHeaderView(
                 title: "Safety & Debug",
-                subtitle: "Backup state and inspect raw diagnostics."
+                subtitle: "Backup state and inspect raw diagnostics.",
+                symbolName: "shield.lefthalf.filled.badge.checkmark"
             )
             pairedPanels(primary: backupRestorePanel, secondary: debugToolsPanel)
         }

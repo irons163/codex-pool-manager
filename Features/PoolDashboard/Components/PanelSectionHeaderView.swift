@@ -3,10 +3,22 @@ import SwiftUI
 struct PanelSectionHeaderView: View {
     let title: String
     let subtitle: String
+    let symbolName: String?
+
+    init(title: String, subtitle: String, symbolName: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.symbolName = symbolName
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionHeaderSpacing) {
             HStack(spacing: 8) {
+                if let symbolName {
+                    Image(systemName: symbolName)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
                 Text(title.uppercased())
                     .font(PoolDashboardTheme.metadataFont.weight(.semibold))
                     .tracking(PoolDashboardTheme.metadataTracking)
