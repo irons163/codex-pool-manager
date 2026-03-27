@@ -38,17 +38,16 @@ struct OAuthLoginPanelView: View {
                 .dashboardInfoCard()
 
                 GroupBox("Import Target") {
-                    HStack(alignment: .center, spacing: PoolDashboardTheme.accountAddRowSpacing) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Account Name")
-                                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                                .foregroundStyle(PoolDashboardTheme.textSecondary)
-                            TextField("Name after sign-in", text: $oauthAccountName)
-                                .dashboardInputFieldStyle()
-                        }
-                        Stepper("Quota \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
-                            .monospacedDigit()
-                            .frame(maxWidth: 260, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Account Name")
+                            .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        TextField("Name after sign-in", text: $oauthAccountName)
+                            .dashboardInputFieldStyle()
+
+                        Text("Quota is assigned automatically by default policy.")
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
                     }
                 }
                 .sectionCardStyle()
