@@ -33,7 +33,11 @@ struct SyncToolbarView: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                .fill(PoolDashboardTheme.panelFill.opacity(0.70))
+                .fill(PoolDashboardTheme.panelStrongFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
+                        .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
+                )
         )
         .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
     }
