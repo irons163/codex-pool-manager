@@ -38,6 +38,7 @@ struct DashboardHeaderSectionView: View {
                 .foregroundStyle(.white.opacity(0.68))
             Text(value)
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
