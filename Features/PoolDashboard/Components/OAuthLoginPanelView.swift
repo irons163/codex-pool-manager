@@ -55,9 +55,8 @@ struct OAuthLoginPanelView: View {
                             await onSignIn()
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(DashboardPrimaryButtonStyle())
                     .disabled(isSigningInOAuth)
-                    .tint(PoolDashboardTheme.glowA)
 
                     if let oauthSuccessMessage {
                         Text(oauthSuccessMessage)
