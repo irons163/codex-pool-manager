@@ -49,6 +49,7 @@ struct BackupRestorePanelView: View {
     private var exportButton: some View {
         Button("Export JSON", action: onExport)
             .buttonStyle(DashboardSubtleButtonStyle())
+            .accessibilityIdentifier("backup.exportJsonButton")
     }
 
     private var exportRefetchableButton: some View {
@@ -59,5 +60,6 @@ struct BackupRestorePanelView: View {
     private var importButton: some View {
         Button("Import JSON", action: onImport)
             .buttonStyle(DashboardPrimaryButtonStyle())
+            .accessibilityIdentifier("backup.importJsonButton")
     }
 }

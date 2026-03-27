@@ -50,6 +50,7 @@ struct SyncToolbarView: View {
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSyncing)
+            .accessibilityIdentifier("sync.toolbar.syncButton")
 
             if let lastSyncAt {
                 PanelStatusCalloutView(

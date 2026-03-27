@@ -110,6 +110,7 @@ struct AccountUsagePanelView: View {
                 newAccountName = ""
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
+            .accessibilityIdentifier("usage.addAccountButton")
         }
     }
 

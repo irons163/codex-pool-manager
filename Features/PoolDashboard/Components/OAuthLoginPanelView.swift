@@ -89,6 +89,7 @@ struct OAuthLoginPanelView: View {
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSigningInOAuth || oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("auth.oauth.signInButton")
 
             if let oauthSuccessMessage {
                 PanelStatusCalloutView(
