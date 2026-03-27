@@ -126,7 +126,7 @@ extension View {
                     .fill(fill)
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.calloutCornerRadius, style: .continuous)
-                            .stroke(border, lineWidth: 1)
+                            .stroke(border, lineWidth: PoolDashboardTheme.calloutBorderWidth)
                     )
             )
     }
