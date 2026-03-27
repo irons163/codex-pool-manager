@@ -87,6 +87,7 @@ struct LocalOAuthAccountsPanelView: View {
                 }
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
     }
 }
