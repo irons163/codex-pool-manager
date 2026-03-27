@@ -46,7 +46,7 @@ struct DebugToolsPanelView: View {
                     } else {
                         TextEditor(text: $lastSwitchLaunchLog)
                             .font(.system(.footnote, design: .monospaced))
-                            .frame(minHeight: 140)
+                            .frame(minHeight: PoolDashboardTheme.debugEditorMinHeight)
                             .padding(8)
                             .background(
                                 RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
