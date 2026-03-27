@@ -140,7 +140,7 @@ struct DashboardGroupBoxStyle: GroupBoxStyle {
         VStack(alignment: .leading, spacing: 10) {
             configuration.label
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.92))
+                .foregroundStyle(.white.opacity(PoolDashboardTheme.groupLabelOpacity))
             configuration.content
         }
     }
