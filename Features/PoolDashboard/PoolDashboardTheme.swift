@@ -86,6 +86,20 @@ extension View {
             .textFieldStyle(.roundedBorder)
             .font(.system(size: 13, weight: .medium, design: .rounded))
     }
+
+    func calloutCard(fill: Color, border: Color = .clear) -> some View {
+        self
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(fill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(border, lineWidth: 1)
+                    )
+            )
+    }
 }
 
 struct DashboardGroupBoxStyle: GroupBoxStyle {
