@@ -23,6 +23,7 @@ struct OverallUsagePanelView: View {
 
                 ProgressView(value: overallUsageRatio)
                     .tint(PoolDashboardTheme.glowA)
+                    .scaleEffect(x: 1, y: 1.25, anchor: .center)
 
                 Button(resetAllButtonTitle) {
                     onResetAll()
