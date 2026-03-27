@@ -26,11 +26,8 @@ struct AccountUsagePanelView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                ViewThatFits(in: .horizontal) {
+                PanelAdaptiveActionRowView {
                     addRow
-                    VStack(alignment: .leading, spacing: 8) {
-                        addRow
-                    }
                 }
 
                 PanelStatusCalloutView(

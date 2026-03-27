@@ -113,13 +113,6 @@ struct LocalOAuthAccountsPanelView: View {
         }
         .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
         .padding(.horizontal, 10)
-        .background(
-            RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                .fill(PoolDashboardTheme.panelMutedFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PoolDashboardTheme.editorCornerRadius, style: .continuous)
-                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                )
-        )
+        .dashboardInfoCard()
     }
 }
