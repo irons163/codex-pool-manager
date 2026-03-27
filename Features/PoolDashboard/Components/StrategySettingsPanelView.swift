@@ -28,7 +28,7 @@ struct StrategySettingsPanelView: View {
         )
 
         GroupBox("策略設定") {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
                 Stepper(
                     "最小切換間隔 \(Int(minSwitchIntervalBinding.wrappedValue)) 秒",
                     value: minSwitchIntervalBinding,
