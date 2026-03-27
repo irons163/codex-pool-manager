@@ -113,7 +113,7 @@ struct AccountUsagePanelView: View {
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                                         .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
                                 )
-                                .padding(.vertical, 2)
+                                .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
                         )
                     }
                 }
