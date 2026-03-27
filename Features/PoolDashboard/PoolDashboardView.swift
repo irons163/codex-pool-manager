@@ -8,7 +8,6 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
-    @AppStorage("developer_mode_enabled") private var isDeveloperModeEnabled = false
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
     @State private var resetAllLatch = DestructiveActionLatch()
@@ -154,7 +153,7 @@ struct PoolDashboardView: View {
         .onChange(of: state.snapshot) { _, snapshot in
             handleSnapshotChange(snapshot)
         }
-        .onChange(of: isDeveloperModeEnabled) { _, isEnabled in
+        .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
                 selectedWorkspace = .operations
             }
@@ -181,8 +180,6 @@ struct PoolDashboardView: View {
             )
 
             syncToolbarPanel
-
-            developerModePanel
 
             HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
                 workspaceSidebar
@@ -232,7 +229,7 @@ struct PoolDashboardView: View {
     private var visibleWorkspaces: [Workspace] {
         Workspace.allCases.filter { workspace in
             if workspace == .developer {
-                return isDeveloperBuild && isDeveloperModeEnabled
+                return isDeveloperBuild
             }
             return true
         }
@@ -345,17 +342,10 @@ struct PoolDashboardView: View {
                 )
 
                 if isDeveloperBuild {
-                    if isDeveloperModeEnabled {
-                        Text("Developer workspace is enabled.")
-                            .font(.footnote)
-                            .foregroundStyle(PoolDashboardTheme.textSecondary)
-                            .dashboardInfoCard()
-                    } else {
-                        Text("Enable Developer Mode to access debug payload tools.")
-                            .font(.footnote)
-                            .foregroundStyle(PoolDashboardTheme.textSecondary)
-                            .dashboardInfoCard()
-                    }
+                    Text("Developer diagnostics are available in the Developer workspace for this debug run.")
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .dashboardInfoCard()
                 }
             }
         }
@@ -421,21 +411,6 @@ struct PoolDashboardView: View {
         ) {
             Task { await syncCodexUsage() }
         }
-    }
-
-    private var developerModePanel: some View {
-        GroupBox("Developer Mode") {
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Enable developer-only diagnostics and raw payload views", isOn: $isDeveloperModeEnabled)
-                    .toggleStyle(.switch)
-
-                Text("When off, debug workspace and raw inspection tools are hidden from daily operation view.")
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-            }
-        }
-        .sectionCardStyle()
-        .tint(PoolDashboardTheme.glowA)
     }
 
     private var oauthLoginPanel: some View {
