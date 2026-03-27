@@ -28,8 +28,12 @@ struct PoolDashboardViewMutationCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
-        state = output.state
-        viewState = output.viewState
+        applyStateAndViewState(
+            state: &state,
+            viewState: &viewState,
+            nextState: output.state,
+            nextViewState: output.viewState
+        )
     }
 
     func applyOAuthSignInOutput(
@@ -38,8 +42,12 @@ struct PoolDashboardViewMutationCoordinator {
         viewState: inout PoolDashboardViewState,
         formState: inout PoolDashboardFormState
     ) {
-        state = output.state
-        viewState = output.viewState
+        applyStateAndViewState(
+            state: &state,
+            viewState: &viewState,
+            nextState: output.state,
+            nextViewState: output.viewState
+        )
         formState.applyOAuthAccountName(output.oauthAccountName)
     }
 
@@ -61,8 +69,12 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel: inout LocalOAuthImportViewModel,
         viewState: inout PoolDashboardViewState
     ) {
-        state = output.state
-        viewState = output.viewState
+        applyStateAndViewState(
+            state: &state,
+            viewState: &viewState,
+            nextState: output.state,
+            nextViewState: output.viewState
+        )
         viewModel = output.viewModel
     }
 
@@ -75,5 +87,15 @@ struct PoolDashboardViewMutationCoordinator {
         viewModel = output.viewModel
         viewState = output.viewState
         sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
+    }
+
+    private func applyStateAndViewState(
+        state: inout AccountPoolState,
+        viewState: inout PoolDashboardViewState,
+        nextState: AccountPoolState,
+        nextViewState: PoolDashboardViewState
+    ) {
+        state = nextState
+        viewState = nextViewState
     }
 }
