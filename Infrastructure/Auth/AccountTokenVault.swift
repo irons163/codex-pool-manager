@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 protocol AccountTokenVault {
     func token(for accountID: UUID) -> String?
@@ -23,54 +22,32 @@ final class InMemoryAccountTokenVault: AccountTokenVault {
     }
 }
 
-final class KeychainAccountTokenVault: AccountTokenVault {
-    private let service = "com.aiagentpool.account-token"
+final class UserDefaultsAccountTokenVault: AccountTokenVault {
+    private let defaults: UserDefaults
+    private let key: String
+
+    init(defaults: UserDefaults = .standard, key: String = "account_pool_tokens") {
+        self.defaults = defaults
+        self.key = key
+    }
 
     func token(for accountID: UUID) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: accountID.uuidString,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess,
-              let data = item as? Data,
-              let value = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        return value
+        storage[accountID.uuidString]
     }
 
     func setToken(_ token: String, for accountID: UUID) {
-        let data = Data(token.utf8)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: accountID.uuidString
-        ]
-
-        let attributes: [String: Any] = [
-            kSecValueData as String: data
-        ]
-
-        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if status == errSecItemNotFound {
-            var addQuery = query
-            addQuery[kSecValueData as String] = data
-            SecItemAdd(addQuery as CFDictionary, nil)
-        }
+        var next = storage
+        next[accountID.uuidString] = token
+        defaults.set(next, forKey: key)
     }
 
     func removeToken(for accountID: UUID) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: accountID.uuidString
-        ]
-        SecItemDelete(query as CFDictionary)
+        var next = storage
+        next.removeValue(forKey: accountID.uuidString)
+        defaults.set(next, forKey: key)
+    }
+
+    private var storage: [String: String] {
+        defaults.dictionary(forKey: key) as? [String: String] ?? [:]
     }
 }

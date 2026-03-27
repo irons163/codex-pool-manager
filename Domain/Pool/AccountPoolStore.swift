@@ -13,7 +13,7 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
     init(
         defaults: UserDefaults = .standard,
         key: String = "account_pool_snapshot",
-        tokenVault: AccountTokenVault = KeychainAccountTokenVault()
+        tokenVault: AccountTokenVault = UserDefaultsAccountTokenVault()
     ) {
         self.defaults = defaults
         self.key = key
