@@ -26,7 +26,12 @@ struct SyncToolbarView: View {
                         .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
                 )
         )
-        .shadow(color: .black.opacity(0.22), radius: PoolDashboardTheme.toolbarShadowRadius, x: 0, y: 6)
+        .shadow(
+            color: .black.opacity(0.22),
+            radius: PoolDashboardTheme.toolbarShadowRadius,
+            x: 0,
+            y: PoolDashboardTheme.cardShadowYOffset
+        )
     }
 
     private var toolbarRow: some View {
