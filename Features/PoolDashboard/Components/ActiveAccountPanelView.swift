@@ -51,7 +51,7 @@ struct ActiveAccountPanelView: View {
                         .tint(.white)
                     }
                 } else {
-                    Text("目前沒有可用帳號")
+                    Label("目前沒有可用帳號", systemImage: "person.crop.circle.badge.exclamationmark")
                         .foregroundStyle(.white.opacity(0.78))
                 }
             }
