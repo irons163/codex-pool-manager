@@ -39,7 +39,7 @@ struct AccountUsagePanelView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     TextField("帳號名稱", text: accountNameBinding(account.id))
-                                        .textFieldStyle(.roundedBorder)
+                                        .dashboardInputFieldStyle()
                                     if let chatGPTAccountID = account.chatGPTAccountID {
                                         Text("Account ID: \(chatGPTAccountID)")
                                             .font(.caption)
