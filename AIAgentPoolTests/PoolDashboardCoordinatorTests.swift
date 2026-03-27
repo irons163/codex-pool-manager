@@ -94,6 +94,39 @@ struct PoolDashboardSwitchLaunchCoordinatorTests {
         #expect(output.errorMessage == "此帳號缺少 Account ID，無法切換")
         #expect(output.switchLaunchLog.contains("失敗：沒有 account_id"))
     }
+
+    @Test
+    func poolDashboardSwitchLaunchCoordinatorDoesNotTreatInvalidBookmarkAsMissingAuthFile() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator()
+        let bookmarkKey = "test.invalid.bookmark.\(UUID().uuidString)"
+        UserDefaults.standard.set(Data("invalid-bookmark".utf8), forKey: bookmarkKey)
+        defer { UserDefaults.standard.removeObject(forKey: bookmarkKey) }
+
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Valid",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "token",
+            chatGPTAccountID: "acct_1"
+        )
+        var authorizeCalled = false
+
+        let output = await coordinator.switchAndLaunch(
+            account: account,
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: bookmarkKey),
+            authorizeAuthFile: {
+                authorizeCalled = true
+                return nil
+            }
+        )
+
+        #expect(!authorizeCalled)
+        #expect(output.errorMessage?.hasPrefix("切換失敗：") == true)
+        #expect(output.switchLaunchLog.contains("錯誤："))
+        #expect(!output.switchLaunchLog.contains("尚未授權 auth.json"))
+    }
 }
 
 @MainActor
