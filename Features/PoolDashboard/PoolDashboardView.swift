@@ -256,6 +256,8 @@ struct PoolDashboardView: View {
         .groupBoxStyle(DashboardGroupBoxStyle())
         .animation(.easeInOut(duration: 0.25), value: state.mode)
         .animation(.easeInOut(duration: 0.25), value: viewState.isSyncingUsage)
+        .animation(.easeInOut(duration: 0.20), value: viewState.showUsageRawJSON)
+        .animation(.easeInOut(duration: 0.20), value: viewState.showSwitchLaunchLog)
     }
 
     // MARK: - Lifecycle
