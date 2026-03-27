@@ -13,7 +13,7 @@ struct DebugToolsPanelView: View {
                     if lastUsageRawJSON.isEmpty {
                         Text("尚未捕捉到 usage response")
                             .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.70))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
                     } else {
                         TextEditor(text: $lastUsageRawJSON)
                             .font(.system(.footnote, design: .monospaced))
@@ -39,7 +39,7 @@ struct DebugToolsPanelView: View {
                     if lastSwitchLaunchLog.isEmpty {
                         Text("尚未執行切換並啟動")
                             .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.70))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
                     } else {
                         TextEditor(text: $lastSwitchLaunchLog)
                             .font(.system(.footnote, design: .monospaced))
