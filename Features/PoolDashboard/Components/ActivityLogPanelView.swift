@@ -17,9 +17,11 @@ struct ActivityLogPanelView: View {
                 }
 
                 if activities.isEmpty {
-                    Text("No activity yet.")
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        .calloutCard(fill: PoolDashboardTheme.panelMutedFill, border: PoolDashboardTheme.panelInnerStroke)
+                    PanelStatusCalloutView(
+                        message: "No activity has been recorded yet.",
+                        title: "Feed Empty",
+                        tone: .info
+                    )
                 } else {
                     HStack {
                         Spacer()
@@ -38,15 +40,7 @@ struct ActivityLogPanelView: View {
                             Text(activity.message)
                                 .foregroundStyle(PoolDashboardTheme.textPrimary)
                         }
-                        .listRowBackground(
-                            RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                                .fill(PoolDashboardTheme.panelMutedFill)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                                )
-                                .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
-                        )
+                        .dashboardListRowCard()
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)

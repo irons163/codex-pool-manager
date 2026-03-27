@@ -33,9 +33,11 @@ struct AccountUsagePanelView: View {
                     }
                 }
 
-                Text("\(accounts.count) account(s)")
-                    .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                PanelStatusCalloutView(
+                    message: "\(accounts.count) account(s) are currently managed in the pool.",
+                    title: "Managed Accounts",
+                    tone: .info
+                )
 
                 List {
                     ForEach(accounts) { account in
@@ -86,15 +88,7 @@ struct AccountUsagePanelView: View {
                                 .tint(usageProgressColor(account))
                         }
                         .padding(.vertical, 4)
-                        .listRowBackground(
-                            RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                                .fill(PoolDashboardTheme.panelMutedFill)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                                )
-                                .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
-                        )
+                        .dashboardListRowCard()
                     }
                 }
                 .listStyle(.plain)
@@ -158,7 +152,7 @@ struct AccountUsagePanelView: View {
                 Button("Delete", role: .destructive) {
                     onRemoveAccount(account.id)
                 }
-                .buttonStyle(DashboardSubtleButtonStyle())
+                .buttonStyle(DashboardWarningButtonStyle())
             }
         }
     }
