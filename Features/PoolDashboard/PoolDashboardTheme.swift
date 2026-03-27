@@ -27,8 +27,8 @@ enum PoolDashboardTheme {
         endPoint: .bottomTrailing
     )
 
-    static let sectionSpacing: CGFloat = 20
-    static let panelPadding: CGFloat = 24
+    static let sectionSpacing: CGFloat = 22
+    static let panelPadding: CGFloat = 26
     static let panelCornerRadius: CGFloat = 20
     static let tileCornerRadius: CGFloat = 14
     static let badgeCornerRadius: CGFloat = 999
