@@ -252,6 +252,7 @@ struct PoolDashboardView: View {
         }
         .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
         .padding(PoolDashboardTheme.panelPadding)
+        .groupBoxStyle(DashboardGroupBoxStyle())
         .animation(.easeInOut(duration: 0.25), value: state.mode)
         .animation(.easeInOut(duration: 0.25), value: viewState.isSyncingUsage)
     }
