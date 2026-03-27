@@ -30,5 +30,6 @@ struct GlassPanel<Content: View>: View {
                     )
             )
             .shadow(color: .black.opacity(0.30), radius: 24, x: 0, y: 14)
+            .shadow(color: PoolDashboardTheme.glowA.opacity(0.10), radius: 18, x: -6, y: -8)
     }
 }
