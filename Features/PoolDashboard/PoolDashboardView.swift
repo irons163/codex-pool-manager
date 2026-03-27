@@ -136,6 +136,11 @@ struct PoolDashboardView: View {
                 subtitle: "Configure switching policy and monitor active execution account."
             )
             pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
+
+            PanelSectionHeaderView(
+                title: "Capacity",
+                subtitle: "Track aggregate pool usage posture and enforce reset controls when exhausted."
+            )
             overallUsagePanel
 
             PanelSectionHeaderView(
