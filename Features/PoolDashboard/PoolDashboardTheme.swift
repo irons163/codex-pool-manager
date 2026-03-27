@@ -70,6 +70,7 @@ enum PoolDashboardTheme {
     static let panelGlowShadowRadius: CGFloat = 20
     static let headerAccentRuleWidth: CGFloat = 180
     static let tileShadowRadius: CGFloat = 10
+    static let cardShadowYOffset: CGFloat = 6
     static let headerTileVerticalPadding: CGFloat = 11
     static let headerTileHorizontalPadding: CGFloat = 12
     static let usageListMinHeight: CGFloat = 260
