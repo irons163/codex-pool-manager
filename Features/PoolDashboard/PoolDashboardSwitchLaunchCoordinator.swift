@@ -62,6 +62,17 @@ struct PoolDashboardSwitchLaunchCoordinator {
         func switchFailureMessage(_ error: Error) -> String {
             Message.switchFailurePrefix + error.localizedDescription
         }
+        func outputForError(
+            _ error: Error,
+            logPrefix: String,
+            sessionAuthorizedAuthFileURL: URL?
+        ) -> Output {
+            append("\(logPrefix)：\(error.localizedDescription)")
+            return output(
+                errorMessage: switchFailureMessage(error),
+                sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+            )
+        }
 
         let chatGPTAccountID: String
         do {
@@ -73,9 +84,9 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         } catch {
-            append("錯誤：\(error.localizedDescription)")
-            return output(
-                errorMessage: switchFailureMessage(error),
+            return outputForError(
+                error,
+                logPrefix: "錯誤",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
@@ -97,9 +108,9 @@ struct PoolDashboardSwitchLaunchCoordinator {
                     sessionAuthorizedAuthFileURL: authFileURL
                 )
             } catch {
-                append("\(failureLogPrefix)：\(error.localizedDescription)")
-                return output(
-                    errorMessage: switchFailureMessage(error),
+                return outputForError(
+                    error,
+                    logPrefix: failureLogPrefix,
                     sessionAuthorizedAuthFileURL: failureSessionAuthorizedAuthFileURL
                 )
             }
@@ -132,9 +143,9 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 failureSessionAuthorizedAuthFileURL: authorizedURL
             )
         } catch {
-            append("錯誤：\(error.localizedDescription)")
-            return output(
-                errorMessage: switchFailureMessage(error),
+            return outputForError(
+                error,
+                logPrefix: "錯誤",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
