@@ -76,3 +76,23 @@ struct DashboardGroupBoxStyle: GroupBoxStyle {
         }
     }
 }
+
+struct DashboardPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .padding(.vertical, 9)
+            .padding(.horizontal, 14)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(PoolDashboardTheme.glowA.opacity(configuration.isPressed ? 0.72 : 0.92))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Color.white.opacity(0.28), lineWidth: 1)
+            )
+            .foregroundStyle(.white)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
