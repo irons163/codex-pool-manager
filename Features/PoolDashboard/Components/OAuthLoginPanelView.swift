@@ -60,25 +60,11 @@ struct OAuthLoginPanelView: View {
 
                     if let oauthSuccessMessage {
                         Text(oauthSuccessMessage)
-                            .font(.footnote)
-                            .foregroundStyle(PoolDashboardTheme.glowB)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 8)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(PoolDashboardTheme.glowB.opacity(0.20))
-                            )
+                            .statusBadge(tone: PoolDashboardTheme.success.opacity(0.26))
                     }
                     if let oauthError {
                         Text(oauthError)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 8)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.red.opacity(0.20))
-                            )
+                            .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.26))
                     }
                 }
             }
