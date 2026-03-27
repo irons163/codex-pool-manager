@@ -123,144 +123,32 @@ struct PoolDashboardView: View {
                 modeTitle: state.mode.rawValue
             )
 
-            SyncToolbarView(
-                isSyncing: viewState.isSyncingUsage,
-                lastSyncAt: state.lastUsageSyncAt,
-                errorText: viewState.syncError
-            ) {
-                Task { await syncCodexUsage() }
-            }
+            syncToolbarPanel
 
-            DebugToolsPanelView(
-                showUsageRawJSON: $viewState.showUsageRawJSON,
-                lastUsageRawJSON: $viewState.lastUsageRawJSON,
-                showSwitchLaunchLog: $viewState.showSwitchLaunchLog,
-                lastSwitchLaunchLog: $viewState.lastSwitchLaunchLog
+            sectionHeader(
+                title: "Authentication",
+                subtitle: "Manage sign-in flows and import local Codex sessions."
             )
+            pairedPanels(primary: oauthLoginPanel, secondary: localOAuthAccountsPanel)
 
-            OAuthLoginPanelView(
-                oauthIssuer: $oauthIssuer,
-                oauthClientID: $oauthClientID,
-                oauthScopes: $oauthScopes,
-                oauthRedirectURI: $oauthRedirectURI,
-                oauthOriginator: $oauthOriginator,
-                oauthWorkspaceID: $oauthWorkspaceID,
-                oauthAccountName: $formState.oauthAccountName,
-                oauthAccountQuota: $formState.oauthAccountQuota,
-                isSigningInOAuth: viewState.isSigningInOAuth,
-                oauthSuccessMessage: viewState.oauthSuccessMessage,
-                oauthError: viewState.oauthError,
-                onSignIn: {
-                    await signInWithOAuth()
-                }
+            sectionHeader(
+                title: "Runtime Strategy",
+                subtitle: "Configure switching policy and monitor active execution account."
             )
+            pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
+            overallUsagePanel
 
-            LocalOAuthAccountsPanelView(
-                accounts: localOAuthImportViewModel.accounts,
-                errorMessage: localOAuthImportViewModel.errorMessage,
-                onScan: {
-                    refreshLocalOAuthAccounts()
-                },
-                onChooseAuthFile: {
-                    _ = openAuthFilePanel()
-                },
-                onImport: { account in
-                    await importLocalOAuthAccount(account)
-                }
+            sectionHeader(
+                title: "Operations",
+                subtitle: "Track account usage and recent activity in one place."
             )
+            pairedPanels(primary: accountUsagePanel, secondary: activityLogPanel)
 
-            StrategySettingsPanelView(
-                mode: state.mode,
-                accounts: state.accounts,
-                intelligentCandidateName: intelligentCandidateName,
-                canIntelligentSwitch: state.canIntelligentSwitch(),
-                intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
-                modeBinding: strategyBindings.mode,
-                manualSelectionBinding: strategyBindings.manualSelection,
-                minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
-                lowThresholdBinding: strategyBindings.lowThreshold,
-                minUsageDeltaBinding: strategyBindings.minUsageDelta
+            sectionHeader(
+                title: "Safety & Debug",
+                subtitle: "Backup state and inspect raw diagnostics."
             )
-
-            OverallUsagePanelView(
-                totalUsedUnits: state.totalUsedUnits,
-                totalQuota: state.totalQuota,
-                overallUsageRatio: state.overallUsageRatio,
-                availableAccountsCount: state.availableAccountsCount,
-                isPoolExhausted: state.isPoolExhausted,
-                resetAllButtonTitle: resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量",
-                onResetAll: {
-                    handleResetAllUsage()
-                }
-            )
-
-            ActiveAccountPanelView(
-                activeAccount: state.activeAccount,
-                mode: state.mode,
-                isFocusLockActive: state.isFocusLockActive,
-                hasLowUsageWarning: state.hasLowUsageWarning,
-                lowUsageThresholdRatio: state.lowUsageThresholdRatio,
-                onSimulateUsage: {
-                    handleSimulateUsage()
-                },
-                onEvaluateSwitch: {
-                    handleEvaluateSwitch()
-                }
-            )
-
-            AccountUsagePanelView(
-                newAccountName: $formState.newAccountName,
-                newAccountQuota: $formState.newAccountQuota,
-                accounts: state.accounts,
-                onAddAccount: { name, quota in
-                    handleAddAccount(name: name, quota: quota)
-                },
-                onSwitchAndLaunch: { account in
-                    await switchAndLaunchCodex(using: account)
-                },
-                onRemoveAccount: { accountID in
-                    handleRemoveAccount(accountID: accountID)
-                },
-                accountNameBinding: { accountID in
-                    accountBindings.nameBinding(for: accountID)
-                },
-                accountQuotaBinding: { accountID in
-                    accountBindings.quotaBinding(for: accountID)
-                },
-                accountUsedBinding: { accountID in
-                    accountBindings.usedBinding(for: accountID)
-                },
-                usageSourceLabel: { account in
-                    usagePresenter.usageSourceLabel(for: account)
-                },
-                usageWindowDetailLabel: { account in
-                    usagePresenter.usageWindowDetailLabel(for: account)
-                },
-                isPercentUsageAccount: { account in
-                    usagePresenter.isPercentUsageAccount(account)
-                },
-                remainingLabel: { account in
-                    usagePresenter.remainingLabel(for: account)
-                },
-                usageProgressColor: { account in
-                    usagePresenter.usageProgressColor(for: account)
-                }
-            )
-
-            ActivityLogPanelView(
-                activities: state.activities,
-                onClearActivities: {
-                    handleClearActivities()
-                }
-            )
-
-            BackupRestorePanelView(
-                backupJSON: $viewState.backupJSON,
-                backupError: $viewState.backupError,
-                onExport: exportSnapshot,
-                onExportRefetchable: exportRefetchableSnapshot,
-                onImport: importSnapshot
-            )
+            pairedPanels(primary: backupRestorePanel, secondary: debugToolsPanel)
         }
         .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
         .padding(PoolDashboardTheme.panelPadding)
@@ -269,6 +157,195 @@ struct PoolDashboardView: View {
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: viewState.isSyncingUsage)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showUsageRawJSON)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showSwitchLaunchLog)
+    }
+
+    private var syncToolbarPanel: some View {
+        SyncToolbarView(
+            isSyncing: viewState.isSyncingUsage,
+            lastSyncAt: state.lastUsageSyncAt,
+            errorText: viewState.syncError
+        ) {
+            Task { await syncCodexUsage() }
+        }
+    }
+
+    private var oauthLoginPanel: some View {
+        OAuthLoginPanelView(
+            oauthIssuer: $oauthIssuer,
+            oauthClientID: $oauthClientID,
+            oauthScopes: $oauthScopes,
+            oauthRedirectURI: $oauthRedirectURI,
+            oauthOriginator: $oauthOriginator,
+            oauthWorkspaceID: $oauthWorkspaceID,
+            oauthAccountName: $formState.oauthAccountName,
+            oauthAccountQuota: $formState.oauthAccountQuota,
+            isSigningInOAuth: viewState.isSigningInOAuth,
+            oauthSuccessMessage: viewState.oauthSuccessMessage,
+            oauthError: viewState.oauthError,
+            onSignIn: {
+                await signInWithOAuth()
+            }
+        )
+    }
+
+    private var localOAuthAccountsPanel: some View {
+        LocalOAuthAccountsPanelView(
+            accounts: localOAuthImportViewModel.accounts,
+            errorMessage: localOAuthImportViewModel.errorMessage,
+            onScan: {
+                refreshLocalOAuthAccounts()
+            },
+            onChooseAuthFile: {
+                _ = openAuthFilePanel()
+            },
+            onImport: { account in
+                await importLocalOAuthAccount(account)
+            }
+        )
+    }
+
+    private var strategySettingsPanel: some View {
+        StrategySettingsPanelView(
+            mode: state.mode,
+            accounts: state.accounts,
+            intelligentCandidateName: intelligentCandidateName,
+            canIntelligentSwitch: state.canIntelligentSwitch(),
+            intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
+            modeBinding: strategyBindings.mode,
+            manualSelectionBinding: strategyBindings.manualSelection,
+            minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
+            lowThresholdBinding: strategyBindings.lowThreshold,
+            minUsageDeltaBinding: strategyBindings.minUsageDelta
+        )
+    }
+
+    private var overallUsagePanel: some View {
+        OverallUsagePanelView(
+            totalUsedUnits: state.totalUsedUnits,
+            totalQuota: state.totalQuota,
+            overallUsageRatio: state.overallUsageRatio,
+            availableAccountsCount: state.availableAccountsCount,
+            isPoolExhausted: state.isPoolExhausted,
+            resetAllButtonTitle: resetAllLatch.isArmed ? "再次點擊確認重設全部" : "重設全部用量",
+            onResetAll: {
+                handleResetAllUsage()
+            }
+        )
+    }
+
+    private var activeAccountPanel: some View {
+        ActiveAccountPanelView(
+            activeAccount: state.activeAccount,
+            mode: state.mode,
+            isFocusLockActive: state.isFocusLockActive,
+            hasLowUsageWarning: state.hasLowUsageWarning,
+            lowUsageThresholdRatio: state.lowUsageThresholdRatio,
+            onSimulateUsage: {
+                handleSimulateUsage()
+            },
+            onEvaluateSwitch: {
+                handleEvaluateSwitch()
+            }
+        )
+    }
+
+    private var accountUsagePanel: some View {
+        AccountUsagePanelView(
+            newAccountName: $formState.newAccountName,
+            newAccountQuota: $formState.newAccountQuota,
+            accounts: state.accounts,
+            onAddAccount: { name, quota in
+                handleAddAccount(name: name, quota: quota)
+            },
+            onSwitchAndLaunch: { account in
+                await switchAndLaunchCodex(using: account)
+            },
+            onRemoveAccount: { accountID in
+                handleRemoveAccount(accountID: accountID)
+            },
+            accountNameBinding: { accountID in
+                accountBindings.nameBinding(for: accountID)
+            },
+            accountQuotaBinding: { accountID in
+                accountBindings.quotaBinding(for: accountID)
+            },
+            accountUsedBinding: { accountID in
+                accountBindings.usedBinding(for: accountID)
+            },
+            usageSourceLabel: { account in
+                usagePresenter.usageSourceLabel(for: account)
+            },
+            usageWindowDetailLabel: { account in
+                usagePresenter.usageWindowDetailLabel(for: account)
+            },
+            isPercentUsageAccount: { account in
+                usagePresenter.isPercentUsageAccount(account)
+            },
+            remainingLabel: { account in
+                usagePresenter.remainingLabel(for: account)
+            },
+            usageProgressColor: { account in
+                usagePresenter.usageProgressColor(for: account)
+            }
+        )
+    }
+
+    private var activityLogPanel: some View {
+        ActivityLogPanelView(
+            activities: state.activities,
+            onClearActivities: {
+                handleClearActivities()
+            }
+        )
+    }
+
+    private var backupRestorePanel: some View {
+        BackupRestorePanelView(
+            backupJSON: $viewState.backupJSON,
+            backupError: $viewState.backupError,
+            onExport: exportSnapshot,
+            onExportRefetchable: exportRefetchableSnapshot,
+            onImport: importSnapshot
+        )
+    }
+
+    private var debugToolsPanel: some View {
+        DebugToolsPanelView(
+            showUsageRawJSON: $viewState.showUsageRawJSON,
+            lastUsageRawJSON: $viewState.lastUsageRawJSON,
+            showSwitchLaunchLog: $viewState.showSwitchLaunchLog,
+            lastSwitchLaunchLog: $viewState.lastSwitchLaunchLog
+        )
+    }
+
+    @ViewBuilder
+    private func sectionHeader(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .tracking(PoolDashboardTheme.metadataTracking)
+            Text(subtitle)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private func pairedPanels<Primary: View, Secondary: View>(
+        primary: Primary,
+        secondary: Secondary
+    ) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                primary.frame(maxWidth: .infinity, alignment: .topLeading)
+                secondary.frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                primary
+                secondary
+            }
+        }
     }
 
     // MARK: - Lifecycle
