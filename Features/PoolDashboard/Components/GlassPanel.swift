@@ -11,6 +11,16 @@ struct GlassPanel<Content: View>: View {
                     .fill(PoolDashboardTheme.panelFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.08), .clear],
+                                    startPoint: .topLeading,
+                                    endPoint: .center
+                                )
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
                             .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
                     )
                     .overlay(
