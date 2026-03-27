@@ -17,7 +17,11 @@ struct OAuthLoginPanelView: View {
 
     var body: some View {
         GroupBox("OAuth 登入（你自行填 client_id）") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("輸入 Client ID 後可直接登入，進階參數通常維持預設即可。")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
                 TextField("Client ID", text: $oauthClientID)
                     .textFieldStyle(.roundedBorder)
 
@@ -34,19 +38,24 @@ struct OAuthLoginPanelView: View {
                         TextField("Allowed Workspace ID（可留空）", text: $oauthWorkspaceID)
                             .textFieldStyle(.roundedBorder)
                     }
-                    .padding(.top, 4)
-                    .padding(10)
+                    .padding(.top, 6)
+                    .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(PoolDashboardTheme.panelFill.opacity(0.66))
+                            .fill(PoolDashboardTheme.panelMutedFill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            )
                     )
                 }
-                .foregroundStyle(.white.opacity(0.86))
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
 
-                HStack {
+                HStack(alignment: .center, spacing: 12) {
                     TextField("登入後帳號名稱", text: $oauthAccountName)
                         .textFieldStyle(.roundedBorder)
                     Stepper("配額 \(oauthAccountQuota)", value: $oauthAccountQuota, in: 100...20_000, step: 100)
+                        .monospacedDigit()
                 }
 
                 HStack {
