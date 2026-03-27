@@ -33,27 +33,11 @@ struct StrategySettingsPanelView: View {
 
         GroupBox("Strategy Parameters") {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
-                Stepper(
-                    "Minimum switch interval: \(Int(minSwitchIntervalBinding.wrappedValue))s",
-                    value: minSwitchIntervalBinding,
-                    in: 30...1800,
-                    step: 30
-                )
-                .dashboardInfoCard()
-
                 VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
                     Text("Low-usage alert threshold: \(Int(lowThresholdBinding.wrappedValue * 100))%")
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                     Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
                         .tint(PoolDashboardTheme.glowA)
-                }
-                .dashboardInfoCard()
-
-                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                    Text("Minimum improvement for smart switch: \(Int(minUsageDeltaBinding.wrappedValue * 100))%")
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    Slider(value: minUsageDeltaBinding, in: 0...0.2, step: 0.01)
-                        .tint(PoolDashboardTheme.glowB)
                 }
                 .dashboardInfoCard()
 
