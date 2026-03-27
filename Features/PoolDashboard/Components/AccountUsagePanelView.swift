@@ -118,6 +118,7 @@ struct AccountUsagePanelView: View {
                 .frame(minHeight: 220)
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
     }
 }
