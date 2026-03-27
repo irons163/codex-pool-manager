@@ -30,7 +30,7 @@ struct PoolDashboardBackupFlowCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) -> Bool {
-        let result = backupCoordinator.importSnapshotState(from: viewState.backupJSON)
+        let result = importSnapshotResult(from: viewState.backupJSON)
         return mutationCoordinator.applyBackupImportResult(
             result,
             state: &state,
@@ -45,6 +45,12 @@ struct PoolDashboardBackupFlowCoordinator {
     ) {
         let result = exporter(snapshot)
         mutationCoordinator.applyBackupExportResult(result, viewState: &viewState)
+    }
+
+    private func importSnapshotResult(
+        from backupJSON: String
+    ) -> PoolDashboardBackupCoordinator.ImportResult {
+        backupCoordinator.importSnapshotState(from: backupJSON)
     }
 
 }
