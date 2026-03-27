@@ -60,11 +60,11 @@ struct AccountUsagePanelView: View {
                                         await onSwitchAndLaunch(account)
                                     }
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(PoolDashboardTheme.glowB)
+                                .buttonStyle(DashboardPrimaryButtonStyle())
                                 Button("刪除", role: .destructive) {
                                     onRemoveAccount(account.id)
                                 }
+                                .buttonStyle(DashboardSubtleButtonStyle())
                             }
 
                             if isPercentUsageAccount(account) {
