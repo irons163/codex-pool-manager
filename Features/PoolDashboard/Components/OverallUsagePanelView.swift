@@ -38,10 +38,10 @@ struct OverallUsagePanelView: View {
                     .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
 
                 if isPoolExhausted {
-                    Text("All accounts are exhausted. Increase quota or reset usage to resume switching.")
-                        .font(.subheadline)
-                        .foregroundStyle(PoolDashboardTheme.danger)
-                        .calloutCard(fill: PoolDashboardTheme.danger.opacity(0.18))
+                    PanelStatusCalloutView(
+                        message: "All accounts are exhausted. Increase quota or reset usage to resume switching.",
+                        tone: .danger
+                    )
                 }
             }
         }
