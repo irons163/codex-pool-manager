@@ -26,6 +26,7 @@ struct LocalOAuthAccountsPanelView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(account.displayName)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                                     .foregroundStyle(PoolDashboardTheme.textPrimary)
                                 if let email = account.email {
                                     Text(email)
