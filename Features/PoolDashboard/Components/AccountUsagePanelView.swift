@@ -43,15 +43,15 @@ struct AccountUsagePanelView: View {
                                     if let chatGPTAccountID = account.chatGPTAccountID {
                                         Text("Account ID: \(chatGPTAccountID)")
                                             .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.62))
+                                            .foregroundStyle(PoolDashboardTheme.textMuted)
                                     }
                                     Text(usageSourceLabel(account))
                                         .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.62))
+                                        .foregroundStyle(PoolDashboardTheme.textMuted)
                                     if let usageWindowDetail = usageWindowDetailLabel(account) {
                                         Text(usageWindowDetail)
                                             .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.62))
+                                            .foregroundStyle(PoolDashboardTheme.textMuted)
                                     }
                                 }
                                 Spacer()
@@ -94,12 +94,12 @@ struct AccountUsagePanelView: View {
                             HStack {
                                 Text(remainingLabel(account))
                                     .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.66))
+                                    .foregroundStyle(PoolDashboardTheme.textMuted)
                                 Spacer()
                                 Text("\(Int(account.usageRatio * 100))%")
                                     .font(.caption)
                                     .monospacedDigit()
-                                    .foregroundStyle(.white.opacity(0.66))
+                                    .foregroundStyle(PoolDashboardTheme.textMuted)
                             }
 
                             ProgressView(value: account.usageRatio)
@@ -108,7 +108,11 @@ struct AccountUsagePanelView: View {
                         .padding(.vertical, 4)
                         .listRowBackground(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(PoolDashboardTheme.panelFill.opacity(0.65))
+                                .fill(PoolDashboardTheme.panelMutedFill)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                )
                                 .padding(.vertical, 2)
                         )
                     }
