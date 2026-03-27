@@ -32,6 +32,7 @@ enum PoolDashboardTheme {
     static let panelCornerRadius: CGFloat = 20
     static let tileCornerRadius: CGFloat = 14
     static let badgeCornerRadius: CGFloat = 999
+    static let sectionCardPadding: CGFloat = 12
     static let glowLargeSize: CGFloat = 420
     static let glowMediumSize: CGFloat = 360
     static let glowLargeBlur: CGFloat = 70
