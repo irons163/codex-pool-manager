@@ -45,43 +45,29 @@ struct SyncToolbarView: View {
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
             }
 
-            Button(isSyncing ? "同步中..." : "同步 Codex 用量") {
+            Button(isSyncing ? "Syncing..." : "Sync Codex Usage") {
                 onSync()
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSyncing)
 
             if let lastSyncAt {
-                badge(
-                    "Last: \(lastSyncAt.formatted(date: .omitted, time: .standard))",
-                    tone: PoolDashboardTheme.panelMutedFill,
-                    useMonospacedDigits: true
+                PanelStatusCalloutView(
+                    message: lastSyncAt.formatted(date: .omitted, time: .standard),
+                    title: "Last Successful Sync",
+                    tone: .info
                 )
+                .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)
             }
 
             if let errorText {
-                badge(errorText, tone: PoolDashboardTheme.danger.opacity(0.28), useMonospacedDigits: false)
+                PanelStatusCalloutView(
+                    message: errorText,
+                    title: "Sync Error",
+                    tone: .danger
+                )
+                .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)
             }
         }
-    }
-
-    private func badge(
-        _ text: String,
-        tone: Color,
-        useMonospacedDigits: Bool
-    ) -> some View {
-        Group {
-            if useMonospacedDigits {
-                Text(text)
-                    .font(.footnote)
-                    .monospacedDigit()
-            } else {
-                Text(text)
-                    .font(.footnote)
-            }
-        }
-        .lineLimit(1)
-        .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)
-        .statusBadge(tone: tone)
     }
 }
