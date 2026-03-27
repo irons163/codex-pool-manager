@@ -99,6 +99,7 @@ struct AccountUsagePanelView: View {
                                 Spacer()
                                 Text("\(Int(account.usageRatio * 100))%")
                                     .font(.caption)
+                                    .monospacedDigit()
                                     .foregroundStyle(.white.opacity(0.66))
                             }
 
