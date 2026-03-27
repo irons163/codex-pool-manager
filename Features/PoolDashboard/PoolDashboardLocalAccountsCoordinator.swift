@@ -82,7 +82,7 @@ struct PoolDashboardLocalAccountsCoordinator {
                 viewModel: &viewModel,
                 authFileAccessService: authFileAccessService
             )
-            return BookmarkLoadResult(
+            return makeBookmarkSuccessResult(
                 didLoadAccounts: !viewModel.accounts.isEmpty,
                 authorizedURL: resolved.url
             )
@@ -146,6 +146,16 @@ struct PoolDashboardLocalAccountsCoordinator {
         BookmarkLoadResult(
             didLoadAccounts: false,
             authorizedURL: currentAuthorizedAuthFileURL
+        )
+    }
+
+    private func makeBookmarkSuccessResult(
+        didLoadAccounts: Bool,
+        authorizedURL: URL
+    ) -> BookmarkLoadResult {
+        BookmarkLoadResult(
+            didLoadAccounts: didLoadAccounts,
+            authorizedURL: authorizedURL
         )
     }
 }
