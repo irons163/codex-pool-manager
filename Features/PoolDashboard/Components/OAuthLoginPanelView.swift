@@ -41,6 +41,7 @@ struct OAuthLoginPanelView: View {
                             .fill(PoolDashboardTheme.panelFill.opacity(0.66))
                     )
                 }
+                .foregroundStyle(.white.opacity(0.86))
 
                 HStack {
                     TextField("登入後帳號名稱", text: $oauthAccountName)
