@@ -26,7 +26,7 @@ struct OAuthLoginPanelView: View {
                     .dashboardInputFieldStyle()
 
                 DisclosureGroup("進階設定（一般情況不用改）") {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
                         TextField("Issuer (例如 https://auth.openai.com)", text: $oauthIssuer)
                             .dashboardInputFieldStyle()
                         TextField("Scopes", text: $oauthScopes)
