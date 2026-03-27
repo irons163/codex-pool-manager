@@ -20,6 +20,7 @@ struct StrategySettingsPanelView: View {
             }
         }
         .pickerStyle(.segmented)
+        .tint(PoolDashboardTheme.glowA)
 
         GroupBox("策略設定") {
             VStack(alignment: .leading, spacing: 10) {
@@ -44,20 +45,21 @@ struct StrategySettingsPanelView: View {
                     if let intelligentCandidateName {
                         Text("推薦切換帳號：\(intelligentCandidateName)")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.72))
                     }
                     if canIntelligentSwitch {
                         Text("目前可切換帳號")
                             .font(.subheadline)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(PoolDashboardTheme.glowB)
                     } else {
                         Text("冷卻中，\(intelligentCooldownRemaining) 秒後可切換")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.72))
                     }
                 }
             }
         }
+        .tint(PoolDashboardTheme.glowA)
 
         if mode == .manual, !accounts.isEmpty {
             Picker("手動帳號", selection: manualSelectionBinding) {
