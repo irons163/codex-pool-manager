@@ -16,20 +16,22 @@ struct OverallUsagePanelView: View {
                     Text("總用量 \(totalUsedUnits)/\(totalQuota)")
                     Spacer()
                     Text("\(Int(overallUsageRatio * 100))%")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.70))
                 }
 
                 ProgressView(value: overallUsageRatio)
+                    .tint(PoolDashboardTheme.glowA)
 
                 Button(resetAllButtonTitle) {
                     onResetAll()
                 }
                 .buttonStyle(.bordered)
+                .tint(.orange)
 
                 HStack {
                     Text("可用帳號數 \(availableAccountsCount)")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.72))
                     Spacer()
                 }
 
@@ -40,5 +42,6 @@ struct OverallUsagePanelView: View {
                 }
             }
         }
+        .tint(PoolDashboardTheme.glowA)
     }
 }
