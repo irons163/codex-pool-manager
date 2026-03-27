@@ -37,7 +37,7 @@ struct PoolDashboardLifecycleFlowCoordinator {
             currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
         )
 
-        return OnAppearOutput(
+        return makeOnAppearOutput(
             state: localAccountsOutput.state,
             lowUsageAlertPolicy: nextLowUsageAlertPolicy,
             viewModel: localAccountsOutput.viewModel,
@@ -66,6 +66,20 @@ struct PoolDashboardLifecycleFlowCoordinator {
         return SnapshotChangeOutput(
             lowUsageAlertPolicy: nextLowUsageAlertPolicy,
             viewState: nextViewState
+        )
+    }
+
+    private func makeOnAppearOutput(
+        state: AccountPoolState,
+        lowUsageAlertPolicy: LowUsageAlertPolicy,
+        viewModel: LocalOAuthImportViewModel,
+        sessionAuthorizedAuthFileURL: URL?
+    ) -> OnAppearOutput {
+        OnAppearOutput(
+            state: state,
+            lowUsageAlertPolicy: lowUsageAlertPolicy,
+            viewModel: viewModel,
+            sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
     }
 }
