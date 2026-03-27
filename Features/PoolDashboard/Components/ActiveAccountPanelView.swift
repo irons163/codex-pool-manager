@@ -11,15 +11,19 @@ struct ActiveAccountPanelView: View {
     let onEvaluateSwitch: () -> Void
 
     var body: some View {
-        GroupBox("目前使用帳號") {
+        GroupBox("Active Account") {
             VStack(alignment: .leading, spacing: 10) {
+                Text("Inspect live consumption and trigger switch evaluation immediately.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
                 if let activeAccount {
                     HStack {
                         Text(activeAccount.name)
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(PoolDashboardTheme.textPrimary)
                         Spacer()
-                        Text("剩餘 \(activeAccount.remainingUnits)")
+                        Text("Remaining \(activeAccount.remainingUnits)")
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(PoolDashboardTheme.textSecondary)
@@ -30,13 +34,13 @@ struct ActiveAccountPanelView: View {
                         .scaleEffect(x: 1, y: 1.2, anchor: .center)
 
                     if isFocusLockActive {
-                        Text("專注模式鎖定中")
+                        Text("Focus lock is active")
                             .font(.subheadline)
                             .foregroundStyle(PoolDashboardTheme.glowA)
                     }
 
                     if mode == .focus && hasLowUsageWarning {
-                        Text("低剩餘用量提醒：目前帳號剩餘不足 \(Int(lowUsageThresholdRatio * 100))%")
+                        Text("Low-usage alert: remaining balance is below \(Int(lowUsageThresholdRatio * 100))%")
                             .font(.subheadline)
                             .foregroundStyle(PoolDashboardTheme.warning)
                             .calloutCard(
@@ -46,18 +50,18 @@ struct ActiveAccountPanelView: View {
                     }
 
                     HStack {
-                        Button("模擬使用 +50") {
+                        Button("Simulate +50") {
                             onSimulateUsage()
                         }
                         .buttonStyle(DashboardPrimaryButtonStyle())
 
-                        Button("重新評估切換") {
+                        Button("Re-evaluate switch") {
                             onEvaluateSwitch()
                         }
                         .buttonStyle(DashboardSubtleButtonStyle())
                     }
                 } else {
-                    Label("目前沒有可用帳號", systemImage: "person.crop.circle.badge.exclamationmark")
+                    Label("No available account", systemImage: "person.crop.circle.badge.exclamationmark")
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                 }
             }

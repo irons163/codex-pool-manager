@@ -10,10 +10,14 @@ struct OverallUsagePanelView: View {
     let onResetAll: () -> Void
 
     var body: some View {
-        GroupBox("整體用量") {
+        GroupBox("Pool Overview") {
             VStack(alignment: .leading, spacing: 10) {
+                Text("Monitor aggregate capacity and reset usage during controlled maintenance windows.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
                 HStack {
-                    Text("總用量 \(totalUsedUnits)/\(totalQuota)")
+                    Text("Total usage \(totalUsedUnits)/\(totalQuota)")
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                     Spacer()
                     Text("\(Int(overallUsageRatio * 100))%")
@@ -30,11 +34,11 @@ struct OverallUsagePanelView: View {
                 }
                 .buttonStyle(DashboardWarningButtonStyle())
 
-                Text("可用帳號數 \(availableAccountsCount)")
+                Text("Available accounts: \(availableAccountsCount)")
                     .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
 
                 if isPoolExhausted {
-                    Text("所有帳號用量已耗盡，請補充配額或重設用量。")
+                    Text("All accounts are exhausted. Increase quota or reset usage to resume switching.")
                         .font(.subheadline)
                         .foregroundStyle(PoolDashboardTheme.danger)
                         .calloutCard(fill: PoolDashboardTheme.danger.opacity(0.18))
