@@ -17,7 +17,7 @@ struct OAuthLoginPanelView: View {
 
     var body: some View {
         GroupBox("OAuth 登入（你自行填 client_id）") {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text("輸入 Client ID 後可直接登入，進階參數通常維持預設即可。")
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
