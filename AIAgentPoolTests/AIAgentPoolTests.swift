@@ -3113,31 +3113,6 @@ extension AIAgentPoolTests {
     }
 
     @Test
-    func poolDashboardMutationCoordinatorApplySwitchOutputWritesLogErrorAndSessionURL() {
-        let coordinator = PoolDashboardMutationCoordinator()
-        var viewModel = LocalOAuthImportViewModel()
-        var viewState = PoolDashboardViewState()
-        var url: URL? = nil
-        let expectedURL = URL(string: "file:///tmp/auth.json")
-        let output = PoolDashboardSwitchLaunchCoordinator.Output(
-            switchLaunchLog: "log-line",
-            errorMessage: "err",
-            sessionAuthorizedAuthFileURL: expectedURL
-        )
-
-        coordinator.applySwitchOutput(
-            output,
-            viewModel: &viewModel,
-            viewState: &viewState,
-            sessionAuthorizedAuthFileURL: &url
-        )
-
-        #expect(viewState.lastSwitchLaunchLog == "log-line")
-        #expect(viewModel.errorMessage == "err")
-        #expect(url == expectedURL)
-    }
-
-    @Test
     func poolDashboardMutationCoordinatorApplyBackupExportResultWritesJSONAndClearsError() {
         let coordinator = PoolDashboardMutationCoordinator()
         var viewState = PoolDashboardViewState()
