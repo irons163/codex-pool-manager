@@ -50,5 +50,6 @@ struct DashboardHeaderSectionView: View {
                         .stroke(tone.opacity(0.55), lineWidth: 1)
                 )
         )
+        .shadow(color: tone.opacity(0.18), radius: 10, x: 0, y: 6)
     }
 }
