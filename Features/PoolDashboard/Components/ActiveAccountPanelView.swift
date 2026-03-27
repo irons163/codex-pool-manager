@@ -27,6 +27,7 @@ struct ActiveAccountPanelView: View {
 
                     ProgressView(value: activeAccount.usageRatio)
                         .tint(PoolDashboardTheme.glowB)
+                        .scaleEffect(x: 1, y: 1.2, anchor: .center)
 
                     if isFocusLockActive {
                         Text("專注模式鎖定中")
