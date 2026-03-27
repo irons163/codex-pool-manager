@@ -61,6 +61,7 @@ struct StrategySettingsPanelView: View {
                 }
             }
         }
+        .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
 
         if mode == .manual, !accounts.isEmpty {
