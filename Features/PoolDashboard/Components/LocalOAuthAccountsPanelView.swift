@@ -78,7 +78,7 @@ struct LocalOAuthAccountsPanelView: View {
                             .disabled(account.chatGPTAccountID == nil)
                             .tint(PoolDashboardTheme.glowA)
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 6)
                         .padding(.horizontal, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
