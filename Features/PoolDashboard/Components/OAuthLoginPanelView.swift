@@ -28,15 +28,15 @@ struct OAuthLoginPanelView: View {
                 DisclosureGroup("進階設定（一般情況不用改）") {
                     VStack(alignment: .leading, spacing: 8) {
                         TextField("Issuer (例如 https://auth.openai.com)", text: $oauthIssuer)
-                            .textFieldStyle(.roundedBorder)
+                            .dashboardInputFieldStyle()
                         TextField("Scopes", text: $oauthScopes)
-                            .textFieldStyle(.roundedBorder)
+                            .dashboardInputFieldStyle()
                         TextField("Redirect URI", text: $oauthRedirectURI)
-                            .textFieldStyle(.roundedBorder)
+                            .dashboardInputFieldStyle()
                         TextField("Originator", text: $oauthOriginator)
-                            .textFieldStyle(.roundedBorder)
+                            .dashboardInputFieldStyle()
                         TextField("Allowed Workspace ID（可留空）", text: $oauthWorkspaceID)
-                            .textFieldStyle(.roundedBorder)
+                            .dashboardInputFieldStyle()
                     }
                     .padding(.top, 6)
                     .padding(12)
