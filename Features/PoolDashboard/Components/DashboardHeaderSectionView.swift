@@ -22,7 +22,7 @@ struct DashboardHeaderSectionView: View {
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 dashboardTile(title: "帳號", value: "\(accountCount)", tone: .blue)
                 dashboardTile(title: "可用", value: "\(availableCount)", tone: .green)
                 dashboardTile(title: "總用量", value: "\(overallUsagePercent)%", tone: .orange)
