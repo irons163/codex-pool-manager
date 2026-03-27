@@ -63,7 +63,7 @@ struct PoolDashboardLifecycleFlowCoordinator {
             nextViewState.showLowUsageAlert = true
         }
 
-        return SnapshotChangeOutput(
+        return makeSnapshotChangeOutput(
             lowUsageAlertPolicy: nextLowUsageAlertPolicy,
             viewState: nextViewState
         )
@@ -80,6 +80,16 @@ struct PoolDashboardLifecycleFlowCoordinator {
             lowUsageAlertPolicy: lowUsageAlertPolicy,
             viewModel: viewModel,
             sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+        )
+    }
+
+    private func makeSnapshotChangeOutput(
+        lowUsageAlertPolicy: LowUsageAlertPolicy,
+        viewState: PoolDashboardViewState
+    ) -> SnapshotChangeOutput {
+        SnapshotChangeOutput(
+            lowUsageAlertPolicy: lowUsageAlertPolicy,
+            viewState: viewState
         )
     }
 }
