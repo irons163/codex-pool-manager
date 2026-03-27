@@ -84,6 +84,10 @@ struct StrategySettingsPanelView: View {
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(PoolDashboardTheme.panelMutedFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                    )
             )
         }
     }
