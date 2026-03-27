@@ -21,13 +21,13 @@ struct SyncToolbarView: View {
             if let lastSyncAt {
                 badge(
                     "最近同步：\(lastSyncAt.formatted(date: .omitted, time: .standard))",
-                    tone: .white.opacity(0.18),
+                    tone: PoolDashboardTheme.panelMutedFill,
                     useMonospacedDigits: true
                 )
             }
 
             if let errorText {
-                badge(errorText, tone: .red.opacity(0.35), useMonospacedDigits: false)
+                badge(errorText, tone: PoolDashboardTheme.danger.opacity(0.28), useMonospacedDigits: false)
             }
         }
         .padding(12)
