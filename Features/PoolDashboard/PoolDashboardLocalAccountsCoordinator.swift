@@ -62,9 +62,8 @@ struct PoolDashboardLocalAccountsCoordinator {
         currentAuthorizedAuthFileURL: URL?
     ) -> BookmarkLoadResult {
         guard authFileAccessService.hasSavedBookmark() else {
-            return BookmarkLoadResult(
-                didLoadAccounts: false,
-                authorizedURL: currentAuthorizedAuthFileURL
+            return makeBookmarkFallbackResult(
+                currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
 
@@ -89,9 +88,8 @@ struct PoolDashboardLocalAccountsCoordinator {
             )
         } catch {
             viewModel.applyBookmarkInvalid()
-            return BookmarkLoadResult(
-                didLoadAccounts: false,
-                authorizedURL: currentAuthorizedAuthFileURL
+            return makeBookmarkFallbackResult(
+                currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
     }
@@ -140,5 +138,14 @@ struct PoolDashboardLocalAccountsCoordinator {
             guard !improvedName.isEmpty, improvedName != persisted.name else { continue }
             state.updateAccount(persisted.id, name: improvedName)
         }
+    }
+
+    private func makeBookmarkFallbackResult(
+        currentAuthorizedAuthFileURL: URL?
+    ) -> BookmarkLoadResult {
+        BookmarkLoadResult(
+            didLoadAccounts: false,
+            authorizedURL: currentAuthorizedAuthFileURL
+        )
     }
 }
