@@ -120,7 +120,7 @@ struct AccountUsagePanelView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .frame(minHeight: 240)
+                .frame(minHeight: 260)
             }
         }
         .sectionCardStyle()
