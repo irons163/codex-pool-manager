@@ -39,15 +39,22 @@ struct SyncToolbarView: View {
         tone: Color,
         useMonospacedDigits: Bool
     ) -> some View {
-        Text(text)
-            .font(.footnote)
-            .monospacedDigit(useMonospacedDigits)
-            .foregroundStyle(.white.opacity(0.86))
-            .padding(.vertical, 5)
-            .padding(.horizontal, 10)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(tone)
-            )
+        Group {
+            if useMonospacedDigits {
+                Text(text)
+                    .font(.footnote)
+                    .monospacedDigit()
+            } else {
+                Text(text)
+                    .font(.footnote)
+            }
+        }
+        .foregroundStyle(.white.opacity(0.86))
+        .padding(.vertical, 5)
+        .padding(.horizontal, 10)
+        .background(
+            Capsule(style: .continuous)
+                .fill(tone)
+        )
     }
 }
