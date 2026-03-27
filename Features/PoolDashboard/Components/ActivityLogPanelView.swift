@@ -22,6 +22,7 @@ struct ActivityLogPanelView: View {
                         Text(activity.timestamp.formatted(date: .omitted, time: .standard))
                             .monospacedDigit()
                             .foregroundStyle(PoolDashboardTheme.textMuted)
+                            .frame(width: 96, alignment: .leading)
                         Text(activity.message)
                             .foregroundStyle(PoolDashboardTheme.textPrimary)
                     }
