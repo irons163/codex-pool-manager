@@ -93,7 +93,7 @@ struct PoolDashboardView: View {
                 }
             }
             .padding(.horizontal, PoolDashboardTheme.scrollHorizontalPadding)
-            .padding(.vertical, 10)
+            .padding(.vertical, PoolDashboardTheme.dashboardVerticalPadding)
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
