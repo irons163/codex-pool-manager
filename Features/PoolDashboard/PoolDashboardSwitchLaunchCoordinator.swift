@@ -1,6 +1,12 @@
 import Foundation
 
 struct PoolDashboardSwitchLaunchCoordinator {
+    private struct SwitchAttemptContext {
+        let authFileURL: URL
+        let failureLogPrefix: String
+        let failureSessionAuthorizedAuthFileURL: URL?
+    }
+
     private enum ValidationError: Error {
         case missingToken
         case missingAccountID
@@ -87,27 +93,23 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
         }
 
-        func attemptSwitch(
-            authFileURL: URL,
-            failureLogPrefix: String,
-            failureSessionAuthorizedAuthFileURL: URL?
-        ) async -> Output {
+        func attemptSwitch(_ context: SwitchAttemptContext) async -> Output {
             do {
                 try await performSwitchAndLaunch(
-                    authFileURL: authFileURL,
+                    authFileURL: context.authFileURL,
                     account: account,
                     chatGPTAccountID: chatGPTAccountID,
                     logger: append
                 )
                 return output(
                     errorMessage: nil,
-                    sessionAuthorizedAuthFileURL: authFileURL
+                    sessionAuthorizedAuthFileURL: context.authFileURL
                 )
             } catch {
                 return outputForError(
                     error,
-                    logPrefix: failureLogPrefix,
-                    sessionAuthorizedAuthFileURL: failureSessionAuthorizedAuthFileURL
+                    logPrefix: context.failureLogPrefix,
+                    sessionAuthorizedAuthFileURL: context.failureSessionAuthorizedAuthFileURL
                 )
             }
         }
@@ -116,11 +118,11 @@ struct PoolDashboardSwitchLaunchCoordinator {
             let authFileURL = try authFileAccessService.resolveAuthFileURLForSwitch(
                 sessionAuthorizedURL: currentAuthorizedAuthFileURL
             )
-            return await attemptSwitch(
+            return await attemptSwitch(.init(
                 authFileURL: authFileURL,
                 failureLogPrefix: "錯誤",
                 failureSessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
-            )
+            ))
         } catch CodexAuthFileAccessService.AccessError.missingAuthFile {
             append("尚未授權 auth.json，啟動選檔流程")
             guard let authorizedURL = authorizeAuthFile() else {
@@ -132,11 +134,11 @@ struct PoolDashboardSwitchLaunchCoordinator {
             }
 
             append("已取得授權，重試切換")
-            return await attemptSwitch(
+            return await attemptSwitch(.init(
                 authFileURL: authorizedURL,
                 failureLogPrefix: "重試失敗",
                 failureSessionAuthorizedAuthFileURL: authorizedURL
-            )
+            ))
         } catch {
             return outputForError(
                 error,
