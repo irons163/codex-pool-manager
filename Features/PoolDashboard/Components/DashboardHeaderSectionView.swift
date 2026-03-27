@@ -20,6 +20,15 @@ struct DashboardHeaderSectionView: View {
                     .font(PoolDashboardTheme.subtitleFont)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [PoolDashboardTheme.glowA.opacity(0.75), PoolDashboardTheme.glowB.opacity(0.45)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: 180, height: 3)
             }
 
             HStack(spacing: 14) {
