@@ -8,6 +8,7 @@ enum PoolDashboardTheme {
     static let panelFill = Color.white.opacity(0.07)
     static let panelStroke = Color.white.opacity(0.14)
     static let panelInnerStroke = Color.white.opacity(0.08)
+    static let panelBorderWidth: CGFloat = 1
 
     static let backgroundGradient = LinearGradient(
         colors: [
