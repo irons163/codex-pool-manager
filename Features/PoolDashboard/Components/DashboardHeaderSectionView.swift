@@ -62,6 +62,11 @@ struct DashboardHeaderSectionView: View {
                         .stroke(tone.opacity(0.55), lineWidth: PoolDashboardTheme.tileBorderWidth)
                 )
         )
-        .shadow(color: tone.opacity(0.18), radius: PoolDashboardTheme.tileShadowRadius, x: 0, y: 6)
+        .shadow(
+            color: tone.opacity(0.18),
+            radius: PoolDashboardTheme.tileShadowRadius,
+            x: 0,
+            y: PoolDashboardTheme.cardShadowYOffset
+        )
     }
 }
