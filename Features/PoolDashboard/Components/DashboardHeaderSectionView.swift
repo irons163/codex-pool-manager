@@ -59,7 +59,7 @@ struct DashboardHeaderSectionView: View {
                 .fill(PoolDashboardTheme.panelStrongFill)
                 .overlay(
                     RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                        .stroke(tone.opacity(0.55), lineWidth: 1)
+                        .stroke(tone.opacity(0.55), lineWidth: PoolDashboardTheme.tileBorderWidth)
                 )
         )
         .shadow(color: tone.opacity(0.18), radius: 10, x: 0, y: 6)
