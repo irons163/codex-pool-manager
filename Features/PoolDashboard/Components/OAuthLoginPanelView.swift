@@ -72,7 +72,7 @@ struct OAuthLoginPanelView: View {
     }
 
     private var oauthActionRow: some View {
-        HStack {
+        HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
             Button(isSigningInOAuth ? "OAuth 登入中..." : "OAuth 登入並新增帳號") {
                 Task {
                     await onSignIn()
