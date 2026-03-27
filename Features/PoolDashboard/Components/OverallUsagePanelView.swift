@@ -40,6 +40,7 @@ struct OverallUsagePanelView: View {
                 if isPoolExhausted {
                     PanelStatusCalloutView(
                         message: "All accounts are exhausted. Increase quota or reset usage to resume switching.",
+                        title: "Pool Exhausted",
                         tone: .danger
                     )
                 }

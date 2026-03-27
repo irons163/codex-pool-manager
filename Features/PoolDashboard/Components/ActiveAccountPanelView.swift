@@ -34,19 +34,19 @@ struct ActiveAccountPanelView: View {
                         .scaleEffect(x: 1, y: 1.2, anchor: .center)
 
                     if isFocusLockActive {
-                        Text("Focus lock is active")
-                            .font(.subheadline)
-                            .foregroundStyle(PoolDashboardTheme.glowA)
+                        PanelStatusCalloutView(
+                            message: "Runtime is currently pinned to the active account for deterministic execution.",
+                            title: "Focus Lock Active",
+                            tone: .info
+                        )
                     }
 
                     if mode == .focus && hasLowUsageWarning {
-                        Text("Low-usage alert: remaining balance is below \(Int(lowUsageThresholdRatio * 100))%")
-                            .font(.subheadline)
-                            .foregroundStyle(PoolDashboardTheme.warning)
-                            .calloutCard(
-                                fill: PoolDashboardTheme.warning.opacity(0.18),
-                                border: PoolDashboardTheme.warning.opacity(0.36)
-                            )
+                        PanelStatusCalloutView(
+                            message: "Remaining balance is below \(Int(lowUsageThresholdRatio * 100))%. Consider switching soon.",
+                            title: "Low Usage Warning",
+                            tone: .warning
+                        )
                     }
 
                     HStack {
