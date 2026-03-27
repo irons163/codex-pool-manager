@@ -64,6 +64,18 @@ extension View {
     func sectionCardStyle() -> some View {
         modifier(SectionCardStyle())
     }
+
+    func statusBadge(tone: Color) -> some View {
+        self
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(PoolDashboardTheme.textPrimary)
+            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(tone)
+            )
+    }
 }
 
 struct DashboardGroupBoxStyle: GroupBoxStyle {
