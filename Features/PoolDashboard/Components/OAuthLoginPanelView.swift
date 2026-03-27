@@ -23,7 +23,7 @@ struct OAuthLoginPanelView: View {
     var body: some View {
         GroupBox("OAuth Sign-In") {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.oauthPanelSpacing) {
-                Text("Use your own client ID to sign in, then import the account directly into the pool.")
+                Text("Use your own OAuth client to sign in, then import the resulting account into the pool.")
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
@@ -35,6 +35,7 @@ struct OAuthLoginPanelView: View {
                     TextField("Paste OAuth client ID", text: $oauthClientID)
                         .dashboardInputFieldStyle()
                 }
+                .dashboardInfoCard()
 
                 GroupBox("Import Target") {
                     HStack(alignment: .center, spacing: PoolDashboardTheme.accountAddRowSpacing) {
@@ -61,15 +62,7 @@ struct OAuthLoginPanelView: View {
                         advancedField("Workspace ID", placeholder: "Optional", text: $oauthWorkspaceID)
                     }
                     .padding(.top, 8)
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .fill(PoolDashboardTheme.panelMutedFill)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                            )
-                    )
+                    .dashboardInfoCard()
                 }
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
@@ -89,23 +82,27 @@ struct OAuthLoginPanelView: View {
     private var actionRow: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
             Button(isSigningInOAuth ? "Signing In..." : "Sign In and Import") {
-                Task {
-                    await onSignIn()
-                }
+                Task { await onSignIn() }
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSigningInOAuth)
 
             if let oauthSuccessMessage {
-                Text(oauthSuccessMessage)
-                    .lineLimit(1)
-                    .statusBadge(tone: PoolDashboardTheme.success.opacity(0.26))
+                PanelStatusCalloutView(
+                    message: oauthSuccessMessage,
+                    title: "Import Completed",
+                    tone: .success
+                )
+                .frame(maxWidth: 340, alignment: .leading)
             }
 
             if let oauthError {
-                Text(oauthError)
-                    .lineLimit(1)
-                    .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.26))
+                PanelStatusCalloutView(
+                    message: oauthError,
+                    title: "Sign-In Failed",
+                    tone: .danger
+                )
+                .frame(maxWidth: 340, alignment: .leading)
             }
         }
     }

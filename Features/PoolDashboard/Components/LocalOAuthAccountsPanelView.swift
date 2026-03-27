@@ -10,7 +10,7 @@ struct LocalOAuthAccountsPanelView: View {
     var body: some View {
         GroupBox("Local OAuth Sessions") {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.localOAuthPanelSpacing) {
-                Text("Discover signed-in Codex sessions from your local auth file and import them as managed accounts.")
+                Text("Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.")
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
@@ -22,7 +22,11 @@ struct LocalOAuthAccountsPanelView: View {
                 }
 
                 if accounts.isEmpty {
-                    emptyState
+                    PanelStatusCalloutView(
+                        message: "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.",
+                        title: "No Session Detected",
+                        tone: .info
+                    )
                 } else {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(accounts) { account in
@@ -49,22 +53,17 @@ struct LocalOAuthAccountsPanelView: View {
             .buttonStyle(DashboardSubtleButtonStyle())
 
             if let errorMessage {
-                Text(errorMessage)
-                    .lineLimit(1)
-                    .frame(maxWidth: PoolDashboardTheme.localBadgeMaxWidth, alignment: .leading)
-                    .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
+                PanelStatusCalloutView(
+                    message: errorMessage,
+                    title: "Scan Failed",
+                    tone: .danger
+                )
+                .frame(maxWidth: PoolDashboardTheme.localBadgeMaxWidth, alignment: .leading)
             } else {
                 Text("\(accounts.count) session(s) found")
                     .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
             }
         }
-    }
-
-    private var emptyState: some View {
-        Text("No local OAuth session was found. If Codex is signed in, choose `~/.codex/auth.json` manually.")
-            .font(.footnote)
-            .foregroundStyle(PoolDashboardTheme.textSecondary)
-            .calloutCard(fill: PoolDashboardTheme.panelMutedFill, border: PoolDashboardTheme.panelInnerStroke)
     }
 
     private func accountRow(_ account: LocalCodexOAuthAccount) -> some View {
@@ -91,18 +90,18 @@ struct LocalOAuthAccountsPanelView: View {
                         .font(.footnote)
                         .foregroundStyle(PoolDashboardTheme.textMuted)
                 } else {
-                    Text("Missing Account ID: usage sync unavailable")
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.warning)
+                    PanelStatusCalloutView(
+                        message: "This account has no ChatGPT account id, so usage sync is unavailable.",
+                        title: "Missing Account ID",
+                        tone: .warning
+                    )
                 }
             }
 
             Spacer()
 
             Button("Import") {
-                Task {
-                    await onImport(account)
-                }
+                Task { await onImport(account) }
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(account.chatGPTAccountID == nil)
