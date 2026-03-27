@@ -9,17 +9,19 @@ struct LocalOAuthAccountsPanelView: View {
 
     var body: some View {
         GroupBox("本機已登入 OAuth 帳號") {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Button("掃描本機登入") {
                         onScan()
                     }
                     .buttonStyle(.bordered)
+                    .tint(PoolDashboardTheme.glowA)
 
                     Button("選擇 auth.json") {
                         onChooseAuthFile()
                     }
                     .buttonStyle(.bordered)
+                    .tint(PoolDashboardTheme.glowB)
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -28,14 +30,14 @@ struct LocalOAuthAccountsPanelView: View {
                     } else {
                         Text("找到 \(accounts.count) 個帳號")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.70))
                     }
                 }
 
                 if accounts.isEmpty {
                     Text("尚未找到本機 OAuth 帳號。若你已登入 Codex，請點「選擇 auth.json」並選擇 ~/.codex/auth.json")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.70))
                 } else {
                     ForEach(accounts) { account in
                         HStack {
@@ -67,11 +69,13 @@ struct LocalOAuthAccountsPanelView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(account.chatGPTAccountID == nil)
+                            .tint(PoolDashboardTheme.glowA)
                         }
                         .padding(.vertical, 4)
                     }
                 }
             }
         }
+        .tint(PoolDashboardTheme.glowA)
     }
 }
