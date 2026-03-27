@@ -81,6 +81,7 @@ struct PoolDashboardView: View {
                     dashboardContent
                 }
             }
+            .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
