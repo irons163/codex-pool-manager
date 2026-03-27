@@ -22,9 +22,7 @@ struct PoolDashboardLocalAccountsCoordinator {
             return bookmarkResult.authorizedURL
         }
 
-        let discovered = LocalCodexAccountDiscovery.discover()
-        viewModel.applyAutomaticScanResult(discovered)
-        normalizeStoredImportedAccountNames(state: &state, localAccounts: viewModel.accounts)
+        applyAutomaticDiscoveryResult(state: &state, viewModel: &viewModel)
         return bookmarkResult.authorizedURL
     }
 
@@ -157,5 +155,14 @@ struct PoolDashboardLocalAccountsCoordinator {
             didLoadAccounts: didLoadAccounts,
             authorizedURL: authorizedURL
         )
+    }
+
+    private func applyAutomaticDiscoveryResult(
+        state: inout AccountPoolState,
+        viewModel: inout LocalOAuthImportViewModel
+    ) {
+        let discovered = LocalCodexAccountDiscovery.discover()
+        viewModel.applyAutomaticScanResult(discovered)
+        normalizeStoredImportedAccountNames(state: &state, localAccounts: viewModel.accounts)
     }
 }
