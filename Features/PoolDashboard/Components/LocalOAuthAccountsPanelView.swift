@@ -56,6 +56,7 @@ struct LocalOAuthAccountsPanelView: View {
                                 }
                                 Text(account.maskedToken)
                                     .font(.footnote)
+                                    .monospaced()
                                     .foregroundStyle(.secondary)
                                 if let chatGPTAccountID = account.chatGPTAccountID {
                                     Text("Account ID: \(chatGPTAccountID)")
