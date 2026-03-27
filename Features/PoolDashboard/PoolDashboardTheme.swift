@@ -31,15 +31,18 @@ enum PoolDashboardTheme {
     )
 
     static let sectionSpacing: CGFloat = 26
+    static let sectionHeaderSpacing: CGFloat = 8
     static let panelPadding: CGFloat = 26
     static let panelCornerRadius: CGFloat = 20
     static let tileCornerRadius: CGFloat = 14
     static let controlCornerRadius: CGFloat = 10
     static let badgeCornerRadius: CGFloat = 999
     static let sectionCardPadding: CGFloat = 12
+    static let sectionCardInnerPadding: CGFloat = 10
     static let editorCornerRadius: CGFloat = 10
     static let calloutCornerRadius: CGFloat = 10
     static let calloutBorderWidth: CGFloat = 1
+    static let infoCardCornerRadius: CGFloat = 11
     static let glowLargeSize: CGFloat = 420
     static let glowMediumSize: CGFloat = 360
     static let glowLargeBlur: CGFloat = 70
@@ -133,6 +136,32 @@ extension View {
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.calloutCornerRadius, style: .continuous)
                             .stroke(border, lineWidth: PoolDashboardTheme.calloutBorderWidth)
                     )
+            )
+    }
+
+    func dashboardInfoCard() -> some View {
+        self
+            .padding(PoolDashboardTheme.sectionCardInnerPadding)
+            .background(
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.infoCardCornerRadius, style: .continuous)
+                    .fill(PoolDashboardTheme.panelMutedFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.infoCardCornerRadius, style: .continuous)
+                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                    )
+            )
+    }
+
+    func dashboardListRowCard() -> some View {
+        self
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                    .fill(PoolDashboardTheme.panelMutedFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                    )
+                    .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
             )
     }
 }
