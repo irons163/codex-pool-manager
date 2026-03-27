@@ -53,7 +53,7 @@ struct DashboardHeaderSectionView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, PoolDashboardTheme.headerTileVerticalPadding)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, PoolDashboardTheme.headerTileHorizontalPadding)
         .background(
             RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
                 .fill(PoolDashboardTheme.panelStrongFill)
