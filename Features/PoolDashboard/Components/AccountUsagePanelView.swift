@@ -120,7 +120,7 @@ struct AccountUsagePanelView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .frame(minHeight: 260)
+                .frame(minHeight: PoolDashboardTheme.usageListMinHeight)
             }
         }
         .sectionCardStyle()
