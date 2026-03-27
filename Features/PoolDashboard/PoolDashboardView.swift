@@ -243,17 +243,21 @@ struct PoolDashboardView: View {
                 symbolName: selectedWorkspace.symbolName
             )
 
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
-                    workspaceMainPanel
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                    workspaceContextPanel
-                        .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
-                }
+            if selectedWorkspace == .operations {
+                workspaceMainPanel
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                        workspaceMainPanel
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        workspaceContextPanel
+                            .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
+                    }
 
-                VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                    workspaceMainPanel
-                    workspaceContextPanel
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                        workspaceMainPanel
+                        workspaceContextPanel
+                    }
                 }
             }
         }
@@ -288,7 +292,7 @@ struct PoolDashboardView: View {
         case .capacity:
             capacityContextPanel
         case .operations:
-            operationsContextPanel
+            EmptyView()
         case .safety:
             safetyContextPanel
         case .developer:
@@ -327,35 +331,6 @@ struct PoolDashboardView: View {
                         tone: .success
                     )
                 }
-            }
-        }
-        .sectionCardStyle()
-    }
-
-    private var operationsContextPanel: some View {
-        GroupBox("Operations Signals") {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Activity entries")
-                    .font(.caption)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                Text("\\(state.activities.count)")
-                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PoolDashboardTheme.textPrimary)
-                    .dashboardInfoCard()
-
-                Text("Available ratio")
-                    .font(.caption)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                Text("\\(Int((Double(state.availableAccountsCount) / max(1, Double(state.accounts.count))) * 100))%")
-                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .dashboardInfoCard()
-
-                PanelStatusCalloutView(
-                    message: "Activity feed and clear actions are now grouped in Developer workspace.",
-                    title: "Feed Moved",
-                    tone: .info
-                )
             }
         }
         .sectionCardStyle()
