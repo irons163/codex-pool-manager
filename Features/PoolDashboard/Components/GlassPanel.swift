@@ -21,11 +21,11 @@ struct GlassPanel<Content: View>: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
+                            .stroke(PoolDashboardTheme.panelStroke, lineWidth: PoolDashboardTheme.panelBorderWidth)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.panelCornerRadius - 1, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: PoolDashboardTheme.panelBorderWidth)
                             .padding(1)
                     )
             )
