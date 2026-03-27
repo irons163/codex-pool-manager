@@ -66,6 +66,7 @@ struct SyncToolbarView: View {
                     .font(.footnote)
             }
         }
+        .lineLimit(1)
         .statusBadge(tone: tone)
     }
 }
