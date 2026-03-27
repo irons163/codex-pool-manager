@@ -41,6 +41,14 @@ struct PoolDashboardView: View {
         PoolDashboardStrategyBindingAdapter(state: $state)
     }
 
+    private var isDeveloperBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
     private enum Workspace: String, CaseIterable, Identifiable {
         case authentication
         case runtime
@@ -224,7 +232,7 @@ struct PoolDashboardView: View {
     private var visibleWorkspaces: [Workspace] {
         Workspace.allCases.filter { workspace in
             if workspace == .developer {
-                return isDeveloperModeEnabled
+                return isDeveloperBuild && isDeveloperModeEnabled
             }
             return true
         }
@@ -336,16 +344,18 @@ struct PoolDashboardView: View {
                     tone: .info
                 )
 
-                if isDeveloperModeEnabled {
-                    Text("Developer workspace is enabled.")
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        .dashboardInfoCard()
-                } else {
-                    Text("Enable Developer Mode to access debug payload tools.")
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        .dashboardInfoCard()
+                if isDeveloperBuild {
+                    if isDeveloperModeEnabled {
+                        Text("Developer workspace is enabled.")
+                            .font(.footnote)
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            .dashboardInfoCard()
+                    } else {
+                        Text("Enable Developer Mode to access debug payload tools.")
+                            .font(.footnote)
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            .dashboardInfoCard()
+                    }
                 }
             }
         }
