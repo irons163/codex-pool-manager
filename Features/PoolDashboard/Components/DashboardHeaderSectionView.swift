@@ -28,7 +28,7 @@ struct DashboardHeaderSectionView: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: 180, height: 3)
+                    .frame(width: PoolDashboardTheme.headerAccentRuleWidth, height: 3)
             }
 
             HStack(spacing: 14) {
