@@ -55,6 +55,7 @@ enum PoolDashboardTheme {
     static let pillHorizontalPadding: CGFloat = 10
     static let actionRowSpacing: CGFloat = 10
     static let compactFieldSpacing: CGFloat = 8
+    static let toolbarShadowRadius: CGFloat = 10
 }
 
 private struct SectionCardStyle: ViewModifier {
