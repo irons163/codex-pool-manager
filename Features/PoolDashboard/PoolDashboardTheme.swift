@@ -75,7 +75,7 @@ extension View {
         self
             .font(.footnote.weight(.medium))
             .foregroundStyle(PoolDashboardTheme.textPrimary)
-            .padding(.vertical, 5)
+            .padding(.vertical, PoolDashboardTheme.pillVerticalPadding)
             .padding(.horizontal, 10)
             .background(
                 Capsule(style: .continuous)
