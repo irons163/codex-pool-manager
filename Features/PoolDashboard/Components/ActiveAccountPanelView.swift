@@ -39,7 +39,10 @@ struct ActiveAccountPanelView: View {
                         Text("低剩餘用量提醒：目前帳號剩餘不足 \(Int(lowUsageThresholdRatio * 100))%")
                             .font(.subheadline)
                             .foregroundStyle(PoolDashboardTheme.warning)
-                            .calloutCard(fill: PoolDashboardTheme.warning.opacity(0.18))
+                            .calloutCard(
+                                fill: PoolDashboardTheme.warning.opacity(0.18),
+                                border: PoolDashboardTheme.warning.opacity(0.36)
+                            )
                     }
 
                     HStack {
