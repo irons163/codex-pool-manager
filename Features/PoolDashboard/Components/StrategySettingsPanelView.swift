@@ -34,11 +34,13 @@ struct StrategySettingsPanelView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("低用量提醒門檻 \(Int(lowThresholdBinding.wrappedValue * 100))%")
                     Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
+                        .tint(PoolDashboardTheme.glowA)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("智能切換最小改善 \(Int(minUsageDeltaBinding.wrappedValue * 100))%")
                     Slider(value: minUsageDeltaBinding, in: 0...0.2, step: 0.01)
+                        .tint(PoolDashboardTheme.glowB)
                 }
 
                 if mode == .intelligent {
