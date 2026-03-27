@@ -7,40 +7,31 @@ struct PoolDashboardBackupCoordinator {
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
 
     func exportSnapshot(from snapshot: AccountPoolSnapshot) -> ExportResult {
-        runExportOperation {
+        runOperation(failurePrefix: "匯出失敗") {
             try dataFlowCoordinator.exportSnapshotJSON(snapshot)
         }
     }
 
     func exportRefetchableSnapshot(from snapshot: AccountPoolSnapshot) -> ExportResult {
-        runExportOperation {
+        runOperation(failurePrefix: "匯出失敗") {
             try dataFlowCoordinator.exportRefetchableSnapshotJSON(snapshot)
         }
     }
 
     func importSnapshotState(from json: String) -> ImportResult {
-        runImportOperation {
+        runOperation(failurePrefix: "匯入失敗") {
             try dataFlowCoordinator.importState(from: json)
         }
     }
 
-    private func runImportOperation(
-        _ operation: () throws -> AccountPoolState
-    ) -> ImportResult {
+    private func runOperation<Result>(
+        failurePrefix: String,
+        _ operation: () throws -> Result
+    ) -> (Result?, String?) {
         do {
             return (try operation(), nil)
         } catch {
-            return (nil, "匯入失敗：\(error.localizedDescription)")
-        }
-    }
-
-    private func runExportOperation(
-        _ operation: () throws -> String
-    ) -> ExportResult {
-        do {
-            return (try operation(), nil)
-        } catch {
-            return (nil, "匯出失敗：\(error.localizedDescription)")
+            return (nil, "\(failurePrefix)：\(error.localizedDescription)")
         }
     }
 }
