@@ -10,14 +10,14 @@ struct DashboardHeaderSectionView: View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("AIAGENTPOOL CONTROL CENTER")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(PoolDashboardTheme.metadataFont.weight(.semibold))
                     .tracking(1.2)
                     .foregroundStyle(.white.opacity(0.62))
                 Text("Codex Account Orchestrator")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(PoolDashboardTheme.titleFont)
                     .foregroundStyle(.white)
                 Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
-                    .font(.subheadline)
+                    .font(PoolDashboardTheme.subtitleFont)
                     .foregroundStyle(.white.opacity(0.78))
                     .frame(maxWidth: 520, alignment: .leading)
             }
