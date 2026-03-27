@@ -28,7 +28,7 @@ struct StrategySettingsPanelView: View {
         )
 
         GroupBox("策略設定") {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Stepper(
                     "最小切換間隔 \(Int(minSwitchIntervalBinding.wrappedValue)) 秒",
                     value: minSwitchIntervalBinding,
