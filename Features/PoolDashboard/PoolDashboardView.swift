@@ -15,6 +15,7 @@ struct PoolDashboardView: View {
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
+    @State private var selectedWorkspace: Workspace = .authentication
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -37,6 +38,46 @@ struct PoolDashboardView: View {
     }
     private var strategyBindings: PoolDashboardStrategyBindingAdapter {
         PoolDashboardStrategyBindingAdapter(state: $state)
+    }
+
+    private enum Workspace: String, CaseIterable, Identifiable {
+        case authentication
+        case runtime
+        case capacity
+        case operations
+        case safety
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .authentication: "Authentication"
+            case .runtime: "Runtime Strategy"
+            case .capacity: "Capacity"
+            case .operations: "Operations"
+            case .safety: "Safety & Debug"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .authentication: "Manage sign-in flows and import local Codex sessions."
+            case .runtime: "Configure switching policy and monitor active execution account."
+            case .capacity: "Track aggregate pool usage posture and enforce reset controls when exhausted."
+            case .operations: "Track account usage and recent activity in one place."
+            case .safety: "Backup state and inspect raw diagnostics."
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .authentication: "person.badge.key"
+            case .runtime: "dial.medium"
+            case .capacity: "gauge.with.dots.needle.bottom.50percent"
+            case .operations: "list.bullet.rectangle"
+            case .safety: "shield.lefthalf.filled.badge.checkmark"
+            }
+        }
     }
 
     init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
@@ -87,10 +128,8 @@ struct PoolDashboardView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            ScrollView(showsIndicators: false) {
-                GlassPanel {
-                    dashboardContent
-                }
+            GlassPanel {
+                dashboardContent
             }
             .padding(.horizontal, PoolDashboardTheme.scrollHorizontalPadding)
             .padding(.vertical, PoolDashboardTheme.dashboardVerticalPadding)
@@ -125,40 +164,14 @@ struct PoolDashboardView: View {
 
             syncToolbarPanel
 
-            PanelSectionHeaderView(
-                title: "Authentication",
-                subtitle: "Manage sign-in flows and import local Codex sessions.",
-                symbolName: "person.badge.key"
-            )
-            pairedPanels(primary: oauthLoginPanel, secondary: localOAuthAccountsPanel)
+            HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                workspaceSidebar
 
-            PanelSectionHeaderView(
-                title: "Runtime Strategy",
-                subtitle: "Configure switching policy and monitor active execution account.",
-                symbolName: "dial.medium"
-            )
-            pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
-
-            PanelSectionHeaderView(
-                title: "Capacity",
-                subtitle: "Track aggregate pool usage posture and enforce reset controls when exhausted.",
-                symbolName: "gauge.with.dots.needle.bottom.50percent"
-            )
-            overallUsagePanel
-
-            PanelSectionHeaderView(
-                title: "Operations",
-                subtitle: "Track account usage and recent activity in one place.",
-                symbolName: "list.bullet.rectangle"
-            )
-            pairedPanels(primary: accountUsagePanel, secondary: activityLogPanel)
-
-            PanelSectionHeaderView(
-                title: "Safety & Debug",
-                subtitle: "Backup state and inspect raw diagnostics.",
-                symbolName: "shield.lefthalf.filled.badge.checkmark"
-            )
-            pairedPanels(primary: backupRestorePanel, secondary: debugToolsPanel)
+                ScrollView(showsIndicators: false) {
+                    workspaceContent
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
         }
         .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
         .padding(PoolDashboardTheme.panelPadding)
@@ -167,6 +180,100 @@ struct PoolDashboardView: View {
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: viewState.isSyncingUsage)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showUsageRawJSON)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showSwitchLaunchLog)
+        .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: selectedWorkspace)
+    }
+
+    private var workspaceSidebar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("WORKSPACES")
+                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                .tracking(PoolDashboardTheme.metadataTracking)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .padding(.horizontal, 8)
+
+            ForEach(Workspace.allCases) { workspace in
+                workspaceButton(for: workspace)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(width: PoolDashboardTheme.workspaceSidebarWidth, alignment: .topLeading)
+        .padding(PoolDashboardTheme.workspaceSidebarPadding)
+        .background(
+            RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
+                .fill(PoolDashboardTheme.panelMutedFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
+                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                )
+        )
+    }
+
+    private var workspaceContent: some View {
+        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+            PanelSectionHeaderView(
+                title: selectedWorkspace.title,
+                subtitle: selectedWorkspace.subtitle,
+                symbolName: selectedWorkspace.symbolName
+            )
+
+            workspacePanel
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var workspacePanel: some View {
+        switch selectedWorkspace {
+        case .authentication:
+            pairedPanels(primary: oauthLoginPanel, secondary: localOAuthAccountsPanel)
+        case .runtime:
+            pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
+        case .capacity:
+            overallUsagePanel
+        case .operations:
+            pairedPanels(primary: accountUsagePanel, secondary: activityLogPanel)
+        case .safety:
+            pairedPanels(primary: backupRestorePanel, secondary: debugToolsPanel)
+        }
+    }
+
+    private func workspaceButton(for workspace: Workspace) -> some View {
+        Button {
+            selectedWorkspace = workspace
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: workspace.symbolName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 16)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(workspace.title)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    Text(workspace.subtitle)
+                        .font(.caption2)
+                        .lineLimit(1)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.workspaceSidebarItemCornerRadius, style: .continuous)
+                    .fill(selectedWorkspace == workspace ? PoolDashboardTheme.panelStrongFill : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.workspaceSidebarItemCornerRadius, style: .continuous)
+                            .stroke(
+                                selectedWorkspace == workspace ? PoolDashboardTheme.glowA.opacity(0.5) : PoolDashboardTheme.panelInnerStroke,
+                                lineWidth: 1
+                            )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(selectedWorkspace == workspace ? PoolDashboardTheme.textPrimary : PoolDashboardTheme.textSecondary)
     }
 
     private var syncToolbarPanel: some View {
