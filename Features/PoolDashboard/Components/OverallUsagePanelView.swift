@@ -25,7 +25,7 @@ struct OverallUsagePanelView: View {
                 Button(resetAllButtonTitle) {
                     onResetAll()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .tint(.orange)
 
                 HStack {
