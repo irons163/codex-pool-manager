@@ -22,7 +22,7 @@ struct AccountUsagePanelView: View {
     var body: some View {
         GroupBox("帳號用量") {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
                     TextField("新帳號名稱", text: $newAccountName)
                         .dashboardInputFieldStyle()
                     Stepper("配額 \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
