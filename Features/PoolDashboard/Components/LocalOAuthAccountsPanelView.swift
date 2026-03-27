@@ -36,6 +36,7 @@ struct LocalOAuthAccountsPanelView: View {
                                     .font(.footnote)
                                     .monospaced()
                                     .foregroundStyle(PoolDashboardTheme.textMuted)
+                                    .lineLimit(1)
                                 if let chatGPTAccountID = account.chatGPTAccountID {
                                     Text("Account ID: \(chatGPTAccountID)")
                                         .font(.footnote)
