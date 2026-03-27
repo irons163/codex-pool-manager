@@ -38,11 +38,7 @@ struct PoolDashboardRuntimeCoordinator {
                 lastUsageRawJSON: rawResponse
             )
         } catch {
-            return SyncOutput(
-                state: state,
-                syncError: "同步失敗：\(error.localizedDescription)",
-                lastUsageRawJSON: nil
-            )
+            return syncFailureOutput(from: state, error: error)
         }
     }
 
@@ -74,21 +70,51 @@ struct PoolDashboardRuntimeCoordinator {
                 fallbackQuota: input.fallbackQuota
             )
 
-            return OAuthSignInOutput(
+            return oauthSuccessOutput(
                 state: nextState,
-                oauthError: nil,
-                oauthSuccessMessage: successMessage,
-                nextOAuthAccountName: "",
-                shouldRefreshLocalOAuthAccounts: true
+                successMessage: successMessage
             )
         } catch {
-            return OAuthSignInOutput(
+            return oauthFailureOutput(
                 state: state,
-                oauthError: error.localizedDescription,
-                oauthSuccessMessage: nil,
-                nextOAuthAccountName: input.accountNameInput,
-                shouldRefreshLocalOAuthAccounts: false
+                accountNameInput: input.accountNameInput,
+                error: error
             )
         }
+    }
+
+    private func syncFailureOutput(from state: AccountPoolState, error: Error) -> SyncOutput {
+        SyncOutput(
+            state: state,
+            syncError: "同步失敗：\(error.localizedDescription)",
+            lastUsageRawJSON: nil
+        )
+    }
+
+    private func oauthSuccessOutput(
+        state: AccountPoolState,
+        successMessage: String
+    ) -> OAuthSignInOutput {
+        OAuthSignInOutput(
+            state: state,
+            oauthError: nil,
+            oauthSuccessMessage: successMessage,
+            nextOAuthAccountName: "",
+            shouldRefreshLocalOAuthAccounts: true
+        )
+    }
+
+    private func oauthFailureOutput(
+        state: AccountPoolState,
+        accountNameInput: String,
+        error: Error
+    ) -> OAuthSignInOutput {
+        OAuthSignInOutput(
+            state: state,
+            oauthError: error.localizedDescription,
+            oauthSuccessMessage: nil,
+            nextOAuthAccountName: accountNameInput,
+            shouldRefreshLocalOAuthAccounts: false
+        )
     }
 }
