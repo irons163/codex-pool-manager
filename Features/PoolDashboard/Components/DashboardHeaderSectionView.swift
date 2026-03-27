@@ -19,6 +19,7 @@ struct DashboardHeaderSectionView: View {
                 Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.78))
+                    .frame(maxWidth: 520, alignment: .leading)
             }
 
             HStack(spacing: 12) {
