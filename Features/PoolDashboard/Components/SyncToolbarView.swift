@@ -11,6 +11,25 @@ struct SyncToolbarView: View {
     let onSync: () -> Void
 
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            toolbarRow
+            VStack(alignment: .leading, spacing: 8) {
+                toolbarRow
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
+                .fill(PoolDashboardTheme.panelStrongFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
+                        .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
+                )
+        )
+        .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
+    }
+
+    private var toolbarRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: Layout.spacing) {
             Button(isSyncing ? "同步中..." : "同步 Codex 用量") {
                 onSync()
@@ -30,16 +49,6 @@ struct SyncToolbarView: View {
                 badge(errorText, tone: PoolDashboardTheme.danger.opacity(0.28), useMonospacedDigits: false)
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                .fill(PoolDashboardTheme.panelStrongFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                        .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
-                )
-        )
-        .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
     }
 
     private func badge(
