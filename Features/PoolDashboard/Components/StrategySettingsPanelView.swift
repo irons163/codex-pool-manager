@@ -33,12 +33,14 @@ struct StrategySettingsPanelView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("低用量提醒門檻 \(Int(lowThresholdBinding.wrappedValue * 100))%")
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
                     Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
                         .tint(PoolDashboardTheme.glowA)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("智能切換最小改善 \(Int(minUsageDeltaBinding.wrappedValue * 100))%")
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
                     Slider(value: minUsageDeltaBinding, in: 0...0.2, step: 0.01)
                         .tint(PoolDashboardTheme.glowB)
                 }
@@ -47,7 +49,7 @@ struct StrategySettingsPanelView: View {
                     if let intelligentCandidateName {
                         Text("推薦切換帳號：\(intelligentCandidateName)")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.72))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
                     }
                     if canIntelligentSwitch {
                         Text("目前可切換帳號")
@@ -56,7 +58,7 @@ struct StrategySettingsPanelView: View {
                     } else {
                         Text("冷卻中，\(intelligentCooldownRemaining) 秒後可切換")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.72))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
                     }
                 }
             }
@@ -68,7 +70,7 @@ struct StrategySettingsPanelView: View {
             HStack(spacing: 10) {
                 Text("手動帳號")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.82))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
                 Picker("手動帳號", selection: manualSelectionBinding) {
                     ForEach(accounts) { account in
                         Text(account.name).tag(account.id)
@@ -81,7 +83,7 @@ struct StrategySettingsPanelView: View {
             .padding(.horizontal, 10)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(PoolDashboardTheme.panelFill.opacity(0.62))
+                    .fill(PoolDashboardTheme.panelMutedFill)
             )
         }
     }
