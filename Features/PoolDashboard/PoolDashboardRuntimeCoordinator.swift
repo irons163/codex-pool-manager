@@ -1,6 +1,10 @@
 import Foundation
 
 struct PoolDashboardRuntimeCoordinator {
+    private enum Message {
+        static let syncFailurePrefix = "同步失敗："
+    }
+
     struct SyncOutput {
         let state: AccountPoolState
         let syncError: String?
@@ -86,7 +90,7 @@ struct PoolDashboardRuntimeCoordinator {
     private func syncFailureOutput(from state: AccountPoolState, error: Error) -> SyncOutput {
         SyncOutput(
             state: state,
-            syncError: "同步失敗：\(error.localizedDescription)",
+            syncError: Message.syncFailurePrefix + error.localizedDescription,
             lastUsageRawJSON: nil
         )
     }
