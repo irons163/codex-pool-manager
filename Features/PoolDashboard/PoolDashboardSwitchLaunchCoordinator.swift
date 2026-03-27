@@ -1,10 +1,6 @@
 import Foundation
 
 struct PoolDashboardSwitchLaunchCoordinator {
-    private enum SwitchResolutionError: Error {
-        case missingAuthFile
-    }
-
     private enum ValidationError: Error {
         case missingToken
         case missingAccountID
@@ -117,16 +113,15 @@ struct PoolDashboardSwitchLaunchCoordinator {
         }
 
         do {
-            let authFileURL = try resolveAuthFileURLForSwitch(
-                currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
-                authFileAccessService: authFileAccessService
+            let authFileURL = try authFileAccessService.resolveAuthFileURLForSwitch(
+                sessionAuthorizedURL: currentAuthorizedAuthFileURL
             )
             return await attemptSwitch(
                 authFileURL: authFileURL,
                 failureLogPrefix: "錯誤",
                 failureSessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
-        } catch SwitchResolutionError.missingAuthFile {
+        } catch CodexAuthFileAccessService.AccessError.missingAuthFile {
             append("尚未授權 auth.json，啟動選檔流程")
             guard let authorizedURL = authorizeAuthFile() else {
                 append("使用者未完成 auth.json 授權")
@@ -159,19 +154,6 @@ struct PoolDashboardSwitchLaunchCoordinator {
             throw ValidationError.missingAccountID
         }
         return chatGPTAccountID
-    }
-
-    private func resolveAuthFileURLForSwitch(
-        currentAuthorizedAuthFileURL: URL?,
-        authFileAccessService: CodexAuthFileAccessService
-    ) throws -> URL {
-        do {
-            return try authFileAccessService.resolveAuthFileURLForSwitch(
-                sessionAuthorizedURL: currentAuthorizedAuthFileURL
-            )
-        } catch CodexAuthFileAccessService.AccessError.missingAuthFile {
-            throw SwitchResolutionError.missingAuthFile
-        }
     }
 
     @MainActor
