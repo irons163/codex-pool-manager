@@ -47,6 +47,7 @@ enum PoolDashboardTheme {
     static let standardAnimationDuration: Double = 0.24
     static let fastAnimationDuration: Double = 0.18
     static let listRowVerticalInset: CGFloat = 3
+    static let scrollHorizontalPadding: CGFloat = 14
 }
 
 private struct SectionCardStyle: ViewModifier {
