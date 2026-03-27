@@ -12,13 +12,13 @@ struct DashboardHeaderSectionView: View {
                 Text("AIAGENTPOOL CONTROL CENTER")
                     .font(PoolDashboardTheme.metadataFont.weight(.semibold))
                     .tracking(1.2)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
                 Text("Codex Account Orchestrator")
                     .font(PoolDashboardTheme.titleFont)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
                 Text("管理 OAuth 帳號、監控用量、快速切換執行環境")
                     .font(PoolDashboardTheme.subtitleFont)
-                    .foregroundStyle(.white.opacity(0.78))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .frame(maxWidth: 520, alignment: .leading)
             }
 
@@ -36,11 +36,11 @@ struct DashboardHeaderSectionView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.68))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
             Text(value)
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
