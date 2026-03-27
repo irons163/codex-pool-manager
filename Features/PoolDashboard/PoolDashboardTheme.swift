@@ -106,10 +106,10 @@ extension View {
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.calloutCornerRadius, style: .continuous)
                     .fill(fill)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.calloutCornerRadius, style: .continuous)
                             .stroke(border, lineWidth: 1)
                     )
             )
