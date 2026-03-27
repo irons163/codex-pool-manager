@@ -125,26 +125,26 @@ struct PoolDashboardView: View {
 
             syncToolbarPanel
 
-            sectionHeader(
+            PanelSectionHeaderView(
                 title: "Authentication",
                 subtitle: "Manage sign-in flows and import local Codex sessions."
             )
             pairedPanels(primary: oauthLoginPanel, secondary: localOAuthAccountsPanel)
 
-            sectionHeader(
+            PanelSectionHeaderView(
                 title: "Runtime Strategy",
                 subtitle: "Configure switching policy and monitor active execution account."
             )
             pairedPanels(primary: strategySettingsPanel, secondary: activeAccountPanel)
             overallUsagePanel
 
-            sectionHeader(
+            PanelSectionHeaderView(
                 title: "Operations",
                 subtitle: "Track account usage and recent activity in one place."
             )
             pairedPanels(primary: accountUsagePanel, secondary: activityLogPanel)
 
-            sectionHeader(
+            PanelSectionHeaderView(
                 title: "Safety & Debug",
                 subtitle: "Backup state and inspect raw diagnostics."
             )
@@ -316,19 +316,6 @@ struct PoolDashboardView: View {
             showSwitchLaunchLog: $viewState.showSwitchLaunchLog,
             lastSwitchLaunchLog: $viewState.lastSwitchLaunchLog
         )
-    }
-
-    @ViewBuilder
-    private func sectionHeader(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased())
-                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                .foregroundStyle(PoolDashboardTheme.textMuted)
-                .tracking(PoolDashboardTheme.metadataTracking)
-            Text(subtitle)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(PoolDashboardTheme.textSecondary)
-        }
     }
 
     @ViewBuilder
