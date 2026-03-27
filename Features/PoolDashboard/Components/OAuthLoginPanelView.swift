@@ -21,6 +21,7 @@ struct OAuthLoginPanelView: View {
                 Text("輸入 Client ID 後可直接登入，進階參數通常維持預設即可。")
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
+                    .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
 
                 TextField("Client ID", text: $oauthClientID)
                     .dashboardInputFieldStyle()
