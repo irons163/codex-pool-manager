@@ -22,7 +22,7 @@ struct AccountUsagePanelView: View {
     var body: some View {
         GroupBox("帳號用量") {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
+                HStack(spacing: 12) {
                     TextField("新帳號名稱", text: $newAccountName)
                         .textFieldStyle(.roundedBorder)
                     Stepper("配額 \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
@@ -31,6 +31,7 @@ struct AccountUsagePanelView: View {
                         newAccountName = ""
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(PoolDashboardTheme.glowA)
                 }
 
                 List {
@@ -61,6 +62,7 @@ struct AccountUsagePanelView: View {
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
+                                .tint(PoolDashboardTheme.glowB)
                                 Button("刪除", role: .destructive) {
                                     onRemoveAccount(account.id)
                                 }
@@ -104,11 +106,17 @@ struct AccountUsagePanelView: View {
                                 .tint(usageProgressColor(account))
                         }
                         .padding(.vertical, 4)
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(PoolDashboardTheme.panelFill.opacity(0.65))
+                                .padding(.vertical, 2)
+                        )
                     }
                 }
                 .listStyle(.plain)
                 .frame(minHeight: 220)
             }
         }
+        .tint(PoolDashboardTheme.glowA)
     }
 }
