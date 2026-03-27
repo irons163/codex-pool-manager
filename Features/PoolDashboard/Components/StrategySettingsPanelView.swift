@@ -98,16 +98,7 @@ struct StrategySettingsPanelView: View {
                 .labelsHidden()
                 .pickerStyle(.menu)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
-            .background(
-                RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                    )
-            )
+            .dashboardInfoCard()
         }
     }
 }

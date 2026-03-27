@@ -51,16 +51,17 @@ struct ActiveAccountPanelView: View {
                     }
 
                     HStack {
-                        Button("Simulate +50") {
+                        Button("Simulate +50 Units") {
                             onSimulateUsage()
                         }
                         .buttonStyle(DashboardPrimaryButtonStyle())
 
-                        Button("Re-evaluate switch") {
+                        Button("Run Switch Evaluation") {
                             onEvaluateSwitch()
                         }
                         .buttonStyle(DashboardSubtleButtonStyle())
                     }
+                    .dashboardInfoCard()
                 } else {
                     Label("No available account", systemImage: "person.crop.circle.badge.exclamationmark")
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
