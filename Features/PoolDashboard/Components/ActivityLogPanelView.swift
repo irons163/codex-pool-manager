@@ -5,40 +5,53 @@ struct ActivityLogPanelView: View {
     let onClearActivities: () -> Void
 
     var body: some View {
-        GroupBox("近期活動") {
-            if activities.isEmpty {
-                Text("目前沒有活動紀錄")
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-            } else {
+        GroupBox("Activity Feed") {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
+                    Text("Latest system actions and switch records.")
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
                     Spacer()
-                    Button("清除活動紀錄", role: .destructive) {
-                        onClearActivities()
-                    }
-                    .buttonStyle(DashboardWarningButtonStyle())
+                    Text("\(activities.count)")
+                        .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
                 }
-                List(activities.prefix(8)) { activity in
+
+                if activities.isEmpty {
+                    Text("No activity yet.")
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .calloutCard(fill: PoolDashboardTheme.panelMutedFill, border: PoolDashboardTheme.panelInnerStroke)
+                } else {
                     HStack {
-                        Text(activity.timestamp.formatted(date: .omitted, time: .standard))
-                            .monospacedDigit()
-                            .foregroundStyle(PoolDashboardTheme.textMuted)
-                            .frame(width: 96, alignment: .leading)
-                        Text(activity.message)
-                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        Spacer()
+                        Button("Clear Activity", role: .destructive) {
+                            onClearActivities()
+                        }
+                        .buttonStyle(DashboardWarningButtonStyle())
                     }
-                    .listRowBackground(
-                        RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .fill(PoolDashboardTheme.panelMutedFill)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                            )
-                            .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
-                    )
+
+                    List(activities.prefix(12)) { activity in
+                        HStack(spacing: 8) {
+                            Text(activity.timestamp.formatted(date: .omitted, time: .standard))
+                                .monospacedDigit()
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                                .frame(width: 104, alignment: .leading)
+                            Text(activity.message)
+                                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        }
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                                .fill(PoolDashboardTheme.panelMutedFill)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                                        .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                )
+                                .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
+                        )
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: PoolDashboardTheme.activityListMinHeight)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: PoolDashboardTheme.activityListMinHeight)
             }
         }
         .sectionCardStyle()
