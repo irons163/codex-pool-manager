@@ -33,7 +33,7 @@ struct ActivityLogPanelView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .frame(minHeight: 160)
+                .frame(minHeight: 180)
             }
         }
         .sectionCardStyle()
