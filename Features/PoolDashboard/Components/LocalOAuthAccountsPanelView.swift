@@ -90,6 +90,7 @@ struct LocalOAuthAccountsPanelView: View {
             if let errorMessage {
                 Text(errorMessage)
                     .lineLimit(1)
+                    .frame(maxWidth: PoolDashboardTheme.localBadgeMaxWidth, alignment: .leading)
                     .statusBadge(tone: PoolDashboardTheme.danger.opacity(0.24))
             } else {
                 Text("找到 \(accounts.count) 個帳號")
