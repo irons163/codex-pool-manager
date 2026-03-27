@@ -58,6 +58,7 @@ enum PoolDashboardTheme {
     static let toolbarShadowRadius: CGFloat = 10
     static let panelShadowRadius: CGFloat = 28
     static let headerAccentRuleWidth: CGFloat = 180
+    static let tileShadowRadius: CGFloat = 10
 }
 
 private struct SectionCardStyle: ViewModifier {
