@@ -35,6 +35,11 @@ struct OAuthLoginPanelView: View {
                             .textFieldStyle(.roundedBorder)
                     }
                     .padding(.top, 4)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(PoolDashboardTheme.panelFill.opacity(0.66))
+                    )
                 }
 
                 HStack {
