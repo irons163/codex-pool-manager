@@ -158,7 +158,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
             return try authFileAccessService.resolveAuthFileURLForSwitch(
                 sessionAuthorizedURL: currentAuthorizedAuthFileURL
             )
-        } catch {
+        } catch CodexAuthFileAccessService.AccessError.missingAuthFile {
             throw SwitchResolutionError.missingAuthFile
         }
     }
