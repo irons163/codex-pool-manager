@@ -33,6 +33,7 @@ struct DebugToolsPanelView: View {
                         }
                     }
                 }
+                .tint(PoolDashboardTheme.glowA)
 
                 DisclosureGroup("Last Switch Launch Log", isExpanded: $showSwitchLaunchLog) {
                     if lastSwitchLaunchLog.isEmpty {
@@ -58,6 +59,7 @@ struct DebugToolsPanelView: View {
                         }
                     }
                 }
+                .tint(PoolDashboardTheme.glowB)
             }
         }
         .sectionCardStyle()
