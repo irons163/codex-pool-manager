@@ -28,6 +28,7 @@ struct DebugToolsPanelView: View {
                                 lastUsageRawJSON = ""
                             }
                             .buttonStyle(.bordered)
+                            .tint(.orange)
                             Spacer()
                         }
                     }
@@ -52,6 +53,7 @@ struct DebugToolsPanelView: View {
                                 lastSwitchLaunchLog = ""
                             }
                             .buttonStyle(.bordered)
+                            .tint(.orange)
                             Spacer()
                         }
                     }
