@@ -32,6 +32,7 @@ struct SyncToolbarView: View {
             RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
                 .fill(PoolDashboardTheme.panelFill.opacity(0.70))
         )
+        .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
     }
 
     private func badge(
