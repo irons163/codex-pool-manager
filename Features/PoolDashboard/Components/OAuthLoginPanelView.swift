@@ -62,11 +62,23 @@ struct OAuthLoginPanelView: View {
                         Text(oauthSuccessMessage)
                             .font(.footnote)
                             .foregroundStyle(PoolDashboardTheme.glowB)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(PoolDashboardTheme.glowB.opacity(0.20))
+                            )
                     }
                     if let oauthError {
                         Text(oauthError)
                             .font(.footnote)
                             .foregroundStyle(.red)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color.red.opacity(0.20))
+                            )
                     }
                 }
             }
