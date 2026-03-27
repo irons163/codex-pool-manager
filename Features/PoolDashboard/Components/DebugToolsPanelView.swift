@@ -46,7 +46,7 @@ struct DebugToolsPanelView: View {
                     } else {
                         TextEditor(text: $lastSwitchLaunchLog)
                             .font(.system(.footnote, design: .monospaced))
-                            .frame(minHeight: 120)
+                            .frame(minHeight: 140)
                             .padding(8)
                             .background(
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
