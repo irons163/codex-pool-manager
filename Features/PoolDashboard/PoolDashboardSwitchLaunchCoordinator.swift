@@ -45,7 +45,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         }
         func outputForError(
             _ error: Error,
-            logPrefix: String,
+            logPrefix: String = "錯誤",
             sessionAuthorizedAuthFileURL: URL?
         ) -> Output {
             append("\(logPrefix)：\(error.localizedDescription)")
@@ -119,7 +119,6 @@ struct PoolDashboardSwitchLaunchCoordinator {
         } catch {
             return outputForError(
                 error,
-                logPrefix: "錯誤",
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }
