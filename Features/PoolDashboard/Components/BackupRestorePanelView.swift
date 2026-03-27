@@ -11,24 +11,19 @@ struct BackupRestorePanelView: View {
     var body: some View {
         GroupBox("備份與還原") {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    Button("匯出 JSON") {
-                        onExport()
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        exportButton
+                        exportRefetchableButton
+                        importButton
                     }
-                    .buttonStyle(.bordered)
-                    .tint(PoolDashboardTheme.glowA)
-
-                    Button("匯出（可重抓）") {
-                        onExportRefetchable()
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 10) {
+                            exportButton
+                            exportRefetchableButton
+                        }
+                        importButton
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.orange)
-
-                    Button("匯入 JSON") {
-                        onImport()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(PoolDashboardTheme.glowB)
                 }
 
                 Text("警告：匯出（可重抓）會包含 access token 與 account id，僅限你自己保管，勿分享。")
@@ -59,5 +54,23 @@ struct BackupRestorePanelView: View {
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var exportButton: some View {
+        Button("匯出 JSON", action: onExport)
+            .buttonStyle(.bordered)
+            .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var exportRefetchableButton: some View {
+        Button("匯出（可重抓）", action: onExportRefetchable)
+            .buttonStyle(.bordered)
+            .tint(.orange)
+    }
+
+    private var importButton: some View {
+        Button("匯入 JSON", action: onImport)
+            .buttonStyle(.borderedProminent)
+            .tint(PoolDashboardTheme.glowB)
     }
 }
