@@ -5,12 +5,15 @@ struct PoolDashboardMutationCoordinator {
         _ result: PoolDashboardBackupCoordinator.ExportResult,
         viewState: inout PoolDashboardViewState
     ) {
-        if let json = result.json {
+        switch (result.json, result.errorMessage) {
+        case let (json?, _):
             viewState.backupJSON = json
             viewState.backupError = nil
-        } else if let message = result.errorMessage {
+        case let (_, message?):
             viewState.backupJSON = ""
             viewState.backupError = message
+        case (nil, nil):
+            break
         }
     }
 
