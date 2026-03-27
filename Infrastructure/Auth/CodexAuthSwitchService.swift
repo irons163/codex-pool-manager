@@ -24,7 +24,10 @@ struct CodexAuthSwitchService {
     var logger: (String) -> Void = { _ in }
 
     private let knownBundleIdentifiers = ["com.openai.chatgpt", "com.openai.codex"]
-    private let knownAppPaths = ["/Applications/ChatGPT.app", "/Applications/Codex.app"]
+    private let knownAppURLs = [
+        URL(fileURLWithPath: "/Applications/ChatGPT.app"),
+        URL(fileURLWithPath: "/Applications/Codex.app")
+    ]
     private let appCloseTimeoutNanoseconds: UInt64 = 8_000_000_000
     private let appExitPollIntervalNanoseconds: UInt64 = 200_000_000
     private let launchRetryIntervalNanoseconds: UInt64 = 500_000_000
@@ -143,10 +146,9 @@ struct CodexAuthSwitchService {
                 }
             }
 
-            for appPath in knownAppPaths {
-                let appURL = URL(fileURLWithPath: appPath)
+            for appURL in knownAppURLs {
                 if try await launchApp(at: appURL) {
-                    logger("啟動成功：\(appPath)")
+                    logger("啟動成功：\(appURL.path)")
                     return true
                 }
             }
