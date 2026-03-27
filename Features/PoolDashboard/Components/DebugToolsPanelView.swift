@@ -8,16 +8,21 @@ struct DebugToolsPanelView: View {
 
     var body: some View {
         GroupBox("Debug") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 DisclosureGroup("Last Usage Raw JSON", isExpanded: $showUsageRawJSON) {
                     if lastUsageRawJSON.isEmpty {
                         Text("尚未捕捉到 usage response")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.70))
                     } else {
                         TextEditor(text: $lastUsageRawJSON)
                             .font(.system(.footnote, design: .monospaced))
                             .frame(minHeight: 120)
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(PoolDashboardTheme.panelFill)
+                            )
                         HStack {
                             Button("清除") {
                                 lastUsageRawJSON = ""
@@ -32,11 +37,16 @@ struct DebugToolsPanelView: View {
                     if lastSwitchLaunchLog.isEmpty {
                         Text("尚未執行切換並啟動")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.70))
                     } else {
                         TextEditor(text: $lastSwitchLaunchLog)
                             .font(.system(.footnote, design: .monospaced))
                             .frame(minHeight: 120)
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(PoolDashboardTheme.panelFill)
+                            )
                         HStack {
                             Button("清除") {
                                 lastSwitchLaunchLog = ""
@@ -48,5 +58,6 @@ struct DebugToolsPanelView: View {
                 }
             }
         }
+        .tint(PoolDashboardTheme.glowA)
     }
 }
