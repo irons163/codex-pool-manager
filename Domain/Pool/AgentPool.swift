@@ -2,6 +2,7 @@ import Foundation
 
 struct AgentAccount: Identifiable, Equatable, Codable {
     let id: UUID
+    var createdAt: Date
     var name: String
     var usedUnits: Int
     var quota: Int
@@ -9,18 +10,24 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var chatGPTAccountID: String?
     var usageWindowName: String?
     var usageWindowResetAt: Date?
+    var isUsageSyncExcluded: Bool
+    var usageSyncError: String?
 
     init(
         id: UUID,
+        createdAt: Date = .now,
         name: String,
         usedUnits: Int,
         quota: Int,
         apiToken: String = "",
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
-        usageWindowResetAt: Date? = nil
+        usageWindowResetAt: Date? = nil,
+        isUsageSyncExcluded: Bool = false,
+        usageSyncError: String? = nil
     ) {
         self.id = id
+        self.createdAt = createdAt
         self.name = name
         self.usedUnits = usedUnits
         self.quota = quota
@@ -28,11 +35,14 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.chatGPTAccountID = chatGPTAccountID
         self.usageWindowName = usageWindowName
         self.usageWindowResetAt = usageWindowResetAt
+        self.isUsageSyncExcluded = isUsageSyncExcluded
+        self.usageSyncError = usageSyncError
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .distantPast
         name = try container.decode(String.self, forKey: .name)
         usedUnits = try container.decodeIfPresent(Int.self, forKey: .usedUnits) ?? 0
         quota = try container.decodeIfPresent(Int.self, forKey: .quota) ?? 100
@@ -40,6 +50,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
         usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)
         usageWindowResetAt = try container.decodeIfPresent(Date.self, forKey: .usageWindowResetAt)
+        isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
+        usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
     }
 
     var remainingUnits: Int {
@@ -59,13 +71,16 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     func redactingAPIToken() -> AgentAccount {
         AgentAccount(
             id: id,
+            createdAt: createdAt,
             name: name,
             usedUnits: usedUnits,
             quota: quota,
             apiToken: "",
             chatGPTAccountID: chatGPTAccountID,
             usageWindowName: usageWindowName,
-            usageWindowResetAt: usageWindowResetAt
+            usageWindowResetAt: usageWindowResetAt,
+            isUsageSyncExcluded: isUsageSyncExcluded,
+            usageSyncError: usageSyncError
         )
     }
 }
@@ -266,11 +281,11 @@ struct AccountPoolState {
     }
 
     var totalUsedUnits: Int {
-        accounts.reduce(0) { $0 + $1.usedUnits }
+        syncIncludedAccounts.reduce(0) { $0 + $1.usedUnits }
     }
 
     var totalQuota: Int {
-        accounts.reduce(0) { $0 + $1.quota }
+        syncIncludedAccounts.reduce(0) { $0 + $1.quota }
     }
 
     var overallUsageRatio: Double {
@@ -279,11 +294,11 @@ struct AccountPoolState {
     }
 
     var availableAccountsCount: Int {
-        accounts.filter { $0.remainingUnits > 0 }.count
+        syncIncludedAccounts.filter { $0.remainingUnits > 0 }.count
     }
 
     var isPoolExhausted: Bool {
-        !accounts.isEmpty && availableAccountsCount == 0
+        !syncIncludedAccounts.isEmpty && availableAccountsCount == 0
     }
 
     var intelligentCandidateID: UUID? {
@@ -479,6 +494,17 @@ struct AccountPoolState {
         lastUsageSyncAt = now
     }
 
+    mutating func setUsageSyncExclusion(
+        for accountID: UUID,
+        reason: String?,
+        now: Date = .now
+    ) {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
+        accounts[index].isUsageSyncExcluded = (reason != nil)
+        accounts[index].usageSyncError = reason
+        evaluate(now: now)
+    }
+
     mutating func evaluate(now: Date = .now) {
         guard !accounts.isEmpty else {
             activeAccountID = nil
@@ -537,7 +563,7 @@ struct AccountPoolState {
     }
 
     private func intelligentCandidateAccountID() -> UUID? {
-        let availableAccounts = accounts.filter { $0.remainingUnits > 0 }
+        let availableAccounts = syncIncludedAccounts.filter { $0.remainingUnits > 0 }
         guard !availableAccounts.isEmpty else { return nil }
 
         return availableAccounts
@@ -552,11 +578,21 @@ struct AccountPoolState {
     }
 
     private func bestRemainingAccountID() -> UUID? {
-        accounts.max(by: { $0.remainingUnits < $1.remainingUnits })?.id
+        syncIncludedAccounts.max(by: { $0.remainingUnits < $1.remainingUnits })?.id
+    }
+
+    private var syncIncludedAccounts: [AgentAccount] {
+        accounts.filter { !$0.isUsageSyncExcluded }
     }
 
     private mutating func switchActive(to accountID: UUID, now: Date) {
-        let validID = accounts.contains(where: { $0.id == accountID }) ? accountID : accounts[0].id
+        let availableIDs = Set(syncIncludedAccounts.map(\.id))
+        guard !availableIDs.isEmpty else {
+            activeAccountID = nil
+            return
+        }
+        let fallbackID = syncIncludedAccounts[0].id
+        let validID = availableIDs.contains(accountID) ? accountID : fallbackID
         if activeAccountID != validID {
             let previousName = accounts.first(where: { $0.id == activeAccountID })?.name
             activeAccountID = validID

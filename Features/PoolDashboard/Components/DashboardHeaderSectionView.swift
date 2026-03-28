@@ -33,18 +33,12 @@ struct DashboardHeaderSectionView: View {
         .padding(.vertical, PoolDashboardTheme.headerTileVerticalPadding)
         .padding(.horizontal, PoolDashboardTheme.headerTileHorizontalPadding)
         .background(
-            RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                .fill(PoolDashboardTheme.panelStrongFill)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.78))
                 .overlay(
-                    RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                        .stroke(tone.opacity(0.55), lineWidth: PoolDashboardTheme.tileBorderWidth)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(tone.opacity(0.45), lineWidth: 0.9)
                 )
-        )
-        .shadow(
-            color: tone.opacity(0.18),
-            radius: PoolDashboardTheme.tileShadowRadius,
-            x: 0,
-            y: PoolDashboardTheme.cardShadowYOffset
         )
     }
 }

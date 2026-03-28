@@ -99,10 +99,10 @@ private struct SectionCardStyle: ViewModifier {
             .padding(PoolDashboardTheme.sectionCardPadding)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelFill.opacity(0.58))
+                    .fill(PoolDashboardTheme.panelFill.opacity(0.34))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.7), lineWidth: 0.8)
                     )
             )
     }
@@ -150,10 +150,10 @@ extension View {
             .padding(PoolDashboardTheme.sectionCardInnerPadding)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.infoCardCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill)
+                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.8))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.infoCardCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.65), lineWidth: 0.8)
                     )
             )
     }
@@ -162,10 +162,10 @@ extension View {
         self
             .listRowBackground(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill)
+                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.72))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.55), lineWidth: 0.7)
                     )
                     .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
             )

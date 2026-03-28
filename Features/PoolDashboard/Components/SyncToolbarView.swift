@@ -17,34 +17,12 @@ struct SyncToolbarView: View {
                 toolbarRow
             }
         }
-        .padding(PoolDashboardTheme.toolbarPadding)
-        .background(
-            RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                .fill(PoolDashboardTheme.panelStrongFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                        .stroke(PoolDashboardTheme.panelStroke, lineWidth: 1)
-                )
-        )
-        .shadow(
-            color: .black.opacity(0.22),
-            radius: PoolDashboardTheme.toolbarShadowRadius,
-            x: 0,
-            y: PoolDashboardTheme.cardShadowYOffset
-        )
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
     }
 
     private var toolbarRow: some View {
         HStack(alignment: .center, spacing: Layout.spacing) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Usage Sync")
-                    .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                Text(isSyncing ? "Sync in progress" : "Manual refresh available")
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-            }
-
             Button(isSyncing ? "Syncing..." : "Sync Codex Usage") {
                 onSync()
             }

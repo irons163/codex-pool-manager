@@ -13,6 +13,7 @@ struct AIAgentPoolApp: App {
         WindowGroup {
             ContentView()
         }
+        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .commands {
             SidebarCommands()

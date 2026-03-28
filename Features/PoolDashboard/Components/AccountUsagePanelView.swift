@@ -1,6 +1,14 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
+    private enum SortMode: String, CaseIterable, Identifiable {
+        case joinedAt = "加入時間"
+        case name = "名稱"
+        case remainingHigh = "剩餘用量高到低"
+
+        var id: String { rawValue }
+    }
+
     private enum LayoutMode: String, CaseIterable, Identifiable {
         case single = "單排"
         case double = "雙排"
@@ -17,12 +25,14 @@ struct AccountUsagePanelView: View {
         }
     }
 
+    @State private var sortMode: SortMode = .joinedAt
     @State private var layoutMode: LayoutMode = .single
 
     @Binding var newAccountName: String
     @Binding var newAccountQuota: Int
 
     let accounts: [AgentAccount]
+    let switchLaunchError: String?
     let showAddAccountControls: Bool
     let onAddAccount: (String, Int) -> Void
     let onSwitchAndLaunch: (AgentAccount) async -> Void
@@ -37,11 +47,9 @@ struct AccountUsagePanelView: View {
     let usageProgressColor: (AgentAccount) -> Color
 
     var body: some View {
-        GroupBox("Account Usage") {
+        GroupBox {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Manage quotas, trigger switches, and monitor utilization per account.")
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                headerRow
 
                 if showAddAccountControls {
                     PanelAdaptiveActionRowView {
@@ -49,22 +57,17 @@ struct AccountUsagePanelView: View {
                     }
                 }
 
-                PanelStatusCalloutView(
-                    message: "\(accounts.count) account(s) are currently managed in the pool.",
-                    title: "Managed Accounts",
-                    tone: .info
-                )
-
-                Picker("排列", selection: $layoutMode) {
-                    ForEach(LayoutMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
+                if let switchLaunchError, !switchLaunchError.isEmpty {
+                    PanelStatusCalloutView(
+                        message: switchLaunchError,
+                        title: "Switch Failed",
+                        tone: .danger
+                    )
                 }
-                .pickerStyle(.segmented)
 
                 ScrollView {
                     LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
-                        ForEach(accounts) { account in
+                        ForEach(sortedAccounts) { account in
                             accountCard(account)
                         }
                     }
@@ -74,6 +77,63 @@ struct AccountUsagePanelView: View {
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var headerRow: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text("Account Usage")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(PoolDashboardTheme.groupLabelOpacity))
+
+            Spacer(minLength: 0)
+
+            sortingLayoutControls
+        }
+    }
+
+    private var sortingLayoutControls: some View {
+        HStack(spacing: 10) {
+            Menu {
+                ForEach(SortMode.allCases) { mode in
+                    Button {
+                        sortMode = mode
+                    } label: {
+                        if sortMode == mode {
+                            Label(mode.rawValue, systemImage: "checkmark")
+                        } else {
+                            Text(mode.rawValue)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("排序")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(PoolDashboardTheme.panelMutedFill.opacity(0.8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.7), lineWidth: 0.8)
+                        )
+                )
+            }
+            .menuStyle(.borderlessButton)
+
+            Picker("排列", selection: $layoutMode) {
+                ForEach(LayoutMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
     }
 
     private var addRow: some View {
@@ -97,13 +157,38 @@ struct AccountUsagePanelView: View {
         Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10), count: layoutMode.columns)
     }
 
+    private var sortedAccounts: [AgentAccount] {
+        switch sortMode {
+        case .joinedAt:
+            return accounts.sorted { lhs, rhs in
+                if lhs.createdAt == rhs.createdAt {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+                return lhs.createdAt > rhs.createdAt
+            }
+        case .name:
+            return accounts.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .remainingHigh:
+            return accounts.sorted { lhs, rhs in
+                if lhs.isUsageSyncExcluded != rhs.isUsageSyncExcluded {
+                    return !lhs.isUsageSyncExcluded
+                }
+                if lhs.remainingRatio == rhs.remainingRatio {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+                return lhs.remainingRatio > rhs.remainingRatio
+            }
+        }
+    }
+
     private func accountCard(_ account: AgentAccount) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if layoutMode == .single {
-                accountSingleRowHeader(account)
+                accountNameRow(account)
+                accountActionAndWarningRow(account)
             } else {
                 accountNameRow(account)
-                accountActionRow(account)
+                accountActionAndWarningRow(account)
             }
 
             if isPercentUsageAccount(account) {
@@ -143,10 +228,20 @@ struct AccountUsagePanelView: View {
             .dashboardInputFieldStyle()
     }
 
-    private func accountActionRow(_ account: AgentAccount) -> some View {
-        HStack(spacing: 8) {
-            Spacer(minLength: 0)
+    @ViewBuilder
+    private func syncExcludedWarning(_ account: AgentAccount) -> some View {
+        if account.isUsageSyncExcluded {
+            PanelStatusCalloutView(
+                message: account.usageSyncError ?? "This account is excluded from sync and pool calculations.",
+                title: "Excluded from Sync",
+                tone: .warning
+            )
+            .frame(maxWidth: 440, alignment: .leading)
+        }
+    }
 
+    private func accountActionButtons(_ account: AgentAccount) -> some View {
+        HStack(spacing: 8) {
             Button("Switch & Launch") {
                 Task {
                     await onSwitchAndLaunch(account)
@@ -165,10 +260,21 @@ struct AccountUsagePanelView: View {
         }
     }
 
-    private func accountSingleRowHeader(_ account: AgentAccount) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            accountNameRow(account)
-            accountActionRow(account)
+    private func accountActionAndWarningRow(_ account: AgentAccount) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 10) {
+                syncExcludedWarning(account)
+                Spacer(minLength: 0)
+                accountActionButtons(account)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                syncExcludedWarning(account)
+                HStack {
+                    Spacer(minLength: 0)
+                    accountActionButtons(account)
+                }
+            }
         }
     }
 }

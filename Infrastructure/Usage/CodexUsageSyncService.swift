@@ -63,24 +63,40 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
+        let missingTokenMessage = "缺少 API Token，已排除於同步與調度計算"
+        let missingAccountIDMessage = "缺少 Account ID，已排除於同步與調度計算"
         for account in state.accounts {
-            guard !account.apiToken.isEmpty,
-                  let chatGPTAccountID = account.chatGPTAccountID,
-                  !chatGPTAccountID.isEmpty else {
+            guard !account.apiToken.isEmpty else {
+                state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now)
                 continue
             }
-            let usage = try await fetchUsageWithRetry(
-                accessToken: account.apiToken,
-                accountID: chatGPTAccountID
-            )
-            state.updateAccount(
-                account.id,
-                quota: usage.quota,
-                usedUnits: usage.usedUnits,
-                usageWindowName: usage.usageWindowName,
-                usageWindowResetAt: usage.usageWindowResetAt,
-                now: now
-            )
+            guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+                state.setUsageSyncExclusion(for: account.id, reason: missingAccountIDMessage, now: now)
+                continue
+            }
+
+            do {
+                let usage = try await fetchUsageWithRetry(
+                    accessToken: account.apiToken,
+                    accountID: chatGPTAccountID
+                )
+                state.updateAccount(
+                    account.id,
+                    quota: usage.quota,
+                    usedUnits: usage.usedUnits,
+                    usageWindowName: usage.usageWindowName,
+                    usageWindowResetAt: usage.usageWindowResetAt,
+                    now: now
+                )
+                state.setUsageSyncExclusion(for: account.id, reason: nil, now: now)
+            } catch {
+                let mapped = mapSyncError(error)
+                state.setUsageSyncExclusion(
+                    for: account.id,
+                    reason: mapped.localizedDescription,
+                    now: now
+                )
+            }
         }
         state.markUsageSynced(at: now)
     }
@@ -273,4 +289,3 @@ private extension KeyedDecodingContainer where K == OpenAICodexUsageClient.Dynam
         return nil
     }
 }
-
