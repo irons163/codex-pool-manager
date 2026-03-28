@@ -39,7 +39,7 @@
 "delete.button" = "삭제";
 
 "oauth.sign_in.title" = "OAuth 로그인";
-"oauth.sign_in.subtitle" = "Use your own OAuth client to sign in, then import the resulting account into the pool.";
+"oauth.sign_in.subtitle" = "자체 OAuth 클라이언트로 로그인한 뒤, 생성된 계정을 풀로 가져오세요.";
 "oauth.import_target.title" = "가져오기 대상";
 "oauth.account_name.label" = "계정 이름";
 "oauth.account_name.placeholder" = "로그인 후 이름";
@@ -53,75 +53,75 @@
 "oauth.originator.label" = "Originator";
 "oauth.workspace_id.label" = "Workspace ID";
 "oauth.workspace_id.optional" = "선택 사항";
-"oauth.workspace_id.hint" = "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.";
+"oauth.workspace_id.hint" = "Workspace ID는 조직 관리 OAuth 흐름에서만 필요합니다. 개인 계정은 비워 두세요.";
 "oauth.signing_in" = "로그인 중...";
 "oauth.sign_in_import" = "로그인 및 가져오기";
 "oauth.import_completed" = "가져오기 완료";
 "oauth.sign_in_failed" = "로그인 실패";
 
 "local_oauth.title" = "로컬 OAuth 세션";
-"local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
+"local_oauth.subtitle" = "로컬 인증 데이터에서 로그인된 Codex 세션을 찾아 관리형 풀 계정으로 가져옵니다.";
 "local_oauth.no_session.title" = "세션을 찾을 수 없음";
-"local_oauth.no_session.message" = "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
+"local_oauth.no_session.message" = "로컬 OAuth 세션을 찾지 못했습니다. Codex에 로그인되어 있다면 ~/.codex/auth.json을 수동으로 선택하세요.";
 "local_oauth.scan_button" = "로컬 세션 스캔";
 "local_oauth.choose_button" = "auth.json 선택";
 "local_oauth.scan_failed" = "스캔 실패";
 "local_oauth.session_count_format" = "%d개 세션 발견";
 "local_oauth.account_id_format" = "계정 ID: %@";
 "local_oauth.missing_id.title" = "계정 ID 누락";
-"local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
+"local_oauth.missing_id.message" = "이 계정에는 ChatGPT account id가 없어 사용량 동기화를 사용할 수 없습니다.";
 "local_oauth.import_button" = "가져오기";
 "local_oauth.sync_unavailable" = "사용량 동기화 불가";
 
-"strategy.subtitle" = "Control how runtime selects and rotates accounts.";
+"strategy.subtitle" = "런타임이 계정을 선택하고 순환하는 방식을 제어합니다.";
 "strategy.switch_mode" = "전환 모드";
 "strategy.parameters" = "전략 파라미터";
 "strategy.low_usage_threshold_format" = "저사용량 경고 임계값: %d%%";
 "strategy.smart_recommendation.title" = "스마트 추천";
-"strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
+"strategy.smart_recommendation.message_format" = "추천 다음 계정은 %@ 입니다.";
 "strategy.switch_allowed.title" = "전환 가능";
-"strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+"strategy.switch_allowed.message" = "스마트 전환 조건이 충족되었습니다.";
 
 "overview.title" = "풀 개요";
-"overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
+"overview.subtitle" = "전체 용량을 모니터링하고 통제된 유지보수 창에서 사용량을 초기화합니다.";
 "overview.total_usage_format" = "총 사용량 %d/%d";
 "overview.available_accounts_format" = "사용 가능 계정: %d";
 "overview.pool_exhausted.title" = "풀 고갈";
-"overview.pool_exhausted.message" = "All accounts are exhausted. Increase quota or reset usage to resume switching.";
+"overview.pool_exhausted.message" = "모든 계정이 소진되었습니다. 전환을 재개하려면 할당량을 늘리거나 사용량을 초기화하세요.";
 "overview.reset_all" = "전체 사용량 초기화";
 "overview.reset_all_confirm" = "전체 사용량 초기화 확인";
 
 "backup_restore.title" = "백업 및 복원";
-"backup_restore.subtitle" = "Export snapshots for recovery and migration. Keep refetchable exports private.";
+"backup_restore.subtitle" = "복구와 마이그레이션을 위해 스냅샷을 내보냅니다. 재조회 가능한 내보내기 파일은 비공개로 보관하세요.";
 "backup_restore.sensitive.title" = "민감 정보";
-"backup_restore.sensitive.message" = "Refetchable exports may include access token and account id. Store only in secure internal systems.";
+"backup_restore.sensitive.message" = "재조회 가능한 내보내기에는 access token과 account id가 포함될 수 있습니다. 안전한 내부 시스템에만 저장하세요.";
 "backup_restore.failed" = "백업 작업 실패";
 "backup_restore.export_json" = "JSON 내보내기";
 "backup_restore.export_refetchable" = "Refetchable 내보내기";
 "backup_restore.import_json" = "JSON 가져오기";
 
 "active_account.title" = "활성 계정";
-"active_account.subtitle" = "Inspect live consumption and trigger switch evaluation immediately.";
+"active_account.subtitle" = "실시간 사용량을 확인하고 즉시 전환 평가를 실행합니다.";
 "active_account.remaining_format" = "남은 용량 %d";
 "active_account.focus_lock.title" = "집중 잠금 활성";
-"active_account.focus_lock.message" = "Runtime is currently pinned to the active account for deterministic execution.";
+"active_account.focus_lock.message" = "결정적 실행을 위해 현재 런타임이 활성 계정에 고정되어 있습니다.";
 "active_account.low_usage.title" = "저사용량 경고";
-"active_account.low_usage.message_format" = "Remaining balance is below %d%%. Consider switching soon.";
+"active_account.low_usage.message_format" = "남은 사용량이 %d%% 미만입니다. 곧 전환을 고려하세요.";
 "active_account.simulate_button" = "+50 사용량 시뮬레이션";
 "active_account.run_evaluation" = "전환 평가 실행";
 "active_account.none" = "사용 가능한 계정 없음";
 
 "workspace.list_title" = "워크스페이스";
 "workspace.authentication.title" = "인증";
-"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
+"workspace.authentication.subtitle" = "로그인 흐름을 관리하고 로컬 Codex 세션을 가져옵니다.";
 "workspace.runtime.title" = "런타임 전략";
-"workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.runtime.subtitle" = "전환 정책을 구성하고 활성 실행 계정을 모니터링합니다.";
 "workspace.capacity.title" = "용량";
-"workspace.capacity.subtitle" = "Track aggregate pool usage posture and enforce reset controls when exhausted.";
+"workspace.capacity.subtitle" = "풀 전체 사용 상태를 추적하고 소진 시 초기화 제어를 적용합니다.";
 "workspace.safety.title" = "안전";
-"workspace.safety.subtitle" = "Backup state and inspect raw diagnostics.";
+"workspace.safety.subtitle" = "상태를 백업하고 원시 진단 정보를 확인합니다.";
 "workspace.developer.title" = "개발";
-"workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
+"workspace.developer.subtitle" = "개발자 전용 진단과 원시 페이로드 점검 기능입니다.";
 "drawer.expand" = "펼치기";
 "drawer.collapse" = "접기";
 "alert.low_usage.title" = "저사용량 경고";
@@ -132,17 +132,17 @@
 "capacity.active_account_format" = "활성 계정: %@";
 "capacity.overall_usage_format" = "전체 사용량: %d%%";
 "capacity.exhausted.title" = "조치 필요";
-"capacity.exhausted.message" = "Pool capacity is exhausted. Reset usage or raise quota before next switch.";
+"capacity.exhausted.message" = "풀 용량이 소진되었습니다. 다음 전환 전에 사용량을 초기화하거나 할당량을 늘리세요.";
 "capacity.healthy.title" = "용량 정상";
-"capacity.healthy.message" = "Pool still has headroom for continued routing.";
+"capacity.healthy.message" = "풀이 아직 여유 용량이 있어 라우팅을 계속할 수 있습니다.";
 
 "safety.signals.title" = "안전 신호";
 "safety.operational.title" = "운영 안전";
-"safety.operational.message" = "Backup and restore tools stay available in standard mode. Developer diagnostics are separated.";
-"safety.developer_available" = "Developer diagnostics are available in the Developer workspace for this debug run.";
+"safety.operational.message" = "표준 모드에서도 백업/복원 도구를 사용할 수 있으며, 개발자 진단은 분리되어 있습니다.";
+"safety.developer_available" = "이번 디버그 실행에서는 개발자 워크스페이스에서 개발자 진단을 사용할 수 있습니다.";
 
 "developer.diagnostics.title" = "개발 진단";
-"developer.diagnostics.subtitle" = "Use this workspace only for development troubleshooting and payload inspection.";
+"developer.diagnostics.subtitle" = "이 워크스페이스는 개발 문제 해결과 페이로드 점검 용도로만 사용하세요.";
 "local_import.auto_scan_empty" = "자동 스캔에서 계정을 찾지 못했습니다. macOS Sandbox 제한 때문일 수 있습니다. 접근 권한을 위해 \"auth.json 선택\"을 눌러주세요.";
 "local_import.file_readable_but_no_token" = "파일은 읽을 수 있지만 access token을 찾지 못했습니다.";
 "local_import.read_failure_format" = "읽기 실패: %@";

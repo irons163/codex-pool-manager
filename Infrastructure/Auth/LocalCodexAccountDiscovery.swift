@@ -55,7 +55,7 @@ enum LocalCodexAccountDiscovery {
         if let dictionary = node as? [String: Any] {
             if let accessToken = findAccessToken(in: dictionary) {
                 let email = findStringDeep(in: dictionary, keys: emailKeys)
-                let name = findStringDeep(in: dictionary, keys: displayNameKeys) ?? email ?? "Codex OAuth"
+                let name = findStringDeep(in: dictionary, keys: displayNameKeys) ?? email ?? L10n.text("account.default_oauth_name")
                 let chatGPTAccountID = findStringDeep(in: dictionary, keys: accountIDKeys)
                 let id = "\(source)|\(chatGPTAccountID ?? (email ?? name))|\(accessToken.prefix(16))"
                 accounts.append(
