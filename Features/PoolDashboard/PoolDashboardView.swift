@@ -52,7 +52,6 @@ struct PoolDashboardView: View {
         case authentication
         case runtime
         case capacity
-        case operations
         case safety
         case developer
 
@@ -63,7 +62,6 @@ struct PoolDashboardView: View {
             case .authentication: "Authentication"
             case .runtime: "Runtime Strategy"
             case .capacity: "Capacity"
-            case .operations: "Operations"
             case .safety: "Safety"
             case .developer: "Developer"
             }
@@ -74,7 +72,6 @@ struct PoolDashboardView: View {
             case .authentication: "Manage sign-in flows and import local Codex sessions."
             case .runtime: "Configure switching policy and monitor active execution account."
             case .capacity: "Track aggregate pool usage posture and enforce reset controls when exhausted."
-            case .operations: "Track account usage and recent activity in one place."
             case .safety: "Backup state and inspect raw diagnostics."
             case .developer: "Developer-only diagnostics and raw payload inspection."
             }
@@ -85,7 +82,6 @@ struct PoolDashboardView: View {
             case .authentication: "person.badge.key"
             case .runtime: "dial.medium"
             case .capacity: "gauge.with.dots.needle.bottom.50percent"
-            case .operations: "list.bullet.rectangle"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
             case .developer: "wrench.and.screwdriver"
             }
@@ -155,7 +151,7 @@ struct PoolDashboardView: View {
         }
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
-                selectedWorkspace = .operations
+                selectedWorkspace = .authentication
             }
         }
         .alert("Low Usage Warning", isPresented: $viewState.showLowUsageAlert) {
@@ -247,21 +243,17 @@ struct PoolDashboardView: View {
                 symbolName: selectedWorkspace.symbolName
             )
 
-            if selectedWorkspace == .operations {
-                workspaceMainPanel
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
-                        workspaceMainPanel
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                        workspaceContextPanel
-                            .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
-                    }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                    workspaceMainPanel
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    workspaceContextPanel
+                        .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
+                }
 
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                        workspaceMainPanel
-                        workspaceContextPanel
-                    }
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                    workspaceMainPanel
+                    workspaceContextPanel
                 }
             }
         }
@@ -277,8 +269,6 @@ struct PoolDashboardView: View {
             strategySettingsPanel
         case .capacity:
             overallUsagePanel
-        case .operations:
-            operationsPinnedPanel
         case .safety:
             backupRestorePanel
         case .developer:
@@ -295,8 +285,6 @@ struct PoolDashboardView: View {
             activeAccountPanel
         case .capacity:
             capacityContextPanel
-        case .operations:
-            EmptyView()
         case .safety:
             safetyContextPanel
         case .developer:
@@ -545,20 +533,6 @@ struct PoolDashboardView: View {
                 handleClearActivities()
             }
         )
-    }
-
-    private var operationsPinnedPanel: some View {
-        GroupBox("Operations") {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Operations panel is pinned below the dashboard metrics for faster access.")
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                Text("Use the top Account Usage panel to switch, delete, and inspect account utilization.")
-                    .font(.caption)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-            }
-        }
-        .sectionCardStyle()
     }
 
     private var backupRestorePanel: some View {
