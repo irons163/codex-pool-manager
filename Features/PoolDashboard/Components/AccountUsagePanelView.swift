@@ -1,6 +1,24 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
+    private enum LayoutMode: String, CaseIterable, Identifiable {
+        case single = "單排"
+        case double = "雙排"
+        case triple = "三排"
+
+        var id: String { rawValue }
+
+        var columns: Int {
+            switch self {
+            case .single: 1
+            case .double: 2
+            case .triple: 3
+            }
+        }
+    }
+
+    @State private var layoutMode: LayoutMode = .single
+
     @Binding var newAccountName: String
     @Binding var newAccountQuota: Int
 
@@ -37,50 +55,20 @@ struct AccountUsagePanelView: View {
                     tone: .info
                 )
 
-                List {
-                    ForEach(accounts) { account in
-                        VStack(alignment: .leading, spacing: 8) {
-                            ViewThatFits(in: .horizontal) {
-                                accountIdentityRow(account)
-                                VStack(alignment: .leading, spacing: 8) {
-                                    accountIdentityRow(account)
-                                }
-                            }
-
-                            if isPercentUsageAccount(account) {
-                                HStack {
-                                    Text("Used \(account.usedUnits)%")
-                                        .font(.subheadline)
-                                    Spacer()
-                                    Text("Remaining \(account.remainingUnits)%")
-                                        .font(.subheadline)
-                                }
-                            } else {
-                                HStack {
-                                    Stepper(
-                                        "Used \(account.usedUnits)",
-                                        value: accountUsedBinding(account.id),
-                                        in: 0...account.quota,
-                                        step: 50
-                                    )
-                                    Stepper(
-                                        "Quota \(account.quota)",
-                                        value: accountQuotaBinding(account.id),
-                                        in: 100...20_000,
-                                        step: 100
-                                    )
-                                }
-                            }
-
-                            ProgressView(value: account.usageRatio)
-                                .tint(usageProgressColor(account))
-                        }
-                        .padding(.vertical, 4)
-                        .dashboardListRowCard()
+                Picker("排列", selection: $layoutMode) {
+                    ForEach(LayoutMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
                     }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
+                .pickerStyle(.segmented)
+
+                ScrollView {
+                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
+                        ForEach(accounts) { account in
+                            accountCard(account)
+                        }
+                    }
+                }
                 .frame(minHeight: PoolDashboardTheme.usageListMinHeight)
             }
         }
@@ -105,6 +93,51 @@ struct AccountUsagePanelView: View {
         }
     }
 
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10), count: layoutMode.columns)
+    }
+
+    private func accountCard(_ account: AgentAccount) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                accountIdentityRow(account)
+                VStack(alignment: .leading, spacing: 8) {
+                    accountIdentityRow(account)
+                }
+            }
+
+            if isPercentUsageAccount(account) {
+                HStack {
+                    Text("Used \(account.usedUnits)%")
+                        .font(.subheadline)
+                    Spacer()
+                    Text("Remaining \(account.remainingUnits)%")
+                        .font(.subheadline)
+                }
+            } else {
+                HStack {
+                    Stepper(
+                        "Used \(account.usedUnits)",
+                        value: accountUsedBinding(account.id),
+                        in: 0...account.quota,
+                        step: 50
+                    )
+                    Stepper(
+                        "Quota \(account.quota)",
+                        value: accountQuotaBinding(account.id),
+                        in: 100...20_000,
+                        step: 100
+                    )
+                }
+            }
+
+            ProgressView(value: account.usageRatio)
+                .tint(usageProgressColor(account))
+        }
+        .padding(.vertical, 4)
+        .dashboardListRowCard()
+    }
+
     private func accountIdentityRow(_ account: AgentAccount) -> some View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
@@ -115,18 +148,34 @@ struct AccountUsagePanelView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                Button("Switch & Launch") {
-                    Task {
-                        await onSwitchAndLaunch(account)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    Button("Switch & Launch") {
+                        Task {
+                            await onSwitchAndLaunch(account)
+                        }
                     }
-                }
-                .buttonStyle(DashboardPrimaryButtonStyle())
+                    .buttonStyle(DashboardPrimaryButtonStyle())
 
-                Button("Delete", role: .destructive) {
-                    onRemoveAccount(account.id)
+                    Button("Delete", role: .destructive) {
+                        onRemoveAccount(account.id)
+                    }
+                    .buttonStyle(DashboardWarningButtonStyle())
                 }
-                .buttonStyle(DashboardWarningButtonStyle())
+
+                VStack(alignment: .trailing, spacing: 6) {
+                    Button("Switch & Launch") {
+                        Task {
+                            await onSwitchAndLaunch(account)
+                        }
+                    }
+                    .buttonStyle(DashboardPrimaryButtonStyle())
+
+                    Button("Delete", role: .destructive) {
+                        onRemoveAccount(account.id)
+                    }
+                    .buttonStyle(DashboardWarningButtonStyle())
+                }
             }
         }
     }
