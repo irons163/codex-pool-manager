@@ -37,3 +37,109 @@
 "sync.excluded.default_message" = "このアカウントは同期およびプール計算から除外されています。";
 "switch.launch.button" = "切替して起動";
 "delete.button" = "削除";
+
+"oauth.sign_in.title" = "OAuth サインイン";
+"oauth.sign_in.subtitle" = "Use your own OAuth client to sign in, then import the resulting account into the pool.";
+"oauth.import_target.title" = "インポート先";
+"oauth.account_name.label" = "アカウント名";
+"oauth.account_name.placeholder" = "サインイン後の名前";
+"oauth.quota.hint" = "クォータは既定ポリシーで自動割り当てされます。";
+"oauth.advanced.title" = "詳細 OAuth パラメータ";
+"oauth.client_id.label" = "Client ID";
+"oauth.client_id.placeholder" = "OAuth Client ID を貼り付け";
+"oauth.issuer.label" = "Issuer";
+"oauth.scopes.label" = "Scopes";
+"oauth.redirect_uri.label" = "Redirect URI";
+"oauth.originator.label" = "Originator";
+"oauth.workspace_id.label" = "Workspace ID";
+"oauth.workspace_id.optional" = "任意";
+"oauth.workspace_id.hint" = "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.";
+"oauth.signing_in" = "サインイン中...";
+"oauth.sign_in_import" = "サインインしてインポート";
+"oauth.import_completed" = "インポート完了";
+"oauth.sign_in_failed" = "サインイン失敗";
+
+"local_oauth.title" = "ローカル OAuth セッション";
+"local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
+"local_oauth.no_session.title" = "セッション未検出";
+"local_oauth.no_session.message" = "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
+"local_oauth.scan_button" = "ローカルセッションをスキャン";
+"local_oauth.choose_button" = "auth.json を選択";
+"local_oauth.scan_failed" = "スキャン失敗";
+"local_oauth.session_count_format" = "%d 件のセッションが見つかりました";
+"local_oauth.account_id_format" = "アカウント ID: %@";
+"local_oauth.missing_id.title" = "アカウント ID 不足";
+"local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
+"local_oauth.import_button" = "インポート";
+"local_oauth.sync_unavailable" = "使用量同期は利用不可";
+
+"strategy.subtitle" = "Control how runtime selects and rotates accounts.";
+"strategy.switch_mode" = "切替モード";
+"strategy.parameters" = "戦略パラメータ";
+"strategy.low_usage_threshold_format" = "低使用量アラートしきい値: %d%%";
+"strategy.smart_recommendation.title" = "スマート推奨";
+"strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
+"strategy.switch_allowed.title" = "切替可能";
+"strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+
+"overview.title" = "プール概要";
+"overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
+"overview.total_usage_format" = "合計使用量 %d/%d";
+"overview.available_accounts_format" = "利用可能アカウント: %d";
+"overview.pool_exhausted.title" = "プール枯渇";
+"overview.pool_exhausted.message" = "All accounts are exhausted. Increase quota or reset usage to resume switching.";
+"overview.reset_all" = "全使用量をリセット";
+"overview.reset_all_confirm" = "全使用量リセットを確認";
+
+"backup_restore.title" = "バックアップと復元";
+"backup_restore.subtitle" = "Export snapshots for recovery and migration. Keep refetchable exports private.";
+"backup_restore.sensitive.title" = "機密情報";
+"backup_restore.sensitive.message" = "Refetchable exports may include access token and account id. Store only in secure internal systems.";
+"backup_restore.failed" = "バックアップ操作に失敗";
+"backup_restore.export_json" = "JSON をエクスポート";
+"backup_restore.export_refetchable" = "Refetchable をエクスポート";
+"backup_restore.import_json" = "JSON をインポート";
+
+"active_account.title" = "アクティブアカウント";
+"active_account.subtitle" = "Inspect live consumption and trigger switch evaluation immediately.";
+"active_account.remaining_format" = "残量 %d";
+"active_account.focus_lock.title" = "フォーカスロック有効";
+"active_account.focus_lock.message" = "Runtime is currently pinned to the active account for deterministic execution.";
+"active_account.low_usage.title" = "低使用量警告";
+"active_account.low_usage.message_format" = "Remaining balance is below %d%%. Consider switching soon.";
+"active_account.simulate_button" = "+50 使用量をシミュレート";
+"active_account.run_evaluation" = "切替評価を実行";
+"active_account.none" = "利用可能なアカウントなし";
+
+"workspace.list_title" = "ワークスペース";
+"workspace.authentication.title" = "認証";
+"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
+"workspace.runtime.title" = "ランタイム戦略";
+"workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.capacity.title" = "容量";
+"workspace.capacity.subtitle" = "Track aggregate pool usage posture and enforce reset controls when exhausted.";
+"workspace.safety.title" = "安全性";
+"workspace.safety.subtitle" = "Backup state and inspect raw diagnostics.";
+"workspace.developer.title" = "開発";
+"workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
+"drawer.expand" = "展開";
+"drawer.collapse" = "折りたたむ";
+"alert.low_usage.title" = "低使用量警告";
+"alert.dismiss" = "閉じる";
+"common.none" = "なし";
+
+"capacity.signals.title" = "プール信号";
+"capacity.active_account_format" = "アクティブアカウント: %@";
+"capacity.overall_usage_format" = "全体使用量: %d%%";
+"capacity.exhausted.title" = "要対応";
+"capacity.exhausted.message" = "Pool capacity is exhausted. Reset usage or raise quota before next switch.";
+"capacity.healthy.title" = "容量健全";
+"capacity.healthy.message" = "Pool still has headroom for continued routing.";
+
+"safety.signals.title" = "安全信号";
+"safety.operational.title" = "運用上の安全";
+"safety.operational.message" = "Backup and restore tools stay available in standard mode. Developer diagnostics are separated.";
+"safety.developer_available" = "Developer diagnostics are available in the Developer workspace for this debug run.";
+
+"developer.diagnostics.title" = "開発診断";
+"developer.diagnostics.subtitle" = "Use this workspace only for development troubleshooting and payload inspection.";

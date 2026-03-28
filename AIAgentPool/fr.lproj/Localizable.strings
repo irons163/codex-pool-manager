@@ -37,3 +37,109 @@
 "sync.excluded.default_message" = "Ce compte est exclu de la synchronisation et du calcul du pool.";
 "switch.launch.button" = "Basculer et lancer";
 "delete.button" = "Supprimer";
+
+"oauth.sign_in.title" = "Connexion OAuth";
+"oauth.sign_in.subtitle" = "Use your own OAuth client to sign in, then import the resulting account into the pool.";
+"oauth.import_target.title" = "Cible d'import";
+"oauth.account_name.label" = "Nom du compte";
+"oauth.account_name.placeholder" = "Nom après connexion";
+"oauth.quota.hint" = "Le quota est attribué automatiquement par la stratégie par défaut.";
+"oauth.advanced.title" = "Paramètres OAuth avancés";
+"oauth.client_id.label" = "Client ID";
+"oauth.client_id.placeholder" = "Coller le Client ID OAuth";
+"oauth.issuer.label" = "Issuer";
+"oauth.scopes.label" = "Scopes";
+"oauth.redirect_uri.label" = "Redirect URI";
+"oauth.originator.label" = "Originator";
+"oauth.workspace_id.label" = "Workspace ID";
+"oauth.workspace_id.optional" = "Optionnel";
+"oauth.workspace_id.hint" = "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.";
+"oauth.signing_in" = "Connexion...";
+"oauth.sign_in_import" = "Se connecter et importer";
+"oauth.import_completed" = "Import terminé";
+"oauth.sign_in_failed" = "Échec de connexion";
+
+"local_oauth.title" = "Sessions OAuth locales";
+"local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
+"local_oauth.no_session.title" = "Aucune session détectée";
+"local_oauth.no_session.message" = "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
+"local_oauth.scan_button" = "Scanner les sessions locales";
+"local_oauth.choose_button" = "Choisir auth.json";
+"local_oauth.scan_failed" = "Échec du scan";
+"local_oauth.session_count_format" = "%d session(s) trouvée(s)";
+"local_oauth.account_id_format" = "ID du compte : %@";
+"local_oauth.missing_id.title" = "ID du compte manquant";
+"local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
+"local_oauth.import_button" = "Importer";
+"local_oauth.sync_unavailable" = "Sync d'usage indisponible";
+
+"strategy.subtitle" = "Control how runtime selects and rotates accounts.";
+"strategy.switch_mode" = "Mode de bascule";
+"strategy.parameters" = "Paramètres de stratégie";
+"strategy.low_usage_threshold_format" = "Seuil d'alerte faible usage : %d%%";
+"strategy.smart_recommendation.title" = "Recommandation intelligente";
+"strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
+"strategy.switch_allowed.title" = "Bascule autorisée";
+"strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+
+"overview.title" = "Vue d'ensemble du pool";
+"overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
+"overview.total_usage_format" = "Usage total %d/%d";
+"overview.available_accounts_format" = "Comptes disponibles : %d";
+"overview.pool_exhausted.title" = "Pool épuisé";
+"overview.pool_exhausted.message" = "All accounts are exhausted. Increase quota or reset usage to resume switching.";
+"overview.reset_all" = "Réinitialiser tout l'usage";
+"overview.reset_all_confirm" = "Confirmer la réinitialisation totale";
+
+"backup_restore.title" = "Sauvegarde et restauration";
+"backup_restore.subtitle" = "Export snapshots for recovery and migration. Keep refetchable exports private.";
+"backup_restore.sensitive.title" = "Données sensibles";
+"backup_restore.sensitive.message" = "Refetchable exports may include access token and account id. Store only in secure internal systems.";
+"backup_restore.failed" = "Échec de l'opération de sauvegarde";
+"backup_restore.export_json" = "Exporter JSON";
+"backup_restore.export_refetchable" = "Exporter refetchable";
+"backup_restore.import_json" = "Importer JSON";
+
+"active_account.title" = "Compte actif";
+"active_account.subtitle" = "Inspect live consumption and trigger switch evaluation immediately.";
+"active_account.remaining_format" = "Restant %d";
+"active_account.focus_lock.title" = "Verrou focus actif";
+"active_account.focus_lock.message" = "Runtime is currently pinned to the active account for deterministic execution.";
+"active_account.low_usage.title" = "Alerte faible usage";
+"active_account.low_usage.message_format" = "Remaining balance is below %d%%. Consider switching soon.";
+"active_account.simulate_button" = "Simuler +50 unités";
+"active_account.run_evaluation" = "Lancer l'évaluation";
+"active_account.none" = "Aucun compte disponible";
+
+"workspace.list_title" = "Espaces";
+"workspace.authentication.title" = "Authentification";
+"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
+"workspace.runtime.title" = "Stratégie runtime";
+"workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.capacity.title" = "Capacité";
+"workspace.capacity.subtitle" = "Track aggregate pool usage posture and enforce reset controls when exhausted.";
+"workspace.safety.title" = "Sécurité";
+"workspace.safety.subtitle" = "Backup state and inspect raw diagnostics.";
+"workspace.developer.title" = "Développeur";
+"workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
+"drawer.expand" = "Développer";
+"drawer.collapse" = "Réduire";
+"alert.low_usage.title" = "Alerte faible usage";
+"alert.dismiss" = "Fermer";
+"common.none" = "Aucun";
+
+"capacity.signals.title" = "Signaux du pool";
+"capacity.active_account_format" = "Compte actif : %@";
+"capacity.overall_usage_format" = "Usage global : %d%%";
+"capacity.exhausted.title" = "Action requise";
+"capacity.exhausted.message" = "Pool capacity is exhausted. Reset usage or raise quota before next switch.";
+"capacity.healthy.title" = "Capacité saine";
+"capacity.healthy.message" = "Pool still has headroom for continued routing.";
+
+"safety.signals.title" = "Signaux de sécurité";
+"safety.operational.title" = "Sécurité opérationnelle";
+"safety.operational.message" = "Backup and restore tools stay available in standard mode. Developer diagnostics are separated.";
+"safety.developer_available" = "Developer diagnostics are available in the Developer workspace for this debug run.";
+
+"developer.diagnostics.title" = "Diagnostics développeur";
+"developer.diagnostics.subtitle" = "Use this workspace only for development troubleshooting and payload inspection.";

@@ -37,3 +37,109 @@
 "sync.excluded.default_message" = "此账号已排除在同步与池调度计算之外。";
 "switch.launch.button" = "切换并启动";
 "delete.button" = "删除";
+
+"oauth.sign_in.title" = "OAuth 登录";
+"oauth.sign_in.subtitle" = "使用你的 OAuth Client 登录，并将结果账号导入池中。";
+"oauth.import_target.title" = "导入目标";
+"oauth.account_name.label" = "账号名称";
+"oauth.account_name.placeholder" = "登录后名称";
+"oauth.quota.hint" = "配额会按默认策略自动分配。";
+"oauth.advanced.title" = "高级 OAuth 参数";
+"oauth.client_id.label" = "Client ID";
+"oauth.client_id.placeholder" = "粘贴 OAuth Client ID";
+"oauth.issuer.label" = "Issuer";
+"oauth.scopes.label" = "Scopes";
+"oauth.redirect_uri.label" = "Redirect URI";
+"oauth.originator.label" = "Originator";
+"oauth.workspace_id.label" = "Workspace ID";
+"oauth.workspace_id.optional" = "可选";
+"oauth.workspace_id.hint" = "Workspace ID 仅在组织管理的 OAuth 流程中需要，个人账号可留空。";
+"oauth.signing_in" = "登录中...";
+"oauth.sign_in_import" = "登录并导入";
+"oauth.import_completed" = "导入完成";
+"oauth.sign_in_failed" = "登录失败";
+
+"local_oauth.title" = "本地 OAuth 会话";
+"local_oauth.subtitle" = "从本地认证数据发现已登录的 Codex 会话，并导入为受管账号。";
+"local_oauth.no_session.title" = "未检测到会话";
+"local_oauth.no_session.message" = "未找到本地 OAuth 会话。如果 Codex 已登录，请手动选择 ~/.codex/auth.json。";
+"local_oauth.scan_button" = "扫描本地会话";
+"local_oauth.choose_button" = "选择 auth.json";
+"local_oauth.scan_failed" = "扫描失败";
+"local_oauth.session_count_format" = "找到 %d 个会话";
+"local_oauth.account_id_format" = "账号 ID：%@";
+"local_oauth.missing_id.title" = "缺少账号 ID";
+"local_oauth.missing_id.message" = "该账号缺少 ChatGPT account id，因此无法同步用量。";
+"local_oauth.import_button" = "导入";
+"local_oauth.sync_unavailable" = "无法同步用量";
+
+"strategy.subtitle" = "控制运行时如何选择并轮换账号。";
+"strategy.switch_mode" = "切换模式";
+"strategy.parameters" = "策略参数";
+"strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";
+"strategy.smart_recommendation.title" = "智能建议";
+"strategy.smart_recommendation.message_format" = "推荐下一个账号：%@。";
+"strategy.switch_allowed.title" = "允许切换";
+"strategy.switch_allowed.message" = "已满足智能切换条件。";
+
+"overview.title" = "池概览";
+"overview.subtitle" = "监控整体容量，并在维护窗口重置用量。";
+"overview.total_usage_format" = "总用量 %d/%d";
+"overview.available_accounts_format" = "可用账号：%d";
+"overview.pool_exhausted.title" = "池已耗尽";
+"overview.pool_exhausted.message" = "所有账号均已耗尽。请提升配额或重置用量后再切换。";
+"overview.reset_all" = "重置全部用量";
+"overview.reset_all_confirm" = "确认重置全部用量";
+
+"backup_restore.title" = "备份与恢复";
+"backup_restore.subtitle" = "导出快照用于恢复与迁移。可重取导出请妥善保管。";
+"backup_restore.sensitive.title" = "敏感资料";
+"backup_restore.sensitive.message" = "可重取导出可能包含 access token 与 account id，请仅存放在受保护的内部系统。";
+"backup_restore.failed" = "备份操作失败";
+"backup_restore.export_json" = "导出 JSON";
+"backup_restore.export_refetchable" = "导出可重取";
+"backup_restore.import_json" = "导入 JSON";
+
+"active_account.title" = "当前账号";
+"active_account.subtitle" = "查看实时消耗并立即触发切换评估。";
+"active_account.remaining_format" = "剩余 %d";
+"active_account.focus_lock.title" = "专注锁定已启用";
+"active_account.focus_lock.message" = "运行时当前锁定该账号，以保证确定性执行。";
+"active_account.low_usage.title" = "低用量警告";
+"active_account.low_usage.message_format" = "剩余额度低于 %d%%，建议尽快切换。";
+"active_account.simulate_button" = "模拟 +50 用量";
+"active_account.run_evaluation" = "执行切换评估";
+"active_account.none" = "无可用账号";
+
+"workspace.list_title" = "工作区";
+"workspace.authentication.title" = "认证";
+"workspace.authentication.subtitle" = "管理登录流程并导入本地 Codex 会话。";
+"workspace.runtime.title" = "运行策略";
+"workspace.runtime.subtitle" = "配置切换策略并监控当前执行账号。";
+"workspace.capacity.title" = "容量";
+"workspace.capacity.subtitle" = "追踪整体池用量并在耗尽时执行重置控制。";
+"workspace.safety.title" = "安全";
+"workspace.safety.subtitle" = "备份状态并检查原始诊断。";
+"workspace.developer.title" = "开发";
+"workspace.developer.subtitle" = "仅供开发者使用的诊断与原始负载查看。";
+"drawer.expand" = "展开";
+"drawer.collapse" = "收起";
+"alert.low_usage.title" = "低用量警告";
+"alert.dismiss" = "关闭";
+"common.none" = "无";
+
+"capacity.signals.title" = "池信号";
+"capacity.active_account_format" = "当前账号：%@";
+"capacity.overall_usage_format" = "整体用量：%d%%";
+"capacity.exhausted.title" = "需要处理";
+"capacity.exhausted.message" = "池容量已耗尽。请在下次切换前提高配额或重置用量。";
+"capacity.healthy.title" = "容量健康";
+"capacity.healthy.message" = "池仍有可用余量可继续路由。";
+
+"safety.signals.title" = "安全信号";
+"safety.operational.title" = "运行安全";
+"safety.operational.message" = "标准模式仍可使用备份与恢复工具，开发诊断已分离。";
+"safety.developer_available" = "本次调试可在 Developer 工作区使用开发诊断。";
+
+"developer.diagnostics.title" = "开发诊断";
+"developer.diagnostics.subtitle" = "该工作区仅用于开发排障与原始数据查看。";
