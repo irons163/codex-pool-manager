@@ -11,11 +11,14 @@ enum CodexAuthSwitchError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .appStillRunning(bundleIdentifier):
-            return "偵測到 \(bundleIdentifier) 仍在執行。Sandbox 模式無法自動關閉其他 App，請先手動關閉後再試。"
+            return String(
+                format: L10n.text("switch.service.error.app_still_running_format"),
+                bundleIdentifier
+            )
         case .appNotFound:
-            return "已切換 auth.json，但找不到可啟動的 Codex/ChatGPT App"
+            return L10n.text("switch.service.error.app_not_found")
         case .unsupportedPlatform:
-            return "目前平台不支援啟動 Codex App"
+            return L10n.text("switch.service.error.unsupported_platform")
         }
     }
 }

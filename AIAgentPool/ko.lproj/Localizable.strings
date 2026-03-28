@@ -174,6 +174,9 @@
 "switch.error.missing_token" = "이 계정에는 사용 가능한 token이 없어 전환할 수 없습니다.";
 "switch.error.missing_account_id" = "이 계정에는 Account ID가 없어 전환할 수 없습니다.";
 "switch.error.requires_auth_file_permission" = "전환 및 실행 전에 auth.json 권한 부여를 완료해 주세요.";
+"switch.service.error.app_still_running_format" = "%@이(가) 아직 실행 중입니다. Sandbox 모드에서는 이 앱이 다른 앱을 자동으로 종료할 수 없습니다. 수동으로 종료한 뒤 다시 시도해 주세요.";
+"switch.service.error.app_not_found" = "auth.json은 전환되었지만 실행 가능한 Codex/ChatGPT 앱을 찾지 못했습니다.";
+"switch.service.error.unsupported_platform" = "이 플랫폼에서는 Codex 앱 실행을 지원하지 않습니다.";
 "sync.failure.prefix" = "동기화 실패";
 "sync.failure.with_description_format" = "%@: %@";
 "activity_feed.title" = "활동 피드";

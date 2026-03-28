@@ -174,6 +174,9 @@
 "switch.error.missing_token" = "このアカウントには使用可能な token がないため、切り替えできません。";
 "switch.error.missing_account_id" = "このアカウントには Account ID がないため、切り替えできません。";
 "switch.error.requires_auth_file_permission" = "切り替えて起動する前に、auth.json の認可を完了してください。";
+"switch.service.error.app_still_running_format" = "%@ がまだ実行中です。Sandbox モードではこのアプリが他のアプリを自動終了できません。手動で終了してから再試行してください。";
+"switch.service.error.app_not_found" = "auth.json は切り替えられましたが、起動可能な Codex/ChatGPT アプリが見つかりませんでした。";
+"switch.service.error.unsupported_platform" = "このプラットフォームでは Codex アプリの起動をサポートしていません。";
 "sync.failure.prefix" = "同期に失敗しました";
 "sync.failure.with_description_format" = "%@: %@";
 "activity_feed.title" = "アクティビティフィード";

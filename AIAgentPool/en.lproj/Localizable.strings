@@ -206,6 +206,9 @@
 "switch.error.missing_token" = "This account has no usable token and cannot switch.";
 "switch.error.missing_account_id" = "This account is missing Account ID and cannot switch.";
 "switch.error.requires_auth_file_permission" = "Please complete auth.json authorization before switch and launch.";
+"switch.service.error.app_still_running_format" = "Detected %@ is still running. In Sandbox mode, this app cannot automatically close other apps. Please close it manually and try again.";
+"switch.service.error.app_not_found" = "auth.json switched, but no launchable Codex/ChatGPT app was found.";
+"switch.service.error.unsupported_platform" = "Launching the Codex app is not supported on this platform.";
 
 "sync.failure.prefix" = "Sync failed";
 "sync.failure.with_description_format" = "%@: %@";
