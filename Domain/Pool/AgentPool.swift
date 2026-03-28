@@ -92,9 +92,9 @@ struct PoolActivity: Identifiable, Codable, Equatable {
 }
 
 enum SwitchMode: String, CaseIterable, Identifiable, Codable {
-    case intelligent = "智能切換"
-    case manual = "手動切換"
-    case focus = "專注模式"
+    case intelligent = "intelligent"
+    case manual = "manual"
+    case focus = "focus"
 
     var id: String { rawValue }
 
@@ -102,11 +102,11 @@ enum SwitchMode: String, CaseIterable, Identifiable, Codable {
         let container = try decoder.singleValueContainer()
         let value = try container.decode(String.self)
         switch value {
-        case SwitchMode.intelligent.rawValue, "intelligent":
+        case SwitchMode.intelligent.rawValue, "Intelligent", "智能切換":
             self = .intelligent
-        case SwitchMode.manual.rawValue, "manual":
+        case SwitchMode.manual.rawValue, "Manual", "手動切換":
             self = .manual
-        case SwitchMode.focus.rawValue, "focus":
+        case SwitchMode.focus.rawValue, "Focus", "專注模式":
             self = .focus
         default:
             throw DecodingError.dataCorruptedError(

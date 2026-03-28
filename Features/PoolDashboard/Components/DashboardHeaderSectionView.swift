@@ -20,11 +20,11 @@ struct DashboardHeaderSectionView: View {
 
     private func localizedModeTitle(_ title: String) -> String {
         switch title {
-        case "智能切換", "Intelligent":
+        case "智能切換", "Intelligent", "intelligent":
             return L10n.text("mode.intelligent")
-        case "手動切換", "Manual":
+        case "手動切換", "Manual", "manual":
             return L10n.text("mode.manual")
-        case "專注模式", "Focus":
+        case "專注模式", "Focus", "focus":
             return L10n.text("mode.focus")
         default:
             return title
