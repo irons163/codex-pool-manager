@@ -79,7 +79,9 @@ enum AccountPoolSnapshotCodec {
             minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
             lastSwitchAt: snapshot.lastSwitchAt,
             lastUsageSyncAt: snapshot.lastUsageSyncAt,
-            switchWithoutLaunching: snapshot.switchWithoutLaunching
+            switchWithoutLaunching: snapshot.switchWithoutLaunching,
+            autoSyncEnabled: snapshot.autoSyncEnabled,
+            autoSyncIntervalSeconds: snapshot.autoSyncIntervalSeconds
         )
     }
 }

@@ -42,6 +42,10 @@ struct PoolDashboardView: View {
         PoolDashboardStrategyBindingAdapter(state: $state)
     }
 
+    private var autoSyncTaskID: String {
+        "\(state.autoSyncEnabled)-\(Int(state.autoSyncIntervalSeconds))"
+    }
+
     private var isDeveloperBuild: Bool {
         #if DEBUG
         true
@@ -150,6 +154,14 @@ struct PoolDashboardView: View {
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
                 selectedWorkspace = .authentication
+            }
+        }
+        .task(id: autoSyncTaskID) {
+            guard state.autoSyncEnabled else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(state.autoSyncIntervalSeconds * 1_000_000_000))
+                if Task.isCancelled { break }
+                await syncCodexUsage()
             }
         }
         .alert(L10n.text("alert.low_usage.title"), isPresented: $viewState.showLowUsageAlert) {
@@ -589,7 +601,9 @@ struct PoolDashboardView: View {
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
             lowThresholdBinding: strategyBindings.lowThreshold,
             minUsageDeltaBinding: strategyBindings.minUsageDelta,
-            switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching
+            switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching,
+            autoSyncEnabledBinding: strategyBindings.autoSyncEnabled,
+            autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds
         )
     }
 

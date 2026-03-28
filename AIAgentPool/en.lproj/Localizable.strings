@@ -96,6 +96,8 @@
 "strategy.switch_allowed.title" = "Switch Allowed";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
 "strategy.switch_without_launch" = "Switch but do not launch";
+"strategy.auto_sync_enabled" = "Auto-sync Codex usage";
+"strategy.auto_sync_interval_seconds_format" = "Auto-sync interval: %d sec";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

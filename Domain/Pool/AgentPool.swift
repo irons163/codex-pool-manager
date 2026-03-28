@@ -162,6 +162,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var lastSwitchAt: Date?
     var lastUsageSyncAt: Date?
     var switchWithoutLaunching: Bool
+    var autoSyncEnabled: Bool
+    var autoSyncIntervalSeconds: TimeInterval
 
     init(
         accounts: [AgentAccount],
@@ -175,7 +177,9 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minUsageRatioDeltaToSwitch: Double,
         lastSwitchAt: Date?,
         lastUsageSyncAt: Date? = nil,
-        switchWithoutLaunching: Bool = false
+        switchWithoutLaunching: Bool = false,
+        autoSyncEnabled: Bool = true,
+        autoSyncIntervalSeconds: TimeInterval = 30
     ) {
         self.accounts = accounts
         self.activities = activities
@@ -189,6 +193,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.lastSwitchAt = lastSwitchAt
         self.lastUsageSyncAt = lastUsageSyncAt
         self.switchWithoutLaunching = switchWithoutLaunching
+        self.autoSyncEnabled = autoSyncEnabled
+        self.autoSyncIntervalSeconds = autoSyncIntervalSeconds
     }
 
     init(from decoder: Decoder) throws {
@@ -205,6 +211,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
         lastUsageSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastUsageSyncAt)
         switchWithoutLaunching = try container.decodeIfPresent(Bool.self, forKey: .switchWithoutLaunching) ?? false
+        autoSyncEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoSyncEnabled) ?? true
+        autoSyncIntervalSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .autoSyncIntervalSeconds) ?? 30
     }
 
     func redactingAPITokens() -> AccountPoolSnapshot {
@@ -220,7 +228,9 @@ struct AccountPoolSnapshot: Codable, Equatable {
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
-            switchWithoutLaunching: switchWithoutLaunching
+            switchWithoutLaunching: switchWithoutLaunching,
+            autoSyncEnabled: autoSyncEnabled,
+            autoSyncIntervalSeconds: autoSyncIntervalSeconds
         )
     }
 }
@@ -240,6 +250,8 @@ struct AccountPoolState {
     private(set) var lowUsageThresholdRatio: Double
     private(set) var minUsageRatioDeltaToSwitch: Double
     private(set) var switchWithoutLaunching: Bool
+    private(set) var autoSyncEnabled: Bool
+    private(set) var autoSyncIntervalSeconds: TimeInterval
 
     init(
         accounts: [AgentAccount],
@@ -247,7 +259,9 @@ struct AccountPoolState {
         minSwitchInterval: TimeInterval = 300,
         lowUsageThresholdRatio: Double = 0.15,
         minUsageRatioDeltaToSwitch: Double = 0,
-        switchWithoutLaunching: Bool = false
+        switchWithoutLaunching: Bool = false,
+        autoSyncEnabled: Bool = true,
+        autoSyncIntervalSeconds: TimeInterval = 30
     ) {
         self.accounts = accounts
         self.activities = []
@@ -261,6 +275,8 @@ struct AccountPoolState {
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = max(0, min(0.5, minUsageRatioDeltaToSwitch))
         self.switchWithoutLaunching = switchWithoutLaunching
+        self.autoSyncEnabled = autoSyncEnabled
+        self.autoSyncIntervalSeconds = max(5, min(300, autoSyncIntervalSeconds))
     }
 
     init(snapshot: AccountPoolSnapshot) {
@@ -273,6 +289,8 @@ struct AccountPoolState {
         self.lastSwitchAt = snapshot.lastSwitchAt
         self.lastUsageSyncAt = snapshot.lastUsageSyncAt
         self.switchWithoutLaunching = snapshot.switchWithoutLaunching
+        self.autoSyncEnabled = snapshot.autoSyncEnabled
+        self.autoSyncIntervalSeconds = max(5, min(300, snapshot.autoSyncIntervalSeconds))
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
@@ -335,7 +353,9 @@ struct AccountPoolState {
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
-            switchWithoutLaunching: switchWithoutLaunching
+            switchWithoutLaunching: switchWithoutLaunching,
+            autoSyncEnabled: autoSyncEnabled,
+            autoSyncIntervalSeconds: autoSyncIntervalSeconds
         )
     }
 
@@ -359,6 +379,16 @@ struct AccountPoolState {
 
     mutating func setSwitchWithoutLaunching(_ value: Bool, now: Date = .now) {
         switchWithoutLaunching = value
+        evaluate(now: now)
+    }
+
+    mutating func setAutoSyncEnabled(_ value: Bool, now: Date = .now) {
+        autoSyncEnabled = value
+        evaluate(now: now)
+    }
+
+    mutating func setAutoSyncIntervalSeconds(_ value: TimeInterval, now: Date = .now) {
+        autoSyncIntervalSeconds = max(5, min(300, value))
         evaluate(now: now)
     }
 

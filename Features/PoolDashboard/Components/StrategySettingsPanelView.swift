@@ -13,6 +13,8 @@ struct StrategySettingsPanelView: View {
     let lowThresholdBinding: Binding<Double>
     let minUsageDeltaBinding: Binding<Double>
     let switchWithoutLaunchingBinding: Binding<Bool>
+    let autoSyncEnabledBinding: Binding<Bool>
+    let autoSyncIntervalSecondsBinding: Binding<Double>
 
     private var visibleModes: [SwitchMode] {
         [.intelligent, .focus]
@@ -51,6 +53,26 @@ struct StrategySettingsPanelView: View {
                     .tint(PoolDashboardTheme.glowA)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Toggle(L10n.text("strategy.auto_sync_enabled"), isOn: autoSyncEnabledBinding)
+                        .toggleStyle(.switch)
+                        .tint(PoolDashboardTheme.glowA)
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    Text(
+                        L10n.text(
+                            "strategy.auto_sync_interval_seconds_format",
+                            Int(autoSyncIntervalSecondsBinding.wrappedValue)
+                        )
+                    )
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    Slider(value: autoSyncIntervalSecondsBinding, in: 5...300, step: 1)
+                        .tint(PoolDashboardTheme.glowA)
+                        .disabled(!autoSyncEnabledBinding.wrappedValue)
+                }
+                .dashboardInfoCard()
 
                 if mode == .intelligent {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {

@@ -96,6 +96,8 @@
 "strategy.switch_allowed.title" = "允許切換";
 "strategy.switch_allowed.message" = "已滿足智慧切換條件。";
 "strategy.switch_without_launch" = "切換但不啟動";
+"strategy.auto_sync_enabled" = "自動同步 Codex 用量";
+"strategy.auto_sync_interval_seconds_format" = "自動同步間隔：%d 秒";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";

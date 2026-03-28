@@ -65,6 +65,24 @@ struct PoolDashboardStrategyBindingAdapter {
         )
     }
 
+    var autoSyncEnabled: Binding<Bool> {
+        Binding(
+            get: { state.wrappedValue.autoSyncEnabled },
+            set: { newValue in
+                state.wrappedValue.setAutoSyncEnabled(newValue)
+            }
+        )
+    }
+
+    var autoSyncIntervalSeconds: Binding<Double> {
+        Binding(
+            get: { state.wrappedValue.autoSyncIntervalSeconds },
+            set: { newValue in
+                state.wrappedValue.setAutoSyncIntervalSeconds(newValue)
+            }
+        )
+    }
+
     private func updateSwitchSettings(
         minSwitchInterval: Double? = nil,
         lowUsageThresholdRatio: Double? = nil,
