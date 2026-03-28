@@ -45,7 +45,7 @@ struct CodexAuthSwitchService {
         account: AgentAccount,
         chatGPTAccountID: String
     ) async throws {
-        logger("使用 auth.json：\(authFileURL.path)")
+        logger(String(format: L10n.text("switch.service.log.using_auth_file_format"), authFileURL.path))
         let hasSecurityScope = authFileURL.startAccessingSecurityScopedResource()
         defer {
             if hasSecurityScope {
@@ -60,7 +60,7 @@ struct CodexAuthSwitchService {
         )
 
         try await relaunchCodexApp()
-        logger("啟動完成")
+        logger(L10n.text("switch.service.log.launch_completed"))
     }
 
     private func rewriteAuthFile(
@@ -76,7 +76,7 @@ struct CodexAuthSwitchService {
             email: account.name.contains("@") ? account.name : nil
         )
         try rewrittenData.write(to: authFileURL, options: .atomic)
-        logger("auth.json 已改寫")
+        logger(L10n.text("switch.service.log.auth_file_rewritten"))
     }
 
     private func relaunchCodexApp() async throws {
@@ -101,24 +101,44 @@ struct CodexAuthSwitchService {
 #if canImport(AppKit)
         let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
         guard !runningApps.isEmpty else {
-            logger("未偵測到執行中：\(bundleIdentifier)")
+            logger(String(format: L10n.text("switch.service.log.app_not_running_format"), bundleIdentifier))
             return true
         }
 
-        logger("偵測到執行中：\(bundleIdentifier)（\(runningApps.count)）")
+        logger(
+            String(
+                format: L10n.text("switch.service.log.app_running_count_format"),
+                bundleIdentifier,
+                runningApps.count
+            )
+        )
 
         if isSandboxedEnvironment {
-            logger("Sandbox 模式下無法自動關閉其他 App，請手動關閉後再切換")
+            logger(L10n.text("switch.service.log.sandbox_cannot_close_apps"))
             return false
         }
 
         for runningApp in runningApps {
             let pid = runningApp.processIdentifier
             let didTerminate = runningApp.terminate()
-            logger("嘗試關閉 pid=\(pid) -> \(didTerminate ? "terminate" : "terminate failed")")
+            logger(
+                String(
+                    format: L10n.text("switch.service.log.terminate_attempt_format"),
+                    pid,
+                    didTerminate ? L10n.text("switch.service.log.terminate_status_success")
+                        : L10n.text("switch.service.log.terminate_status_failed")
+                )
+            )
             if !didTerminate {
                 let didForceTerminate = runningApp.forceTerminate()
-                logger("嘗試強制關閉 pid=\(pid) -> \(didForceTerminate ? "forceTerminate" : "forceTerminate failed")")
+                logger(
+                    String(
+                        format: L10n.text("switch.service.log.force_terminate_attempt_format"),
+                        pid,
+                        didForceTerminate ? L10n.text("switch.service.log.force_terminate_status_success")
+                            : L10n.text("switch.service.log.force_terminate_status_failed")
+                    )
+                )
             }
         }
 
@@ -127,11 +147,11 @@ struct CodexAuthSwitchService {
             timeoutNanoseconds: appCloseTimeoutNanoseconds
         )
         if didExit {
-            logger("已關閉：\(bundleIdentifier)")
+            logger(String(format: L10n.text("switch.service.log.app_closed_format"), bundleIdentifier))
             return true
         }
 
-        logger("仍在執行：\(bundleIdentifier)（可能受權限限制）")
+        logger(String(format: L10n.text("switch.service.log.app_still_running_format"), bundleIdentifier))
         return false
 #else
         return true
@@ -140,25 +160,25 @@ struct CodexAuthSwitchService {
 
     private func launchCodexAppWithRetry(maxAttempts: Int = 6) async throws -> Bool {
         for attempt in 1...maxAttempts {
-            logger("啟動嘗試 #\(attempt)")
+            logger(String(format: L10n.text("switch.service.log.launch_attempt_format"), attempt))
 
             for bundleIdentifier in knownBundleIdentifiers {
                 if try await launchApp(bundleIdentifier: bundleIdentifier) {
-                    logger("啟動成功：\(bundleIdentifier)")
+                    logger(String(format: L10n.text("switch.service.log.launch_success_bundle_format"), bundleIdentifier))
                     return true
                 }
             }
 
             for appURL in knownAppURLs {
                 if try await launchApp(at: appURL) {
-                    logger("啟動成功：\(appURL.path)")
+                    logger(String(format: L10n.text("switch.service.log.launch_success_path_format"), appURL.path))
                     return true
                 }
             }
 
             try? await Task.sleep(nanoseconds: launchRetryIntervalNanoseconds)
         }
-        logger("多次嘗試後仍無法啟動 Codex/ChatGPT")
+        logger(L10n.text("switch.service.log.launch_failed_after_retries"))
         return false
     }
 
@@ -181,10 +201,10 @@ struct CodexAuthSwitchService {
     private func launchApp(bundleIdentifier: String) async throws -> Bool {
 #if canImport(AppKit)
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            logger("找不到 bundle id：\(bundleIdentifier)")
+            logger(String(format: L10n.text("switch.service.log.bundle_not_found_format"), bundleIdentifier))
             return false
         }
-        logger("找到 bundle id \(bundleIdentifier) -> \(url.path)")
+        logger(String(format: L10n.text("switch.service.log.bundle_found_format"), bundleIdentifier, url.path))
         return try await launchApp(at: url)
 #else
         return false

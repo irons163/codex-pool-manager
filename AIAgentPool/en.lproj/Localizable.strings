@@ -219,6 +219,26 @@
 "switch.service.error.app_still_running_format" = "Detected %@ is still running. In Sandbox mode, this app cannot automatically close other apps. Please close it manually and try again.";
 "switch.service.error.app_not_found" = "auth.json switched, but no launchable Codex/ChatGPT app was found.";
 "switch.service.error.unsupported_platform" = "Launching the Codex app is not supported on this platform.";
+"switch.service.log.using_auth_file_format" = "Using auth.json: %@";
+"switch.service.log.launch_completed" = "Launch completed";
+"switch.service.log.auth_file_rewritten" = "auth.json rewritten";
+"switch.service.log.app_not_running_format" = "Not running: %@";
+"switch.service.log.app_running_count_format" = "Running detected: %@ (%d)";
+"switch.service.log.sandbox_cannot_close_apps" = "Sandbox mode cannot auto-close other apps. Close them manually before switching.";
+"switch.service.log.terminate_attempt_format" = "Terminate pid=%d -> %@";
+"switch.service.log.terminate_status_success" = "terminate";
+"switch.service.log.terminate_status_failed" = "terminate failed";
+"switch.service.log.force_terminate_attempt_format" = "Force terminate pid=%d -> %@";
+"switch.service.log.force_terminate_status_success" = "forceTerminate";
+"switch.service.log.force_terminate_status_failed" = "forceTerminate failed";
+"switch.service.log.app_closed_format" = "Closed: %@";
+"switch.service.log.app_still_running_format" = "Still running: %@ (possibly permission-limited)";
+"switch.service.log.launch_attempt_format" = "Launch attempt #%d";
+"switch.service.log.launch_success_bundle_format" = "Launch succeeded: %@";
+"switch.service.log.launch_success_path_format" = "Launch succeeded: %@";
+"switch.service.log.launch_failed_after_retries" = "Unable to launch Codex/ChatGPT after multiple attempts";
+"switch.service.log.bundle_not_found_format" = "Bundle id not found: %@";
+"switch.service.log.bundle_found_format" = "Bundle id found %@ -> %@";
 
 "sync.failure.prefix" = "Sync failed";
 "sync.failure.with_description_format" = "%@: %@";
