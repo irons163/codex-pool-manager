@@ -7,27 +7,27 @@ struct DebugToolsPanelView: View {
     @Binding var lastSwitchLaunchLog: String
 
     var body: some View {
-        GroupBox("Debug Tools") {
+        GroupBox(L10n.text("debug_tools.title")) {
             VStack(alignment: .leading, spacing: 12) {
                 PanelStatusCalloutView(
-                    message: "Use these tools only for diagnostics. Clear sensitive logs before sharing screenshots.",
-                    title: "Debug Data Warning",
+                    message: L10n.text("debug_tools.warning.message"),
+                    title: L10n.text("debug_tools.warning.title"),
                     tone: .warning
                 )
 
                 debugDisclosure(
-                    title: "Usage Raw JSON",
+                    title: L10n.text("debug_tools.usage_raw_json"),
                     isExpanded: $showUsageRawJSON,
                     content: $lastUsageRawJSON,
-                    emptyText: "No usage response captured yet.",
+                    emptyText: L10n.text("debug_tools.usage_empty"),
                     tint: PoolDashboardTheme.glowA
                 )
 
                 debugDisclosure(
-                    title: "Switch Launch Log",
+                    title: L10n.text("debug_tools.switch_launch_log"),
                     isExpanded: $showSwitchLaunchLog,
                     content: $lastSwitchLaunchLog,
-                    emptyText: "No switch-and-launch operation executed yet.",
+                    emptyText: L10n.text("debug_tools.switch_empty"),
                     tint: PoolDashboardTheme.glowB
                 )
             }
@@ -47,7 +47,7 @@ struct DebugToolsPanelView: View {
             if content.wrappedValue.isEmpty {
                 PanelStatusCalloutView(
                     message: emptyText,
-                    title: "No Data",
+                    title: L10n.text("debug_tools.no_data"),
                     tone: .info
                 )
             } else {
@@ -58,7 +58,7 @@ struct DebugToolsPanelView: View {
                 )
 
                 HStack {
-                    Button("Clear") {
+                    Button(L10n.text("common.clear")) {
                         content.wrappedValue = ""
                     }
                     .buttonStyle(DashboardWarningButtonStyle())

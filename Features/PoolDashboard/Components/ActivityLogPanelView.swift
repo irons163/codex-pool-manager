@@ -5,10 +5,10 @@ struct ActivityLogPanelView: View {
     let onClearActivities: () -> Void
 
     var body: some View {
-        GroupBox("Activity Feed") {
+        GroupBox(L10n.text("activity_feed.title")) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Latest system actions and switch records.")
+                    Text(L10n.text("activity_feed.subtitle"))
                         .font(.footnote)
                         .foregroundStyle(PoolDashboardTheme.textMuted)
                     Spacer()
@@ -18,14 +18,14 @@ struct ActivityLogPanelView: View {
 
                 if activities.isEmpty {
                     PanelStatusCalloutView(
-                        message: "No activity has been recorded yet.",
-                        title: "Feed Empty",
+                        message: L10n.text("activity_feed.empty.message"),
+                        title: L10n.text("activity_feed.empty.title"),
                         tone: .info
                     )
                 } else {
                     HStack {
                         Spacer()
-                        Button("Clear Activity", role: .destructive) {
+                        Button(L10n.text("activity_feed.clear"), role: .destructive) {
                             onClearActivities()
                         }
                         .buttonStyle(DashboardWarningButtonStyle())

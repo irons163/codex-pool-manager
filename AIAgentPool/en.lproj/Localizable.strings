@@ -144,3 +144,28 @@
 
 "overview.reset_all" = "Reset All Usage";
 "overview.reset_all_confirm" = "Confirm Reset All Usage";
+"activity_feed.title" = "Activity Feed";
+"activity_feed.subtitle" = "Latest system actions and switch records.";
+"activity_feed.empty.title" = "Feed Empty";
+"activity_feed.empty.message" = "No activity has been recorded yet.";
+"activity_feed.clear" = "Clear Activity";
+
+"debug_tools.title" = "Debug Tools";
+"debug_tools.warning.title" = "Debug Data Warning";
+"debug_tools.warning.message" = "Use these tools only for diagnostics. Clear sensitive logs before sharing screenshots.";
+"debug_tools.usage_raw_json" = "Usage Raw JSON";
+"debug_tools.usage_empty" = "No usage response captured yet.";
+"debug_tools.switch_launch_log" = "Switch Launch Log";
+"debug_tools.switch_empty" = "No switch-and-launch operation executed yet.";
+"debug_tools.no_data" = "No Data";
+"common.clear" = "Clear";
+
+"alert.low_usage.message.account_format" = "%@ remaining %d, below threshold %d%%.";
+"alert.low_usage.message.generic" = "Active account remaining usage is low.";
+
+"usage.source.percent" = "Source: response.rate_limit.primary_window.used_percent";
+"usage.source.units" = "Source: response.used_units / quota";
+"usage.source.manual" = "Source: manual/local override";
+"usage.remaining_units_format" = "Remaining %d";
+"usage.window_format" = "Window: %@";
+"usage.resets_format" = "Resets: %@";

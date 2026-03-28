@@ -3,12 +3,12 @@ import SwiftUI
 struct PoolAccountUsagePresenter {
     func usageSourceLabel(for account: AgentAccount) -> String {
         if account.chatGPTAccountID != nil, account.quota == 100 {
-            return "Source: response.rate_limit.primary_window.used_percent"
+            return L10n.text("usage.source.percent")
         }
         if account.chatGPTAccountID != nil {
-            return "Source: response.used_units / quota"
+            return L10n.text("usage.source.units")
         }
-        return "Source: manual/local override"
+        return L10n.text("usage.source.manual")
     }
 
     func isPercentUsageAccount(_ account: AgentAccount) -> Bool {
@@ -17,9 +17,9 @@ struct PoolAccountUsagePresenter {
 
     func remainingLabel(for account: AgentAccount) -> String {
         if isPercentUsageAccount(account) {
-            return "Remaining \(account.remainingUnits)%"
+            return L10n.text("usage.remaining_percent_format", account.remainingUnits)
         }
-        return "Remaining \(account.remainingUnits)"
+        return L10n.text("usage.remaining_units_format", account.remainingUnits)
     }
 
     func usageWindowDetailLabel(for account: AgentAccount) -> String? {
@@ -27,10 +27,15 @@ struct PoolAccountUsagePresenter {
 
         var segments: [String] = []
         if let usageWindowName = account.usageWindowName, !usageWindowName.isEmpty {
-            segments.append("Window: \(usageWindowName)")
+            segments.append(L10n.text("usage.window_format", usageWindowName))
         }
         if let resetAt = account.usageWindowResetAt {
-            segments.append("Resets: \(resetAt.formatted(.dateTime.month().day().hour().minute()))")
+            segments.append(
+                L10n.text(
+                    "usage.resets_format",
+                    resetAt.formatted(.dateTime.month().day().hour().minute())
+                )
+            )
         }
         return segments.isEmpty ? nil : segments.joined(separator: " · ")
     }

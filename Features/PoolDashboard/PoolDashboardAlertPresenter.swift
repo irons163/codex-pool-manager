@@ -1,14 +1,15 @@
 import Foundation
 
 struct PoolDashboardAlertPresenter {
-    private enum Message {
-        static let genericLowUsage = "目前帳號剩餘用量偏低。"
-    }
-
     func lowUsageAlertMessage(activeAccount: AgentAccount?, thresholdRatio: Double) -> String {
         if let activeAccount {
-            return "\(activeAccount.name) 剩餘 \(activeAccount.remainingUnits)，已低於 \(Int(thresholdRatio * 100))% 門檻。"
+            return L10n.text(
+                "alert.low_usage.message.account_format",
+                activeAccount.name,
+                activeAccount.remainingUnits,
+                Int(thresholdRatio * 100)
+            )
         }
-        return Message.genericLowUsage
+        return L10n.text("alert.low_usage.message.generic")
     }
 }
