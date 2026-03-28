@@ -588,7 +588,8 @@ struct PoolDashboardView: View {
             manualSelectionBinding: strategyBindings.manualSelection,
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
             lowThresholdBinding: strategyBindings.lowThreshold,
-            minUsageDeltaBinding: strategyBindings.minUsageDelta
+            minUsageDeltaBinding: strategyBindings.minUsageDelta,
+            switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching
         )
     }
 
@@ -956,12 +957,16 @@ struct PoolDashboardView: View {
     private func switchAndLaunchCodex(using account: AgentAccount) async {
         let output = await switchLaunchFlowCoordinator.switchAndLaunch(
             using: account,
+            switchWithoutLaunching: state.switchWithoutLaunching,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService,
             viewModel: localOAuthImportViewModel,
             viewState: viewState,
             authorizeAuthFile: openAuthFilePanel
         )
+        if output.viewState.switchLaunchError == nil {
+            state.markActiveAccountForSwitchLaunch(account.id)
+        }
         applySwitchLaunchOutput(output)
     }
 }

@@ -49,6 +49,30 @@ struct AIAgentPoolTests {
     }
 
     @Test
+    func intelligentModeAutoSwitchesWhenRemainingRatioReachesThreshold() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
+            ],
+            mode: .intelligent,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0.15
+        )
+
+        let start = Date(timeIntervalSince1970: 0)
+        state.evaluate(now: start)
+        #expect(state.activeAccount?.id == a)
+
+        state.recordUsage(units: 750, now: start.addingTimeInterval(30))
+
+        #expect(state.activeAccount?.id == b)
+    }
+
+    @Test
     func manualModeSticksToSelectedAccount() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
@@ -298,8 +322,8 @@ struct AIAgentPoolTests {
         state.evaluate(now: Date(timeIntervalSince1970: 0))
         state.recordUsage(units: 900, now: Date(timeIntervalSince1970: 30))
 
-        #expect(!state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 30)))
-        #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 30)) == 270)
+        #expect(state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 30)))
+        #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 30)) == 0)
     }
 
     @Test
@@ -535,8 +559,8 @@ struct AIAgentPoolTests {
         let snapshot = state.snapshot
         let restored = AccountPoolState(snapshot: snapshot)
 
-        #expect(restored.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 100)) == 200)
-        #expect(!restored.canIntelligentSwitch(now: Date(timeIntervalSince1970: 100)))
+        #expect(restored.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 100)) == 0)
+        #expect(restored.canIntelligentSwitch(now: Date(timeIntervalSince1970: 100)))
     }
 
     @Test

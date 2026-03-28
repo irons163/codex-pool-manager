@@ -78,7 +78,8 @@ enum AccountPoolSnapshotCodec {
             lowUsageThresholdRatio: snapshot.lowUsageThresholdRatio,
             minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
             lastSwitchAt: snapshot.lastSwitchAt,
-            lastUsageSyncAt: snapshot.lastUsageSyncAt
+            lastUsageSyncAt: snapshot.lastUsageSyncAt,
+            switchWithoutLaunching: snapshot.switchWithoutLaunching
         )
     }
 }

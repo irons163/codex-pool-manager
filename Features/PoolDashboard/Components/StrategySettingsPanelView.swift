@@ -12,6 +12,7 @@ struct StrategySettingsPanelView: View {
     let minSwitchIntervalBinding: Binding<Double>
     let lowThresholdBinding: Binding<Double>
     let minUsageDeltaBinding: Binding<Double>
+    let switchWithoutLaunchingBinding: Binding<Bool>
 
     private var visibleModes: [SwitchMode] {
         [.intelligent, .focus]
@@ -44,6 +45,12 @@ struct StrategySettingsPanelView: View {
                         .tint(PoolDashboardTheme.glowA)
                 }
                 .dashboardInfoCard()
+
+                Toggle(L10n.text("strategy.switch_without_launch"), isOn: switchWithoutLaunchingBinding)
+                    .toggleStyle(.switch)
+                    .tint(PoolDashboardTheme.glowA)
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    .dashboardInfoCard()
 
                 if mode == .intelligent {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {

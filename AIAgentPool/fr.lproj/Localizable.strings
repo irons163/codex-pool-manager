@@ -90,7 +90,7 @@
 "strategy.switch_mode" = "Mode de bascule";
 "strategy.parameters" = "Paramètres de stratégie";
 "strategy.low_usage_threshold_format" = "Seuil d'alerte faible usage : %d%%";
-"strategy.switch_threshold_format" = "Seuil de basculement intelligent : %d%%";
+"strategy.switch_threshold_format" = "Seuil intelligent de faible usage restant : %d%%";
 "strategy.smart_recommendation.title" = "Recommandation intelligente";
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Bascule autorisée";

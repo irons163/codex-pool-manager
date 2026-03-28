@@ -90,11 +90,12 @@
 "strategy.switch_mode" = "Switch Mode";
 "strategy.parameters" = "Strategy Parameters";
 "strategy.low_usage_threshold_format" = "Low-usage alert threshold: %d%%";
-"strategy.switch_threshold_format" = "Intelligent switch threshold: %d%%";
+"strategy.switch_threshold_format" = "Intelligent low-remaining-usage threshold: %d%%";
 "strategy.smart_recommendation.title" = "Smart Recommendation";
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Switch Allowed";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+"strategy.switch_without_launch" = "Switch but do not launch";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
@@ -232,6 +233,7 @@
 "switch.service.error.unsupported_platform" = "Launching the Codex app is not supported on this platform.";
 "switch.service.log.using_auth_file_format" = "Using auth.json: %@";
 "switch.service.log.launch_completed" = "Launch completed";
+"switch.service.log.launch_skipped_by_setting" = "Launch skipped by workspace setting";
 "switch.service.log.auth_file_rewritten" = "auth.json rewritten";
 "switch.service.log.app_not_running_format" = "Not running: %@";
 "switch.service.log.app_running_count_format" = "Running detected: %@ (%d)";

@@ -90,7 +90,7 @@
 "strategy.switch_mode" = "전환 모드";
 "strategy.parameters" = "전략 파라미터";
 "strategy.low_usage_threshold_format" = "저사용량 경고 임계값: %d%%";
-"strategy.switch_threshold_format" = "스마트 전환 임계값: %d%%";
+"strategy.switch_threshold_format" = "스마트 전환 낮은 잔여 사용량 임계값: %d%%";
 "strategy.smart_recommendation.title" = "스마트 추천";
 "strategy.smart_recommendation.message_format" = "추천 다음 계정은 %@ 입니다.";
 "strategy.switch_allowed.title" = "전환 가능";

@@ -90,7 +90,7 @@
 "strategy.switch_mode" = "切换模式";
 "strategy.parameters" = "策略参数";
 "strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";
-"strategy.switch_threshold_format" = "智能切换阈值：%d%%";
+"strategy.switch_threshold_format" = "智能切换低剩余用量阈值：%d%%";
 "strategy.smart_recommendation.title" = "智能建议";
 "strategy.smart_recommendation.message_format" = "推荐下一个账号：%@。";
 "strategy.switch_allowed.title" = "允许切换";

@@ -40,6 +40,28 @@ struct CodexAuthSwitchService {
     }
 
     @MainActor
+    func performSwitchOnly(
+        authFileURL: URL,
+        account: AgentAccount,
+        chatGPTAccountID: String
+    ) throws {
+        logger(String(format: L10n.text("switch.service.log.using_auth_file_format"), authFileURL.path))
+        let hasSecurityScope = authFileURL.startAccessingSecurityScopedResource()
+        defer {
+            if hasSecurityScope {
+                authFileURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        try rewriteAuthFile(
+            authFileURL: authFileURL,
+            account: account,
+            chatGPTAccountID: chatGPTAccountID
+        )
+        logger(L10n.text("switch.service.log.launch_skipped_by_setting"))
+    }
+
+    @MainActor
     func performSwitchAndLaunch(
         authFileURL: URL,
         account: AgentAccount,

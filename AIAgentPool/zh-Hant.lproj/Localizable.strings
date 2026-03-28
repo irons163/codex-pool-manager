@@ -90,11 +90,12 @@
 "strategy.switch_mode" = "切換模式";
 "strategy.parameters" = "策略參數";
 "strategy.low_usage_threshold_format" = "低用量提醒門檻：%d%%";
-"strategy.switch_threshold_format" = "智能切換門檻：%d%%";
+"strategy.switch_threshold_format" = "智能切換低剩餘用量門檻：%d%%";
 "strategy.smart_recommendation.title" = "智慧建議";
 "strategy.smart_recommendation.message_format" = "建議下一個帳號為 %@。";
 "strategy.switch_allowed.title" = "允許切換";
 "strategy.switch_allowed.message" = "已滿足智慧切換條件。";
+"strategy.switch_without_launch" = "切換但不啟動";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";
@@ -195,6 +196,7 @@
 "switch.service.error.unsupported_platform" = "目前平台不支援啟動 Codex App";
 "switch.service.log.using_auth_file_format" = "使用 auth.json：%@";
 "switch.service.log.launch_completed" = "啟動完成";
+"switch.service.log.launch_skipped_by_setting" = "已依工作區設定略過啟動";
 "switch.service.log.auth_file_rewritten" = "auth.json 已改寫";
 "switch.service.log.app_not_running_format" = "未偵測到執行中：%@";
 "switch.service.log.app_running_count_format" = "偵測到執行中：%@（%d）";

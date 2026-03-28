@@ -161,6 +161,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var minUsageRatioDeltaToSwitch: Double
     var lastSwitchAt: Date?
     var lastUsageSyncAt: Date?
+    var switchWithoutLaunching: Bool
 
     init(
         accounts: [AgentAccount],
@@ -173,7 +174,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         lowUsageThresholdRatio: Double,
         minUsageRatioDeltaToSwitch: Double,
         lastSwitchAt: Date?,
-        lastUsageSyncAt: Date? = nil
+        lastUsageSyncAt: Date? = nil,
+        switchWithoutLaunching: Bool = false
     ) {
         self.accounts = accounts
         self.activities = activities
@@ -186,6 +188,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.minUsageRatioDeltaToSwitch = minUsageRatioDeltaToSwitch
         self.lastSwitchAt = lastSwitchAt
         self.lastUsageSyncAt = lastUsageSyncAt
+        self.switchWithoutLaunching = switchWithoutLaunching
     }
 
     init(from decoder: Decoder) throws {
@@ -201,6 +204,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
         lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
         lastUsageSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastUsageSyncAt)
+        switchWithoutLaunching = try container.decodeIfPresent(Bool.self, forKey: .switchWithoutLaunching) ?? false
     }
 
     func redactingAPITokens() -> AccountPoolSnapshot {
@@ -215,7 +219,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
-            lastUsageSyncAt: lastUsageSyncAt
+            lastUsageSyncAt: lastUsageSyncAt,
+            switchWithoutLaunching: switchWithoutLaunching
         )
     }
 }
@@ -234,13 +239,15 @@ struct AccountPoolState {
     private(set) var minSwitchInterval: TimeInterval
     private(set) var lowUsageThresholdRatio: Double
     private(set) var minUsageRatioDeltaToSwitch: Double
+    private(set) var switchWithoutLaunching: Bool
 
     init(
         accounts: [AgentAccount],
         mode: SwitchMode = .intelligent,
         minSwitchInterval: TimeInterval = 300,
         lowUsageThresholdRatio: Double = 0.15,
-        minUsageRatioDeltaToSwitch: Double = 0
+        minUsageRatioDeltaToSwitch: Double = 0,
+        switchWithoutLaunching: Bool = false
     ) {
         self.accounts = accounts
         self.activities = []
@@ -253,6 +260,7 @@ struct AccountPoolState {
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = max(0, min(0.5, minUsageRatioDeltaToSwitch))
+        self.switchWithoutLaunching = switchWithoutLaunching
     }
 
     init(snapshot: AccountPoolSnapshot) {
@@ -264,6 +272,7 @@ struct AccountPoolState {
         self.focusLockedAccountID = snapshot.focusLockedAccountID
         self.lastSwitchAt = snapshot.lastSwitchAt
         self.lastUsageSyncAt = snapshot.lastUsageSyncAt
+        self.switchWithoutLaunching = snapshot.switchWithoutLaunching
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
@@ -325,7 +334,8 @@ struct AccountPoolState {
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
-            lastUsageSyncAt: lastUsageSyncAt
+            lastUsageSyncAt: lastUsageSyncAt,
+            switchWithoutLaunching: switchWithoutLaunching
         )
     }
 
@@ -347,15 +357,17 @@ struct AccountPoolState {
         evaluate(now: now)
     }
 
+    mutating func setSwitchWithoutLaunching(_ value: Bool, now: Date = .now) {
+        switchWithoutLaunching = value
+        evaluate(now: now)
+    }
+
     func canIntelligentSwitch(now: Date = .now) -> Bool {
-        guard mode == .intelligent else { return false }
-        return canSwitch(now: now)
+        mode == .intelligent
     }
 
     func intelligentSwitchCooldownRemaining(now: Date = .now) -> Int {
-        guard mode == .intelligent, let lastSwitchAt else { return 0 }
-        let remaining = minSwitchInterval - now.timeIntervalSince(lastSwitchAt)
-        return max(0, Int(ceil(remaining)))
+        0
     }
 
     mutating func setMode(_ newMode: SwitchMode, now: Date = .now) {
@@ -373,6 +385,10 @@ struct AccountPoolState {
         if mode == .manual {
             switchActive(to: accountID, now: now)
         }
+    }
+
+    mutating func markActiveAccountForSwitchLaunch(_ accountID: UUID, now: Date = .now) {
+        switchActive(to: accountID, now: now)
     }
 
     mutating func recordUsage(units: Int, now: Date = .now) {
@@ -544,25 +560,16 @@ struct AccountPoolState {
                 return
             }
 
-            if current.id == candidateID {
+            guard current.id != candidateID else {
                 return
             }
 
-            if let candidate = accounts.first(where: { $0.id == candidateID }) {
-                let improvement = current.usageRatio - candidate.usageRatio
-                if improvement < minUsageRatioDeltaToSwitch {
-                    return
-                }
+            guard current.remainingRatio <= minUsageRatioDeltaToSwitch else {
+                return
             }
 
-            guard canSwitch(now: now) else { return }
             switchActive(to: candidateID, now: now)
         }
-    }
-
-    private func canSwitch(now: Date) -> Bool {
-        guard let lastSwitchAt else { return true }
-        return now.timeIntervalSince(lastSwitchAt) >= minSwitchInterval
     }
 
     private func intelligentCandidateAccountID() -> UUID? {

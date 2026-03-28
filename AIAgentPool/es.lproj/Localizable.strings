@@ -90,7 +90,7 @@
 "strategy.switch_mode" = "Modo de cambio";
 "strategy.parameters" = "Parámetros de estrategia";
 "strategy.low_usage_threshold_format" = "Umbral de alerta de bajo uso: %d%%";
-"strategy.switch_threshold_format" = "Umbral de cambio inteligente: %d%%";
+"strategy.switch_threshold_format" = "Umbral inteligente de bajo uso restante: %d%%";
 "strategy.smart_recommendation.title" = "Recomendación inteligente";
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Cambio permitido";

@@ -56,6 +56,15 @@ struct PoolDashboardStrategyBindingAdapter {
         )
     }
 
+    var switchWithoutLaunching: Binding<Bool> {
+        Binding(
+            get: { state.wrappedValue.switchWithoutLaunching },
+            set: { newValue in
+                state.wrappedValue.setSwitchWithoutLaunching(newValue)
+            }
+        )
+    }
+
     private func updateSwitchSettings(
         minSwitchInterval: Double? = nil,
         lowUsageThresholdRatio: Double? = nil,
