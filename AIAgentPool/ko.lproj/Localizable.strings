@@ -211,6 +211,12 @@
 "switch.service.log.bundle_found_format" = "bundle id 찾음 %@ -> %@";
 "sync.failure.prefix" = "동기화 실패";
 "sync.failure.with_description_format" = "%@: %@";
+"usage.sync.error.unauthorized" = "권한 부여에 실패했습니다. API token을 확인해 주세요.";
+"usage.sync.error.rate_limited" = "속도 제한에 도달했습니다. 잠시 후 다시 시도해 주세요.";
+"usage.sync.error.network" = "네트워크 오류입니다. 연결을 확인해 주세요.";
+"usage.sync.error.unknown" = "동기화에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+"usage.sync.excluded.missing_token" = "API token이 없어 동기화 및 스케줄링 계산에서 제외되었습니다.";
+"usage.sync.excluded.missing_account_id" = "Account ID가 없어 동기화 및 스케줄링 계산에서 제외되었습니다.";
 "activity_feed.title" = "활동 피드";
 "activity_feed.subtitle" = "최신 시스템 작업 및 전환 기록입니다.";
 "activity_feed.empty.title" = "피드 비어 있음";

@@ -211,6 +211,12 @@
 "switch.service.log.bundle_found_format" = "找到 bundle id %@ -> %@";
 "sync.failure.prefix" = "同步失败";
 "sync.failure.with_description_format" = "%@：%@";
+"usage.sync.error.unauthorized" = "授权失败，请检查 API Token。";
+"usage.sync.error.rate_limited" = "已达速率限制，请稍后再试。";
+"usage.sync.error.network" = "网络异常，请检查连接。";
+"usage.sync.error.unknown" = "同步失败，请稍后再试。";
+"usage.sync.excluded.missing_token" = "缺少 API Token，已排除于同步与调度计算";
+"usage.sync.excluded.missing_account_id" = "缺少 Account ID，已排除于同步与调度计算";
 "activity_feed.title" = "活动记录";
 "activity_feed.subtitle" = "最新系统操作与切换记录。";
 "activity_feed.empty.title" = "记录为空";

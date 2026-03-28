@@ -211,6 +211,12 @@
 "switch.service.log.bundle_found_format" = "bundle id を検出 %@ -> %@";
 "sync.failure.prefix" = "同期に失敗しました";
 "sync.failure.with_description_format" = "%@: %@";
+"usage.sync.error.unauthorized" = "認可に失敗しました。API token を確認してください。";
+"usage.sync.error.rate_limited" = "レート制限に達しました。しばらくしてから再試行してください。";
+"usage.sync.error.network" = "ネットワークエラーです。接続を確認してください。";
+"usage.sync.error.unknown" = "同期に失敗しました。しばらくしてから再試行してください。";
+"usage.sync.excluded.missing_token" = "API token がないため、同期とスケジューリング計算から除外されました。";
+"usage.sync.excluded.missing_account_id" = "Account ID がないため、同期とスケジューリング計算から除外されました。";
 "activity_feed.title" = "アクティビティフィード";
 "activity_feed.subtitle" = "最新のシステム操作と切り替え履歴です。";
 "activity_feed.empty.title" = "フィードは空です";

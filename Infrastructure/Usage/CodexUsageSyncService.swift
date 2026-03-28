@@ -13,13 +13,13 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unauthorized:
-            return "授權失敗，請檢查 API Token。"
+            return L10n.text("usage.sync.error.unauthorized")
         case .rateLimited:
-            return "已達速率限制，請稍後再試。"
+            return L10n.text("usage.sync.error.rate_limited")
         case .network:
-            return "網路異常，請檢查連線。"
+            return L10n.text("usage.sync.error.network")
         case .unknown:
-            return "同步失敗，請稍後再試。"
+            return L10n.text("usage.sync.error.unknown")
         }
     }
 }
@@ -63,8 +63,8 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
-        let missingTokenMessage = "缺少 API Token，已排除於同步與調度計算"
-        let missingAccountIDMessage = "缺少 Account ID，已排除於同步與調度計算"
+        let missingTokenMessage = L10n.text("usage.sync.excluded.missing_token")
+        let missingAccountIDMessage = L10n.text("usage.sync.excluded.missing_account_id")
         for account in state.accounts {
             guard !account.apiToken.isEmpty else {
                 state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now)

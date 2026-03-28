@@ -244,3 +244,9 @@
 
 "sync.failure.prefix" = "Sync failed";
 "sync.failure.with_description_format" = "%@: %@";
+"usage.sync.error.unauthorized" = "Authorization failed. Please check your API token.";
+"usage.sync.error.rate_limited" = "Rate limit reached. Please try again later.";
+"usage.sync.error.network" = "Network error. Please check your connection.";
+"usage.sync.error.unknown" = "Sync failed. Please try again later.";
+"usage.sync.excluded.missing_token" = "Missing API token. Excluded from sync and scheduling calculations.";
+"usage.sync.excluded.missing_account_id" = "Missing Account ID. Excluded from sync and scheduling calculations.";

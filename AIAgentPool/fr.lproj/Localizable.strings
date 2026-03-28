@@ -211,6 +211,12 @@
 "switch.service.log.bundle_found_format" = "Bundle id trouvé %@ -> %@";
 "sync.failure.prefix" = "Échec de la synchronisation";
 "sync.failure.with_description_format" = "%@: %@";
+"usage.sync.error.unauthorized" = "Échec de l'autorisation. Vérifiez votre token API.";
+"usage.sync.error.rate_limited" = "Limite de débit atteinte. Veuillez réessayer plus tard.";
+"usage.sync.error.network" = "Erreur réseau. Vérifiez votre connexion.";
+"usage.sync.error.unknown" = "Échec de la synchronisation. Veuillez réessayer plus tard.";
+"usage.sync.excluded.missing_token" = "Token API manquant. Exclu de la synchronisation et des calculs d'ordonnancement.";
+"usage.sync.excluded.missing_account_id" = "Account ID manquant. Exclu de la synchronisation et des calculs d'ordonnancement.";
 "activity_feed.title" = "Flux d'activité";
 "activity_feed.subtitle" = "Dernières actions système et historiques de basculement.";
 "activity_feed.empty.title" = "Flux vide";
