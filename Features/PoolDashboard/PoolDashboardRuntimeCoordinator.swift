@@ -2,7 +2,7 @@ import Foundation
 
 struct PoolDashboardRuntimeCoordinator {
     private enum Message {
-        static let syncFailurePrefix = "同步失敗："
+        static let syncFailurePrefix = "sync.failure.prefix"
     }
 
     struct SyncOutput {
@@ -83,7 +83,7 @@ struct PoolDashboardRuntimeCoordinator {
     private func syncFailureOutput(from state: AccountPoolState, error: Error) -> SyncOutput {
         SyncOutput(
             state: state,
-            syncError: Message.syncFailurePrefix + error.localizedDescription,
+            syncError: L10n.text("sync.failure.with_description_format", L10n.text(Message.syncFailurePrefix), error.localizedDescription),
             lastUsageRawJSON: nil
         )
     }

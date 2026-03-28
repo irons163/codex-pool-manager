@@ -19,9 +19,9 @@ enum PoolDashboardAuthFlowError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidConfiguration:
-            return "請至少填入 Client ID（其餘欄位有預設值）"
+            return L10n.text("auth.invalid_configuration")
         case .invalidImportDecision:
-            return "auth.json 缺少 ChatGPT Account ID，無法查詢用量"
+            return L10n.text("auth.missing_chatgpt_account_id")
         }
     }
 }

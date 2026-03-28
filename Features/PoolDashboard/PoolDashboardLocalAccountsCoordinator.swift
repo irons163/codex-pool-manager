@@ -104,7 +104,7 @@ struct PoolDashboardLocalAccountsCoordinator {
     ) -> URL? {
         guard let url = CodexAuthFilePanelService().pickAuthFileURL() else {
 #if !canImport(AppKit)
-            viewModel.errorMessage = "目前平台不支援檔案面板"
+            viewModel.errorMessage = L10n.text("local_accounts.file_panel_unsupported")
 #endif
             return nil
         }
@@ -130,7 +130,13 @@ struct PoolDashboardLocalAccountsCoordinator {
         for localAccount in localAccounts {
             guard let chatGPTAccountID = localAccount.chatGPTAccountID else { continue }
             guard let persisted = state.accounts.first(where: { $0.chatGPTAccountID == chatGPTAccountID }) else { continue }
-            guard persisted.name == "Codex OAuth" else { continue }
+            guard
+                persisted.name == "Codex OAuth"
+                || persisted.name == "OAuth Account"
+                || persisted.name == L10n.text("account.default_oauth_name")
+            else {
+                continue
+            }
 
             let improvedName = localAccount.email ?? localAccount.displayName
             guard !improvedName.isEmpty, improvedName != persisted.name else { continue }

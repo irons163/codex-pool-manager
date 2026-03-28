@@ -169,3 +169,40 @@
 "usage.remaining_units_format" = "Remaining %d";
 "usage.window_format" = "Window: %@";
 "usage.resets_format" = "Resets: %@";
+"local_import.auto_scan_empty" = "Automatic scan found no accounts. This may be due to macOS Sandbox limits. Click \"Choose auth.json\" to grant access.";
+"local_import.file_readable_but_no_token" = "File is readable, but no access token was found.";
+"local_import.read_failure_format" = "Read failed: %@";
+"local_import.bookmark_save_failure_format" = "Failed to save authorization bookmark: %@";
+"local_import.bookmark_invalid" = "Authorization is no longer valid. Please choose auth.json again.";
+"local_import.usage_fetch_failed_format" = "Unable to fetch live usage for this account, import skipped: %@";
+
+"auth.invalid_configuration" = "Please provide at least Client ID (other fields have defaults).";
+"auth.missing_chatgpt_account_id" = "auth.json is missing ChatGPT Account ID, usage cannot be queried.";
+"auth.sign_in_success_updated" = "Sign-in successful, updated existing account.";
+"auth.sign_in_success_added" = "Sign-in successful, added new account.";
+"account.default_oauth_name" = "OAuth Account";
+
+"backup.operation.export_failed" = "Export failed";
+"backup.operation.import_failed" = "Import failed";
+"backup.operation.error_format" = "%@: %@";
+
+"local_accounts.file_panel_unsupported" = "File picker is not supported on this platform.";
+
+"switch.log.start_format" = "Start switching: %@";
+"switch.log.missing_token" = "Failed: missing token";
+"switch.log.missing_account_id" = "Failed: missing account_id";
+"switch.log.error_prefix" = "Error";
+"switch.log.retry_failure_prefix" = "Retry failed";
+"switch.log.auth_permission_start" = "auth.json is not authorized yet, opening file picker";
+"switch.log.auth_permission_not_completed" = "User did not complete auth.json authorization";
+"switch.log.auth_permission_acquired" = "Authorization acquired, retrying switch";
+"switch.log.with_description_format" = "%@: %@";
+
+"switch.error.prefix" = "Switch failed";
+"switch.error.with_description_format" = "%@: %@";
+"switch.error.missing_token" = "This account has no usable token and cannot switch.";
+"switch.error.missing_account_id" = "This account is missing Account ID and cannot switch.";
+"switch.error.requires_auth_file_permission" = "Please complete auth.json authorization before switch and launch.";
+
+"sync.failure.prefix" = "Sync failed";
+"sync.failure.with_description_format" = "%@: %@";

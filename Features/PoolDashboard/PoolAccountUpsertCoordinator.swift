@@ -27,8 +27,9 @@ struct PoolAccountUpsertCoordinator {
         }
 
         let trimmedInput = accountNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let defaultOAuthAccountName = L10n.text("account.default_oauth_name")
         let resolvedAccountName = trimmedInput.isEmpty
-            ? (resolvedEmail ?? "OAuth Account")
+            ? (resolvedEmail ?? defaultOAuthAccountName)
             : trimmedInput
 
         let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
@@ -41,7 +42,12 @@ struct PoolAccountUpsertCoordinator {
         if let existingAccountID {
             let existingAccount = state.accounts.first(where: { $0.id == existingAccountID })
             let shouldReplacePlaceholderName = trimmedInput.isEmpty
-                && (existingAccount?.name == "OAuth Account" || existingAccount?.name.isEmpty == true)
+                && (
+                    existingAccount?.name == L10n.text("account.default_oauth_name")
+                    || existingAccount?.name == "OAuth Account"
+                    || existingAccount?.name == "Codex OAuth"
+                    || existingAccount?.name.isEmpty == true
+                )
             let updatedName = trimmedInput.isEmpty
                 ? (shouldReplacePlaceholderName ? resolvedAccountName : (existingAccount?.name ?? resolvedAccountName))
                 : resolvedAccountName
@@ -57,7 +63,7 @@ struct PoolAccountUpsertCoordinator {
                 usageWindowResetAt: resolvedWindowResetAt,
                 now: now
             )
-            return "登入成功，已更新既有帳號"
+            return L10n.text("auth.sign_in_success_updated")
         }
 
         let newAccountID = state.addAccount(
@@ -77,7 +83,7 @@ struct PoolAccountUpsertCoordinator {
             usageWindowResetAt: resolvedWindowResetAt,
             now: now
         )
-        return "登入成功，已新增帳號"
+        return L10n.text("auth.sign_in_success_added")
     }
 
     func applyLocalImport(

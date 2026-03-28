@@ -44,7 +44,7 @@ struct PoolDashboardLocalImportCoordinator {
             return Output(state: nextState, viewModel: nextViewModel, didImport: true)
         } catch {
             let syncErrorMessage = authFlowCoordinator.localizedSyncError(error)
-            nextViewModel.errorMessage = "無法取得此帳號的即時用量，未匯入：\(syncErrorMessage)"
+            nextViewModel.errorMessage = L10n.text("local_import.usage_fetch_failed_format", syncErrorMessage)
             return Output(state: nextState, viewModel: nextViewModel, didImport: false)
         }
     }

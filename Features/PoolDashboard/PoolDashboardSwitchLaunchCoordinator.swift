@@ -8,12 +8,18 @@ struct PoolDashboardSwitchLaunchCoordinator {
     }
 
     private enum Message {
-        static let missingTokenLog = "失敗：沒有 token"
-        static let missingAccountIDLog = "失敗：沒有 account_id"
-        static let missingToken = "此帳號沒有可用 token，無法切換"
-        static let missingAccountID = "此帳號缺少 Account ID，無法切換"
-        static let requiresAuthFilePermission = "請先完成 auth.json 授權，才能切換並啟動"
-        static let switchFailurePrefix = "切換失敗："
+        static let missingTokenLog = L10n.text("switch.log.missing_token")
+        static let missingAccountIDLog = L10n.text("switch.log.missing_account_id")
+        static let missingToken = L10n.text("switch.error.missing_token")
+        static let missingAccountID = L10n.text("switch.error.missing_account_id")
+        static let requiresAuthFilePermission = L10n.text("switch.error.requires_auth_file_permission")
+        static let switchFailurePrefix = L10n.text("switch.error.prefix")
+        static let startSwitchFormat = "switch.log.start_format"
+        static let errorPrefix = "switch.log.error_prefix"
+        static let retryFailurePrefix = "switch.log.retry_failure_prefix"
+        static let authPermissionStart = "switch.log.auth_permission_start"
+        static let authPermissionNotCompleted = "switch.log.auth_permission_not_completed"
+        static let authPermissionAcquired = "switch.log.auth_permission_acquired"
     }
 
     struct Output {
@@ -29,7 +35,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         authFileAccessService: CodexAuthFileAccessService,
         authorizeAuthFile: () -> URL?
     ) async -> Output {
-        var logLines: [String] = ["開始切換：\(account.name)"]
+        var logLines: [String] = [L10n.text(Message.startSwitchFormat, account.name)]
         func append(_ line: String) {
             logLines.append(line)
         }
@@ -41,14 +47,14 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
         }
         func switchFailureMessage(_ error: Error) -> String {
-            Message.switchFailurePrefix + error.localizedDescription
+            L10n.text("switch.error.with_description_format", Message.switchFailurePrefix, error.localizedDescription)
         }
         func outputForError(
             _ error: Error,
-            logPrefix: String = "錯誤",
+            logPrefix: String,
             sessionAuthorizedAuthFileURL: URL?
         ) -> Output {
-            append("\(logPrefix)：\(error.localizedDescription)")
+            append(L10n.text("switch.log.with_description_format", logPrefix, error.localizedDescription))
             return output(
                 errorMessage: switchFailureMessage(error),
                 sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
@@ -97,28 +103,29 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
             return await attemptSwitch(.init(
                 authFileURL: authFileURL,
-                failureLogPrefix: "錯誤",
+                failureLogPrefix: L10n.text(Message.errorPrefix),
                 failureSessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             ))
         } catch CodexAuthFileAccessService.AccessError.missingAuthFile {
-            append("尚未授權 auth.json，啟動選檔流程")
+            append(L10n.text(Message.authPermissionStart))
             guard let authorizedURL = authorizeAuthFile() else {
-                append("使用者未完成 auth.json 授權")
+                append(L10n.text(Message.authPermissionNotCompleted))
                 return output(
                     errorMessage: Message.requiresAuthFilePermission,
                     sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
                 )
             }
 
-            append("已取得授權，重試切換")
+            append(L10n.text(Message.authPermissionAcquired))
             return await attemptSwitch(.init(
                 authFileURL: authorizedURL,
-                failureLogPrefix: "重試失敗",
+                failureLogPrefix: L10n.text(Message.retryFailurePrefix),
                 failureSessionAuthorizedAuthFileURL: authorizedURL
             ))
         } catch {
             return outputForError(
                 error,
+                logPrefix: L10n.text(Message.errorPrefix),
                 sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
             )
         }

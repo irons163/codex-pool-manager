@@ -2,8 +2,8 @@ import Foundation
 
 struct PoolDashboardBackupCoordinator {
     private enum Message {
-        static let exportFailurePrefix = "匯出失敗"
-        static let importFailurePrefix = "匯入失敗"
+        static let exportFailurePrefix = L10n.text("backup.operation.export_failed")
+        static let importFailurePrefix = L10n.text("backup.operation.import_failed")
     }
 
     typealias ExportResult = (json: String?, errorMessage: String?)
@@ -36,7 +36,7 @@ struct PoolDashboardBackupCoordinator {
         do {
             return (try operation(), nil)
         } catch {
-            return (nil, "\(failurePrefix)：\(error.localizedDescription)")
+            return (nil, L10n.text("backup.operation.error_format", failurePrefix, error.localizedDescription))
         }
     }
 }

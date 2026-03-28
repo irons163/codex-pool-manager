@@ -12,7 +12,7 @@ struct LocalOAuthImportViewModel {
     mutating func applyAutomaticScanResult(_ discovered: [LocalCodexOAuthAccount]) {
         accounts = discovered
         if discovered.isEmpty {
-            errorMessage = "自動掃描沒有讀到帳號，可能是 macOS Sandbox 限制。請按「選擇 auth.json」授權。"
+            errorMessage = L10n.text("local_import.auto_scan_empty")
         } else {
             errorMessage = nil
         }
@@ -21,22 +21,22 @@ struct LocalOAuthImportViewModel {
     mutating func applyLoadedAccountsFromFile(_ loadedAccounts: [LocalCodexOAuthAccount]) {
         accounts = loadedAccounts
         if loadedAccounts.isEmpty {
-            errorMessage = "檔案格式可讀，但未找到 access token"
+            errorMessage = L10n.text("local_import.file_readable_but_no_token")
         } else {
             errorMessage = nil
         }
     }
 
     mutating func applyReadFailure(_ error: Error) {
-        errorMessage = "讀取失敗：\(error.localizedDescription)"
+        errorMessage = L10n.text("local_import.read_failure_format", error.localizedDescription)
     }
 
     mutating func applyBookmarkSaveFailure(_ error: Error) {
-        errorMessage = "儲存授權失敗：\(error.localizedDescription)"
+        errorMessage = L10n.text("local_import.bookmark_save_failure_format", error.localizedDescription)
     }
 
     mutating func applyBookmarkInvalid() {
-        errorMessage = "授權已失效，請重新選擇 auth.json"
+        errorMessage = L10n.text("local_import.bookmark_invalid")
     }
 
     mutating func prepareImport(
@@ -45,7 +45,7 @@ struct LocalOAuthImportViewModel {
     ) -> ImportDecision {
         _ = existingAccessTokens
         guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
-            errorMessage = "auth.json 缺少 ChatGPT Account ID，無法查詢用量"
+            errorMessage = L10n.text("auth.missing_chatgpt_account_id")
             return .missingAccountID
         }
         // Duplicates are resolved by upsert in ContentView import flow.
