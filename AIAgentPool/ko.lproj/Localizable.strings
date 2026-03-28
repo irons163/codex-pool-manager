@@ -58,6 +58,16 @@
 "oauth.sign_in_import" = "로그인 및 가져오기";
 "oauth.import_completed" = "가져오기 완료";
 "oauth.sign_in_failed" = "로그인 실패";
+"oauth.error.invalid_authorize_url" = "권한 부여 URL이 유효하지 않습니다.";
+"oauth.error.invalid_redirect_uri" = "Redirect URI 설정이 유효하지 않습니다.";
+"oauth.error.browser_start_failed" = "OAuth 로그인 페이지를 열 수 없습니다.";
+"oauth.error.invalid_callback" = "콜백 데이터가 유효하지 않습니다.";
+"oauth.error.localhost_callback_start_failed_format" = "localhost 콜백 서비스 시작 실패: %@";
+"oauth.error.localhost_callback_timed_out" = "localhost 콜백 대기 시간이 초과되었습니다. 다시 로그인해 주세요.";
+"oauth.error.authorization_failed_format" = "권한 부여 실패: %@";
+"oauth.error.missing_code" = "권한 부여 결과에 code가 없습니다.";
+"oauth.error.state_mismatch" = "권한 부여 상태 검증에 실패했습니다.";
+"oauth.error.token_exchange_failed_format" = "Token 교환 실패: %@";
 
 "local_oauth.title" = "로컬 OAuth 세션";
 "local_oauth.subtitle" = "로컬 인증 데이터에서 로그인된 Codex 세션을 찾아 관리형 풀 계정으로 가져옵니다.";

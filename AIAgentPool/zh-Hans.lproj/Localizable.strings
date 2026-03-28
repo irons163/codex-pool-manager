@@ -58,6 +58,16 @@
 "oauth.sign_in_import" = "登录并导入";
 "oauth.import_completed" = "导入完成";
 "oauth.sign_in_failed" = "登录失败";
+"oauth.error.invalid_authorize_url" = "授权网址无效";
+"oauth.error.invalid_redirect_uri" = "Redirect URI 设置无效";
+"oauth.error.browser_start_failed" = "无法打开 OAuth 登录页";
+"oauth.error.invalid_callback" = "回调数据无效";
+"oauth.error.localhost_callback_start_failed_format" = "本地回调服务启动失败：%@";
+"oauth.error.localhost_callback_timed_out" = "等待本地回调超时，请重新登录";
+"oauth.error.authorization_failed_format" = "授权失败：%@";
+"oauth.error.missing_code" = "授权结果缺少 code";
+"oauth.error.state_mismatch" = "授权状态校验失败";
+"oauth.error.token_exchange_failed_format" = "Token 交换失败：%@";
 
 "local_oauth.title" = "本地 OAuth 会话";
 "local_oauth.subtitle" = "从本地认证数据发现已登录的 Codex 会话，并导入为受管账号。";

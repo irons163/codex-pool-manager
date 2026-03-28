@@ -58,6 +58,16 @@
 "oauth.sign_in_import" = "登入並匯入";
 "oauth.import_completed" = "匯入完成";
 "oauth.sign_in_failed" = "登入失敗";
+"oauth.error.invalid_authorize_url" = "授權網址無效";
+"oauth.error.invalid_redirect_uri" = "Redirect URI 設定無效";
+"oauth.error.browser_start_failed" = "無法開啟 OAuth 登入頁";
+"oauth.error.invalid_callback" = "回呼資料無效";
+"oauth.error.localhost_callback_start_failed_format" = "本機回呼服務啟動失敗：%@";
+"oauth.error.localhost_callback_timed_out" = "等待本機回呼逾時，請重新登入";
+"oauth.error.authorization_failed_format" = "授權失敗：%@";
+"oauth.error.missing_code" = "授權結果缺少 code";
+"oauth.error.state_mismatch" = "授權狀態驗證失敗";
+"oauth.error.token_exchange_failed_format" = "Token 交換失敗：%@";
 
 "local_oauth.title" = "本機 OAuth 工作階段";
 "local_oauth.subtitle" = "從本機認證資料探索已登入的 Codex 工作階段，並匯入為受管理帳號。";

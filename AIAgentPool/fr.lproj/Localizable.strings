@@ -58,6 +58,16 @@
 "oauth.sign_in_import" = "Se connecter et importer";
 "oauth.import_completed" = "Import terminé";
 "oauth.sign_in_failed" = "Échec de connexion";
+"oauth.error.invalid_authorize_url" = "URL d'autorisation invalide.";
+"oauth.error.invalid_redirect_uri" = "Configuration Redirect URI invalide.";
+"oauth.error.browser_start_failed" = "Impossible d'ouvrir la page de connexion OAuth.";
+"oauth.error.invalid_callback" = "Données de rappel invalides.";
+"oauth.error.localhost_callback_start_failed_format" = "Échec du démarrage du service de rappel localhost : %@";
+"oauth.error.localhost_callback_timed_out" = "Délai d'attente du rappel localhost dépassé. Veuillez vous reconnecter.";
+"oauth.error.authorization_failed_format" = "Échec de l'autorisation : %@";
+"oauth.error.missing_code" = "Le résultat d'autorisation ne contient pas code.";
+"oauth.error.state_mismatch" = "Échec de la validation de l'état d'autorisation.";
+"oauth.error.token_exchange_failed_format" = "Échec de l'échange de token : %@";
 
 "local_oauth.title" = "Sessions OAuth locales";
 "local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";

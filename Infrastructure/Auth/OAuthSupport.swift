@@ -186,25 +186,28 @@ enum OAuthLoginError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidAuthorizeURL:
-            return "授權網址無效"
+            return L10n.text("oauth.error.invalid_authorize_url")
         case .invalidRedirectURI:
-            return "Redirect URI 設定無效"
+            return L10n.text("oauth.error.invalid_redirect_uri")
         case .browserStartFailed:
-            return "無法開啟 OAuth 登入頁"
+            return L10n.text("oauth.error.browser_start_failed")
         case .invalidCallback:
-            return "回呼資料無效"
+            return L10n.text("oauth.error.invalid_callback")
         case .localhostCallbackStartFailed(let message):
-            return "本機回呼服務啟動失敗：\(message)"
+            return String(
+                format: L10n.text("oauth.error.localhost_callback_start_failed_format"),
+                message
+            )
         case .localhostCallbackTimedOut:
-            return "等待本機回呼逾時，請重新登入"
+            return L10n.text("oauth.error.localhost_callback_timed_out")
         case .authorizationFailed(let message):
-            return "授權失敗：\(message)"
+            return String(format: L10n.text("oauth.error.authorization_failed_format"), message)
         case .missingCode:
-            return "授權結果缺少 code"
+            return L10n.text("oauth.error.missing_code")
         case .stateMismatch:
-            return "授權狀態驗證失敗"
+            return L10n.text("oauth.error.state_mismatch")
         case .tokenExchangeFailed(let message):
-            return "Token 交換失敗：\(message)"
+            return String(format: L10n.text("oauth.error.token_exchange_failed_format"), message)
         }
     }
 }

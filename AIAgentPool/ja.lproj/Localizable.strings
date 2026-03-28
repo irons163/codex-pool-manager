@@ -58,6 +58,16 @@
 "oauth.sign_in_import" = "サインインしてインポート";
 "oauth.import_completed" = "インポート完了";
 "oauth.sign_in_failed" = "サインイン失敗";
+"oauth.error.invalid_authorize_url" = "認可 URL が無効です。";
+"oauth.error.invalid_redirect_uri" = "Redirect URI の設定が無効です。";
+"oauth.error.browser_start_failed" = "OAuth サインインページを開けません。";
+"oauth.error.invalid_callback" = "コールバックデータが無効です。";
+"oauth.error.localhost_callback_start_failed_format" = "localhost コールバックサービスの起動に失敗しました: %@";
+"oauth.error.localhost_callback_timed_out" = "localhost コールバックの待機がタイムアウトしました。再度サインインしてください。";
+"oauth.error.authorization_failed_format" = "認可失敗: %@";
+"oauth.error.missing_code" = "認可結果に code がありません。";
+"oauth.error.state_mismatch" = "認可状態の検証に失敗しました。";
+"oauth.error.token_exchange_failed_format" = "Token 交換に失敗しました: %@";
 
 "local_oauth.title" = "ローカル OAuth セッション";
 "local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
