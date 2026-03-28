@@ -68,6 +68,8 @@
 "oauth.error.missing_code" = "授权结果缺少 code";
 "oauth.error.state_mismatch" = "授权状态校验失败";
 "oauth.error.token_exchange_failed_format" = "Token 交换失败：%@";
+"oauth.error.invalid_response" = "无效响应";
+"oauth.error.invalid_port" = "port 无效";
 
 "local_oauth.title" = "本地 OAuth 会话";
 "local_oauth.subtitle" = "从本地认证数据发现已登录的 Codex 会话，并导入为受管账号。";

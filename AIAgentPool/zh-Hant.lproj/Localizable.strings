@@ -68,6 +68,8 @@
 "oauth.error.missing_code" = "授權結果缺少 code";
 "oauth.error.state_mismatch" = "授權狀態驗證失敗";
 "oauth.error.token_exchange_failed_format" = "Token 交換失敗：%@";
+"oauth.error.invalid_response" = "無效回應";
+"oauth.error.invalid_port" = "port 無效";
 
 "local_oauth.title" = "本機 OAuth 工作階段";
 "local_oauth.subtitle" = "從本機認證資料探索已登入的 Codex 工作階段，並匯入為受管理帳號。";

@@ -68,6 +68,8 @@
 "oauth.error.missing_code" = "권한 부여 결과에 code가 없습니다.";
 "oauth.error.state_mismatch" = "권한 부여 상태 검증에 실패했습니다.";
 "oauth.error.token_exchange_failed_format" = "Token 교환 실패: %@";
+"oauth.error.invalid_response" = "유효하지 않은 응답입니다.";
+"oauth.error.invalid_port" = "유효하지 않은 포트입니다.";
 
 "local_oauth.title" = "로컬 OAuth 세션";
 "local_oauth.subtitle" = "로컬 인증 데이터에서 로그인된 Codex 세션을 찾아 관리형 풀 계정으로 가져옵니다.";

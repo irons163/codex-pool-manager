@@ -68,6 +68,8 @@
 "oauth.error.missing_code" = "認可結果に code がありません。";
 "oauth.error.state_mismatch" = "認可状態の検証に失敗しました。";
 "oauth.error.token_exchange_failed_format" = "Token 交換に失敗しました: %@";
+"oauth.error.invalid_response" = "無効なレスポンスです。";
+"oauth.error.invalid_port" = "無効なポートです。";
 
 "local_oauth.title" = "ローカル OAuth セッション";
 "local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";

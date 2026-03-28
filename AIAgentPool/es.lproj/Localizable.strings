@@ -68,6 +68,8 @@
 "oauth.error.missing_code" = "El resultado de autorización no incluye code.";
 "oauth.error.state_mismatch" = "Falló la validación del estado de autorización.";
 "oauth.error.token_exchange_failed_format" = "Error al intercambiar token: %@";
+"oauth.error.invalid_response" = "Respuesta no válida.";
+"oauth.error.invalid_port" = "Puerto no válido.";
 
 "local_oauth.title" = "Sesiones OAuth locales";
 "local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";

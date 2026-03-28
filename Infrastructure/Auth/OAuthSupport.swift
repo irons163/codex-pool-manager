@@ -362,7 +362,7 @@ final class OAuthLoginService: NSObject {
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
-            throw OAuthLoginError.tokenExchangeFailed("無效回應")
+            throw OAuthLoginError.tokenExchangeFailed(L10n.text("oauth.error.invalid_response"))
         }
         guard (200..<300).contains(http.statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
@@ -523,7 +523,7 @@ final class LocalhostOAuthCallbackServer {
             do {
                 let port = NWEndpoint.Port(rawValue: config.port)
                 guard let port else {
-                    throw OAuthLoginError.localhostCallbackStartFailed("port 無效")
+                    throw OAuthLoginError.localhostCallbackStartFailed(L10n.text("oauth.error.invalid_port"))
                 }
                 listener = try NWListener(using: .tcp, on: port)
             } catch {

@@ -68,6 +68,8 @@
 "oauth.error.missing_code" = "Authorization result is missing code.";
 "oauth.error.state_mismatch" = "Authorization state validation failed.";
 "oauth.error.token_exchange_failed_format" = "Token exchange failed: %@";
+"oauth.error.invalid_response" = "Invalid response.";
+"oauth.error.invalid_port" = "Invalid port.";
 
 "local_oauth.title" = "Local OAuth Sessions";
 "local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
