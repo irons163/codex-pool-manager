@@ -27,6 +27,8 @@
 "add.add_account" = "계정 추가";
 
 "switch.failed.title" = "전환 실패";
+"switch.warning.title" = "실행 지연";
+"switch.warning.launch_failed_but_switched" = "계정 전환은 완료되었지만 실행이 지연되었습니다. 앱이 종료되면 자동으로 다시 실행됩니다.";
 "usage.used_percent_format" = "사용 %d%%";
 "usage.remaining_percent_format" = "남음 %d%%";
 "usage.used_units_format" = "사용 %d";

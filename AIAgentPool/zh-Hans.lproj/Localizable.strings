@@ -27,6 +27,8 @@
 "add.add_account" = "新增账号";
 
 "switch.failed.title" = "切换失败";
+"switch.warning.title" = "启动延迟";
+"switch.warning.launch_failed_but_switched" = "账号已切换成功，但启动延迟。应用关闭后会自动重新启动。";
 "usage.used_percent_format" = "已用 %d%%";
 "usage.remaining_percent_format" = "剩余 %d%%";
 "usage.used_units_format" = "已用 %d";

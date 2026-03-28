@@ -7,6 +7,7 @@ enum CodexAuthSwitchError: LocalizedError {
     case appStillRunning(bundleIdentifier: String)
     case appNotFound
     case unsupportedPlatform
+    case launchFailedAfterSwitch(reason: String)
 
     var errorDescription: String? {
         switch self {
@@ -19,12 +20,14 @@ enum CodexAuthSwitchError: LocalizedError {
             return L10n.text("switch.service.error.app_not_found")
         case .unsupportedPlatform:
             return L10n.text("switch.service.error.unsupported_platform")
+        case let .launchFailedAfterSwitch(reason):
+            return "Launch failed after auth switch: \(reason)"
         }
     }
 }
 
 struct CodexAuthSwitchService {
-    var logger: (String) -> Void = { _ in }
+    var logger: @Sendable (String) -> Void = { _ in }
 
     private let knownBundleIdentifiers = ["com.openai.chatgpt", "com.openai.codex"]
     private let knownAppURLs = [
@@ -34,6 +37,7 @@ struct CodexAuthSwitchService {
     private let appCloseTimeoutNanoseconds: UInt64 = 8_000_000_000
     private let appExitPollIntervalNanoseconds: UInt64 = 200_000_000
     private let launchRetryIntervalNanoseconds: UInt64 = 500_000_000
+    private let deferredLaunchMonitorTimeoutNanoseconds: UInt64 = 3_600_000_000_000
 
     private var isSandboxedEnvironment: Bool {
         ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
@@ -81,8 +85,16 @@ struct CodexAuthSwitchService {
             chatGPTAccountID: chatGPTAccountID
         )
 
-        try await relaunchCodexApp()
-        logger(L10n.text("switch.service.log.launch_completed"))
+        do {
+            let launchedImmediately = try await relaunchCodexApp()
+            if launchedImmediately {
+                logger(L10n.text("switch.service.log.launch_completed"))
+            } else {
+                logger("Launch is deferred. Waiting for app to close, then will relaunch automatically.")
+            }
+        } catch {
+            throw CodexAuthSwitchError.launchFailedAfterSwitch(reason: error.localizedDescription)
+        }
     }
 
     private func rewriteAuthFile(
@@ -101,17 +113,18 @@ struct CodexAuthSwitchService {
         logger(L10n.text("switch.service.log.auth_file_rewritten"))
     }
 
-    private func relaunchCodexApp() async throws {
+    private func relaunchCodexApp() async throws -> Bool {
 #if canImport(AppKit)
         for bundleIdentifier in knownBundleIdentifiers {
             let closed = await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
             if !closed {
-                throw CodexAuthSwitchError.appStillRunning(bundleIdentifier: bundleIdentifier)
+                scheduleDeferredLaunchMonitor(for: bundleIdentifier)
+                return false
             }
         }
 
         if try await launchCodexAppWithRetry() {
-            return
+            return true
         }
         throw CodexAuthSwitchError.appNotFound
 #else
@@ -217,6 +230,39 @@ struct CodexAuthSwitchService {
         return NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
 #else
         return true
+#endif
+    }
+
+    private func scheduleDeferredLaunchMonitor(for bundleIdentifier: String) {
+#if canImport(AppKit)
+        let pollInterval = appExitPollIntervalNanoseconds
+        let timeout = deferredLaunchMonitorTimeoutNanoseconds
+        let logger = logger
+        Task.detached(priority: .background) {
+            logger("Deferred launch monitor started for \(bundleIdentifier).")
+            var waited: UInt64 = 0
+            while waited < timeout {
+                let isRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
+                if !isRunning {
+                    logger("Detected \(bundleIdentifier) closed. Relaunching now.")
+                    let service = CodexAuthSwitchService(logger: logger)
+                    do {
+                        if try await service.launchCodexAppWithRetry() {
+                            logger("Deferred relaunch completed.")
+                        } else {
+                            logger("Deferred relaunch failed after retries.")
+                        }
+                    } catch {
+                        logger("Deferred relaunch error: \(error.localizedDescription)")
+                    }
+                    return
+                }
+
+                try? await Task.sleep(nanoseconds: pollInterval)
+                waited += pollInterval
+            }
+            logger("Deferred launch monitor timed out for \(bundleIdentifier).")
+        }
 #endif
     }
 

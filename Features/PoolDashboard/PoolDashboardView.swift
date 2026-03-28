@@ -18,6 +18,7 @@ struct PoolDashboardView: View {
     @State private var selectedWorkspace: Workspace = .authentication
     @State private var isWorkspaceSectionCollapsed = false
     @State private var isSidebarCollapsed = false
+    @State private var suppressNextSnapshotDrivenSwitch = false
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -148,8 +149,19 @@ struct PoolDashboardView: View {
         .onAppear {
             handleOnAppear()
         }
-        .onChange(of: state.snapshot) { _, snapshot in
+        .onChange(of: state.snapshot) { previousSnapshot, snapshot in
             handleSnapshotChange(snapshot)
+            guard !suppressNextSnapshotDrivenSwitch else {
+                suppressNextSnapshotDrivenSwitch = false
+                return
+            }
+            guard !viewState.isSyncingUsage else { return }
+            Task { @MainActor in
+                await triggerAutomaticSwitchActionIfNeeded(
+                    previousMode: previousSnapshot.mode,
+                    previousActiveAccountID: previousSnapshot.activeAccountID
+                )
+            }
         }
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
@@ -645,6 +657,7 @@ struct PoolDashboardView: View {
             accounts: state.accounts,
             activeAccountID: state.activeAccountID,
             switchLaunchError: viewState.switchLaunchError,
+            switchLaunchWarning: viewState.switchLaunchWarning,
             showAddAccountControls: isDeveloperBuild,
             onAddAccount: { name, quota in
                 handleAddAccount(name: name, quota: quota)
@@ -864,11 +877,19 @@ struct PoolDashboardView: View {
         guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
         defer { asyncStateCoordinator.endUsageSync(viewState: &viewState) }
 
+        let previousMode = state.mode
+        let previousActiveAccountID = state.activeAccountID
+
         let output = await usageSyncFlowCoordinator.syncCodexUsage(
             from: state,
             viewState: viewState
         )
         applyUsageSyncOutput(output)
+
+        await triggerAutomaticSwitchActionIfNeeded(
+            previousMode: previousMode,
+            previousActiveAccountID: previousActiveAccountID
+        )
     }
 
     // MARK: - OAuth
@@ -952,6 +973,39 @@ struct PoolDashboardView: View {
     }
 
     @MainActor
+    private func triggerAutomaticSwitchActionIfNeeded(
+        previousMode: SwitchMode,
+        previousActiveAccountID: UUID?
+    ) async {
+        guard previousMode == .intelligent, state.mode == .intelligent else { return }
+        guard let currentActiveAccountID = state.activeAccountID,
+              currentActiveAccountID != previousActiveAccountID,
+              let account = state.accounts.first(where: { $0.id == currentActiveAccountID })
+        else {
+            return
+        }
+
+        let output = await switchLaunchFlowCoordinator.switchAndLaunch(
+            using: account,
+            switchWithoutLaunching: state.switchWithoutLaunching,
+            currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
+            authFileAccessService: authFileAccessService,
+            viewModel: localOAuthImportViewModel,
+            viewState: viewState,
+            authorizeAuthFile: openAuthFilePanel
+        )
+        if output.didSwitchAuth {
+            suppressNextSnapshotDrivenSwitch = true
+            state.markActiveAccountForSwitchLaunch(account.id)
+        } else if let previousActiveAccountID,
+                  state.accounts.contains(where: { $0.id == previousActiveAccountID }) {
+            suppressNextSnapshotDrivenSwitch = true
+            state.markActiveAccountForSwitchLaunch(previousActiveAccountID)
+        }
+        applySwitchLaunchOutput(output)
+    }
+
+    @MainActor
     private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
         let output = await localImportFlowCoordinator.importLocalOAuthAccount(
             localAccount,
@@ -978,7 +1032,8 @@ struct PoolDashboardView: View {
             viewState: viewState,
             authorizeAuthFile: openAuthFilePanel
         )
-        if output.viewState.switchLaunchError == nil {
+        if output.didSwitchAuth {
+            suppressNextSnapshotDrivenSwitch = true
             state.markActiveAccountForSwitchLaunch(account.id)
         }
         applySwitchLaunchOutput(output)

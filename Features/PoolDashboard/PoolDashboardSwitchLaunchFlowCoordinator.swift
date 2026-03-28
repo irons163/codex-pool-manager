@@ -5,6 +5,7 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
         let viewModel: LocalOAuthImportViewModel
         let viewState: PoolDashboardViewState
         let sessionAuthorizedAuthFileURL: URL?
+        let didSwitchAuth: Bool
     }
 
     private let switchLaunchCoordinator = PoolDashboardSwitchLaunchCoordinator()
@@ -41,19 +42,22 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
         return makeOutput(
             viewModel: nextViewModel,
             viewState: nextViewState,
-            sessionAuthorizedAuthFileURL: nextSessionAuthorizedAuthFileURL
+            sessionAuthorizedAuthFileURL: nextSessionAuthorizedAuthFileURL,
+            didSwitchAuth: switchOutput.didSwitchAuth
         )
     }
 
     private func makeOutput(
         viewModel: LocalOAuthImportViewModel,
         viewState: PoolDashboardViewState,
-        sessionAuthorizedAuthFileURL: URL?
+        sessionAuthorizedAuthFileURL: URL?,
+        didSwitchAuth: Bool
     ) -> Output {
         Output(
             viewModel: viewModel,
             viewState: viewState,
-            sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+            sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
+            didSwitchAuth: didSwitchAuth
         )
     }
 }

@@ -80,7 +80,13 @@ struct PoolDashboardMutationCoordinator {
         sessionAuthorizedAuthFileURL: inout URL?
     ) {
         viewState.lastSwitchLaunchLog = output.switchLaunchLog
-        viewState.switchLaunchError = output.errorMessage
+        if output.didSwitchAuth {
+            viewState.switchLaunchError = nil
+            viewState.switchLaunchWarning = output.errorMessage == nil ? nil : L10n.text("switch.warning.launch_failed_but_switched")
+        } else {
+            viewState.switchLaunchError = output.errorMessage
+            viewState.switchLaunchWarning = nil
+        }
         viewModel.errorMessage = nil
         sessionAuthorizedAuthFileURL = output.sessionAuthorizedAuthFileURL
     }

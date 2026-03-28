@@ -27,6 +27,8 @@
 "add.add_account" = "Agregar cuenta";
 
 "switch.failed.title" = "Error al cambiar";
+"switch.warning.title" = "Inicio retrasado";
+"switch.warning.launch_failed_but_switched" = "El cambio de cuenta se completó, pero el inicio está retrasado. La app se reiniciará automáticamente cuando se cierre.";
 "usage.used_percent_format" = "Usado %d%%";
 "usage.remaining_percent_format" = "Restante %d%%";
 "usage.used_units_format" = "Usado %d";

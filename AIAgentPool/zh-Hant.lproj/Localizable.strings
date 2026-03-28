@@ -27,6 +27,8 @@
 "add.add_account" = "新增帳號";
 
 "switch.failed.title" = "切換失敗";
+"switch.warning.title" = "啟動延遲";
+"switch.warning.launch_failed_but_switched" = "帳號已切換成功，但啟動延遲。應用程式關閉後會自動重新啟動。";
 "usage.used_percent_format" = "已用 %d%%";
 "usage.remaining_percent_format" = "剩餘 %d%%";
 "usage.used_units_format" = "已用 %d";

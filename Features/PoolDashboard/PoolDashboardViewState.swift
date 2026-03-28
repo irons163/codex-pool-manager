@@ -18,4 +18,5 @@ struct PoolDashboardViewState {
     var lastSwitchLaunchLog = ""
     var showSwitchLaunchLog = false
     var switchLaunchError: String?
+    var switchLaunchWarning: String?
 }

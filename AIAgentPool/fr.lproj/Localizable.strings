@@ -27,6 +27,8 @@
 "add.add_account" = "Ajouter un compte";
 
 "switch.failed.title" = "Échec du basculement";
+"switch.warning.title" = "Lancement retardé";
+"switch.warning.launch_failed_but_switched" = "Le basculement de compte a réussi, mais le lancement est retardé. L’application sera relancée automatiquement après sa fermeture.";
 "usage.used_percent_format" = "Utilisé %d%%";
 "usage.remaining_percent_format" = "Restant %d%%";
 "usage.used_units_format" = "Utilisé %d";

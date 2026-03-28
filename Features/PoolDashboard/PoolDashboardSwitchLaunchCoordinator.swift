@@ -26,6 +26,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         let switchLaunchLog: String
         let errorMessage: String?
         let sessionAuthorizedAuthFileURL: URL?
+        let didSwitchAuth: Bool
     }
 
     @MainActor
@@ -40,11 +41,16 @@ struct PoolDashboardSwitchLaunchCoordinator {
         func append(_ line: String) {
             logLines.append(line)
         }
-        func output(errorMessage: String?, sessionAuthorizedAuthFileURL: URL?) -> Output {
+        func output(
+            errorMessage: String?,
+            sessionAuthorizedAuthFileURL: URL?,
+            didSwitchAuth: Bool
+        ) -> Output {
             Output(
                 switchLaunchLog: logLines.joined(separator: "\n"),
                 errorMessage: errorMessage,
-                sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+                sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
+                didSwitchAuth: didSwitchAuth
             )
         }
         func switchFailureMessage(_ error: Error) -> String {
@@ -53,12 +59,14 @@ struct PoolDashboardSwitchLaunchCoordinator {
         func outputForError(
             _ error: Error,
             logPrefix: String,
-            sessionAuthorizedAuthFileURL: URL?
+            sessionAuthorizedAuthFileURL: URL?,
+            didSwitchAuth: Bool = false
         ) -> Output {
             append(L10n.text("switch.log.with_description_format", logPrefix, error.localizedDescription))
             return output(
                 errorMessage: switchFailureMessage(error),
-                sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
+                sessionAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
+                didSwitchAuth: didSwitchAuth
             )
         }
 
@@ -66,14 +74,16 @@ struct PoolDashboardSwitchLaunchCoordinator {
             append(Message.missingTokenLog)
             return output(
                 errorMessage: Message.missingToken,
-                sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
+                sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
+                didSwitchAuth: false
             )
         }
         guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
             append(Message.missingAccountIDLog)
             return output(
                 errorMessage: Message.missingAccountID,
-                sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
+                sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
+                didSwitchAuth: false
             )
         }
 
@@ -88,7 +98,22 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 )
                 return output(
                     errorMessage: nil,
-                    sessionAuthorizedAuthFileURL: context.authFileURL
+                    sessionAuthorizedAuthFileURL: context.authFileURL,
+                    didSwitchAuth: true
+                )
+            } catch let error as CodexAuthSwitchError {
+                if case .launchFailedAfterSwitch = error {
+                    return outputForError(
+                        error,
+                        logPrefix: context.failureLogPrefix,
+                        sessionAuthorizedAuthFileURL: context.authFileURL,
+                        didSwitchAuth: true
+                    )
+                }
+                return outputForError(
+                    error,
+                    logPrefix: context.failureLogPrefix,
+                    sessionAuthorizedAuthFileURL: context.failureSessionAuthorizedAuthFileURL
                 )
             } catch {
                 return outputForError(
@@ -114,7 +139,8 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 append(L10n.text(Message.authPermissionNotCompleted))
                 return output(
                     errorMessage: Message.requiresAuthFilePermission,
-                    sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL
+                    sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
+                    didSwitchAuth: false
                 )
             }
 
@@ -139,7 +165,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         account: AgentAccount,
         chatGPTAccountID: String,
         switchWithoutLaunching: Bool,
-        logger: @escaping (String) -> Void
+        logger: @Sendable @escaping (String) -> Void
     ) async throws {
         let service = CodexAuthSwitchService(logger: logger)
         if switchWithoutLaunching {

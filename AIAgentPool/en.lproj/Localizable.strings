@@ -27,6 +27,8 @@
 "add.add_account" = "Add Account";
 
 "switch.failed.title" = "Switch Failed";
+"switch.warning.title" = "Launch Delayed";
+"switch.warning.launch_failed_but_switched" = "Account switch succeeded, but app launch is delayed. The app will relaunch automatically after it closes.";
 "usage.used_percent_format" = "Used %d%%";
 "usage.remaining_percent_format" = "Remaining %d%%";
 "usage.used_units_format" = "Used %d";

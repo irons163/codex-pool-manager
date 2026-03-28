@@ -27,6 +27,8 @@
 "add.add_account" = "アカウント追加";
 
 "switch.failed.title" = "切り替え失敗";
+"switch.warning.title" = "起動遅延";
+"switch.warning.launch_failed_but_switched" = "アカウントの切り替えは成功しましたが、起動が遅れています。アプリを閉じると自動で再起動されます。";
 "usage.used_percent_format" = "使用済み %d%%";
 "usage.remaining_percent_format" = "残量 %d%%";
 "usage.used_units_format" = "使用済み %d";

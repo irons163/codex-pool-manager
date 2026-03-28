@@ -62,6 +62,7 @@ struct AccountUsagePanelView: View {
     let accounts: [AgentAccount]
     let activeAccountID: UUID?
     let switchLaunchError: String?
+    let switchLaunchWarning: String?
     let showAddAccountControls: Bool
     let onAddAccount: (String, Int) -> Void
     let onSwitchAndLaunch: (AgentAccount) async -> Void
@@ -84,6 +85,14 @@ struct AccountUsagePanelView: View {
                     PanelAdaptiveActionRowView {
                         addRow
                     }
+                }
+
+                if let switchLaunchWarning, !switchLaunchWarning.isEmpty {
+                    PanelStatusCalloutView(
+                        message: switchLaunchWarning,
+                        title: L10n.text("switch.warning.title"),
+                        tone: .warning
+                    )
                 }
 
                 if let switchLaunchError, !switchLaunchError.isEmpty {
