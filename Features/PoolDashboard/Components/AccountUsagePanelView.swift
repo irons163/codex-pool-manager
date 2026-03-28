@@ -72,17 +72,6 @@ struct AccountUsagePanelView: View {
                                 }
                             }
 
-                            HStack {
-                                Text("Usage")
-                                    .font(.caption)
-                                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                                Spacer()
-                                Text("\(Int(account.usageRatio * 100))%")
-                                    .font(.caption)
-                                    .monospacedDigit()
-                                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                            }
-
                             ProgressView(value: account.usageRatio)
                                 .tint(usageProgressColor(account))
                         }
