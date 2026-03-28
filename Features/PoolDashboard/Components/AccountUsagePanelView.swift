@@ -257,7 +257,8 @@ struct AccountUsagePanelView: View {
             ProgressView(value: account.usageRatio)
                 .tint(usageProgressColor(account))
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .dashboardListRowCard()
     }
 
