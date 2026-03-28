@@ -13,8 +13,6 @@ struct AccountUsagePanelView: View {
     let accountQuotaBinding: (UUID) -> Binding<Int>
     let accountUsedBinding: (UUID) -> Binding<Int>
 
-    let usageSourceLabel: (AgentAccount) -> String
-    let usageWindowDetailLabel: (AgentAccount) -> String?
     let isPercentUsageAccount: (AgentAccount) -> Bool
     let remainingLabel: (AgentAccount) -> String
     let usageProgressColor: (AgentAccount) -> Color
@@ -120,21 +118,6 @@ struct AccountUsagePanelView: View {
                 TextField("Account name", text: accountNameBinding(account.id))
                     .dashboardInputFieldStyle()
 
-                if let chatGPTAccountID = account.chatGPTAccountID {
-                    Text("Account ID: \(chatGPTAccountID)")
-                        .font(.caption)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                }
-
-                Text(usageSourceLabel(account))
-                    .font(.caption)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-
-                if let usageWindowDetail = usageWindowDetailLabel(account) {
-                    Text(usageWindowDetail)
-                        .font(.caption)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                }
             }
 
             Spacer()

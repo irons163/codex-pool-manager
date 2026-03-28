@@ -521,12 +521,6 @@ struct PoolDashboardView: View {
             accountUsedBinding: { accountID in
                 accountBindings.usedBinding(for: accountID)
             },
-            usageSourceLabel: { account in
-                usagePresenter.usageSourceLabel(for: account)
-            },
-            usageWindowDetailLabel: { account in
-                usagePresenter.usageWindowDetailLabel(for: account)
-            },
             isPercentUsageAccount: { account in
                 usagePresenter.isPercentUsageAccount(account)
             },
