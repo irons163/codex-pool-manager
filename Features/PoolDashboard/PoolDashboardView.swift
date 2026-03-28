@@ -183,6 +183,8 @@ struct PoolDashboardView: View {
                 syncToolbarPanel
             }
 
+            accountUsagePanel
+
             HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
                 workspaceSidebar
 
@@ -276,7 +278,7 @@ struct PoolDashboardView: View {
         case .capacity:
             overallUsagePanel
         case .operations:
-            accountUsagePanel
+            operationsPinnedPanel
         case .safety:
             backupRestorePanel
         case .developer:
@@ -543,6 +545,20 @@ struct PoolDashboardView: View {
                 handleClearActivities()
             }
         )
+    }
+
+    private var operationsPinnedPanel: some View {
+        GroupBox("Operations") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Operations panel is pinned below the dashboard metrics for faster access.")
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                Text("Use the top Account Usage panel to switch, delete, and inspect account utilization.")
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            }
+        }
+        .sectionCardStyle()
     }
 
     private var backupRestorePanel: some View {
