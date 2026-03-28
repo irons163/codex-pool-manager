@@ -161,6 +161,11 @@
 "activity_feed.empty.title" = "Feed Empty";
 "activity_feed.empty.message" = "No activity has been recorded yet.";
 "activity_feed.clear" = "Clear Activity";
+"activity.account_added_format" = "Added account %@";
+"activity.account_reset_usage_format" = "Reset usage for account %@";
+"activity.reset_all_usage" = "Reset usage for all accounts";
+"activity.switch_account_from_to_format" = "Switched account: %@ -> %@";
+"activity.switch_account_to_format" = "Switched account: %@";
 
 "debug_tools.title" = "Debug Tools";
 "debug_tools.warning.title" = "Debug Data Warning";
@@ -196,6 +201,8 @@
 "auth.sign_in_success_updated" = "Sign-in successful, updated existing account.";
 "auth.sign_in_success_added" = "Sign-in successful, added new account.";
 "account.default_oauth_name" = "OAuth Account";
+"account.unnamed" = "Unnamed Account";
+"account.unknown" = "Unknown Account";
 
 "backup.operation.export_failed" = "Export failed";
 "backup.operation.import_failed" = "Import failed";

@@ -167,7 +167,9 @@
 "auth.missing_chatgpt_account_id" = "Falta el ChatGPT Account ID en auth.json; no se puede consultar el uso.";
 "auth.sign_in_success_updated" = "Inicio de sesión correcto, se actualizó la cuenta existente.";
 "auth.sign_in_success_added" = "Inicio de sesión correcto, se agregó una nueva cuenta.";
-"account.default_oauth_name" = "OAuth Account";
+"account.default_oauth_name" = "Cuenta OAuth";
+"account.unnamed" = "Cuenta sin nombre";
+"account.unknown" = "Cuenta desconocida";
 "backup.operation.export_failed" = "Error de exportación";
 "backup.operation.import_failed" = "Error de importación";
 "backup.operation.error_format" = "%@: %@";
@@ -222,6 +224,11 @@
 "activity_feed.empty.title" = "Registro vacío";
 "activity_feed.empty.message" = "Todavía no se ha registrado ninguna actividad.";
 "activity_feed.clear" = "Borrar actividad";
+"activity.account_added_format" = "Cuenta agregada %@";
+"activity.account_reset_usage_format" = "Uso restablecido para la cuenta %@";
+"activity.reset_all_usage" = "Uso restablecido para todas las cuentas";
+"activity.switch_account_from_to_format" = "Cuenta cambiada: %@ -> %@";
+"activity.switch_account_to_format" = "Cuenta cambiada: %@";
 "debug_tools.title" = "Herramientas de depuración";
 "debug_tools.warning.title" = "Advertencia de datos de depuración";
 "debug_tools.warning.message" = "Usa estas herramientas solo para diagnóstico. Borra los registros sensibles antes de compartir capturas.";

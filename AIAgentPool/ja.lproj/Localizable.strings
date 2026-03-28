@@ -167,7 +167,9 @@
 "auth.missing_chatgpt_account_id" = "auth.json に ChatGPT Account ID がないため、使用量を照会できません。";
 "auth.sign_in_success_updated" = "サインイン成功。既存アカウントを更新しました。";
 "auth.sign_in_success_added" = "サインイン成功。新しいアカウントを追加しました。";
-"account.default_oauth_name" = "OAuth Account";
+"account.default_oauth_name" = "OAuth アカウント";
+"account.unnamed" = "名前未設定のアカウント";
+"account.unknown" = "不明なアカウント";
 "backup.operation.export_failed" = "エクスポートに失敗しました";
 "backup.operation.import_failed" = "インポートに失敗しました";
 "backup.operation.error_format" = "%@: %@";
@@ -222,6 +224,11 @@
 "activity_feed.empty.title" = "フィードは空です";
 "activity_feed.empty.message" = "まだアクティビティは記録されていません。";
 "activity_feed.clear" = "アクティビティをクリア";
+"activity.account_added_format" = "アカウントを追加: %@";
+"activity.account_reset_usage_format" = "アカウント %@ の使用量をリセット";
+"activity.reset_all_usage" = "全アカウントの使用量をリセット";
+"activity.switch_account_from_to_format" = "アカウント切り替え: %@ -> %@";
+"activity.switch_account_to_format" = "アカウント切り替え: %@";
 "debug_tools.title" = "デバッグツール";
 "debug_tools.warning.title" = "デバッグデータ警告";
 "debug_tools.warning.message" = "これらのツールは診断専用です。スクリーンショットを共有する前に機密ログを消去してください。";

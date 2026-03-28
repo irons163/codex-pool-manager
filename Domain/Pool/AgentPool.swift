@@ -398,7 +398,7 @@ struct AccountPoolState {
         let normalizedUsedUnits = max(0, min(usedUnits, normalizedQuota))
         let account = AgentAccount(
             id: UUID(),
-            name: name.isEmpty ? "未命名帳號" : name,
+            name: name.isEmpty ? L10n.text("account.unnamed") : name,
             usedUnits: normalizedUsedUnits,
             quota: normalizedQuota,
             chatGPTAccountID: chatGPTAccountID,
@@ -406,7 +406,7 @@ struct AccountPoolState {
             usageWindowResetAt: usageWindowResetAt
         )
         accounts.append(account)
-        appendActivity("新增帳號 \(account.name)", now: now)
+        appendActivity(String(format: L10n.text("activity.account_added_format"), account.name), now: now)
 
         if manualAccountID == nil {
             manualAccountID = account.id
@@ -446,7 +446,7 @@ struct AccountPoolState {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
 
         if let name {
-            accounts[index].name = name.isEmpty ? "未命名帳號" : name
+            accounts[index].name = name.isEmpty ? L10n.text("account.unnamed") : name
         }
         if let quota {
             accounts[index].quota = max(1, quota)
@@ -474,7 +474,10 @@ struct AccountPoolState {
     mutating func resetUsage(for accountID: UUID, now: Date = .now) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
         accounts[index].usedUnits = 0
-        appendActivity("重設帳號 \(accounts[index].name) 用量", now: now)
+        appendActivity(
+            String(format: L10n.text("activity.account_reset_usage_format"), accounts[index].name),
+            now: now
+        )
         evaluate(now: now)
     }
 
@@ -482,7 +485,7 @@ struct AccountPoolState {
         for index in accounts.indices {
             accounts[index].usedUnits = 0
         }
-        appendActivity("重設全部帳號用量", now: now)
+        appendActivity(L10n.text("activity.reset_all_usage"), now: now)
         evaluate(now: now)
     }
 
@@ -597,11 +600,18 @@ struct AccountPoolState {
             let previousName = accounts.first(where: { $0.id == activeAccountID })?.name
             activeAccountID = validID
             lastSwitchAt = now
-            let targetName = accounts.first(where: { $0.id == validID })?.name ?? "未知帳號"
+            let targetName = accounts.first(where: { $0.id == validID })?.name ?? L10n.text("account.unknown")
             if let previousName {
-                appendActivity("切換帳號：\(previousName) -> \(targetName)", now: now)
+                appendActivity(
+                    String(
+                        format: L10n.text("activity.switch_account_from_to_format"),
+                        previousName,
+                        targetName
+                    ),
+                    now: now
+                )
             } else {
-                appendActivity("切換帳號：\(targetName)", now: now)
+                appendActivity(String(format: L10n.text("activity.switch_account_to_format"), targetName), now: now)
             }
         }
     }

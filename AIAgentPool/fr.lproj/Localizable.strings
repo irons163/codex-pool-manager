@@ -167,7 +167,9 @@
 "auth.missing_chatgpt_account_id" = "auth.json ne contient pas de ChatGPT Account ID, l'usage ne peut pas être interrogé.";
 "auth.sign_in_success_updated" = "Connexion réussie, compte existant mis à jour.";
 "auth.sign_in_success_added" = "Connexion réussie, nouveau compte ajouté.";
-"account.default_oauth_name" = "OAuth Account";
+"account.default_oauth_name" = "Compte OAuth";
+"account.unnamed" = "Compte sans nom";
+"account.unknown" = "Compte inconnu";
 "backup.operation.export_failed" = "Échec de l'exportation";
 "backup.operation.import_failed" = "Échec de l'importation";
 "backup.operation.error_format" = "%@: %@";
@@ -222,6 +224,11 @@
 "activity_feed.empty.title" = "Flux vide";
 "activity_feed.empty.message" = "Aucune activité n'a encore été enregistrée.";
 "activity_feed.clear" = "Effacer l'activité";
+"activity.account_added_format" = "Compte ajouté %@";
+"activity.account_reset_usage_format" = "Usage réinitialisé pour le compte %@";
+"activity.reset_all_usage" = "Usage réinitialisé pour tous les comptes";
+"activity.switch_account_from_to_format" = "Compte basculé : %@ -> %@";
+"activity.switch_account_to_format" = "Compte basculé : %@";
 "debug_tools.title" = "Outils de débogage";
 "debug_tools.warning.title" = "Avertissement de données de débogage";
 "debug_tools.warning.message" = "Utilisez ces outils uniquement pour le diagnostic. Effacez les journaux sensibles avant de partager des captures.";

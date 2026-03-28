@@ -168,6 +168,8 @@
 "auth.sign_in_success_updated" = "登录成功，已更新现有账号";
 "auth.sign_in_success_added" = "登录成功，已新增账号";
 "account.default_oauth_name" = "OAuth 账号";
+"account.unnamed" = "未命名账号";
+"account.unknown" = "未知账号";
 "backup.operation.export_failed" = "导出失败";
 "backup.operation.import_failed" = "导入失败";
 "backup.operation.error_format" = "%@：%@";
@@ -222,6 +224,11 @@
 "activity_feed.empty.title" = "记录为空";
 "activity_feed.empty.message" = "当前尚未记录任何活动。";
 "activity_feed.clear" = "清除活动";
+"activity.account_added_format" = "新增账号 %@";
+"activity.account_reset_usage_format" = "重置账号 %@ 用量";
+"activity.reset_all_usage" = "重置全部账号用量";
+"activity.switch_account_from_to_format" = "切换账号：%@ -> %@";
+"activity.switch_account_to_format" = "切换账号：%@";
 "debug_tools.title" = "调试工具";
 "debug_tools.warning.title" = "调试数据警告";
 "debug_tools.warning.message" = "这些工具仅用于诊断。分享截图前请先清除敏感日志。";

@@ -168,6 +168,8 @@
 "auth.sign_in_success_updated" = "登入成功，已更新既有帳號";
 "auth.sign_in_success_added" = "登入成功，已新增帳號";
 "account.default_oauth_name" = "OAuth 帳號";
+"account.unnamed" = "未命名帳號";
+"account.unknown" = "未知帳號";
 "backup.operation.export_failed" = "匯出失敗";
 "backup.operation.import_failed" = "匯入失敗";
 "backup.operation.error_format" = "%@：%@";
@@ -222,6 +224,11 @@
 "activity_feed.empty.title" = "尚無紀錄";
 "activity_feed.empty.message" = "目前尚未記錄任何活動。";
 "activity_feed.clear" = "清除活動";
+"activity.account_added_format" = "新增帳號 %@";
+"activity.account_reset_usage_format" = "重設帳號 %@ 用量";
+"activity.reset_all_usage" = "重設全部帳號用量";
+"activity.switch_account_from_to_format" = "切換帳號：%@ -> %@";
+"activity.switch_account_to_format" = "切換帳號：%@";
 "debug_tools.title" = "除錯工具";
 "debug_tools.warning.title" = "除錯資料警示";
 "debug_tools.warning.message" = "這些工具僅供診斷用途。分享畫面前請先清除敏感紀錄。";
