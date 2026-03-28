@@ -143,7 +143,7 @@ struct PoolDashboardView: View {
             GlassPanel {
                 dashboardContent
             }
-            .padding(.horizontal, PoolDashboardTheme.scrollHorizontalPadding)
+            .padding(.horizontal, 4)
             .padding(.vertical, PoolDashboardTheme.dashboardVerticalPadding)
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
@@ -195,7 +195,8 @@ struct PoolDashboardView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(PoolDashboardTheme.panelPadding)
+        .padding(.vertical, PoolDashboardTheme.panelPadding)
+        .padding(.horizontal, 8)
         .groupBoxStyle(DashboardGroupBoxStyle())
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: state.mode)
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: viewState.isSyncingUsage)
