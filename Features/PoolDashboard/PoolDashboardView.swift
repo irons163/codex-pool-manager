@@ -194,7 +194,7 @@ struct PoolDashboardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
-        .frame(maxWidth: PoolDashboardTheme.contentWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(PoolDashboardTheme.panelPadding)
         .groupBoxStyle(DashboardGroupBoxStyle())
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: state.mode)
