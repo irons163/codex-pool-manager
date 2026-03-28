@@ -171,28 +171,27 @@ struct PoolDashboardView: View {
     }
 
     private var dashboardContent: some View {
-        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-            HStack {
-                DashboardHeaderSectionView(
-                    accountCount: state.accounts.count,
-                    availableCount: state.availableAccountsCount,
-                    overallUsagePercent: Int(state.overallUsageRatio * 100),
-                    modeTitle: state.mode.rawValue
-                )
+        HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+            workspaceSidebar
 
-                syncToolbarPanel
-            }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                    HStack {
+                        DashboardHeaderSectionView(
+                            accountCount: state.accounts.count,
+                            availableCount: state.availableAccountsCount,
+                            overallUsagePercent: Int(state.overallUsageRatio * 100),
+                            modeTitle: state.mode.rawValue
+                        )
 
-            accountUsagePanel
+                        syncToolbarPanel
+                    }
 
-            HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
-                workspaceSidebar
-
-                ScrollView(showsIndicators: false) {
+                    accountUsagePanel
                     workspaceContent
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, PoolDashboardTheme.panelPadding)
