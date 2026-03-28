@@ -150,6 +150,8 @@
 "local_import.bookmark_invalid" = "L'autorisation n'est plus valide. Veuillez choisir auth.json à nouveau.";
 "local_import.usage_fetch_failed_format" = "Impossible de récupérer l'usage en direct pour ce compte, importation ignorée : %@";
 "auth.invalid_configuration" = "Veuillez renseigner au minimum le Client ID (les autres champs ont des valeurs par défaut).";
+"auth.file_panel.message_select_auth_json" = "Veuillez choisir ~/.codex/auth.json";
+"auth.file_access.missing_auth_file" = "auth.json introuvable. Veuillez d'abord choisir auth.json pour autoriser l'accès.";
 "auth.missing_chatgpt_account_id" = "auth.json ne contient pas de ChatGPT Account ID, l'usage ne peut pas être interrogé.";
 "auth.sign_in_success_updated" = "Connexion réussie, compte existant mis à jour.";
 "auth.sign_in_success_added" = "Connexion réussie, nouveau compte ajouté.";
@@ -188,6 +190,7 @@
 "debug_tools.switch_empty" = "Aucune opération de basculement et lancement n'a encore été exécutée.";
 "debug_tools.no_data" = "Aucune donnée";
 "common.clear" = "Effacer";
+"common.choose" = "Choisir";
 "alert.low_usage.message.account_format" = "%@ restant %d, sous le seuil de %d%%.";
 "alert.low_usage.message.generic" = "L'usage restant du compte actif est faible.";
 "usage.source.percent" = "Source : response.rate_limit.primary_window.used_percent";

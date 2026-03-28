@@ -9,7 +9,7 @@ struct CodexAuthFileAccessService {
         var errorDescription: String? {
             switch self {
             case .missingAuthFile:
-                return "找不到 auth.json，請先按「選擇 auth.json」授權"
+                return L10n.text("auth.file_access.missing_auth_file")
             }
         }
     }

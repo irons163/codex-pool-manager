@@ -150,6 +150,8 @@
 "local_import.bookmark_invalid" = "La autorización ya no es válida. Vuelve a elegir auth.json.";
 "local_import.usage_fetch_failed_format" = "No se pudo obtener el uso en tiempo real de esta cuenta; se omitió la importación: %@";
 "auth.invalid_configuration" = "Proporciona al menos el Client ID (los demás campos tienen valores predeterminados).";
+"auth.file_panel.message_select_auth_json" = "Elige ~/.codex/auth.json";
+"auth.file_access.missing_auth_file" = "No se encontró auth.json. Primero elige auth.json para conceder acceso.";
 "auth.missing_chatgpt_account_id" = "Falta el ChatGPT Account ID en auth.json; no se puede consultar el uso.";
 "auth.sign_in_success_updated" = "Inicio de sesión correcto, se actualizó la cuenta existente.";
 "auth.sign_in_success_added" = "Inicio de sesión correcto, se agregó una nueva cuenta.";
@@ -188,6 +190,7 @@
 "debug_tools.switch_empty" = "Aún no se ejecutó ninguna operación de cambio y lanzamiento.";
 "debug_tools.no_data" = "Sin datos";
 "common.clear" = "Borrar";
+"common.choose" = "Elegir";
 "alert.low_usage.message.account_format" = "A %@ le quedan %d, por debajo del umbral de %d%%.";
 "alert.low_usage.message.generic" = "El uso restante de la cuenta activa es bajo.";
 "usage.source.percent" = "Origen: response.rate_limit.primary_window.used_percent";

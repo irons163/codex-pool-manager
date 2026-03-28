@@ -159,6 +159,7 @@
 "debug_tools.switch_empty" = "No switch-and-launch operation executed yet.";
 "debug_tools.no_data" = "No Data";
 "common.clear" = "Clear";
+"common.choose" = "Choose";
 
 "alert.low_usage.message.account_format" = "%@ remaining %d, below threshold %d%%.";
 "alert.low_usage.message.generic" = "Active account remaining usage is low.";
@@ -177,6 +178,8 @@
 "local_import.usage_fetch_failed_format" = "Unable to fetch live usage for this account, import skipped: %@";
 
 "auth.invalid_configuration" = "Please provide at least Client ID (other fields have defaults).";
+"auth.file_panel.message_select_auth_json" = "Please choose ~/.codex/auth.json";
+"auth.file_access.missing_auth_file" = "auth.json not found. Please choose auth.json to grant access first.";
 "auth.missing_chatgpt_account_id" = "auth.json is missing ChatGPT Account ID, usage cannot be queried.";
 "auth.sign_in_success_updated" = "Sign-in successful, updated existing account.";
 "auth.sign_in_success_added" = "Sign-in successful, added new account.";

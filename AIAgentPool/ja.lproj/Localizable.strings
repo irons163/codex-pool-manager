@@ -150,6 +150,8 @@
 "local_import.bookmark_invalid" = "認可が無効になりました。auth.json を再選択してください。";
 "local_import.usage_fetch_failed_format" = "このアカウントのライブ使用量を取得できないため、インポートをスキップしました: %@";
 "auth.invalid_configuration" = "少なくとも Client ID を入力してください（他の項目にはデフォルト値があります）。";
+"auth.file_panel.message_select_auth_json" = "~/.codex/auth.json を選択してください";
+"auth.file_access.missing_auth_file" = "auth.json が見つかりません。先に auth.json を選択してアクセスを許可してください。";
 "auth.missing_chatgpt_account_id" = "auth.json に ChatGPT Account ID がないため、使用量を照会できません。";
 "auth.sign_in_success_updated" = "サインイン成功。既存アカウントを更新しました。";
 "auth.sign_in_success_added" = "サインイン成功。新しいアカウントを追加しました。";
@@ -188,6 +190,7 @@
 "debug_tools.switch_empty" = "切り替えと起動操作はまだ実行されていません。";
 "debug_tools.no_data" = "データなし";
 "common.clear" = "クリア";
+"common.choose" = "選択";
 "alert.low_usage.message.account_format" = "%@ の残量 %d はしきい値 %d%% を下回っています。";
 "alert.low_usage.message.generic" = "アクティブアカウントの残り使用量が少なくなっています。";
 "usage.source.percent" = "ソース: response.rate_limit.primary_window.used_percent";

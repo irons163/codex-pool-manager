@@ -150,6 +150,8 @@
 "local_import.bookmark_invalid" = "授權已失效，請重新選擇 auth.json";
 "local_import.usage_fetch_failed_format" = "無法取得此帳號的即時用量，未匯入：%@";
 "auth.invalid_configuration" = "請至少填入 Client ID（其餘欄位有預設值）";
+"auth.file_panel.message_select_auth_json" = "請選擇 ~/.codex/auth.json";
+"auth.file_access.missing_auth_file" = "找不到 auth.json，請先按「選擇 auth.json」授權";
 "auth.missing_chatgpt_account_id" = "auth.json 缺少 ChatGPT Account ID，無法查詢用量";
 "auth.sign_in_success_updated" = "登入成功，已更新既有帳號";
 "auth.sign_in_success_added" = "登入成功，已新增帳號";
@@ -188,6 +190,7 @@
 "debug_tools.switch_empty" = "尚未執行切換與啟動操作。";
 "debug_tools.no_data" = "無資料";
 "common.clear" = "清除";
+"common.choose" = "選擇";
 "alert.low_usage.message.account_format" = "%@ 剩餘 %d，已低於 %d%% 門檻。";
 "alert.low_usage.message.generic" = "目前帳號剩餘用量偏低。";
 "usage.source.percent" = "來源：response.rate_limit.primary_window.used_percent";

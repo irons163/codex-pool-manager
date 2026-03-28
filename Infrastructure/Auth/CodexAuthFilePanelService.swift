@@ -12,8 +12,8 @@ struct CodexAuthFilePanelService {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.json]
-        panel.prompt = "選擇"
-        panel.message = "請選擇 ~/.codex/auth.json"
+        panel.prompt = L10n.text("common.choose")
+        panel.message = L10n.text("auth.file_panel.message_select_auth_json")
 
         let codexDirectory = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex")
         panel.directoryURL = codexDirectory

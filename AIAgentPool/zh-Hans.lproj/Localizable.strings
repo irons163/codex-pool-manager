@@ -150,6 +150,8 @@
 "local_import.bookmark_invalid" = "授权已失效，请重新选择 auth.json";
 "local_import.usage_fetch_failed_format" = "无法获取该账号实时用量，未导入：%@";
 "auth.invalid_configuration" = "请至少填写 Client ID（其余字段有默认值）";
+"auth.file_panel.message_select_auth_json" = "请选择 ~/.codex/auth.json";
+"auth.file_access.missing_auth_file" = "找不到 auth.json，请先按“选择 auth.json”授权";
 "auth.missing_chatgpt_account_id" = "auth.json 缺少 ChatGPT Account ID，无法查询用量";
 "auth.sign_in_success_updated" = "登录成功，已更新现有账号";
 "auth.sign_in_success_added" = "登录成功，已新增账号";
@@ -188,6 +190,7 @@
 "debug_tools.switch_empty" = "尚未执行切换并启动操作。";
 "debug_tools.no_data" = "无数据";
 "common.clear" = "清除";
+"common.choose" = "选择";
 "alert.low_usage.message.account_format" = "%@ 剩余 %d，已低于 %d%% 阈值。";
 "alert.low_usage.message.generic" = "当前账号剩余用量偏低。";
 "usage.source.percent" = "来源：response.rate_limit.primary_window.used_percent";
