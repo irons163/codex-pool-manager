@@ -23,7 +23,7 @@ struct SyncToolbarView: View {
 
     private var toolbarRow: some View {
         HStack(alignment: .center, spacing: Layout.spacing) {
-            Button(isSyncing ? "Syncing..." : "Sync Codex Usage") {
+            Button(isSyncing ? L10n.text("sync.syncing") : L10n.text("sync.sync_codex_usage")) {
                 onSync()
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
@@ -33,7 +33,7 @@ struct SyncToolbarView: View {
             if let lastSyncAt {
                 PanelStatusCalloutView(
                     message: lastSyncAt.formatted(date: .omitted, time: .standard),
-                    title: "Last Successful Sync",
+                    title: L10n.text("sync.last_successful_sync"),
                     tone: .info
                 )
                 .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)
@@ -42,7 +42,7 @@ struct SyncToolbarView: View {
             if let errorText {
                 PanelStatusCalloutView(
                     message: errorText,
-                    title: "Sync Error",
+                    title: L10n.text("sync.error"),
                     tone: .danger
                 )
                 .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)

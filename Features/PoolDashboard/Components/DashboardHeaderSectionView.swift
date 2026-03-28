@@ -9,12 +9,25 @@ struct DashboardHeaderSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                dashboardTile(title: "Accounts", value: "\(accountCount)", tone: .blue)
-                dashboardTile(title: "Available", value: "\(availableCount)", tone: .green)
-                dashboardTile(title: "Pool Usage", value: "\(overallUsagePercent)%", tone: .orange)
-                dashboardTile(title: "Mode", value: modeTitle, tone: .indigo)
+                dashboardTile(title: L10n.text("header.accounts"), value: "\(accountCount)", tone: .blue)
+                dashboardTile(title: L10n.text("header.available"), value: "\(availableCount)", tone: .green)
+                dashboardTile(title: L10n.text("header.pool_usage"), value: "\(overallUsagePercent)%", tone: .orange)
+                dashboardTile(title: L10n.text("header.mode"), value: localizedModeTitle(modeTitle), tone: .indigo)
             }
             .layoutPriority(0)
+        }
+    }
+
+    private func localizedModeTitle(_ title: String) -> String {
+        switch title {
+        case "智能切換", "Intelligent":
+            return L10n.text("mode.intelligent")
+        case "手動切換", "Manual":
+            return L10n.text("mode.manual")
+        case "專注模式", "Focus":
+            return L10n.text("mode.focus")
+        default:
+            return title
         }
     }
 

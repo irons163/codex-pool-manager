@@ -5,9 +5,12 @@ struct PoolDashboardStrategyBindingAdapter {
 
     var mode: Binding<SwitchMode> {
         Binding(
-            get: { state.wrappedValue.mode },
+            get: {
+                let currentMode = state.wrappedValue.mode
+                return currentMode == .manual ? .intelligent : currentMode
+            },
             set: { newMode in
-                state.wrappedValue.setMode(newMode)
+                state.wrappedValue.setMode(newMode == .manual ? .intelligent : newMode)
             }
         )
     }

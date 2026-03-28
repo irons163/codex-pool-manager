@@ -1,0 +1,39 @@
+"sync.syncing" = "Synchronisation...";
+"sync.sync_codex_usage" = "Synchroniser l'utilisation Codex";
+"sync.last_successful_sync" = "Dernière synchronisation réussie";
+"sync.error" = "Erreur de synchronisation";
+
+"header.accounts" = "Comptes";
+"header.available" = "Disponibles";
+"header.pool_usage" = "Utilisation du pool";
+"header.mode" = "Mode";
+"mode.intelligent" = "Intelligent";
+"mode.manual" = "Manuel";
+"mode.focus" = "Focus";
+
+"account_usage.title" = "Utilisation des comptes";
+"sort.title" = "Tri";
+"sort.joined_at" = "Date d'ajout";
+"sort.name" = "Nom";
+"sort.remaining_high" = "Restant (décroissant)";
+
+"layout.title" = "Disposition";
+"layout.single" = "1 colonne";
+"layout.double" = "2 colonnes";
+"layout.triple" = "3 colonnes";
+
+"add.new_account_name" = "Nouveau nom de compte";
+"add.quota_format" = "Quota %d";
+"add.add_account" = "Ajouter un compte";
+
+"switch.failed.title" = "Échec du basculement";
+"usage.used_percent_format" = "Utilisé %d%%";
+"usage.remaining_percent_format" = "Restant %d%%";
+"usage.used_units_format" = "Utilisé %d";
+"usage.quota_units_format" = "Quota %d";
+"account.name.placeholder" = "Nom du compte";
+
+"sync.excluded.title" = "Exclu de la synchronisation";
+"sync.excluded.default_message" = "Ce compte est exclu de la synchronisation et du calcul du pool.";
+"switch.launch.button" = "Basculer et lancer";
+"delete.button" = "Supprimer";

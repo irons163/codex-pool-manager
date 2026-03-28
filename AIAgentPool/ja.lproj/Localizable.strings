@@ -1,0 +1,39 @@
+"sync.syncing" = "同期中...";
+"sync.sync_codex_usage" = "Codex 使用量を同期";
+"sync.last_successful_sync" = "最終同期成功";
+"sync.error" = "同期エラー";
+
+"header.accounts" = "アカウント";
+"header.available" = "利用可能";
+"header.pool_usage" = "プール使用率";
+"header.mode" = "モード";
+"mode.intelligent" = "インテリジェント";
+"mode.manual" = "手動";
+"mode.focus" = "フォーカス";
+
+"account_usage.title" = "アカウント使用量";
+"sort.title" = "並び替え";
+"sort.joined_at" = "追加日時";
+"sort.name" = "名前";
+"sort.remaining_high" = "残量（多い順）";
+
+"layout.title" = "レイアウト";
+"layout.single" = "1列";
+"layout.double" = "2列";
+"layout.triple" = "3列";
+
+"add.new_account_name" = "新しいアカウント名";
+"add.quota_format" = "クォータ %d";
+"add.add_account" = "アカウント追加";
+
+"switch.failed.title" = "切り替え失敗";
+"usage.used_percent_format" = "使用済み %d%%";
+"usage.remaining_percent_format" = "残量 %d%%";
+"usage.used_units_format" = "使用済み %d";
+"usage.quota_units_format" = "クォータ %d";
+"account.name.placeholder" = "アカウント名";
+
+"sync.excluded.title" = "同期対象外";
+"sync.excluded.default_message" = "このアカウントは同期およびプール計算から除外されています。";
+"switch.launch.button" = "切替して起動";
+"delete.button" = "削除";

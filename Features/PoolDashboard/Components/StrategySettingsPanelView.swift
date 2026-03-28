@@ -13,13 +13,17 @@ struct StrategySettingsPanelView: View {
     let lowThresholdBinding: Binding<Double>
     let minUsageDeltaBinding: Binding<Double>
 
+    private var visibleModes: [SwitchMode] {
+        [.intelligent, .focus]
+    }
+
     var body: some View {
         Text("Control how runtime selects and rotates accounts.")
             .font(.footnote)
             .foregroundStyle(PoolDashboardTheme.textMuted)
 
         Picker("Switch Mode", selection: modeBinding) {
-            ForEach(SwitchMode.allCases) { mode in
+            ForEach(visibleModes) { mode in
                 Text(mode.rawValue).tag(mode)
             }
         }
@@ -56,33 +60,11 @@ struct StrategySettingsPanelView: View {
                             title: "Switch Allowed",
                             tone: .success
                         )
-                    } else {
-                        PanelStatusCalloutView(
-                            message: "Cooldown active. Available in \(intelligentCooldownRemaining)s.",
-                            title: "Switch Delayed",
-                            tone: .warning
-                        )
                     }
                 }
             }
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
-
-        if mode == .manual, !accounts.isEmpty {
-            HStack(spacing: 10) {
-                Text("Manual account")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                Picker("Manual account", selection: manualSelectionBinding) {
-                    ForEach(accounts) { account in
-                        Text(account.name).tag(account.id)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
-            .dashboardInfoCard()
-        }
     }
 }

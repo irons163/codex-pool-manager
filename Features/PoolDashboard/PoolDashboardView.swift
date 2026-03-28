@@ -179,28 +179,42 @@ struct PoolDashboardView: View {
                 .frame(width: 1)
                 .frame(maxHeight: .infinity)
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                    HStack(alignment: .top, spacing: 12) {
-                        DashboardHeaderSectionView(
-                            accountCount: state.accounts.count,
-                            availableCount: state.availableAccountsCount,
-                            overallUsagePercent: Int(state.overallUsageRatio * 100),
-                            modeTitle: state.mode.rawValue
-                        )
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                        HStack(alignment: .top, spacing: 12) {
+                            DashboardHeaderSectionView(
+                                accountCount: state.accounts.count,
+                                availableCount: state.availableAccountsCount,
+                                overallUsagePercent: Int(state.overallUsageRatio * 100),
+                                modeTitle: state.mode.rawValue
+                            )
 
-                        syncToolbarPanel
+                            syncToolbarPanel
+                        }
+
+                        accountUsagePanel
                     }
-
-                    accountUsagePanel
-                    workspaceCollapseToggle
-
-                    if !isWorkspaceSectionCollapsed {
-                        workspaceContent
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 10)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+
+                workspaceCollapseToggle()
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .background(
+                        PoolDashboardTheme.panelStrongFill.opacity(0.82)
+                            .overlay(alignment: .top) {
+                                Rectangle()
+                                    .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
+                                    .frame(height: 1)
+                            }
+                    )
+
+                if !isWorkspaceSectionCollapsed {
+                    workspaceDrawerPanel
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -244,7 +258,23 @@ struct PoolDashboardView: View {
         .background(PoolDashboardTheme.panelMutedFill.opacity(0.72))
     }
 
-    private var workspaceCollapseToggle: some View {
+    private var workspaceDrawerPanel: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
+                .frame(height: 1)
+
+            ScrollView(showsIndicators: false) {
+                workspaceContent
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
+            .frame(minHeight: 300, maxHeight: 440, alignment: .topLeading)
+            .background(PoolDashboardTheme.panelStrongFill.opacity(0.78))
+        }
+    }
+
+    private func workspaceCollapseToggle() -> some View {
         Button {
             withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
                 isWorkspaceSectionCollapsed.toggle()
@@ -252,28 +282,26 @@ struct PoolDashboardView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: isWorkspaceSectionCollapsed ? "chevron.right" : "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(PoolDashboardTheme.textMuted)
+                    .frame(width: 12)
+
                 Text(selectedWorkspace.title)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
-                Spacer()
+
+                Rectangle()
+                    .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.9))
+                    .frame(height: 1)
+
                 Text(isWorkspaceSectionCollapsed ? "展開" : "收合")
-                    .font(.caption)
+                    .font(.caption2.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textMuted)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
-                    )
-            )
+            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
     }
 
     private var workspaceSidebar: some View {
@@ -334,21 +362,35 @@ struct PoolDashboardView: View {
                 symbolName: selectedWorkspace.symbolName
             )
 
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
-                    workspaceMainPanel
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                    workspaceContextPanel
-                        .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
-                }
+            if hasWorkspaceContextPanel {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                        workspaceMainPanel
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        workspaceContextPanel
+                            .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
+                    }
 
-                VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                    workspaceMainPanel
-                    workspaceContextPanel
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                        workspaceMainPanel
+                        workspaceContextPanel
+                    }
                 }
+            } else {
+                workspaceMainPanel
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var hasWorkspaceContextPanel: Bool {
+        switch selectedWorkspace {
+        case .runtime:
+            return false
+        default:
+            return true
+        }
     }
 
     @ViewBuilder
@@ -537,7 +579,7 @@ struct PoolDashboardView: View {
 
     private var strategySettingsPanel: some View {
         StrategySettingsPanelView(
-            mode: state.mode,
+            mode: state.mode == .manual ? .intelligent : state.mode,
             accounts: state.accounts,
             intelligentCandidateName: intelligentCandidateName,
             canIntelligentSwitch: state.canIntelligentSwitch(),

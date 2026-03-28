@@ -1,0 +1,39 @@
+"sync.syncing" = "Syncing...";
+"sync.sync_codex_usage" = "Sync Codex Usage";
+"sync.last_successful_sync" = "Last Successful Sync";
+"sync.error" = "Sync Error";
+
+"header.accounts" = "Accounts";
+"header.available" = "Available";
+"header.pool_usage" = "Pool Usage";
+"header.mode" = "Mode";
+"mode.intelligent" = "Intelligent";
+"mode.manual" = "Manual";
+"mode.focus" = "Focus";
+
+"account_usage.title" = "Account Usage";
+"sort.title" = "Sort";
+"sort.joined_at" = "Joined Time";
+"sort.name" = "Name";
+"sort.remaining_high" = "Remaining (High to Low)";
+
+"layout.title" = "Layout";
+"layout.single" = "Single";
+"layout.double" = "Double";
+"layout.triple" = "Triple";
+
+"add.new_account_name" = "New account name";
+"add.quota_format" = "Quota %d";
+"add.add_account" = "Add Account";
+
+"switch.failed.title" = "Switch Failed";
+"usage.used_percent_format" = "Used %d%%";
+"usage.remaining_percent_format" = "Remaining %d%%";
+"usage.used_units_format" = "Used %d";
+"usage.quota_units_format" = "Quota %d";
+"account.name.placeholder" = "Account name";
+
+"sync.excluded.title" = "Excluded from Sync";
+"sync.excluded.default_message" = "This account is excluded from sync and pool calculations.";
+"switch.launch.button" = "Switch & Launch";
+"delete.button" = "Delete";

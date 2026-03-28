@@ -1,0 +1,39 @@
+"sync.syncing" = "Sincronizando...";
+"sync.sync_codex_usage" = "Sincronizar uso de Codex";
+"sync.last_successful_sync" = "Última sincronización correcta";
+"sync.error" = "Error de sincronización";
+
+"header.accounts" = "Cuentas";
+"header.available" = "Disponibles";
+"header.pool_usage" = "Uso del pool";
+"header.mode" = "Modo";
+"mode.intelligent" = "Inteligente";
+"mode.manual" = "Manual";
+"mode.focus" = "Enfoque";
+
+"account_usage.title" = "Uso de cuentas";
+"sort.title" = "Ordenar";
+"sort.joined_at" = "Fecha de alta";
+"sort.name" = "Nombre";
+"sort.remaining_high" = "Restante (de mayor a menor)";
+
+"layout.title" = "Diseño";
+"layout.single" = "Una columna";
+"layout.double" = "Dos columnas";
+"layout.triple" = "Tres columnas";
+
+"add.new_account_name" = "Nombre de cuenta nueva";
+"add.quota_format" = "Cuota %d";
+"add.add_account" = "Agregar cuenta";
+
+"switch.failed.title" = "Error al cambiar";
+"usage.used_percent_format" = "Usado %d%%";
+"usage.remaining_percent_format" = "Restante %d%%";
+"usage.used_units_format" = "Usado %d";
+"usage.quota_units_format" = "Cuota %d";
+"account.name.placeholder" = "Nombre de cuenta";
+
+"sync.excluded.title" = "Excluida de sincronización";
+"sync.excluded.default_message" = "Esta cuenta está excluida de la sincronización y del cálculo del pool.";
+"switch.launch.button" = "Cambiar y ejecutar";
+"delete.button" = "Eliminar";

@@ -28,15 +28,6 @@ struct OAuthLoginPanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Client ID")
-                        .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    TextField("Paste OAuth client ID", text: $oauthClientID)
-                        .dashboardInputFieldStyle()
-                }
-                .dashboardInfoCard()
-
                 GroupBox("Import Target") {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Account Name")
@@ -55,6 +46,7 @@ struct OAuthLoginPanelView: View {
                 DisclosureGroup("Advanced OAuth Parameters") {
                     VStack(alignment: .leading, spacing: 10) {
                         LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
+                            advancedField("Client ID", placeholder: "Paste OAuth client ID", text: $oauthClientID)
                             advancedField("Issuer", placeholder: "https://auth.openai.com", text: $oauthIssuer)
                             advancedField("Scopes", placeholder: "openid profile ...", text: $oauthScopes)
                             advancedField("Redirect URI", placeholder: "http://localhost:1455/auth/callback", text: $oauthRedirectURI)

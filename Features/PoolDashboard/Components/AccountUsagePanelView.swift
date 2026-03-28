@@ -1,20 +1,48 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
-    private enum SortMode: String, CaseIterable, Identifiable {
-        case joinedAt = "加入時間"
-        case name = "名稱"
-        case remainingHigh = "剩餘用量高到低"
+    private enum SortMode: CaseIterable, Identifiable {
+        case joinedAt
+        case name
+        case remainingHigh
 
-        var id: String { rawValue }
+        var id: String {
+            switch self {
+            case .joinedAt: "joinedAt"
+            case .name: "name"
+            case .remainingHigh: "remainingHigh"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .joinedAt: L10n.text("sort.joined_at")
+            case .name: L10n.text("sort.name")
+            case .remainingHigh: L10n.text("sort.remaining_high")
+            }
+        }
     }
 
-    private enum LayoutMode: String, CaseIterable, Identifiable {
-        case single = "單排"
-        case double = "雙排"
-        case triple = "三排"
+    private enum LayoutMode: CaseIterable, Identifiable {
+        case single
+        case double
+        case triple
 
-        var id: String { rawValue }
+        var id: String {
+            switch self {
+            case .single: "single"
+            case .double: "double"
+            case .triple: "triple"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .single: L10n.text("layout.single")
+            case .double: L10n.text("layout.double")
+            case .triple: L10n.text("layout.triple")
+            }
+        }
 
         var columns: Int {
             switch self {
@@ -60,7 +88,7 @@ struct AccountUsagePanelView: View {
                 if let switchLaunchError, !switchLaunchError.isEmpty {
                     PanelStatusCalloutView(
                         message: switchLaunchError,
-                        title: "Switch Failed",
+                        title: L10n.text("switch.failed.title"),
                         tone: .danger
                     )
                 }
@@ -81,7 +109,7 @@ struct AccountUsagePanelView: View {
 
     private var headerRow: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("Account Usage")
+            Text(L10n.text("account_usage.title"))
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(PoolDashboardTheme.groupLabelOpacity))
 
@@ -99,15 +127,15 @@ struct AccountUsagePanelView: View {
                         sortMode = mode
                     } label: {
                         if sortMode == mode {
-                            Label(mode.rawValue, systemImage: "checkmark")
+                            Label(mode.title, systemImage: "checkmark")
                         } else {
-                            Text(mode.rawValue)
+                            Text(mode.title)
                         }
                     }
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text("排序")
+                    Text(L10n.text("sort.title"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                     Image(systemName: "arrow.up.arrow.down")
@@ -127,9 +155,9 @@ struct AccountUsagePanelView: View {
             }
             .menuStyle(.borderlessButton)
 
-            Picker("排列", selection: $layoutMode) {
+            Picker(L10n.text("layout.title"), selection: $layoutMode) {
                 ForEach(LayoutMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
+                    Text(mode.title).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
@@ -138,13 +166,13 @@ struct AccountUsagePanelView: View {
 
     private var addRow: some View {
         HStack(spacing: PoolDashboardTheme.accountAddRowSpacing) {
-            TextField("New account name", text: $newAccountName)
+            TextField(L10n.text("add.new_account_name"), text: $newAccountName)
                 .dashboardInputFieldStyle()
 
-            Stepper("Quota \(newAccountQuota)", value: $newAccountQuota, in: 100...10_000, step: 100)
+            Stepper(L10n.text("add.quota_format", newAccountQuota), value: $newAccountQuota, in: 100...10_000, step: 100)
                 .monospacedDigit()
 
-            Button("Add Account") {
+            Button(L10n.text("add.add_account")) {
                 onAddAccount(newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), newAccountQuota)
                 newAccountName = ""
             }
@@ -193,22 +221,22 @@ struct AccountUsagePanelView: View {
 
             if isPercentUsageAccount(account) {
                 HStack {
-                    Text("Used \(account.usedUnits)%")
+                    Text(L10n.text("usage.used_percent_format", account.usedUnits))
                         .font(.subheadline)
                     Spacer()
-                    Text("Remaining \(account.remainingUnits)%")
+                    Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
                         .font(.subheadline)
                 }
             } else {
                 HStack {
                     Stepper(
-                        "Used \(account.usedUnits)",
+                        L10n.text("usage.used_units_format", account.usedUnits),
                         value: accountUsedBinding(account.id),
                         in: 0...account.quota,
                         step: 50
                     )
                     Stepper(
-                        "Quota \(account.quota)",
+                        L10n.text("usage.quota_units_format", account.quota),
                         value: accountQuotaBinding(account.id),
                         in: 100...20_000,
                         step: 100
@@ -224,7 +252,7 @@ struct AccountUsagePanelView: View {
     }
 
     private func accountNameRow(_ account: AgentAccount) -> some View {
-        TextField("Account name", text: accountNameBinding(account.id))
+        TextField(L10n.text("account.name.placeholder"), text: accountNameBinding(account.id))
             .dashboardInputFieldStyle()
     }
 
@@ -232,8 +260,8 @@ struct AccountUsagePanelView: View {
     private func syncExcludedWarning(_ account: AgentAccount) -> some View {
         if account.isUsageSyncExcluded {
             PanelStatusCalloutView(
-                message: account.usageSyncError ?? "This account is excluded from sync and pool calculations.",
-                title: "Excluded from Sync",
+                message: account.usageSyncError ?? L10n.text("sync.excluded.default_message"),
+                title: L10n.text("sync.excluded.title"),
                 tone: .warning
             )
             .frame(maxWidth: 440, alignment: .leading)
@@ -242,7 +270,7 @@ struct AccountUsagePanelView: View {
 
     private func accountActionButtons(_ account: AgentAccount) -> some View {
         HStack(spacing: 8) {
-            Button("Switch & Launch") {
+            Button(L10n.text("switch.launch.button")) {
                 Task {
                     await onSwitchAndLaunch(account)
                 }
@@ -251,7 +279,7 @@ struct AccountUsagePanelView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.85)
 
-            Button("Delete", role: .destructive) {
+            Button(L10n.text("delete.button"), role: .destructive) {
                 onRemoveAccount(account.id)
             }
             .buttonStyle(DashboardWarningButtonStyle())

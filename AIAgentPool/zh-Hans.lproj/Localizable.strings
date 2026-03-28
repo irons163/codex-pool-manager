@@ -1,0 +1,39 @@
+"sync.syncing" = "同步中...";
+"sync.sync_codex_usage" = "同步 Codex 用量";
+"sync.last_successful_sync" = "上次成功同步";
+"sync.error" = "同步错误";
+
+"header.accounts" = "账号";
+"header.available" = "可用";
+"header.pool_usage" = "池用量";
+"header.mode" = "模式";
+"mode.intelligent" = "智能切换";
+"mode.manual" = "手动切换";
+"mode.focus" = "专注模式";
+
+"account_usage.title" = "账号用量";
+"sort.title" = "排序";
+"sort.joined_at" = "加入时间";
+"sort.name" = "名称";
+"sort.remaining_high" = "剩余用量高到低";
+
+"layout.title" = "排列";
+"layout.single" = "单排";
+"layout.double" = "双排";
+"layout.triple" = "三排";
+
+"add.new_account_name" = "新账号名称";
+"add.quota_format" = "配额 %d";
+"add.add_account" = "新增账号";
+
+"switch.failed.title" = "切换失败";
+"usage.used_percent_format" = "已用 %d%%";
+"usage.remaining_percent_format" = "剩余 %d%%";
+"usage.used_units_format" = "已用 %d";
+"usage.quota_units_format" = "配额 %d";
+"account.name.placeholder" = "账号名称";
+
+"sync.excluded.title" = "已排除同步";
+"sync.excluded.default_message" = "此账号已排除在同步与池调度计算之外。";
+"switch.launch.button" = "切换并启动";
+"delete.button" = "删除";

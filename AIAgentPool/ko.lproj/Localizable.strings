@@ -1,0 +1,39 @@
+"sync.syncing" = "동기화 중...";
+"sync.sync_codex_usage" = "Codex 사용량 동기화";
+"sync.last_successful_sync" = "마지막 동기화 성공";
+"sync.error" = "동기화 오류";
+
+"header.accounts" = "계정";
+"header.available" = "사용 가능";
+"header.pool_usage" = "풀 사용량";
+"header.mode" = "모드";
+"mode.intelligent" = "지능형 전환";
+"mode.manual" = "수동 전환";
+"mode.focus" = "집중 모드";
+
+"account_usage.title" = "계정 사용량";
+"sort.title" = "정렬";
+"sort.joined_at" = "추가 시간";
+"sort.name" = "이름";
+"sort.remaining_high" = "남은 사용량 높은 순";
+
+"layout.title" = "배치";
+"layout.single" = "1열";
+"layout.double" = "2열";
+"layout.triple" = "3열";
+
+"add.new_account_name" = "새 계정 이름";
+"add.quota_format" = "할당량 %d";
+"add.add_account" = "계정 추가";
+
+"switch.failed.title" = "전환 실패";
+"usage.used_percent_format" = "사용 %d%%";
+"usage.remaining_percent_format" = "남음 %d%%";
+"usage.used_units_format" = "사용 %d";
+"usage.quota_units_format" = "할당량 %d";
+"account.name.placeholder" = "계정 이름";
+
+"sync.excluded.title" = "동기화 제외";
+"sync.excluded.default_message" = "이 계정은 동기화 및 풀 계산에서 제외됩니다.";
+"switch.launch.button" = "전환 및 실행";
+"delete.button" = "삭제";
