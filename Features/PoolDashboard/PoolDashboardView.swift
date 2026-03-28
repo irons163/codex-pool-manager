@@ -172,14 +172,16 @@ struct PoolDashboardView: View {
 
     private var dashboardContent: some View {
         VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-            DashboardHeaderSectionView(
-                accountCount: state.accounts.count,
-                availableCount: state.availableAccountsCount,
-                overallUsagePercent: Int(state.overallUsageRatio * 100),
-                modeTitle: state.mode.rawValue
-            )
+            HStack {
+                DashboardHeaderSectionView(
+                    accountCount: state.accounts.count,
+                    availableCount: state.availableAccountsCount,
+                    overallUsagePercent: Int(state.overallUsageRatio * 100),
+                    modeTitle: state.mode.rawValue
+                )
 
-            syncToolbarPanel
+                syncToolbarPanel
+            }
 
             HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
                 workspaceSidebar
