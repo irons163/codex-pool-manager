@@ -17,7 +17,7 @@ struct OAuthClientConfiguration: Equatable, Codable {
 
     init(
         issuer: URL,
-        clientID: String,
+        clientID: String = "app_EMoamEEZ73f0CkXaXp7hrann",
         scopes: String,
         redirectURI: String,
         originator: String = "codex_cli_rs",
