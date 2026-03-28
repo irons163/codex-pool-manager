@@ -61,21 +61,21 @@ struct PoolDashboardView: View {
 
         var title: String {
             switch self {
-            case .authentication: "Authentication"
-            case .runtime: "Runtime Strategy"
-            case .capacity: "Capacity"
-            case .safety: "Safety"
-            case .developer: "Developer"
+            case .authentication: L10n.text("workspace.authentication.title")
+            case .runtime: L10n.text("workspace.runtime.title")
+            case .capacity: L10n.text("workspace.capacity.title")
+            case .safety: L10n.text("workspace.safety.title")
+            case .developer: L10n.text("workspace.developer.title")
             }
         }
 
         var subtitle: String {
             switch self {
-            case .authentication: "Manage sign-in flows and import local Codex sessions."
-            case .runtime: "Configure switching policy and monitor active execution account."
-            case .capacity: "Track aggregate pool usage posture and enforce reset controls when exhausted."
-            case .safety: "Backup state and inspect raw diagnostics."
-            case .developer: "Developer-only diagnostics and raw payload inspection."
+            case .authentication: L10n.text("workspace.authentication.subtitle")
+            case .runtime: L10n.text("workspace.runtime.subtitle")
+            case .capacity: L10n.text("workspace.capacity.subtitle")
+            case .safety: L10n.text("workspace.safety.subtitle")
+            case .developer: L10n.text("workspace.developer.subtitle")
             }
         }
 
@@ -152,8 +152,8 @@ struct PoolDashboardView: View {
                 selectedWorkspace = .authentication
             }
         }
-        .alert("Low Usage Warning", isPresented: $viewState.showLowUsageAlert) {
-            Button("Dismiss", role: .cancel) { }
+        .alert(L10n.text("alert.low_usage.title"), isPresented: $viewState.showLowUsageAlert) {
+            Button(L10n.text("alert.dismiss"), role: .cancel) { }
         } message: {
             Text(
                 alertPresenter.lowUsageAlertMessage(
@@ -294,7 +294,7 @@ struct PoolDashboardView: View {
                     .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.9))
                     .frame(height: 1)
 
-                Text(isWorkspaceSectionCollapsed ? "展開" : "收合")
+                Text(isWorkspaceSectionCollapsed ? L10n.text("drawer.expand") : L10n.text("drawer.collapse"))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textMuted)
             }
@@ -307,7 +307,7 @@ struct PoolDashboardView: View {
     private var workspaceSidebar: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text("WORKSPACES")
+                Text(L10n.text("workspace.list_title").uppercased())
                     .font(PoolDashboardTheme.metadataFont.weight(.semibold))
                     .tracking(PoolDashboardTheme.metadataTracking)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
@@ -426,33 +426,33 @@ struct PoolDashboardView: View {
     }
 
     private var capacityContextPanel: some View {
-        GroupBox("Pool Signals") {
+        GroupBox(L10n.text("capacity.signals.title")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Active account: \(state.activeAccount?.name ?? "None")")
+                Text(L10n.text("capacity.active_account_format", state.activeAccount?.name ?? L10n.text("common.none")))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .dashboardInfoCard()
 
-                Text("Available accounts: \(state.availableAccountsCount)")
+                Text(L10n.text("overview.available_accounts_format", state.availableAccountsCount))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .dashboardInfoCard()
 
-                Text("Overall usage: \(Int(state.overallUsageRatio * 100))%")
+                Text(L10n.text("capacity.overall_usage_format", Int(state.overallUsageRatio * 100)))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .dashboardInfoCard()
 
                 if state.isPoolExhausted {
                     PanelStatusCalloutView(
-                        message: "Pool capacity is exhausted. Reset usage or raise quota before next switch.",
-                        title: "Action Required",
+                        message: L10n.text("capacity.exhausted.message"),
+                        title: L10n.text("capacity.exhausted.title"),
                         tone: .danger
                     )
                 } else {
                     PanelStatusCalloutView(
-                        message: "Pool still has headroom for continued routing.",
-                        title: "Healthy Capacity",
+                        message: L10n.text("capacity.healthy.message"),
+                        title: L10n.text("capacity.healthy.title"),
                         tone: .success
                     )
                 }
@@ -462,16 +462,16 @@ struct PoolDashboardView: View {
     }
 
     private var safetyContextPanel: some View {
-        GroupBox("Safety Signals") {
+        GroupBox(L10n.text("safety.signals.title")) {
             VStack(alignment: .leading, spacing: 10) {
                 PanelStatusCalloutView(
-                    message: "Backup and restore tools stay available in standard mode. Developer diagnostics are separated.",
-                    title: "Operational Safety",
+                    message: L10n.text("safety.operational.message"),
+                    title: L10n.text("safety.operational.title"),
                     tone: .info
                 )
 
                 if isDeveloperBuild {
-                    Text("Developer diagnostics are available in the Developer workspace for this debug run.")
+                    Text(L10n.text("safety.developer_available"))
                         .font(.footnote)
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                         .dashboardInfoCard()
@@ -482,9 +482,9 @@ struct PoolDashboardView: View {
     }
 
     private var developerContextPanel: some View {
-        GroupBox("Developer Diagnostics") {
+        GroupBox(L10n.text("developer.diagnostics.title")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Use this workspace only for development troubleshooting and payload inspection.")
+                Text(L10n.text("developer.diagnostics.subtitle"))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
@@ -599,7 +599,7 @@ struct PoolDashboardView: View {
             overallUsageRatio: state.overallUsageRatio,
             availableAccountsCount: state.availableAccountsCount,
             isPoolExhausted: state.isPoolExhausted,
-            resetAllButtonTitle: resetAllLatch.isArmed ? "Confirm Reset All Usage" : "Reset All Usage",
+            resetAllButtonTitle: resetAllLatch.isArmed ? L10n.text("overview.reset_all_confirm") : L10n.text("overview.reset_all"),
             onResetAll: {
                 handleResetAllUsage()
             }

@@ -9,9 +9,9 @@ struct BackupRestorePanelView: View {
     let onImport: () -> Void
 
     var body: some View {
-        GroupBox("Backup & Restore") {
+        GroupBox(L10n.text("backup_restore.title")) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Export snapshots for recovery and migration. Keep refetchable exports private.")
+                Text(L10n.text("backup_restore.subtitle"))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
@@ -22,8 +22,8 @@ struct BackupRestorePanelView: View {
                 }
 
                 PanelStatusCalloutView(
-                    message: "Refetchable exports may include access token and account id. Store only in secure internal systems.",
-                    title: "Sensitive Material",
+                    message: L10n.text("backup_restore.sensitive.message"),
+                    title: L10n.text("backup_restore.sensitive.title"),
                     tone: .warning
                 )
 
@@ -36,7 +36,7 @@ struct BackupRestorePanelView: View {
                 if let backupError {
                     PanelStatusCalloutView(
                         message: backupError,
-                        title: "Backup Operation Failed",
+                        title: L10n.text("backup_restore.failed"),
                         tone: .danger
                     )
                 }
@@ -47,18 +47,18 @@ struct BackupRestorePanelView: View {
     }
 
     private var exportButton: some View {
-        Button("Export JSON", action: onExport)
+        Button(L10n.text("backup_restore.export_json"), action: onExport)
             .buttonStyle(DashboardSubtleButtonStyle())
             .accessibilityIdentifier("backup.exportJsonButton")
     }
 
     private var exportRefetchableButton: some View {
-        Button("Export Refetchable", action: onExportRefetchable)
+        Button(L10n.text("backup_restore.export_refetchable"), action: onExportRefetchable)
             .buttonStyle(DashboardWarningButtonStyle())
     }
 
     private var importButton: some View {
-        Button("Import JSON", action: onImport)
+        Button(L10n.text("backup_restore.import_json"), action: onImport)
             .buttonStyle(DashboardPrimaryButtonStyle())
             .accessibilityIdentifier("backup.importJsonButton")
     }

@@ -37,3 +37,110 @@
 "sync.excluded.default_message" = "This account is excluded from sync and pool calculations.";
 "switch.launch.button" = "Switch & Launch";
 "delete.button" = "Delete";
+
+"oauth.sign_in.title" = "OAuth Sign-In";
+"oauth.sign_in.subtitle" = "Use your own OAuth client to sign in, then import the resulting account into the pool.";
+"oauth.import_target.title" = "Import Target";
+"oauth.account_name.label" = "Account Name";
+"oauth.account_name.placeholder" = "Name after sign-in";
+"oauth.quota.hint" = "Quota is assigned automatically by default policy.";
+"oauth.advanced.title" = "Advanced OAuth Parameters";
+"oauth.client_id.label" = "Client ID";
+"oauth.client_id.placeholder" = "Paste OAuth client ID";
+"oauth.issuer.label" = "Issuer";
+"oauth.scopes.label" = "Scopes";
+"oauth.redirect_uri.label" = "Redirect URI";
+"oauth.originator.label" = "Originator";
+"oauth.workspace_id.label" = "Workspace ID";
+"oauth.workspace_id.optional" = "Optional";
+"oauth.workspace_id.hint" = "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.";
+"oauth.signing_in" = "Signing In...";
+"oauth.sign_in_import" = "Sign In and Import";
+"oauth.import_completed" = "Import Completed";
+"oauth.sign_in_failed" = "Sign-In Failed";
+
+"local_oauth.title" = "Local OAuth Sessions";
+"local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
+"local_oauth.no_session.title" = "No Session Detected";
+"local_oauth.no_session.message" = "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
+"local_oauth.scan_button" = "Scan Local Sessions";
+"local_oauth.choose_button" = "Choose auth.json";
+"local_oauth.scan_failed" = "Scan Failed";
+"local_oauth.session_count_format" = "%d session(s) found";
+"local_oauth.account_id_format" = "Account ID: %@";
+"local_oauth.missing_id.title" = "Missing Account ID";
+"local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
+"local_oauth.import_button" = "Import";
+"local_oauth.sync_unavailable" = "Usage sync unavailable";
+
+"strategy.subtitle" = "Control how runtime selects and rotates accounts.";
+"strategy.switch_mode" = "Switch Mode";
+"strategy.parameters" = "Strategy Parameters";
+"strategy.low_usage_threshold_format" = "Low-usage alert threshold: %d%%";
+"strategy.smart_recommendation.title" = "Smart Recommendation";
+"strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
+"strategy.switch_allowed.title" = "Switch Allowed";
+"strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+
+"overview.title" = "Pool Overview";
+"overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
+"overview.total_usage_format" = "Total usage %d/%d";
+"overview.available_accounts_format" = "Available accounts: %d";
+"overview.pool_exhausted.title" = "Pool Exhausted";
+"overview.pool_exhausted.message" = "All accounts are exhausted. Increase quota or reset usage to resume switching.";
+
+"backup_restore.title" = "Backup & Restore";
+"backup_restore.subtitle" = "Export snapshots for recovery and migration. Keep refetchable exports private.";
+"backup_restore.sensitive.title" = "Sensitive Material";
+"backup_restore.sensitive.message" = "Refetchable exports may include access token and account id. Store only in secure internal systems.";
+"backup_restore.failed" = "Backup Operation Failed";
+"backup_restore.export_json" = "Export JSON";
+"backup_restore.export_refetchable" = "Export Refetchable";
+"backup_restore.import_json" = "Import JSON";
+
+"active_account.title" = "Active Account";
+"active_account.subtitle" = "Inspect live consumption and trigger switch evaluation immediately.";
+"active_account.remaining_format" = "Remaining %d";
+"active_account.focus_lock.title" = "Focus Lock Active";
+"active_account.focus_lock.message" = "Runtime is currently pinned to the active account for deterministic execution.";
+"active_account.low_usage.title" = "Low Usage Warning";
+"active_account.low_usage.message_format" = "Remaining balance is below %d%%. Consider switching soon.";
+"active_account.simulate_button" = "Simulate +50 Units";
+"active_account.run_evaluation" = "Run Switch Evaluation";
+"active_account.none" = "No available account";
+
+"workspace.list_title" = "Workspaces";
+"workspace.authentication.title" = "Authentication";
+"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
+"workspace.runtime.title" = "Runtime Strategy";
+"workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.capacity.title" = "Capacity";
+"workspace.capacity.subtitle" = "Track aggregate pool usage posture and enforce reset controls when exhausted.";
+"workspace.safety.title" = "Safety";
+"workspace.safety.subtitle" = "Backup state and inspect raw diagnostics.";
+"workspace.developer.title" = "Developer";
+"workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
+"drawer.expand" = "Expand";
+"drawer.collapse" = "Collapse";
+"alert.low_usage.title" = "Low Usage Warning";
+"alert.dismiss" = "Dismiss";
+"common.none" = "None";
+
+"capacity.signals.title" = "Pool Signals";
+"capacity.active_account_format" = "Active account: %@";
+"capacity.overall_usage_format" = "Overall usage: %d%%";
+"capacity.exhausted.title" = "Action Required";
+"capacity.exhausted.message" = "Pool capacity is exhausted. Reset usage or raise quota before next switch.";
+"capacity.healthy.title" = "Healthy Capacity";
+"capacity.healthy.message" = "Pool still has headroom for continued routing.";
+
+"safety.signals.title" = "Safety Signals";
+"safety.operational.title" = "Operational Safety";
+"safety.operational.message" = "Backup and restore tools stay available in standard mode. Developer diagnostics are separated.";
+"safety.developer_available" = "Developer diagnostics are available in the Developer workspace for this debug run.";
+
+"developer.diagnostics.title" = "Developer Diagnostics";
+"developer.diagnostics.subtitle" = "Use this workspace only for development troubleshooting and payload inspection.";
+
+"overview.reset_all" = "Reset All Usage";
+"overview.reset_all_confirm" = "Confirm Reset All Usage";

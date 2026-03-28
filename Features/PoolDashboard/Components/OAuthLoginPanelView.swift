@@ -21,42 +21,42 @@ struct OAuthLoginPanelView: View {
     ]
 
     var body: some View {
-        GroupBox("OAuth Sign-In") {
+        GroupBox(L10n.text("oauth.sign_in.title")) {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.oauthPanelSpacing) {
-                Text("Use your own OAuth client to sign in, then import the resulting account into the pool.")
+                Text(L10n.text("oauth.sign_in.subtitle"))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
 
-                GroupBox("Import Target") {
+                GroupBox(L10n.text("oauth.import_target.title")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Account Name")
+                        Text(L10n.text("oauth.account_name.label"))
                             .font(PoolDashboardTheme.metadataFont.weight(.semibold))
                             .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        TextField("Name after sign-in", text: $oauthAccountName)
+                        TextField(L10n.text("oauth.account_name.placeholder"), text: $oauthAccountName)
                             .dashboardInputFieldStyle()
 
-                        Text("Quota is assigned automatically by default policy.")
+                        Text(L10n.text("oauth.quota.hint"))
                             .font(.caption)
                             .foregroundStyle(PoolDashboardTheme.textMuted)
                     }
                 }
                 .sectionCardStyle()
 
-                DisclosureGroup("Advanced OAuth Parameters") {
+                DisclosureGroup(L10n.text("oauth.advanced.title")) {
                     VStack(alignment: .leading, spacing: 10) {
                         LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
-                            advancedField("Client ID", placeholder: "Paste OAuth client ID", text: $oauthClientID)
-                            advancedField("Issuer", placeholder: "https://auth.openai.com", text: $oauthIssuer)
-                            advancedField("Scopes", placeholder: "openid profile ...", text: $oauthScopes)
-                            advancedField("Redirect URI", placeholder: "http://localhost:1455/auth/callback", text: $oauthRedirectURI)
-                            advancedField("Originator", placeholder: "codex_cli_rs", text: $oauthOriginator)
-                            advancedField("Workspace ID", placeholder: "Optional", text: $oauthWorkspaceID)
+                            advancedField(L10n.text("oauth.client_id.label"), placeholder: L10n.text("oauth.client_id.placeholder"), text: $oauthClientID)
+                            advancedField(L10n.text("oauth.issuer.label"), placeholder: "https://auth.openai.com", text: $oauthIssuer)
+                            advancedField(L10n.text("oauth.scopes.label"), placeholder: "openid profile ...", text: $oauthScopes)
+                            advancedField(L10n.text("oauth.redirect_uri.label"), placeholder: "http://localhost:1455/auth/callback", text: $oauthRedirectURI)
+                            advancedField(L10n.text("oauth.originator.label"), placeholder: "codex_cli_rs", text: $oauthOriginator)
+                            advancedField(L10n.text("oauth.workspace_id.label"), placeholder: L10n.text("oauth.workspace_id.optional"), text: $oauthWorkspaceID)
                         }
 
                         PanelStatusCalloutView(
-                            message: "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.",
-                            title: "Workspace ID",
+                            message: L10n.text("oauth.workspace_id.hint"),
+                            title: L10n.text("oauth.workspace_id.label"),
                             tone: .info
                         )
                     }
@@ -77,7 +77,7 @@ struct OAuthLoginPanelView: View {
 
     private var actionRow: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
-            Button(isSigningInOAuth ? "Signing In..." : "Sign In and Import") {
+            Button(isSigningInOAuth ? L10n.text("oauth.signing_in") : L10n.text("oauth.sign_in_import")) {
                 Task { await onSignIn() }
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
@@ -87,7 +87,7 @@ struct OAuthLoginPanelView: View {
             if let oauthSuccessMessage {
                 PanelStatusCalloutView(
                     message: oauthSuccessMessage,
-                    title: "Import Completed",
+                    title: L10n.text("oauth.import_completed"),
                     tone: .success
                 )
                 .frame(maxWidth: 340, alignment: .leading)
@@ -96,7 +96,7 @@ struct OAuthLoginPanelView: View {
             if let oauthError {
                 PanelStatusCalloutView(
                     message: oauthError,
-                    title: "Sign-In Failed",
+                    title: L10n.text("oauth.sign_in_failed"),
                     tone: .danger
                 )
                 .frame(maxWidth: 340, alignment: .leading)

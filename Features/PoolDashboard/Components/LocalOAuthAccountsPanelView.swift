@@ -8,9 +8,9 @@ struct LocalOAuthAccountsPanelView: View {
     let onImport: (LocalCodexOAuthAccount) async -> Void
 
     var body: some View {
-        GroupBox("Local OAuth Sessions") {
+        GroupBox(L10n.text("local_oauth.title")) {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.localOAuthPanelSpacing) {
-                Text("Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.")
+                Text(L10n.text("local_oauth.subtitle"))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
@@ -20,8 +20,8 @@ struct LocalOAuthAccountsPanelView: View {
 
                 if accounts.isEmpty {
                     PanelStatusCalloutView(
-                        message: "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.",
-                        title: "No Session Detected",
+                        message: L10n.text("local_oauth.no_session.message"),
+                        title: L10n.text("local_oauth.no_session.title"),
                         tone: .info
                     )
                 } else {
@@ -39,12 +39,12 @@ struct LocalOAuthAccountsPanelView: View {
 
     private var headerActions: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
-            Button("Scan Local Sessions") {
+            Button(L10n.text("local_oauth.scan_button")) {
                 onScan()
             }
             .buttonStyle(DashboardSubtleButtonStyle())
 
-            Button("Choose auth.json") {
+            Button(L10n.text("local_oauth.choose_button")) {
                 onChooseAuthFile()
             }
             .buttonStyle(DashboardSubtleButtonStyle())
@@ -52,12 +52,12 @@ struct LocalOAuthAccountsPanelView: View {
             if let errorMessage {
                 PanelStatusCalloutView(
                     message: errorMessage,
-                    title: "Scan Failed",
+                    title: L10n.text("local_oauth.scan_failed"),
                     tone: .danger
                 )
                 .frame(maxWidth: PoolDashboardTheme.localBadgeMaxWidth, alignment: .leading)
             } else {
-                Text("\(accounts.count) session(s) found")
+                Text(L10n.text("local_oauth.session_count_format", accounts.count))
                     .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
             }
         }
@@ -83,13 +83,13 @@ struct LocalOAuthAccountsPanelView: View {
                     .lineLimit(1)
 
                 if let chatGPTAccountID = account.chatGPTAccountID {
-                    Text("Account ID: \(chatGPTAccountID)")
+                    Text(L10n.text("local_oauth.account_id_format", chatGPTAccountID))
                         .font(.footnote)
                         .foregroundStyle(PoolDashboardTheme.textMuted)
                 } else {
                     PanelStatusCalloutView(
-                        message: "This account has no ChatGPT account id, so usage sync is unavailable.",
-                        title: "Missing Account ID",
+                        message: L10n.text("local_oauth.missing_id.message"),
+                        title: L10n.text("local_oauth.missing_id.title"),
                         tone: .warning
                     )
                 }
@@ -98,14 +98,14 @@ struct LocalOAuthAccountsPanelView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 6) {
-                Button("Import") {
+                Button(L10n.text("local_oauth.import_button")) {
                     Task { await onImport(account) }
                 }
                 .buttonStyle(DashboardPrimaryButtonStyle())
                 .disabled(account.chatGPTAccountID == nil)
 
                 if account.chatGPTAccountID == nil {
-                    Text("Usage sync unavailable")
+                    Text(L10n.text("local_oauth.sync_unavailable"))
                         .font(.caption)
                         .foregroundStyle(PoolDashboardTheme.textMuted)
                 }

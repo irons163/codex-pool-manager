@@ -12,9 +12,9 @@ struct ActiveAccountPanelView: View {
     let onEvaluateSwitch: () -> Void
 
     var body: some View {
-        GroupBox("Active Account") {
+        GroupBox(L10n.text("active_account.title")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Inspect live consumption and trigger switch evaluation immediately.")
+                Text(L10n.text("active_account.subtitle"))
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
@@ -24,7 +24,7 @@ struct ActiveAccountPanelView: View {
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(PoolDashboardTheme.textPrimary)
                         Spacer()
-                        Text("Remaining \(activeAccount.remainingUnits)")
+                        Text(L10n.text("active_account.remaining_format", activeAccount.remainingUnits))
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(PoolDashboardTheme.textSecondary)
@@ -37,35 +37,35 @@ struct ActiveAccountPanelView: View {
 
                     if isFocusLockActive {
                         PanelStatusCalloutView(
-                            message: "Runtime is currently pinned to the active account for deterministic execution.",
-                            title: "Focus Lock Active",
+                            message: L10n.text("active_account.focus_lock.message"),
+                            title: L10n.text("active_account.focus_lock.title"),
                             tone: .info
                         )
                     }
 
                     if mode == .focus && hasLowUsageWarning {
                         PanelStatusCalloutView(
-                            message: "Remaining balance is below \(Int(lowUsageThresholdRatio * 100))%. Consider switching soon.",
-                            title: "Low Usage Warning",
+                            message: L10n.text("active_account.low_usage.message_format", Int(lowUsageThresholdRatio * 100)),
+                            title: L10n.text("active_account.low_usage.title"),
                             tone: .warning
                         )
                     }
 
                     HStack {
                         if showSimulationControl {
-                            Button("Simulate +50 Units") {
+                            Button(L10n.text("active_account.simulate_button")) {
                                 onSimulateUsage()
                             }
                             .buttonStyle(DashboardPrimaryButtonStyle())
                         }
 
                         if showSimulationControl {
-                            Button("Run Switch Evaluation") {
+                            Button(L10n.text("active_account.run_evaluation")) {
                                 onEvaluateSwitch()
                             }
                             .buttonStyle(DashboardSubtleButtonStyle())
                         } else {
-                            Button("Run Switch Evaluation") {
+                            Button(L10n.text("active_account.run_evaluation")) {
                                 onEvaluateSwitch()
                             }
                             .buttonStyle(DashboardPrimaryButtonStyle())
@@ -73,7 +73,7 @@ struct ActiveAccountPanelView: View {
                     }
                     .dashboardInfoCard()
                 } else {
-                    Label("No available account", systemImage: "person.crop.circle.badge.exclamationmark")
+                    Label(L10n.text("active_account.none"), systemImage: "person.crop.circle.badge.exclamationmark")
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                 }
             }
