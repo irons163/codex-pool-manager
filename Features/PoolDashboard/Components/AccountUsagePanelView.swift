@@ -55,6 +55,7 @@ struct AccountUsagePanelView: View {
 
     @State private var sortMode: SortMode = .joinedAt
     @State private var layoutMode: LayoutMode = .single
+    @FocusState private var focusedAccountNameID: UUID?
 
     @Binding var newAccountName: String
     @Binding var newAccountQuota: Int
@@ -115,6 +116,11 @@ struct AccountUsagePanelView: View {
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+        .onAppear {
+            DispatchQueue.main.async {
+                focusedAccountNameID = nil
+            }
+        }
     }
 
     private var headerRow: some View {
@@ -265,6 +271,7 @@ struct AccountUsagePanelView: View {
     private func accountNameRow(_ account: AgentAccount) -> some View {
         HStack(spacing: 8) {
             TextField(L10n.text("account.name.placeholder"), text: accountNameBinding(account.id))
+                .focused($focusedAccountNameID, equals: account.id)
                 .dashboardInputFieldStyle()
 
             if activeAccountID == account.id {
