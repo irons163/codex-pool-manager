@@ -99,12 +99,8 @@ struct AccountUsagePanelView: View {
 
     private func accountCard(_ account: AgentAccount) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            ViewThatFits(in: .horizontal) {
-                accountIdentityRow(account)
-                VStack(alignment: .leading, spacing: 8) {
-                    accountIdentityRow(account)
-                }
-            }
+            accountNameRow(account)
+            accountActionRow(account)
 
             if isPercentUsageAccount(account) {
                 HStack {
@@ -138,45 +134,30 @@ struct AccountUsagePanelView: View {
         .dashboardListRowCard()
     }
 
-    private func accountIdentityRow(_ account: AgentAccount) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Account name", text: accountNameBinding(account.id))
-                    .dashboardInputFieldStyle()
+    private func accountNameRow(_ account: AgentAccount) -> some View {
+        TextField("Account name", text: accountNameBinding(account.id))
+            .dashboardInputFieldStyle()
+    }
 
-            }
+    private func accountActionRow(_ account: AgentAccount) -> some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
 
-            Spacer()
-
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
-                    Button("Switch & Launch") {
-                        Task {
-                            await onSwitchAndLaunch(account)
-                        }
-                    }
-                    .buttonStyle(DashboardPrimaryButtonStyle())
-
-                    Button("Delete", role: .destructive) {
-                        onRemoveAccount(account.id)
-                    }
-                    .buttonStyle(DashboardWarningButtonStyle())
-                }
-
-                VStack(alignment: .trailing, spacing: 6) {
-                    Button("Switch & Launch") {
-                        Task {
-                            await onSwitchAndLaunch(account)
-                        }
-                    }
-                    .buttonStyle(DashboardPrimaryButtonStyle())
-
-                    Button("Delete", role: .destructive) {
-                        onRemoveAccount(account.id)
-                    }
-                    .buttonStyle(DashboardWarningButtonStyle())
+            Button("Switch & Launch") {
+                Task {
+                    await onSwitchAndLaunch(account)
                 }
             }
+            .buttonStyle(DashboardPrimaryButtonStyle())
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+
+            Button("Delete", role: .destructive) {
+                onRemoveAccount(account.id)
+            }
+            .buttonStyle(DashboardWarningButtonStyle())
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
         }
     }
 }
