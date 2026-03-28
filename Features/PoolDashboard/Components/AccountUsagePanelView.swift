@@ -99,8 +99,12 @@ struct AccountUsagePanelView: View {
 
     private func accountCard(_ account: AgentAccount) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            accountNameRow(account)
-            accountActionRow(account)
+            if layoutMode == .single {
+                accountSingleRowHeader(account)
+            } else {
+                accountNameRow(account)
+                accountActionRow(account)
+            }
 
             if isPercentUsageAccount(account) {
                 HStack {
@@ -158,6 +162,13 @@ struct AccountUsagePanelView: View {
             .buttonStyle(DashboardWarningButtonStyle())
             .lineLimit(1)
             .minimumScaleFactor(0.9)
+        }
+    }
+
+    private func accountSingleRowHeader(_ account: AgentAccount) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            accountNameRow(account)
+            accountActionRow(account)
         }
     }
 }
