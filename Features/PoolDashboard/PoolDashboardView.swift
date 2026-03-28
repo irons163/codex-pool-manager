@@ -58,7 +58,6 @@ struct PoolDashboardView: View {
     private enum Workspace: String, CaseIterable, Identifiable {
         case authentication
         case runtime
-        case capacity
         case safety
         case developer
 
@@ -68,7 +67,6 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: L10n.text("workspace.authentication.title")
             case .runtime: L10n.text("workspace.runtime.title")
-            case .capacity: L10n.text("workspace.capacity.title")
             case .safety: L10n.text("workspace.safety.title")
             case .developer: L10n.text("workspace.developer.title")
             }
@@ -78,7 +76,6 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: L10n.text("workspace.authentication.subtitle")
             case .runtime: L10n.text("workspace.runtime.subtitle")
-            case .capacity: L10n.text("workspace.capacity.subtitle")
             case .safety: L10n.text("workspace.safety.subtitle")
             case .developer: L10n.text("workspace.developer.subtitle")
             }
@@ -88,7 +85,6 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: "person.badge.key"
             case .runtime: "dial.medium"
-            case .capacity: "gauge.with.dots.needle.bottom.50percent"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
             case .developer: "wrench.and.screwdriver"
             }
@@ -424,8 +420,6 @@ struct PoolDashboardView: View {
             oauthLoginPanel
         case .runtime:
             strategySettingsPanel
-        case .capacity:
-            overallUsagePanel
         case .safety:
             backupRestorePanel
         case .developer:
@@ -440,49 +434,11 @@ struct PoolDashboardView: View {
             localOAuthAccountsPanel
         case .runtime:
             activeAccountPanel
-        case .capacity:
-            capacityContextPanel
         case .safety:
             safetyContextPanel
         case .developer:
             developerContextPanel
         }
-    }
-
-    private var capacityContextPanel: some View {
-        GroupBox(L10n.text("capacity.signals.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(L10n.text("capacity.active_account_format", state.activeAccount?.name ?? L10n.text("common.none")))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .dashboardInfoCard()
-
-                Text(L10n.text("overview.available_accounts_format", state.availableAccountsCount))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .dashboardInfoCard()
-
-                Text(L10n.text("capacity.overall_usage_format", Int(state.overallUsageRatio * 100)))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .dashboardInfoCard()
-
-                if state.isPoolExhausted {
-                    PanelStatusCalloutView(
-                        message: L10n.text("capacity.exhausted.message"),
-                        title: L10n.text("capacity.exhausted.title"),
-                        tone: .danger
-                    )
-                } else {
-                    PanelStatusCalloutView(
-                        message: L10n.text("capacity.healthy.message"),
-                        title: L10n.text("capacity.healthy.title"),
-                        tone: .success
-                    )
-                }
-            }
-        }
-        .sectionCardStyle()
     }
 
     private var safetyContextPanel: some View {
@@ -616,20 +572,6 @@ struct PoolDashboardView: View {
             switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching,
             autoSyncEnabledBinding: strategyBindings.autoSyncEnabled,
             autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds
-        )
-    }
-
-    private var overallUsagePanel: some View {
-        OverallUsagePanelView(
-            totalUsedUnits: state.totalUsedUnits,
-            totalQuota: state.totalQuota,
-            overallUsageRatio: state.overallUsageRatio,
-            availableAccountsCount: state.availableAccountsCount,
-            isPoolExhausted: state.isPoolExhausted,
-            resetAllButtonTitle: resetAllLatch.isArmed ? L10n.text("overview.reset_all_confirm") : L10n.text("overview.reset_all"),
-            onResetAll: {
-                handleResetAllUsage()
-            }
         )
     }
 
