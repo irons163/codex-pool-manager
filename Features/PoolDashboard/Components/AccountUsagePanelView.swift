@@ -60,6 +60,7 @@ struct AccountUsagePanelView: View {
     @Binding var newAccountQuota: Int
 
     let accounts: [AgentAccount]
+    let activeAccountID: UUID?
     let switchLaunchError: String?
     let showAddAccountControls: Bool
     let onAddAccount: (String, Int) -> Void
@@ -252,8 +253,26 @@ struct AccountUsagePanelView: View {
     }
 
     private func accountNameRow(_ account: AgentAccount) -> some View {
-        TextField(L10n.text("account.name.placeholder"), text: accountNameBinding(account.id))
-            .dashboardInputFieldStyle()
+        HStack(spacing: 8) {
+            TextField(L10n.text("account.name.placeholder"), text: accountNameBinding(account.id))
+                .dashboardInputFieldStyle()
+
+            if activeAccountID == account.id {
+                Text(L10n.text("account.current_badge"))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(PoolDashboardTheme.glowA.opacity(0.34))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(PoolDashboardTheme.glowA.opacity(0.6), lineWidth: 0.8)
+                    )
+            }
+        }
     }
 
     @ViewBuilder

@@ -32,6 +32,7 @@
 "usage.used_units_format" = "已用 %d";
 "usage.quota_units_format" = "配額 %d";
 "account.name.placeholder" = "帳號名稱";
+"account.current_badge" = "目前";
 
 "sync.excluded.title" = "已排除同步";
 "sync.excluded.default_message" = "此帳號已排除在同步與池調度計算之外。";
@@ -89,6 +90,7 @@
 "strategy.switch_mode" = "切換模式";
 "strategy.parameters" = "策略參數";
 "strategy.low_usage_threshold_format" = "低用量提醒門檻：%d%%";
+"strategy.switch_threshold_format" = "智能切換門檻：%d%%";
 "strategy.smart_recommendation.title" = "智慧建議";
 "strategy.smart_recommendation.message_format" = "建議下一個帳號為 %@。";
 "strategy.switch_allowed.title" = "允許切換";

@@ -46,6 +46,19 @@ struct StrategySettingsPanelView: View {
                 .dashboardInfoCard()
 
                 if mode == .intelligent {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                        Text(
+                            L10n.text(
+                                "strategy.switch_threshold_format",
+                                Int(minUsageDeltaBinding.wrappedValue * 100)
+                            )
+                        )
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        Slider(value: minUsageDeltaBinding, in: 0...0.5, step: 0.01)
+                            .tint(PoolDashboardTheme.glowA)
+                    }
+                    .dashboardInfoCard()
+
                     if let intelligentCandidateName {
                         PanelStatusCalloutView(
                             message: L10n.text("strategy.smart_recommendation.message_format", intelligentCandidateName),

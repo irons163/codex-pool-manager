@@ -32,6 +32,7 @@
 "usage.used_units_format" = "사용 %d";
 "usage.quota_units_format" = "할당량 %d";
 "account.name.placeholder" = "계정 이름";
+"account.current_badge" = "현재";
 
 "sync.excluded.title" = "동기화 제외";
 "sync.excluded.default_message" = "이 계정은 동기화 및 풀 계산에서 제외됩니다.";
@@ -89,6 +90,7 @@
 "strategy.switch_mode" = "전환 모드";
 "strategy.parameters" = "전략 파라미터";
 "strategy.low_usage_threshold_format" = "저사용량 경고 임계값: %d%%";
+"strategy.switch_threshold_format" = "스마트 전환 임계값: %d%%";
 "strategy.smart_recommendation.title" = "스마트 추천";
 "strategy.smart_recommendation.message_format" = "추천 다음 계정은 %@ 입니다.";
 "strategy.switch_allowed.title" = "전환 가능";

@@ -160,14 +160,20 @@ extension View {
 
     func dashboardListRowCard() -> some View {
         self
-            .listRowBackground(
+            .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
+            .padding(.horizontal, 2)
+            .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.72))
+                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.78))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.55), lineWidth: 0.7)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.9), lineWidth: 1)
                     )
-                    .padding(.vertical, PoolDashboardTheme.listRowVerticalInset)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                            .stroke(PoolDashboardTheme.glowA.opacity(0.15), lineWidth: 0.6)
+                            .padding(1)
+                    )
             )
     }
 }

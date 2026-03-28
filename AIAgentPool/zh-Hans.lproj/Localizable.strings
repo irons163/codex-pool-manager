@@ -32,6 +32,7 @@
 "usage.used_units_format" = "已用 %d";
 "usage.quota_units_format" = "配额 %d";
 "account.name.placeholder" = "账号名称";
+"account.current_badge" = "当前";
 
 "sync.excluded.title" = "已排除同步";
 "sync.excluded.default_message" = "此账号已排除在同步与池调度计算之外。";
@@ -89,6 +90,7 @@
 "strategy.switch_mode" = "切换模式";
 "strategy.parameters" = "策略参数";
 "strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";
+"strategy.switch_threshold_format" = "智能切换阈值：%d%%";
 "strategy.smart_recommendation.title" = "智能建议";
 "strategy.smart_recommendation.message_format" = "推荐下一个账号：%@。";
 "strategy.switch_allowed.title" = "允许切换";

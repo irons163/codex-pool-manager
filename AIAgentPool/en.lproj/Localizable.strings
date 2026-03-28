@@ -32,6 +32,7 @@
 "usage.used_units_format" = "Used %d";
 "usage.quota_units_format" = "Quota %d";
 "account.name.placeholder" = "Account name";
+"account.current_badge" = "Current";
 
 "sync.excluded.title" = "Excluded from Sync";
 "sync.excluded.default_message" = "This account is excluded from sync and pool calculations.";
@@ -89,6 +90,7 @@
 "strategy.switch_mode" = "Switch Mode";
 "strategy.parameters" = "Strategy Parameters";
 "strategy.low_usage_threshold_format" = "Low-usage alert threshold: %d%%";
+"strategy.switch_threshold_format" = "Intelligent switch threshold: %d%%";
 "strategy.smart_recommendation.title" = "Smart Recommendation";
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Switch Allowed";
