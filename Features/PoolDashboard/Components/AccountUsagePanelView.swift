@@ -47,10 +47,11 @@ struct AccountUsagePanelView: View {
                             if isPercentUsageAccount(account) {
                                 HStack {
                                     Text("Used \(account.usedUnits)%")
+                                        .font(.subheadline)
                                     Spacer()
                                     Text("Remaining \(account.remainingUnits)%")
+                                        .font(.subheadline)
                                 }
-                                .font(.subheadline)
                             } else {
                                 HStack {
                                     Stepper(
@@ -69,7 +70,7 @@ struct AccountUsagePanelView: View {
                             }
 
                             HStack {
-                                Text(remainingLabel(account))
+                                Text("Usage")
                                     .font(.caption)
                                     .foregroundStyle(PoolDashboardTheme.textMuted)
                                 Spacer()
