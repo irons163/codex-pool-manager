@@ -505,6 +505,7 @@ struct PoolDashboardView: View {
             newAccountName: $formState.newAccountName,
             newAccountQuota: $formState.newAccountQuota,
             accounts: state.accounts,
+            showAddAccountControls: isDeveloperBuild,
             onAddAccount: { name, quota in
                 handleAddAccount(name: name, quota: quota)
             },

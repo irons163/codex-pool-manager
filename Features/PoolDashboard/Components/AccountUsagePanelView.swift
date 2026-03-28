@@ -5,6 +5,7 @@ struct AccountUsagePanelView: View {
     @Binding var newAccountQuota: Int
 
     let accounts: [AgentAccount]
+    let showAddAccountControls: Bool
     let onAddAccount: (String, Int) -> Void
     let onSwitchAndLaunch: (AgentAccount) async -> Void
     let onRemoveAccount: (UUID) -> Void
@@ -24,8 +25,10 @@ struct AccountUsagePanelView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                PanelAdaptiveActionRowView {
-                    addRow
+                if showAddAccountControls {
+                    PanelAdaptiveActionRowView {
+                        addRow
+                    }
                 }
 
                 PanelStatusCalloutView(
