@@ -48,6 +48,18 @@ struct PoolDashboardView: View {
         "\(state.autoSyncEnabled)-\(Int(state.autoSyncIntervalSeconds))"
     }
 
+    private static var defaultAccounts: [AgentAccount] {
+        #if DEBUG
+        [
+            AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: PoolDashboardFormState.defaultQuota),
+            AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: PoolDashboardFormState.defaultQuota),
+            AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: PoolDashboardFormState.defaultQuota)
+        ]
+        #else
+        []
+        #endif
+    }
+
     private var isDeveloperBuild: Bool {
         #if DEBUG
         true
@@ -98,11 +110,7 @@ struct PoolDashboardView: View {
             _state = State(initialValue: AccountPoolState(snapshot: snapshot))
         } else {
             var defaultState = AccountPoolState(
-                accounts: [
-                    AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: PoolDashboardFormState.defaultQuota),
-                    AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: PoolDashboardFormState.defaultQuota),
-                    AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: PoolDashboardFormState.defaultQuota)
-                ],
+                accounts: Self.defaultAccounts,
                 mode: .intelligent,
                 minSwitchInterval: 300,
                 lowUsageThresholdRatio: 0.15
