@@ -93,6 +93,7 @@
 "strategy.subtitle" = "控制运行时如何选择并轮换账号。";
 "strategy.switch_mode" = "切换模式";
 "strategy.parameters" = "策略参数";
+"strategy.general_settings" = "一般设置";
 "strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";
 "strategy.switch_threshold_format" = "智能切换低剩余用量阈值：%d%%";
 "strategy.smart_recommendation.title" = "智能建议";

@@ -93,6 +93,7 @@
 "strategy.subtitle" = "런타임이 계정을 선택하고 순환하는 방식을 제어합니다.";
 "strategy.switch_mode" = "전환 모드";
 "strategy.parameters" = "전략 파라미터";
+"strategy.general_settings" = "일반 설정";
 "strategy.low_usage_threshold_format" = "저사용량 경고 임계값: %d%%";
 "strategy.switch_threshold_format" = "스마트 전환 낮은 잔여 사용량 임계값: %d%%";
 "strategy.smart_recommendation.title" = "스마트 추천";

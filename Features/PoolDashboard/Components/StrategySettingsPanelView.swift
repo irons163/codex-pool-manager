@@ -57,6 +57,43 @@ struct StrategySettingsPanelView: View {
                 }
                 .dashboardInfoCard()
 
+                if mode == .intelligent {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                        Text(
+                            L10n.text(
+                                "strategy.switch_threshold_format",
+                                Int(minUsageDeltaBinding.wrappedValue * 100)
+                            )
+                        )
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        Slider(value: minUsageDeltaBinding, in: 0...0.5, step: 0.01)
+                            .tint(PoolDashboardTheme.glowA)
+                    }
+                    .dashboardInfoCard()
+
+                    if let intelligentCandidateName {
+                        PanelStatusCalloutView(
+                            message: L10n.text("strategy.smart_recommendation.message_format", intelligentCandidateName),
+                            title: L10n.text("strategy.smart_recommendation.title"),
+                            tone: .info
+                        )
+                    }
+
+                    if canIntelligentSwitch {
+                        PanelStatusCalloutView(
+                            message: L10n.text("strategy.switch_allowed.message"),
+                            title: L10n.text("strategy.switch_allowed.title"),
+                            tone: .success
+                        )
+                    }
+                }
+            }
+        }
+        .sectionCardStyle()
+        .tint(PoolDashboardTheme.glowA)
+
+        GroupBox(L10n.text("strategy.general_settings")) {
+            VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
                 Toggle(L10n.text("strategy.switch_without_launch"), isOn: switchAndLaunchBinding)
                     .toggleStyle(.switch)
                     .tint(PoolDashboardTheme.glowA)
@@ -96,37 +133,6 @@ struct StrategySettingsPanelView: View {
                     .tint(PoolDashboardTheme.glowA)
                 }
                 .dashboardInfoCard()
-
-                if mode == .intelligent {
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                        Text(
-                            L10n.text(
-                                "strategy.switch_threshold_format",
-                                Int(minUsageDeltaBinding.wrappedValue * 100)
-                            )
-                        )
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        Slider(value: minUsageDeltaBinding, in: 0...0.5, step: 0.01)
-                            .tint(PoolDashboardTheme.glowA)
-                    }
-                    .dashboardInfoCard()
-
-                    if let intelligentCandidateName {
-                        PanelStatusCalloutView(
-                            message: L10n.text("strategy.smart_recommendation.message_format", intelligentCandidateName),
-                            title: L10n.text("strategy.smart_recommendation.title"),
-                            tone: .info
-                        )
-                    }
-
-                    if canIntelligentSwitch {
-                        PanelStatusCalloutView(
-                            message: L10n.text("strategy.switch_allowed.message"),
-                            title: L10n.text("strategy.switch_allowed.title"),
-                            tone: .success
-                        )
-                    }
-                }
             }
         }
         .sectionCardStyle()

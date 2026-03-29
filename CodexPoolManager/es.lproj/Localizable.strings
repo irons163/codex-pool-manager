@@ -93,6 +93,7 @@
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
 "strategy.switch_mode" = "Modo de cambio";
 "strategy.parameters" = "Parámetros de estrategia";
+"strategy.general_settings" = "Configuración general";
 "strategy.low_usage_threshold_format" = "Umbral de alerta de bajo uso: %d%%";
 "strategy.switch_threshold_format" = "Umbral inteligente de bajo uso restante: %d%%";
 "strategy.smart_recommendation.title" = "Recomendación inteligente";

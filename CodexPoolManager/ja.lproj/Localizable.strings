@@ -93,6 +93,7 @@
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
 "strategy.switch_mode" = "切替モード";
 "strategy.parameters" = "戦略パラメータ";
+"strategy.general_settings" = "一般設定";
 "strategy.low_usage_threshold_format" = "低使用量アラートしきい値: %d%%";
 "strategy.switch_threshold_format" = "スマート切り替え低残量しきい値: %d%%";
 "strategy.smart_recommendation.title" = "スマート推奨";
