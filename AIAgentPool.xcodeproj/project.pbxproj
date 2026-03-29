@@ -75,14 +75,14 @@
 			containerPortal = 4AFBA57A2F72203A008D97C1 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 4AFBA5812F72203A008D97C1;
-			remoteInfo = AIAgentPool;
+			remoteInfo = CodexPoolManager;
 		};
 		4AFBA59C2F72203C008D97C1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4AFBA57A2F72203A008D97C1 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 4AFBA5812F72203A008D97C1;
-			remoteInfo = AIAgentPool;
+			remoteInfo = CodexPoolManager;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -153,17 +153,17 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4AFBA5842F72203A008D97C1 /* AIAgentPool */ = {
+		4AFBA5842F72203A008D97C1 /* CodexPoolManager */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AIAgentPool;
 			sourceTree = "<group>";
 		};
-		4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */ = {
+		4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AIAgentPoolTests;
 			sourceTree = "<group>";
 		};
-		4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */ = {
+		4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AIAgentPoolUITests;
 			sourceTree = "<group>";
@@ -325,9 +325,9 @@
 		4AFBA5792F72203A008D97C1 = {
 			isa = PBXGroup;
 			children = (
-				4AFBA5842F72203A008D97C1 /* AIAgentPool */,
-				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
-				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
+				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
+				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
+				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
 				4AFBA5832F72203A008D97C1 /* Products */,
 				4AB61EA82F739CB1001AC4CB /* Domain */,
 				4AB61EAA2F739CB1001AC4CB /* Infrastructure */,
@@ -350,9 +350,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4AFBA5812F72203A008D97C1 /* AIAgentPool */ = {
+		4AFBA5812F72203A008D97C1 /* CodexPoolManager */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4AFBA5A52F72203C008D97C1 /* Build configuration list for PBXNativeTarget "AIAgentPool" */;
+			buildConfigurationList = 4AFBA5A52F72203C008D97C1 /* Build configuration list for PBXNativeTarget "CodexPoolManager" */;
 			buildPhases = (
 				4AFBA57E2F72203A008D97C1 /* Sources */,
 				4AFBA57F2F72203A008D97C1 /* Frameworks */,
@@ -363,18 +363,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA5842F72203A008D97C1 /* AIAgentPool */,
+				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
 			);
-			name = AIAgentPool;
+			name = CodexPoolManager;
 			packageProductDependencies = (
 			);
 			productName = CodexPoolManager;
 			productReference = 4AFBA5822F72203A008D97C1 /* AIAgentPool.app */;
 			productType = "com.apple.product-type.application";
 		};
-		4AFBA5902F72203C008D97C1 /* AIAgentPoolTests */ = {
+		4AFBA5902F72203C008D97C1 /* CodexPoolManagerTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4AFBA5A82F72203C008D97C1 /* Build configuration list for PBXNativeTarget "AIAgentPoolTests" */;
+			buildConfigurationList = 4AFBA5A82F72203C008D97C1 /* Build configuration list for PBXNativeTarget "CodexPoolManagerTests" */;
 			buildPhases = (
 				4AFBA58D2F72203C008D97C1 /* Sources */,
 				4AFBA58E2F72203C008D97C1 /* Frameworks */,
@@ -386,18 +386,18 @@
 				4AFBA5932F72203C008D97C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
+				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
 			);
-			name = AIAgentPoolTests;
+			name = CodexPoolManagerTests;
 			packageProductDependencies = (
 			);
 			productName = CodexPoolManagerTests;
 			productReference = 4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		4AFBA59A2F72203C008D97C1 /* AIAgentPoolUITests */ = {
+		4AFBA59A2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4AFBA5AB2F72203C008D97C1 /* Build configuration list for PBXNativeTarget "AIAgentPoolUITests" */;
+			buildConfigurationList = 4AFBA5AB2F72203C008D97C1 /* Build configuration list for PBXNativeTarget "CodexPoolManagerUITests" */;
 			buildPhases = (
 				4AFBA5972F72203C008D97C1 /* Sources */,
 				4AFBA5982F72203C008D97C1 /* Frameworks */,
@@ -409,9 +409,9 @@
 				4AFBA59D2F72203C008D97C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
+				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
 			);
-			name = AIAgentPoolUITests;
+			name = CodexPoolManagerUITests;
 			packageProductDependencies = (
 			);
 			productName = CodexPoolManagerUITests;
@@ -461,9 +461,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4AFBA5812F72203A008D97C1 /* AIAgentPool */,
-				4AFBA5902F72203C008D97C1 /* AIAgentPoolTests */,
-				4AFBA59A2F72203C008D97C1 /* AIAgentPoolUITests */,
+				4AFBA5812F72203A008D97C1 /* CodexPoolManager */,
+				4AFBA5902F72203C008D97C1 /* CodexPoolManagerTests */,
+				4AFBA59A2F72203C008D97C1 /* CodexPoolManagerUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -579,12 +579,12 @@
 /* Begin PBXTargetDependency section */
 		4AFBA5932F72203C008D97C1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4AFBA5812F72203A008D97C1 /* AIAgentPool */;
+			target = 4AFBA5812F72203A008D97C1 /* CodexPoolManager */;
 			targetProxy = 4AFBA5922F72203C008D97C1 /* PBXContainerItemProxy */;
 		};
 		4AFBA59D2F72203C008D97C1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4AFBA5812F72203A008D97C1 /* AIAgentPool */;
+			target = 4AFBA5812F72203A008D97C1 /* CodexPoolManager */;
 			targetProxy = 4AFBA59C2F72203C008D97C1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -868,7 +868,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4AFBA5A52F72203C008D97C1 /* Build configuration list for PBXNativeTarget "AIAgentPool" */ = {
+		4AFBA5A52F72203C008D97C1 /* Build configuration list for PBXNativeTarget "CodexPoolManager" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4AFBA5A62F72203C008D97C1 /* Debug */,
@@ -877,7 +877,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4AFBA5A82F72203C008D97C1 /* Build configuration list for PBXNativeTarget "AIAgentPoolTests" */ = {
+		4AFBA5A82F72203C008D97C1 /* Build configuration list for PBXNativeTarget "CodexPoolManagerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4AFBA5A92F72203C008D97C1 /* Debug */,
@@ -886,7 +886,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4AFBA5AB2F72203C008D97C1 /* Build configuration list for PBXNativeTarget "AIAgentPoolUITests" */ = {
+		4AFBA5AB2F72203C008D97C1 /* Build configuration list for PBXNativeTarget "CodexPoolManagerUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4AFBA5AC2F72203C008D97C1 /* Debug */,

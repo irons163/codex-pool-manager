@@ -17,7 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
                BuildableName = "CodexPoolManager.app"
-               BlueprintName = "AIAgentPool"
+               BlueprintName = "CodexPoolManager"
                ReferencedContainer = "container:AIAgentPool.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -37,7 +37,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4AFBA5902F72203C008D97C1"
                BuildableName = "CodexPoolManagerTests.xctest"
-               BlueprintName = "AIAgentPoolTests"
+               BlueprintName = "CodexPoolManagerTests"
                ReferencedContainer = "container:AIAgentPool.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -48,7 +48,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4AFBA59A2F72203C008D97C1"
                BuildableName = "CodexPoolManagerUITests.xctest"
-               BlueprintName = "AIAgentPoolUITests"
+               BlueprintName = "CodexPoolManagerUITests"
                ReferencedContainer = "container:AIAgentPool.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -71,7 +71,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
             BuildableName = "CodexPoolManager.app"
-            BlueprintName = "AIAgentPool"
+            BlueprintName = "CodexPoolManager"
             ReferencedContainer = "container:AIAgentPool.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -88,7 +88,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
             BuildableName = "CodexPoolManager.app"
-            BlueprintName = "AIAgentPool"
+            BlueprintName = "CodexPoolManager"
             ReferencedContainer = "container:AIAgentPool.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
