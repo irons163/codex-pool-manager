@@ -228,6 +228,7 @@ struct AccountUsagePanelView: View {
 
     private func accountCard(_ account: AgentAccount) -> some View {
         let isCurrentAccount = activeAccountID == account.id
+        let paidAccount = isPaidAccount(account)
 
         return VStack(alignment: .leading, spacing: 8) {
             if layoutMode == .single {
@@ -238,56 +239,59 @@ struct AccountUsagePanelView: View {
                 accountActionAndWarningRow(account)
             }
 
-            if isPercentUsageAccount(account) {
-                HStack {
-                    Text(L10n.text("usage.used_percent_format", account.usedUnits))
-                        .font(.subheadline)
-                    Spacer()
-                    Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
-                        .font(.subheadline)
+            if paidAccount {
+                if let weeklyUsageRecordText = weeklyUsageRecordText(for: account) {
+                    Text(weeklyUsageRecordText)
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
                 }
-            } else {
-                HStack {
-                    Stepper(
-                        L10n.text("usage.used_units_format", account.usedUnits),
-                        value: accountUsedBinding(account.id),
-                        in: 0...account.quota,
-                        step: 50
-                    )
-                    Stepper(
-                        L10n.text("usage.quota_units_format", account.quota),
-                        value: accountQuotaBinding(account.id),
-                        in: 100...20_000,
-                        step: 100
-                    )
-                }
-            }
-
-            if let weeklyUsageRecordText = weeklyUsageRecordText(for: account) {
-                Text(weeklyUsageRecordText)
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-            }
-
-            Text(resetRecordText(for: account))
-                .font(.footnote)
-                .foregroundStyle(PoolDashboardTheme.textMuted)
-
-            if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
                 ProgressView(value: account.usageRatio)
                     .tint(usageProgressColor(account))
+                Text(resetRecordText(for: account))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                Text(L10n.text("account.five_hour_usage_percent_format", fiveHourPercent))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                Text(fiveHourResetRecordText(for: account))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                ProgressView(value: Double(fiveHourPercent) / 100)
-                    .tint(usageColor(forPercent: fiveHourPercent))
+                if let fiveHourPercent = account.primaryUsagePercent {
+                    Text(L10n.text("account.five_hour_usage_percent_format", fiveHourPercent))
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                    ProgressView(value: Double(fiveHourPercent) / 100)
+                        .tint(usageColor(forPercent: fiveHourPercent))
+                    Text(fiveHourResetRecordText(for: account))
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
             } else {
+                if isPercentUsageAccount(account) {
+                    HStack {
+                        Text(L10n.text("usage.used_percent_format", account.usedUnits))
+                            .font(.subheadline)
+                        Spacer()
+                        Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
+                            .font(.subheadline)
+                    }
+                } else {
+                    HStack {
+                        Stepper(
+                            L10n.text("usage.used_units_format", account.usedUnits),
+                            value: accountUsedBinding(account.id),
+                            in: 0...account.quota,
+                            step: 50
+                        )
+                        Stepper(
+                            L10n.text("usage.quota_units_format", account.quota),
+                            value: accountQuotaBinding(account.id),
+                            in: 100...20_000,
+                            step: 100
+                        )
+                    }
+                }
+
                 ProgressView(value: account.usageRatio)
                     .tint(usageProgressColor(account))
+                Text(resetRecordText(for: account))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
             }
         }
         .padding(.horizontal, 12)
