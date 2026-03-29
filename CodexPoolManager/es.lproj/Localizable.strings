@@ -38,7 +38,7 @@
 
 "sync.excluded.title" = "Excluida de sincronización";
 "sync.excluded.default_message" = "Esta cuenta está excluida de la sincronización y del cálculo del pool.";
-"switch.launch.button" = "Cambiar y ejecutar";
+"switch.launch.button" = "Cambiar";
 "delete.button" = "Eliminar";
 
 "oauth.sign_in.title" = "Inicio de sesión OAuth";

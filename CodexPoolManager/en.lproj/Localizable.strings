@@ -38,7 +38,7 @@
 
 "sync.excluded.title" = "Excluded from Sync";
 "sync.excluded.default_message" = "This account is excluded from sync and pool calculations.";
-"switch.launch.button" = "Switch & Launch";
+"switch.launch.button" = "Switch";
 "delete.button" = "Delete";
 
 "oauth.sign_in.title" = "OAuth Sign-In";

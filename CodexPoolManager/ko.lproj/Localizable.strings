@@ -38,7 +38,7 @@
 
 "sync.excluded.title" = "동기화 제외";
 "sync.excluded.default_message" = "이 계정은 동기화 및 풀 계산에서 제외됩니다.";
-"switch.launch.button" = "전환 및 실행";
+"switch.launch.button" = "전환";
 "delete.button" = "삭제";
 
 "oauth.sign_in.title" = "OAuth 로그인";

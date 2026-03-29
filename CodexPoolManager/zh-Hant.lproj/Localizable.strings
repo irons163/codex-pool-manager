@@ -38,7 +38,7 @@
 
 "sync.excluded.title" = "已排除同步";
 "sync.excluded.default_message" = "此帳號已排除在同步與池調度計算之外。";
-"switch.launch.button" = "切換並啟動";
+"switch.launch.button" = "切換";
 "delete.button" = "刪除";
 
 "oauth.sign_in.title" = "OAuth 登入";
