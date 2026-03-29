@@ -15,6 +15,8 @@ struct StrategySettingsPanelView: View {
     let switchWithoutLaunchingBinding: Binding<Bool>
     let autoSyncEnabledBinding: Binding<Bool>
     let autoSyncIntervalSecondsBinding: Binding<Double>
+    let languageOverrideBinding: Binding<String>
+    let languageOptions: [L10n.LanguageOption]
 
     private var visibleModes: [SwitchMode] {
         [.intelligent, .focus]
@@ -71,6 +73,20 @@ struct StrategySettingsPanelView: View {
                     Slider(value: autoSyncIntervalSecondsBinding, in: 5...300, step: 1)
                         .tint(PoolDashboardTheme.glowA)
                         .disabled(!autoSyncEnabledBinding.wrappedValue)
+                }
+                .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Text(L10n.text("strategy.language"))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    Picker(L10n.text("strategy.language"), selection: languageOverrideBinding) {
+                        ForEach(languageOptions) { option in
+                            Text(option.title).tag(option.code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(PoolDashboardTheme.glowA)
                 }
                 .dashboardInfoCard()
 

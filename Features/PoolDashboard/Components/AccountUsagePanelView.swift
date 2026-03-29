@@ -226,7 +226,9 @@ struct AccountUsagePanelView: View {
     }
 
     private func accountCard(_ account: AgentAccount) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let isCurrentAccount = activeAccountID == account.id
+
+        return VStack(alignment: .leading, spacing: 8) {
             if layoutMode == .single {
                 accountNameRow(account)
                 accountActionAndWarningRow(account)
@@ -266,6 +268,18 @@ struct AccountUsagePanelView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .dashboardListRowCard()
+        .overlay {
+            if isCurrentAccount {
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                    .stroke(PoolDashboardTheme.glowA.opacity(0.92), lineWidth: 2.2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                            .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
+                            .padding(1)
+                    )
+            }
+        }
+        .shadow(color: isCurrentAccount ? PoolDashboardTheme.glowA.opacity(0.35) : .clear, radius: isCurrentAccount ? 12 : 0)
     }
 
     private func accountNameRow(_ account: AgentAccount) -> some View {

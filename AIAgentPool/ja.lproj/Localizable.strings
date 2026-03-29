@@ -97,6 +97,7 @@
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "切替可能";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+"strategy.language" = "言語";
 
 "overview.title" = "プール概要";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

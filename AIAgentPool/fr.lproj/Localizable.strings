@@ -97,6 +97,7 @@
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Bascule autorisée";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
+"strategy.language" = "Langue";
 
 "overview.title" = "Vue d'ensemble du pool";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

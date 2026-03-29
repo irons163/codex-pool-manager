@@ -1,10 +1,44 @@
 import Foundation
 
 enum L10n {
+    struct LanguageOption: Identifiable {
+        let code: String
+        let title: String
+        var id: String { code }
+    }
+
+    static let languageOverrideKey = "app_language_override"
+    static let systemLanguageCode = "system"
+
     private static let supportedLanguageCodes = ["en", "zh-Hant", "zh-Hans", "fr", "es", "ja", "ko"]
     private static let fallbackLanguageCode = "en"
 
+    static let languageOptions: [LanguageOption] = [
+        LanguageOption(code: systemLanguageCode, title: "System"),
+        LanguageOption(code: "en", title: "English"),
+        LanguageOption(code: "zh-Hant", title: "繁體中文"),
+        LanguageOption(code: "zh-Hans", title: "简体中文"),
+        LanguageOption(code: "fr", title: "Français"),
+        LanguageOption(code: "es", title: "Español"),
+        LanguageOption(code: "ja", title: "日本語"),
+        LanguageOption(code: "ko", title: "한국어")
+    ]
+
+    private static var selectedOverrideLanguageCode: String? {
+        guard let value = UserDefaults.standard.string(forKey: languageOverrideKey),
+              value != systemLanguageCode,
+              supportedLanguageCodes.contains(value)
+        else {
+            return nil
+        }
+        return value
+    }
+
     private static var resolvedLanguageCode: String {
+        if let selectedOverrideLanguageCode {
+            return selectedOverrideLanguageCode
+        }
+
         for preferred in Locale.preferredLanguages {
             let lowercased = preferred.lowercased()
             if lowercased.hasPrefix("zh-hant") || lowercased.hasPrefix("zh-tw") || lowercased.hasPrefix("zh-hk") {

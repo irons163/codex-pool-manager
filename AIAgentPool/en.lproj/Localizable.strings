@@ -100,6 +100,7 @@
 "strategy.switch_without_launch" = "Switch but do not launch";
 "strategy.auto_sync_enabled" = "Auto-sync Codex usage";
 "strategy.auto_sync_interval_seconds_format" = "Auto-sync interval: %d sec";
+"strategy.language" = "Language";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

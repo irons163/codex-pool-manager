@@ -100,6 +100,7 @@
 "strategy.switch_without_launch" = "切換但不啟動";
 "strategy.auto_sync_enabled" = "自動同步 Codex 用量";
 "strategy.auto_sync_interval_seconds_format" = "自動同步間隔：%d 秒";
+"strategy.language" = "語言";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";

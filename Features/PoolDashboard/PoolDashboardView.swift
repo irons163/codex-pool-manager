@@ -8,6 +8,7 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
+    @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
     @State private var resetAllLatch = DestructiveActionLatch()
@@ -571,7 +572,9 @@ struct PoolDashboardView: View {
             minUsageDeltaBinding: strategyBindings.minUsageDelta,
             switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching,
             autoSyncEnabledBinding: strategyBindings.autoSyncEnabled,
-            autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds
+            autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds,
+            languageOverrideBinding: $appLanguageOverride,
+            languageOptions: L10n.languageOptions
         )
     }
 
