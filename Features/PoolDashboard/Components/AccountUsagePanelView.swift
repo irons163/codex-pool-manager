@@ -273,8 +273,22 @@ struct AccountUsagePanelView: View {
                 .font(.footnote)
                 .foregroundStyle(PoolDashboardTheme.textMuted)
 
-            ProgressView(value: account.usageRatio)
-                .tint(usageProgressColor(account))
+            if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+                ProgressView(value: account.usageRatio)
+                    .tint(usageProgressColor(account))
+
+                Text(L10n.text("account.five_hour_usage_percent_format", fiveHourPercent))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                Text(fiveHourResetRecordText(for: account))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                ProgressView(value: Double(fiveHourPercent) / 100)
+                    .tint(usageColor(forPercent: fiveHourPercent))
+            } else {
+                ProgressView(value: account.usageRatio)
+                    .tint(usageProgressColor(account))
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -407,6 +421,18 @@ struct AccountUsagePanelView: View {
         let resetText = account.usageWindowResetAt?
             .formatted(.dateTime.month().day().hour().minute()) ?? "--"
         return L10n.text("account.weekly_resets_format", resetText)
+    }
+
+    private func fiveHourResetRecordText(for account: AgentAccount) -> String {
+        let resetText = account.primaryUsageResetAt?
+            .formatted(.dateTime.month().day().hour().minute()) ?? "--"
+        return L10n.text("account.five_hour_resets_format", resetText)
+    }
+
+    private func usageColor(forPercent percent: Int) -> Color {
+        if percent >= 90 { return .red }
+        if percent >= 70 { return .orange }
+        return .blue
     }
 
     @ViewBuilder

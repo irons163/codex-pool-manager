@@ -10,6 +10,10 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var chatGPTAccountID: String?
     var usageWindowName: String?
     var usageWindowResetAt: Date?
+    var primaryUsagePercent: Int?
+    var primaryUsageResetAt: Date?
+    var secondaryUsagePercent: Int?
+    var secondaryUsageResetAt: Date?
     var isPaid: Bool
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
@@ -24,6 +28,10 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
+        primaryUsagePercent: Int? = nil,
+        primaryUsageResetAt: Date? = nil,
+        secondaryUsagePercent: Int? = nil,
+        secondaryUsageResetAt: Date? = nil,
         isPaid: Bool = false,
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
@@ -37,6 +45,10 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.chatGPTAccountID = chatGPTAccountID
         self.usageWindowName = usageWindowName
         self.usageWindowResetAt = usageWindowResetAt
+        self.primaryUsagePercent = primaryUsagePercent
+        self.primaryUsageResetAt = primaryUsageResetAt
+        self.secondaryUsagePercent = secondaryUsagePercent
+        self.secondaryUsageResetAt = secondaryUsageResetAt
         self.isPaid = isPaid
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
@@ -53,6 +65,10 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
         usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)
         usageWindowResetAt = try container.decodeIfPresent(Date.self, forKey: .usageWindowResetAt)
+        primaryUsagePercent = try container.decodeIfPresent(Int.self, forKey: .primaryUsagePercent)
+        primaryUsageResetAt = try container.decodeIfPresent(Date.self, forKey: .primaryUsageResetAt)
+        secondaryUsagePercent = try container.decodeIfPresent(Int.self, forKey: .secondaryUsagePercent)
+        secondaryUsageResetAt = try container.decodeIfPresent(Date.self, forKey: .secondaryUsageResetAt)
         isPaid = try container.decodeIfPresent(Bool.self, forKey: .isPaid) ?? false
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
@@ -83,6 +99,10 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             chatGPTAccountID: chatGPTAccountID,
             usageWindowName: usageWindowName,
             usageWindowResetAt: usageWindowResetAt,
+            primaryUsagePercent: primaryUsagePercent,
+            primaryUsageResetAt: primaryUsageResetAt,
+            secondaryUsagePercent: secondaryUsagePercent,
+            secondaryUsageResetAt: secondaryUsageResetAt,
             isPaid: isPaid,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
@@ -492,6 +512,10 @@ struct AccountPoolState {
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
+        primaryUsagePercent: Int? = nil,
+        primaryUsageResetAt: Date? = nil,
+        secondaryUsagePercent: Int? = nil,
+        secondaryUsageResetAt: Date? = nil,
         isPaid: Bool? = nil,
         now: Date = .now
     ) {
@@ -517,6 +541,18 @@ struct AccountPoolState {
         }
         if let usageWindowResetAt {
             accounts[index].usageWindowResetAt = usageWindowResetAt
+        }
+        if let primaryUsagePercent {
+            accounts[index].primaryUsagePercent = min(max(primaryUsagePercent, 0), 100)
+        }
+        if let primaryUsageResetAt {
+            accounts[index].primaryUsageResetAt = primaryUsageResetAt
+        }
+        if let secondaryUsagePercent {
+            accounts[index].secondaryUsagePercent = min(max(secondaryUsagePercent, 0), 100)
+        }
+        if let secondaryUsageResetAt {
+            accounts[index].secondaryUsageResetAt = secondaryUsageResetAt
         }
         if let isPaid {
             accounts[index].isPaid = isPaid

@@ -31,6 +31,10 @@ struct CodexUsage: Equatable {
     let usageWindowResetAt: Date?
     let accountID: String?
     let accountEmail: String?
+    let primaryUsagePercent: Int?
+    let primaryUsageResetAt: Date?
+    let secondaryUsagePercent: Int?
+    let secondaryUsageResetAt: Date?
     let isPaid: Bool
 
     init(
@@ -40,6 +44,10 @@ struct CodexUsage: Equatable {
         usageWindowResetAt: Date? = nil,
         accountID: String? = nil,
         accountEmail: String? = nil,
+        primaryUsagePercent: Int? = nil,
+        primaryUsageResetAt: Date? = nil,
+        secondaryUsagePercent: Int? = nil,
+        secondaryUsageResetAt: Date? = nil,
         isPaid: Bool = false
     ) {
         self.usedUnits = usedUnits
@@ -48,6 +56,10 @@ struct CodexUsage: Equatable {
         self.usageWindowResetAt = usageWindowResetAt
         self.accountID = accountID
         self.accountEmail = accountEmail
+        self.primaryUsagePercent = primaryUsagePercent
+        self.primaryUsageResetAt = primaryUsageResetAt
+        self.secondaryUsagePercent = secondaryUsagePercent
+        self.secondaryUsageResetAt = secondaryUsageResetAt
         self.isPaid = isPaid
     }
 }
@@ -89,6 +101,10 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     usedUnits: usage.usedUnits,
                     usageWindowName: usage.usageWindowName,
                     usageWindowResetAt: usage.usageWindowResetAt,
+                    primaryUsagePercent: usage.primaryUsagePercent,
+                    primaryUsageResetAt: usage.primaryUsageResetAt,
+                    secondaryUsagePercent: usage.secondaryUsagePercent,
+                    secondaryUsageResetAt: usage.secondaryUsageResetAt,
                     isPaid: usage.isPaid,
                     now: now
                 )
@@ -182,6 +198,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
             ?? (isPaid ? "secondary_window" : "primary_window")
         let usageWindowResetAt = selectedWindow?.resetAt
             ?? (isPaid ? primaryWindow?.resetAt : secondaryWindow?.resetAt)
+        let primaryUsagePercent = percentValue(from: primaryWindow?.usedPercent)
+        let secondaryUsagePercent = percentValue(from: secondaryWindow?.usedPercent)
         let accountID = payload.accountID
         let accountEmail = payload.email
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
@@ -192,6 +210,10 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 usageWindowResetAt: usageWindowResetAt,
                 accountID: accountID,
                 accountEmail: accountEmail,
+                primaryUsagePercent: primaryUsagePercent,
+                primaryUsageResetAt: primaryWindow?.resetAt,
+                secondaryUsagePercent: secondaryUsagePercent,
+                secondaryUsageResetAt: secondaryWindow?.resetAt,
                 isPaid: isPaid
             )
         }
@@ -206,6 +228,10 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 usageWindowResetAt: usageWindowResetAt,
                 accountID: accountID,
                 accountEmail: accountEmail,
+                primaryUsagePercent: primaryUsagePercent,
+                primaryUsageResetAt: primaryWindow?.resetAt,
+                secondaryUsagePercent: secondaryUsagePercent,
+                secondaryUsageResetAt: secondaryWindow?.resetAt,
                 isPaid: isPaid
             )
         }
@@ -305,6 +331,11 @@ struct OpenAICodexUsageClient: CodexUsageClient {
             return true
         }
         return false
+    }
+
+    private func percentValue(from rawValue: Double?) -> Int? {
+        guard let rawValue else { return nil }
+        return min(max(Int(rawValue.rounded()), 0), 100)
     }
 }
 private extension KeyedDecodingContainer where K == OpenAICodexUsageClient.DynamicCodingKey {

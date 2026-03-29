@@ -39,6 +39,8 @@
 "account.weekly_usage_percent_format" = "週用量：%d%%";
 "account.weekly_usage_units_format" = "週用量：%d / %d";
 "account.weekly_resets_format" = "重置：%@";
+"account.five_hour_usage_percent_format" = "5 小時用量：%d%%";
+"account.five_hour_resets_format" = "5 小時重置：%@";
 "account.edit.cancel" = "取消";
 "account.edit.save" = "儲存";
 

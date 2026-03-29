@@ -39,6 +39,8 @@
 "account.weekly_usage_percent_format" = "Weekly usage: %d%%";
 "account.weekly_usage_units_format" = "Weekly usage: %d / %d";
 "account.weekly_resets_format" = "Resets: %@";
+"account.five_hour_usage_percent_format" = "5-hour usage: %d%%";
+"account.five_hour_resets_format" = "5-hour resets: %@";
 "account.edit.cancel" = "Cancel";
 "account.edit.save" = "Save";
 
