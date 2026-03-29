@@ -137,6 +137,8 @@
 "workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
 "workspace.runtime.title" = "Runtime Strategy";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.settings.title" = "Settings";
+"workspace.settings.subtitle" = "Manage launch behavior, sync cadence, and language.";
 "workspace.capacity.title" = "Capacity";
 "workspace.capacity.subtitle" = "Track aggregate pool usage posture and enforce reset controls when exhausted.";
 "workspace.safety.title" = "Safety";

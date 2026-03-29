@@ -136,6 +136,8 @@
 "workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
 "workspace.runtime.title" = "ランタイム戦略";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.settings.title" = "設定";
+"workspace.settings.subtitle" = "起動動作、同期間隔、言語を管理します。";
 "workspace.capacity.title" = "容量";
 "workspace.capacity.subtitle" = "Track aggregate pool usage posture and enforce reset controls when exhausted.";
 "workspace.safety.title" = "安全性";

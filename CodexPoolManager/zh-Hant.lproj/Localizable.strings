@@ -139,6 +139,8 @@
 "workspace.authentication.subtitle" = "管理登入流程並匯入本機 Codex 工作階段。";
 "workspace.runtime.title" = "執行策略";
 "workspace.runtime.subtitle" = "設定切換策略並監控目前執行帳號。";
+"workspace.settings.title" = "設定";
+"workspace.settings.subtitle" = "管理啟動行為、同步頻率與語言。";
 "workspace.capacity.title" = "容量";
 "workspace.capacity.subtitle" = "追蹤整體池用量並在耗盡時啟用重置控制。";
 "workspace.safety.title" = "安全";

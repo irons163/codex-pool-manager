@@ -136,6 +136,8 @@
 "workspace.authentication.subtitle" = "로그인 흐름을 관리하고 로컬 Codex 세션을 가져옵니다.";
 "workspace.runtime.title" = "런타임 전략";
 "workspace.runtime.subtitle" = "전환 정책을 구성하고 활성 실행 계정을 모니터링합니다.";
+"workspace.settings.title" = "설정";
+"workspace.settings.subtitle" = "실행 동작, 동기화 주기, 언어를 관리합니다.";
 "workspace.capacity.title" = "용량";
 "workspace.capacity.subtitle" = "풀 전체 사용 상태를 추적하고 소진 시 초기화 제어를 적용합니다.";
 "workspace.safety.title" = "안전";

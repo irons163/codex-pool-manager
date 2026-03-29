@@ -136,6 +136,8 @@
 "workspace.authentication.subtitle" = "管理登录流程并导入本地 Codex 会话。";
 "workspace.runtime.title" = "运行策略";
 "workspace.runtime.subtitle" = "配置切换策略并监控当前执行账号。";
+"workspace.settings.title" = "设置";
+"workspace.settings.subtitle" = "管理启动行为、同步频率与语言。";
 "workspace.capacity.title" = "容量";
 "workspace.capacity.subtitle" = "追踪整体池用量并在耗尽时执行重置控制。";
 "workspace.safety.title" = "安全";

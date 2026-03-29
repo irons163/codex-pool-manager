@@ -72,6 +72,7 @@ struct PoolDashboardView: View {
     private enum Workspace: String, CaseIterable, Identifiable {
         case authentication
         case runtime
+        case settings
         case safety
         case developer
 
@@ -81,6 +82,7 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: L10n.text("workspace.authentication.title")
             case .runtime: L10n.text("workspace.runtime.title")
+            case .settings: L10n.text("workspace.settings.title")
             case .safety: L10n.text("workspace.safety.title")
             case .developer: L10n.text("workspace.developer.title")
             }
@@ -90,6 +92,7 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: L10n.text("workspace.authentication.subtitle")
             case .runtime: L10n.text("workspace.runtime.subtitle")
+            case .settings: L10n.text("workspace.settings.subtitle")
             case .safety: L10n.text("workspace.safety.subtitle")
             case .developer: L10n.text("workspace.developer.subtitle")
             }
@@ -99,6 +102,7 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: "person.badge.key"
             case .runtime: "dial.medium"
+            case .settings: "gearshape"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
             case .developer: "wrench.and.screwdriver"
             }
@@ -416,7 +420,7 @@ struct PoolDashboardView: View {
 
     private var hasWorkspaceContextPanel: Bool {
         switch selectedWorkspace {
-        case .runtime:
+        case .runtime, .settings:
             return false
         default:
             return true
@@ -430,6 +434,8 @@ struct PoolDashboardView: View {
             oauthLoginPanel
         case .runtime:
             strategySettingsPanel
+        case .settings:
+            workspaceSettingsPanel
         case .safety:
             backupRestorePanel
         case .developer:
@@ -444,6 +450,8 @@ struct PoolDashboardView: View {
             localOAuthAccountsPanel
         case .runtime:
             activeAccountPanel
+        case .settings:
+            EmptyView()
         case .safety:
             safetyContextPanel
         case .developer:
@@ -578,7 +586,12 @@ struct PoolDashboardView: View {
             manualSelectionBinding: strategyBindings.manualSelection,
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
             lowThresholdBinding: strategyBindings.lowThreshold,
-            minUsageDeltaBinding: strategyBindings.minUsageDelta,
+            minUsageDeltaBinding: strategyBindings.minUsageDelta
+        )
+    }
+
+    private var workspaceSettingsPanel: some View {
+        WorkspaceSettingsPanelView(
             switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching,
             autoSyncEnabledBinding: strategyBindings.autoSyncEnabled,
             autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds,
