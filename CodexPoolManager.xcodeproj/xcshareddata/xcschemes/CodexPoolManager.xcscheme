@@ -18,7 +18,7 @@
                BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
                BuildableName = "CodexPoolManager.app"
                BlueprintName = "CodexPoolManager"
-               ReferencedContainer = "container:AIAgentPool.xcodeproj">
+               ReferencedContainer = "container:CodexPoolManager.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -38,7 +38,7 @@
                BlueprintIdentifier = "4AFBA5902F72203C008D97C1"
                BuildableName = "CodexPoolManagerTests.xctest"
                BlueprintName = "CodexPoolManagerTests"
-               ReferencedContainer = "container:AIAgentPool.xcodeproj">
+               ReferencedContainer = "container:CodexPoolManager.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -49,7 +49,7 @@
                BlueprintIdentifier = "4AFBA59A2F72203C008D97C1"
                BuildableName = "CodexPoolManagerUITests.xctest"
                BlueprintName = "CodexPoolManagerUITests"
-               ReferencedContainer = "container:AIAgentPool.xcodeproj">
+               ReferencedContainer = "container:CodexPoolManager.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -72,7 +72,7 @@
             BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
             BuildableName = "CodexPoolManager.app"
             BlueprintName = "CodexPoolManager"
-            ReferencedContainer = "container:AIAgentPool.xcodeproj">
+            ReferencedContainer = "container:CodexPoolManager.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -89,7 +89,7 @@
             BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
             BuildableName = "CodexPoolManager.app"
             BlueprintName = "CodexPoolManager"
-            ReferencedContainer = "container:AIAgentPool.xcodeproj">
+            ReferencedContainer = "container:CodexPoolManager.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
