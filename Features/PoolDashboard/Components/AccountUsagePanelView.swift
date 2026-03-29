@@ -269,6 +269,10 @@ struct AccountUsagePanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
             }
 
+            Text(resetRecordText(for: account))
+                .font(.footnote)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+
             ProgressView(value: account.usageRatio)
                 .tint(usageProgressColor(account))
         }
@@ -392,23 +396,17 @@ struct AccountUsagePanelView: View {
     private func weeklyUsageRecordText(for account: AgentAccount) -> String? {
         guard isPaidAccount(account) else { return nil }
 
-        let usageText: String
         if isPercentUsageAccount(account) {
-            usageText = L10n.text("account.weekly_usage_percent_format", account.usedUnits)
+            return L10n.text("account.weekly_usage_percent_format", account.usedUnits)
         } else {
-            usageText = L10n.text("account.weekly_usage_units_format", account.usedUnits, account.quota)
+            return L10n.text("account.weekly_usage_units_format", account.usedUnits, account.quota)
         }
+    }
 
-        var segments = [usageText]
-        if let resetAt = account.usageWindowResetAt {
-            segments.append(
-                L10n.text(
-                    "account.weekly_resets_format",
-                    resetAt.formatted(.dateTime.month().day().hour().minute())
-                )
-            )
-        }
-        return segments.joined(separator: " · ")
+    private func resetRecordText(for account: AgentAccount) -> String {
+        let resetText = account.usageWindowResetAt?
+            .formatted(.dateTime.month().day().hour().minute()) ?? "--"
+        return L10n.text("account.weekly_resets_format", resetText)
     }
 
     @ViewBuilder

@@ -174,14 +174,16 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         }
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)
-        let usageWindowName = payload.rateLimit?.secondaryWindow?.name
-            ?? payload.rateLimit?.primaryWindow?.name
-            ?? "primary_window"
-        let usageWindowResetAt = payload.rateLimit?.secondaryWindow?.resetAt
-            ?? payload.rateLimit?.primaryWindow?.resetAt
+        let isPaid = inferPaidStatus(from: payload)
+        let primaryWindow = payload.rateLimit?.primaryWindow
+        let secondaryWindow = payload.rateLimit?.secondaryWindow
+        let selectedWindow = isPaid ? (secondaryWindow ?? primaryWindow) : (primaryWindow ?? secondaryWindow)
+        let usageWindowName = selectedWindow?.name
+            ?? (isPaid ? "secondary_window" : "primary_window")
+        let usageWindowResetAt = selectedWindow?.resetAt
+            ?? (isPaid ? primaryWindow?.resetAt : secondaryWindow?.resetAt)
         let accountID = payload.accountID
         let accountEmail = payload.email
-        let isPaid = inferPaidStatus(from: payload)
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
             return CodexUsage(
                 usedUnits: usedUnits,
@@ -193,7 +195,9 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 isPaid: isPaid
             )
         }
-        if let usedPercent = payload.rateLimit?.primaryWindow?.usedPercent {
+        if let usedPercent = selectedWindow?.usedPercent
+            ?? primaryWindow?.usedPercent
+            ?? secondaryWindow?.usedPercent {
             let clamped = min(max(Int(usedPercent.rounded()), 0), 100)
             return CodexUsage(
                 usedUnits: clamped,
@@ -232,9 +236,19 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let primaryWindow: Window?
         let secondaryWindow: Window?
 
-        private enum CodingKeys: String, CodingKey {
-            case primaryWindow = "primary_window"
-            case secondaryWindow = "secondary_window"
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: DynamicCodingKey.self)
+            primaryWindow = try container.decodeIfPresent(Window.self, forKeys: [
+                "primary_window",
+                "primaryWindow"
+            ])
+            secondaryWindow = try container.decodeIfPresent(Window.self, forKeys: [
+                "secondary_window",
+                "secondaryWindow",
+                "secondary",
+                "weekly_window",
+                "week_window"
+            ])
         }
     }
 
