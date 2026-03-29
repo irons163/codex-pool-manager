@@ -31,6 +31,7 @@ struct CodexUsage: Equatable {
     let usageWindowResetAt: Date?
     let accountID: String?
     let accountEmail: String?
+    let isPaid: Bool
 
     init(
         usedUnits: Int,
@@ -38,7 +39,8 @@ struct CodexUsage: Equatable {
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
         accountID: String? = nil,
-        accountEmail: String? = nil
+        accountEmail: String? = nil,
+        isPaid: Bool = false
     ) {
         self.usedUnits = usedUnits
         self.quota = quota
@@ -46,6 +48,7 @@ struct CodexUsage: Equatable {
         self.usageWindowResetAt = usageWindowResetAt
         self.accountID = accountID
         self.accountEmail = accountEmail
+        self.isPaid = isPaid
     }
 }
 
@@ -86,6 +89,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     usedUnits: usage.usedUnits,
                     usageWindowName: usage.usageWindowName,
                     usageWindowResetAt: usage.usageWindowResetAt,
+                    isPaid: usage.isPaid,
                     now: now
                 )
                 state.setUsageSyncExclusion(for: account.id, reason: nil, now: now)
@@ -170,10 +174,14 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         }
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)
-        let usageWindowName = payload.rateLimit?.primaryWindow?.name ?? "primary_window"
-        let usageWindowResetAt = payload.rateLimit?.primaryWindow?.resetAt
+        let usageWindowName = payload.rateLimit?.secondaryWindow?.name
+            ?? payload.rateLimit?.primaryWindow?.name
+            ?? "primary_window"
+        let usageWindowResetAt = payload.rateLimit?.secondaryWindow?.resetAt
+            ?? payload.rateLimit?.primaryWindow?.resetAt
         let accountID = payload.accountID
         let accountEmail = payload.email
+        let isPaid = inferPaidStatus(from: payload)
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
             return CodexUsage(
                 usedUnits: usedUnits,
@@ -181,7 +189,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 usageWindowName: usageWindowName,
                 usageWindowResetAt: usageWindowResetAt,
                 accountID: accountID,
-                accountEmail: accountEmail
+                accountEmail: accountEmail,
+                isPaid: isPaid
             )
         }
         if let usedPercent = payload.rateLimit?.primaryWindow?.usedPercent {
@@ -192,7 +201,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 usageWindowName: usageWindowName,
                 usageWindowResetAt: usageWindowResetAt,
                 accountID: accountID,
-                accountEmail: accountEmail
+                accountEmail: accountEmail,
+                isPaid: isPaid
             )
         }
         throw CodexSyncError.unknown
@@ -204,6 +214,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let rateLimit: RateLimit?
         let accountID: String?
         let email: String?
+        let planType: String?
+        let credits: Credits?
 
         private enum CodingKeys: String, CodingKey {
             case usedUnits = "used_units"
@@ -211,14 +223,28 @@ struct OpenAICodexUsageClient: CodexUsageClient {
             case rateLimit = "rate_limit"
             case accountID = "account_id"
             case email
+            case planType = "plan_type"
+            case credits
         }
     }
 
     private struct RateLimit: Decodable {
         let primaryWindow: Window?
+        let secondaryWindow: Window?
 
         private enum CodingKeys: String, CodingKey {
             case primaryWindow = "primary_window"
+            case secondaryWindow = "secondary_window"
+        }
+    }
+
+    private struct Credits: Decodable {
+        let hasCredits: Bool?
+        let unlimited: Bool?
+
+        private enum CodingKeys: String, CodingKey {
+            case hasCredits = "has_credits"
+            case unlimited
         }
     }
 
@@ -255,6 +281,17 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+
+    private func inferPaidStatus(from payload: UsagePayload) -> Bool {
+        if let planType = payload.planType?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           !planType.isEmpty {
+            return planType != "free"
+        }
+        if payload.credits?.hasCredits == true || payload.credits?.unlimited == true {
+            return true
+        }
+        return false
+    }
 }
 private extension KeyedDecodingContainer where K == OpenAICodexUsageClient.DynamicCodingKey {
     func decodeIfPresent<T: Decodable>(_ type: T.Type, forKeys keys: [String]) throws -> T? {

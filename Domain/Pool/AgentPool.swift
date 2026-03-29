@@ -10,6 +10,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var chatGPTAccountID: String?
     var usageWindowName: String?
     var usageWindowResetAt: Date?
+    var isPaid: Bool
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
 
@@ -23,6 +24,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
+        isPaid: Bool = false,
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
     ) {
@@ -35,6 +37,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.chatGPTAccountID = chatGPTAccountID
         self.usageWindowName = usageWindowName
         self.usageWindowResetAt = usageWindowResetAt
+        self.isPaid = isPaid
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
     }
@@ -50,6 +53,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
         usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)
         usageWindowResetAt = try container.decodeIfPresent(Date.self, forKey: .usageWindowResetAt)
+        isPaid = try container.decodeIfPresent(Bool.self, forKey: .isPaid) ?? false
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
     }
@@ -79,6 +83,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             chatGPTAccountID: chatGPTAccountID,
             usageWindowName: usageWindowName,
             usageWindowResetAt: usageWindowResetAt,
+            isPaid: isPaid,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -487,6 +492,7 @@ struct AccountPoolState {
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
+        isPaid: Bool? = nil,
         now: Date = .now
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
@@ -511,6 +517,9 @@ struct AccountPoolState {
         }
         if let usageWindowResetAt {
             accounts[index].usageWindowResetAt = usageWindowResetAt
+        }
+        if let isPaid {
+            accounts[index].isPaid = isPaid
         }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)

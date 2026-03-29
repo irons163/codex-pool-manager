@@ -345,6 +345,7 @@ struct AccountUsagePanelView: View {
                             .stroke(Color.orange.opacity(0.6), lineWidth: 0.8)
                     )
             }
+
         }
     }
 
@@ -385,13 +386,7 @@ struct AccountUsagePanelView: View {
     }
 
     private func isPaidAccount(_ account: AgentAccount) -> Bool {
-        guard account.chatGPTAccountID != nil else { return false }
-        if let windowName = account.usageWindowName?.lowercased() {
-            if windowName.contains("week") || windowName.contains("7d") {
-                return true
-            }
-        }
-        return !isPercentUsageAccount(account)
+        account.isPaid
     }
 
     private func weeklyUsageRecordText(for account: AgentAccount) -> String? {
