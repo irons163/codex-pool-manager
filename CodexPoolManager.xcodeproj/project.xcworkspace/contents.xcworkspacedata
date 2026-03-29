@@ -4,4 +4,25 @@
    <FileRef
       location = "self:">
    </FileRef>
+   <FileRef
+      location = "group:README.md">
+   </FileRef>
+   <FileRef
+      location = "group:README.zh-Hant.md">
+   </FileRef>
+   <FileRef
+      location = "group:README.zh-Hans.md">
+   </FileRef>
+   <FileRef
+      location = "group:README.ja.md">
+   </FileRef>
+   <FileRef
+      location = "group:README.ko.md">
+   </FileRef>
+   <FileRef
+      location = "group:README.fr.md">
+   </FileRef>
+   <FileRef
+      location = "group:README.es.md">
+   </FileRef>
 </Workspace>

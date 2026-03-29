@@ -4,6 +4,10 @@ A macOS app for managing multiple Codex accounts, switching active auth quickly,
 
 Languages: [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
 
+## App Screenshot
+
+![Codex Pool Manager Screenshot](docs/images/app-screenshot.png)
+
 ## Features
 
 - Multi-account pool management
