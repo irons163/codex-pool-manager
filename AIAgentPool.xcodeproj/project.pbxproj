@@ -147,23 +147,23 @@
 		4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardBackupCoordinator.swift; sourceTree = "<group>"; };
 		4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLifecycleCoordinator.swift; sourceTree = "<group>"; };
 		4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardMutationCoordinator.swift; sourceTree = "<group>"; };
-		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4AFBA5842F72203A008D97C1 /* CodexPoolManager */ = {
+		4AFBA5842F72203A008D97C1 /* AIAgentPool */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AIAgentPool;
 			sourceTree = "<group>";
 		};
-		4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */ = {
+		4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AIAgentPoolTests;
 			sourceTree = "<group>";
 		};
-		4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
+		4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AIAgentPoolUITests;
 			sourceTree = "<group>";
@@ -325,9 +325,9 @@
 		4AFBA5792F72203A008D97C1 = {
 			isa = PBXGroup;
 			children = (
-				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
-				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
-				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
+				4AFBA5842F72203A008D97C1 /* AIAgentPool */,
+				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
+				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
 				4AFBA5832F72203A008D97C1 /* Products */,
 				4AB61EA82F739CB1001AC4CB /* Domain */,
 				4AB61EAA2F739CB1001AC4CB /* Infrastructure */,
@@ -340,9 +340,9 @@
 		4AFBA5832F72203A008D97C1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4AFBA5822F72203A008D97C1 /* AIAgentPool.app */,
-				4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */,
-				4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */,
+				4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */,
+				4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */,
+				4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -363,13 +363,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
+				4AFBA5842F72203A008D97C1 /* AIAgentPool */,
 			);
 			name = CodexPoolManager;
 			packageProductDependencies = (
 			);
 			productName = CodexPoolManager;
-			productReference = 4AFBA5822F72203A008D97C1 /* AIAgentPool.app */;
+			productReference = 4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */;
 			productType = "com.apple.product-type.application";
 		};
 		4AFBA5902F72203C008D97C1 /* CodexPoolManagerTests */ = {
@@ -386,13 +386,13 @@
 				4AFBA5932F72203C008D97C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
+				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
 			);
 			name = CodexPoolManagerTests;
 			packageProductDependencies = (
 			);
 			productName = CodexPoolManagerTests;
-			productReference = 4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */;
+			productReference = 4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		4AFBA59A2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
@@ -409,13 +409,13 @@
 				4AFBA59D2F72203C008D97C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
+				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
 			);
 			name = CodexPoolManagerUITests;
 			packageProductDependencies = (
 			);
 			productName = CodexPoolManagerUITests;
-			productReference = 4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */;
+			productReference = 4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -723,9 +723,9 @@
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-					INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
-					INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
-					INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
+				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
+				INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -759,9 +759,9 @@
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-					INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
-					INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
-					INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
+				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
+				INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

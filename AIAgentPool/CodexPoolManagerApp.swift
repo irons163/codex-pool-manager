@@ -1,6 +1,6 @@
 //
-//  AIAgentPoolApp.swift
-//  AIAgentPool
+//  CodexPoolManagerApp.swift
+//  CodexPoolManager
 //
 //  Created by Phil on 2026/3/24.
 //
