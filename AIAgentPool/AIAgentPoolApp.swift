@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct AIAgentPoolApp: App {
+struct CodexPoolManagerApp: App {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
 
     var body: some Scene {
