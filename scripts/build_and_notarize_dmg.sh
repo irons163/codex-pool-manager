@@ -7,6 +7,7 @@ PROJECT_PATH="${PROJECT_PATH:-CodexPoolManager.xcodeproj}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-AC_NOTARY}"
 VERSION="${VERSION:-${GITHUB_REF_NAME:-$(date +%Y.%m.%d.%H%M)}}"
+CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:-Developer ID Application}"
 
 WORK_DIR="$(pwd)/build/release"
 ARCHIVE_PATH="$WORK_DIR/${APP_NAME}.xcarchive"
@@ -23,6 +24,12 @@ xcodebuild \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
   -archivePath "$ARCHIVE_PATH" \
+  CODE_SIGN_STYLE=Manual \
+  CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
+  OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
+  ENABLE_HARDENED_RUNTIME=YES \
+  CODE_SIGNING_REQUIRED=YES \
+  CODE_SIGNING_ALLOWED=YES \
   archive
 
 APP_PATH="$ARCHIVE_PATH/Products/Applications/${APP_NAME}.app"
@@ -33,6 +40,23 @@ fi
 
 echo "==> Verifying code signature"
 codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+SIGNATURE_DETAILS="$(codesign -d --verbose=4 "$APP_PATH" 2>&1 || true)"
+echo "$SIGNATURE_DETAILS"
+
+if ! grep -q "Authority=Developer ID Application" <<<"$SIGNATURE_DETAILS"; then
+  echo "Code signing identity is not Developer ID Application." >&2
+  exit 1
+fi
+
+if ! grep -q "Timestamp=" <<<"$SIGNATURE_DETAILS"; then
+  echo "Code signature is missing secure timestamp." >&2
+  exit 1
+fi
+
+if ! grep -q "Runtime Version=" <<<"$SIGNATURE_DETAILS"; then
+  echo "Hardened runtime is not enabled in code signature." >&2
+  exit 1
+fi
 
 echo "==> Creating DMG"
 cp -R "$APP_PATH" "$STAGING_DIR/"
