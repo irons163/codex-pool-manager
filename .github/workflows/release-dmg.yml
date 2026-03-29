@@ -10,10 +10,30 @@ permissions:
 
 jobs:
   build-dmg:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)"
+          if [[ -z "${XCODE_APP:-}" ]]; then
+            echo "No Xcode installation found under /Applications" >&2
+            exit 1
+          fi
+          echo "Using Xcode at: $XCODE_APP"
+          echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+          export DEVELOPER_DIR="$XCODE_APP/Contents/Developer"
+          XCODE_VERSION="$(xcodebuild -version | awk '/Xcode/ {print $2; exit}')"
+          XCODE_MAJOR="${XCODE_VERSION%%.*}"
+          echo "Selected Xcode version: $XCODE_VERSION"
+          if [[ "${XCODE_MAJOR:-0}" -lt 16 ]]; then
+            echo "Xcode 16+ is required for project format 77, got: $XCODE_VERSION" >&2
+            exit 1
+          fi
 
       - name: Validate required secrets
         shell: bash
