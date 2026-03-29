@@ -2,8 +2,9 @@ import SwiftUI
 
 struct PoolDashboardView: View {
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
+    private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
-    @AppStorage("oauth_client_id") private var oauthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+    @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
     @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
     @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
@@ -690,6 +691,8 @@ struct PoolDashboardView: View {
     // MARK: - Lifecycle
 
     private func handleOnAppear() {
+        migrateDefaultOAuthClientIDIfNeeded()
+
         let output = lifecycleFlowCoordinator.onAppear(
             state: state,
             lowUsageAlertPolicy: lowUsageAlertPolicy,
@@ -698,6 +701,13 @@ struct PoolDashboardView: View {
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
         applyLifecycleOnAppearOutput(output)
+    }
+
+    private func migrateDefaultOAuthClientIDIfNeeded() {
+        guard oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        oauthClientID = Self.defaultOAuthClientID
     }
 
     private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
