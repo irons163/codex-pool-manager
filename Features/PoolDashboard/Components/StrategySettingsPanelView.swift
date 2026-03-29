@@ -22,6 +22,13 @@ struct StrategySettingsPanelView: View {
         [.intelligent, .focus]
     }
 
+    private var switchAndLaunchBinding: Binding<Bool> {
+        Binding(
+            get: { !switchWithoutLaunchingBinding.wrappedValue },
+            set: { switchWithoutLaunchingBinding.wrappedValue = !$0 }
+        )
+    }
+
     var body: some View {
         Text(L10n.text("strategy.subtitle"))
             .font(.footnote)
@@ -50,7 +57,7 @@ struct StrategySettingsPanelView: View {
                 }
                 .dashboardInfoCard()
 
-                Toggle(L10n.text("strategy.switch_without_launch"), isOn: switchWithoutLaunchingBinding)
+                Toggle(L10n.text("strategy.switch_without_launch"), isOn: switchAndLaunchBinding)
                     .toggleStyle(.switch)
                     .tint(PoolDashboardTheme.glowA)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)

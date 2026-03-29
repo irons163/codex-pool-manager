@@ -35,6 +35,8 @@
 "usage.quota_units_format" = "Quota %d";
 "account.name.placeholder" = "Account name";
 "account.current_badge" = "Current";
+"account.edit.cancel" = "Cancel";
+"account.edit.save" = "Save";
 
 "sync.excluded.title" = "Excluded from Sync";
 "sync.excluded.default_message" = "This account is excluded from sync and pool calculations.";
@@ -97,7 +99,7 @@
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Switch Allowed";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
-"strategy.switch_without_launch" = "Switch but do not launch";
+"strategy.switch_without_launch" = "Switch and launch";
 "strategy.auto_sync_enabled" = "Auto-sync Codex usage";
 "strategy.auto_sync_interval_seconds_format" = "Auto-sync interval: %d sec";
 "strategy.language" = "Language";

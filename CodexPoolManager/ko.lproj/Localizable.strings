@@ -35,6 +35,8 @@
 "usage.quota_units_format" = "할당량 %d";
 "account.name.placeholder" = "계정 이름";
 "account.current_badge" = "현재";
+"account.edit.cancel" = "취소";
+"account.edit.save" = "저장";
 
 "sync.excluded.title" = "동기화 제외";
 "sync.excluded.default_message" = "이 계정은 동기화 및 풀 계산에서 제외됩니다.";

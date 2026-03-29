@@ -35,6 +35,8 @@
 "usage.quota_units_format" = "配额 %d";
 "account.name.placeholder" = "账号名称";
 "account.current_badge" = "当前";
+"account.edit.cancel" = "取消";
+"account.edit.save" = "保存";
 
 "sync.excluded.title" = "已排除同步";
 "sync.excluded.default_message" = "此账号已排除在同步与池调度计算之外。";

@@ -55,6 +55,7 @@ struct AccountUsagePanelView: View {
 
     @State private var sortMode: SortMode = .joinedAt
     @State private var layoutMode: LayoutMode = .single
+    @State private var draftAccountNames: [UUID: String] = [:]
     @FocusState private var focusedAccountNameID: UUID?
 
     @Binding var newAccountName: String
@@ -284,9 +285,28 @@ struct AccountUsagePanelView: View {
 
     private func accountNameRow(_ account: AgentAccount) -> some View {
         HStack(spacing: 8) {
-            TextField(L10n.text("account.name.placeholder"), text: accountNameBinding(account.id))
+            TextField(L10n.text("account.name.placeholder"), text: accountNameDraftBinding(account))
                 .focused($focusedAccountNameID, equals: account.id)
+                .onSubmit {
+                    saveAccountName(account)
+                }
                 .dashboardInputFieldStyle()
+
+            if isEditingAccountName(account) {
+                Button(L10n.text("account.edit.cancel")) {
+                    cancelEditingAccountName(account)
+                }
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+
+                Button(L10n.text("account.edit.save")) {
+                    saveAccountName(account)
+                }
+                .controlSize(.small)
+                .buttonStyle(.borderedProminent)
+                .tint(PoolDashboardTheme.glowA)
+                .disabled(!hasPendingAccountNameChanges(account))
+            }
 
             if activeAccountID == account.id {
                 Text(L10n.text("account.current_badge"))
@@ -303,6 +323,42 @@ struct AccountUsagePanelView: View {
                             .stroke(PoolDashboardTheme.glowA.opacity(0.6), lineWidth: 0.8)
                     )
             }
+        }
+    }
+
+    private func accountNameDraftBinding(_ account: AgentAccount) -> Binding<String> {
+        Binding(
+            get: { draftAccountNames[account.id] ?? account.name },
+            set: { draftAccountNames[account.id] = $0 }
+        )
+    }
+
+    private func isEditingAccountName(_ account: AgentAccount) -> Bool {
+        focusedAccountNameID == account.id || draftAccountNames[account.id] != nil
+    }
+
+    private func hasPendingAccountNameChanges(_ account: AgentAccount) -> Bool {
+        (draftAccountNames[account.id] ?? account.name) != account.name
+    }
+
+    private func cancelEditingAccountName(_ account: AgentAccount) {
+        draftAccountNames[account.id] = nil
+        if focusedAccountNameID == account.id {
+            focusedAccountNameID = nil
+        }
+    }
+
+    private func saveAccountName(_ account: AgentAccount) {
+        let draftName = (draftAccountNames[account.id] ?? account.name)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if draftName != account.name {
+            accountNameBinding(account.id).wrappedValue = draftName
+        }
+
+        draftAccountNames[account.id] = nil
+        if focusedAccountNameID == account.id {
+            focusedAccountNameID = nil
         }
     }
 

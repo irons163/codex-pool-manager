@@ -35,6 +35,8 @@
 "usage.quota_units_format" = "配額 %d";
 "account.name.placeholder" = "帳號名稱";
 "account.current_badge" = "目前";
+"account.edit.cancel" = "取消";
+"account.edit.save" = "儲存";
 
 "sync.excluded.title" = "已排除同步";
 "sync.excluded.default_message" = "此帳號已排除在同步與池調度計算之外。";
@@ -97,7 +99,7 @@
 "strategy.smart_recommendation.message_format" = "建議下一個帳號為 %@。";
 "strategy.switch_allowed.title" = "允許切換";
 "strategy.switch_allowed.message" = "已滿足智慧切換條件。";
-"strategy.switch_without_launch" = "切換但不啟動";
+"strategy.switch_without_launch" = "切換並啟動";
 "strategy.auto_sync_enabled" = "自動同步 Codex 用量";
 "strategy.auto_sync_interval_seconds_format" = "自動同步間隔：%d 秒";
 "strategy.language" = "語言";

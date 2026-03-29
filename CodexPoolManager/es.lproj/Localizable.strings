@@ -35,6 +35,8 @@
 "usage.quota_units_format" = "Cuota %d";
 "account.name.placeholder" = "Nombre de cuenta";
 "account.current_badge" = "Actual";
+"account.edit.cancel" = "Cancelar";
+"account.edit.save" = "Guardar";
 
 "sync.excluded.title" = "Excluida de sincronización";
 "sync.excluded.default_message" = "Esta cuenta está excluida de la sincronización y del cálculo del pool.";

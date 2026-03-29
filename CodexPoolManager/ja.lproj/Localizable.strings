@@ -35,6 +35,8 @@
 "usage.quota_units_format" = "クォータ %d";
 "account.name.placeholder" = "アカウント名";
 "account.current_badge" = "現在";
+"account.edit.cancel" = "キャンセル";
+"account.edit.save" = "保存";
 
 "sync.excluded.title" = "同期対象外";
 "sync.excluded.default_message" = "このアカウントは同期およびプール計算から除外されています。";
