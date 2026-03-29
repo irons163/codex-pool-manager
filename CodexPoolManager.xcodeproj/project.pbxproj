@@ -293,13 +293,6 @@
 			path = PoolDashboard;
 			sourceTree = "<group>";
 		};
-		4AB61EAF2F739CB1001AC4CB /* Support */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Support;
-			sourceTree = "<group>";
-		};
 		4AB61EB62F739E92001AC4CB /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -332,7 +325,6 @@
 				4AB61EA82F739CB1001AC4CB /* Domain */,
 				4AB61EAA2F739CB1001AC4CB /* Infrastructure */,
 				4AB61EAD2F739CB1001AC4CB /* Features */,
-				4AB61EAF2F739CB1001AC4CB /* Support */,
 				4AB61EB02F739CED001AC4CB /* ContentView.swift */,
 			);
 			sourceTree = "<group>";
