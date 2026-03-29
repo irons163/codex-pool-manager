@@ -3,7 +3,7 @@ import SwiftUI
 struct PoolDashboardView: View {
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
-    @AppStorage("oauth_client_id") private var oauthClientID = ""
+    @AppStorage("oauth_client_id") private var oauthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
     @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
     @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
