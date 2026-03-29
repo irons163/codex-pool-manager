@@ -67,6 +67,7 @@ jobs:
           APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
@@ -78,7 +79,18 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          IDENTITIES="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true)"
+          echo "$IDENTITIES"
+          if ! grep -q "Developer ID Application" <<<"$IDENTITIES"; then
+            echo "No Developer ID Application identity found in imported keychain." >&2
+            exit 1
+          fi
+          if ! grep -q "($APPLE_TEAM_ID)" <<<"$IDENTITIES"; then
+            echo "No Developer ID Application identity matches APPLE_TEAM_ID=$APPLE_TEAM_ID." >&2
+            exit 1
+          fi
 
       - name: Configure notarytool profile
         shell: bash
@@ -98,9 +110,12 @@ jobs:
       - name: Build and notarize DMG
         shell: bash
         env:
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           chmod +x scripts/build_and_notarize_dmg.sh
           VERSION="${GITHUB_REF_NAME#refs/tags/}"
           if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
