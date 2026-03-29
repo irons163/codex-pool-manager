@@ -8,6 +8,7 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-AC_NOTARY}"
 VERSION="${VERSION:-${GITHUB_REF_NAME:-$(date +%Y.%m.%d.%H%M)}}"
 CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:-Developer ID Application}"
+DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
 
 WORK_DIR="$(pwd)/build/release"
 ARCHIVE_PATH="$WORK_DIR/${APP_NAME}.xcarchive"
@@ -18,6 +19,11 @@ DMG_PATH="$WORK_DIR/${DMG_NAME}"
 rm -rf "$WORK_DIR" dist
 mkdir -p "$WORK_DIR" "$STAGING_DIR" dist
 
+if [[ -z "$DEVELOPMENT_TEAM" ]]; then
+  echo "DEVELOPMENT_TEAM is required for archive signing." >&2
+  exit 1
+fi
+
 echo "==> Archiving app"
 xcodebuild \
   -project "$PROJECT_PATH" \
@@ -25,6 +31,7 @@ xcodebuild \
   -configuration "$CONFIGURATION" \
   -archivePath "$ARCHIVE_PATH" \
   CODE_SIGN_STYLE=Manual \
+  DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
   CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
   OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
   ENABLE_HARDENED_RUNTIME=YES \
