@@ -180,6 +180,7 @@ struct PoolDashboardView: View {
         }
         .task(id: autoSyncTaskID) {
             guard state.autoSyncEnabled else { return }
+            await syncCodexUsage()
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(state.autoSyncIntervalSeconds * 1_000_000_000))
                 if Task.isCancelled { break }
