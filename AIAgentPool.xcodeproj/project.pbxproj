@@ -153,19 +153,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4AFBA5842F72203A008D97C1 /* AIAgentPool */ = {
+		4AFBA5842F72203A008D97C1 /* CodexPoolManager */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AIAgentPool;
+			path = CodexPoolManager;
 			sourceTree = "<group>";
 		};
-		4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */ = {
+		4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AIAgentPoolTests;
+			path = CodexPoolManagerTests;
 			sourceTree = "<group>";
 		};
-		4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */ = {
+		4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AIAgentPoolUITests;
+			path = CodexPoolManagerUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -325,9 +325,9 @@
 		4AFBA5792F72203A008D97C1 = {
 			isa = PBXGroup;
 			children = (
-				4AFBA5842F72203A008D97C1 /* AIAgentPool */,
-				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
-				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
+				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
+				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
+				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
 				4AFBA5832F72203A008D97C1 /* Products */,
 				4AB61EA82F739CB1001AC4CB /* Domain */,
 				4AB61EAA2F739CB1001AC4CB /* Infrastructure */,
@@ -363,7 +363,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA5842F72203A008D97C1 /* AIAgentPool */,
+				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
 			);
 			name = CodexPoolManager;
 			packageProductDependencies = (
@@ -386,7 +386,7 @@
 				4AFBA5932F72203C008D97C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA5942F72203C008D97C1 /* AIAgentPoolTests */,
+				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
 			);
 			name = CodexPoolManagerTests;
 			packageProductDependencies = (
@@ -409,7 +409,7 @@
 				4AFBA59D2F72203C008D97C1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4AFBA59E2F72203C008D97C1 /* AIAgentPoolUITests */,
+				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
 			);
 			name = CodexPoolManagerUITests;
 			packageProductDependencies = (
