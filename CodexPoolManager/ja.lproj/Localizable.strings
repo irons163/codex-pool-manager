@@ -35,6 +35,10 @@
 "usage.quota_units_format" = "クォータ %d";
 "account.name.placeholder" = "アカウント名";
 "account.current_badge" = "現在";
+"account.paid_badge" = "有料";
+"account.weekly_usage_percent_format" = "週次使用量: %d%%";
+"account.weekly_usage_units_format" = "週次使用量: %d / %d";
+"account.weekly_resets_format" = "リセット: %@";
 "account.edit.cancel" = "キャンセル";
 "account.edit.save" = "保存";
 

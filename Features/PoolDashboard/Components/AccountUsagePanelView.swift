@@ -263,6 +263,12 @@ struct AccountUsagePanelView: View {
                 }
             }
 
+            if let weeklyUsageRecordText = weeklyUsageRecordText(for: account) {
+                Text(weeklyUsageRecordText)
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            }
+
             ProgressView(value: account.usageRatio)
                 .tint(usageProgressColor(account))
         }
@@ -323,6 +329,22 @@ struct AccountUsagePanelView: View {
                             .stroke(PoolDashboardTheme.glowA.opacity(0.6), lineWidth: 0.8)
                     )
             }
+
+            if isPaidAccount(account) {
+                Text(L10n.text("account.paid_badge"))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.orange.opacity(0.34))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.orange.opacity(0.6), lineWidth: 0.8)
+                    )
+            }
         }
     }
 
@@ -360,6 +382,38 @@ struct AccountUsagePanelView: View {
         if focusedAccountNameID == account.id {
             focusedAccountNameID = nil
         }
+    }
+
+    private func isPaidAccount(_ account: AgentAccount) -> Bool {
+        guard account.chatGPTAccountID != nil else { return false }
+        if let windowName = account.usageWindowName?.lowercased() {
+            if windowName.contains("week") || windowName.contains("7d") {
+                return true
+            }
+        }
+        return !isPercentUsageAccount(account)
+    }
+
+    private func weeklyUsageRecordText(for account: AgentAccount) -> String? {
+        guard isPaidAccount(account) else { return nil }
+
+        let usageText: String
+        if isPercentUsageAccount(account) {
+            usageText = L10n.text("account.weekly_usage_percent_format", account.usedUnits)
+        } else {
+            usageText = L10n.text("account.weekly_usage_units_format", account.usedUnits, account.quota)
+        }
+
+        var segments = [usageText]
+        if let resetAt = account.usageWindowResetAt {
+            segments.append(
+                L10n.text(
+                    "account.weekly_resets_format",
+                    resetAt.formatted(.dateTime.month().day().hour().minute())
+                )
+            )
+        }
+        return segments.joined(separator: " · ")
     }
 
     @ViewBuilder

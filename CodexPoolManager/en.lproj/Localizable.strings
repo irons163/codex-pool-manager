@@ -35,6 +35,10 @@
 "usage.quota_units_format" = "Quota %d";
 "account.name.placeholder" = "Account name";
 "account.current_badge" = "Current";
+"account.paid_badge" = "Paid";
+"account.weekly_usage_percent_format" = "Weekly usage: %d%%";
+"account.weekly_usage_units_format" = "Weekly usage: %d / %d";
+"account.weekly_resets_format" = "Resets: %@";
 "account.edit.cancel" = "Cancel";
 "account.edit.save" = "Save";
 

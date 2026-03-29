@@ -35,6 +35,10 @@
 "usage.quota_units_format" = "할당량 %d";
 "account.name.placeholder" = "계정 이름";
 "account.current_badge" = "현재";
+"account.paid_badge" = "유료";
+"account.weekly_usage_percent_format" = "주간 사용량: %d%%";
+"account.weekly_usage_units_format" = "주간 사용량: %d / %d";
+"account.weekly_resets_format" = "리셋: %@";
 "account.edit.cancel" = "취소";
 "account.edit.save" = "저장";
 
