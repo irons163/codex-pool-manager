@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
-               BuildableName = "AIAgentPool.app"
+               BuildableName = "CodexPoolManager.app"
                BlueprintName = "AIAgentPool"
                ReferencedContainer = "container:AIAgentPool.xcodeproj">
             </BuildableReference>
@@ -36,7 +36,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4AFBA5902F72203C008D97C1"
-               BuildableName = "AIAgentPoolTests.xctest"
+               BuildableName = "CodexPoolManagerTests.xctest"
                BlueprintName = "AIAgentPoolTests"
                ReferencedContainer = "container:AIAgentPool.xcodeproj">
             </BuildableReference>
@@ -47,7 +47,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4AFBA59A2F72203C008D97C1"
-               BuildableName = "AIAgentPoolUITests.xctest"
+               BuildableName = "CodexPoolManagerUITests.xctest"
                BlueprintName = "AIAgentPoolUITests"
                ReferencedContainer = "container:AIAgentPool.xcodeproj">
             </BuildableReference>
@@ -70,7 +70,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
-            BuildableName = "AIAgentPool.app"
+            BuildableName = "CodexPoolManager.app"
             BlueprintName = "AIAgentPool"
             ReferencedContainer = "container:AIAgentPool.xcodeproj">
          </BuildableReference>
@@ -87,7 +87,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4AFBA5812F72203A008D97C1"
-            BuildableName = "AIAgentPool.app"
+            BuildableName = "CodexPoolManager.app"
             BlueprintName = "AIAgentPool"
             ReferencedContainer = "container:AIAgentPool.xcodeproj">
          </BuildableReference>

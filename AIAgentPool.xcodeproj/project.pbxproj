@@ -147,9 +147,9 @@
 		4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardBackupCoordinator.swift; sourceTree = "<group>"; };
 		4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardLifecycleCoordinator.swift; sourceTree = "<group>"; };
 		4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardMutationCoordinator.swift; sourceTree = "<group>"; };
-		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIAgentPool.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AIAgentPoolUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFBA5822F72203A008D97C1 /* AIAgentPool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -368,7 +368,7 @@
 			name = AIAgentPool;
 			packageProductDependencies = (
 			);
-			productName = AIAgentPool;
+			productName = CodexPoolManager;
 			productReference = 4AFBA5822F72203A008D97C1 /* AIAgentPool.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -391,7 +391,7 @@
 			name = AIAgentPoolTests;
 			packageProductDependencies = (
 			);
-			productName = AIAgentPoolTests;
+			productName = CodexPoolManagerTests;
 			productReference = 4AFBA5912F72203C008D97C1 /* AIAgentPoolTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -414,7 +414,7 @@
 			name = AIAgentPoolUITests;
 			packageProductDependencies = (
 			);
-			productName = AIAgentPoolUITests;
+			productName = CodexPoolManagerUITests;
 			productReference = 4AFBA59B2F72203C008D97C1 /* AIAgentPoolUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -733,7 +733,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.AIAgentPool;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CodexPoolManager;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -769,7 +769,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.AIAgentPool;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CodexPoolManager;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -790,13 +790,13 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.AIAgentPoolTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CodexPoolManagerTests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AIAgentPool.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AIAgentPool";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CodexPoolManager.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CodexPoolManager";
 			};
 			name = Debug;
 		};
@@ -810,13 +810,13 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.AIAgentPoolTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CodexPoolManagerTests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AIAgentPool.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AIAgentPool";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CodexPoolManager.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CodexPoolManager";
 			};
 			name = Release;
 		};
@@ -828,13 +828,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.AIAgentPoolUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CodexPoolManagerUITests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = AIAgentPool;
+				TEST_TARGET_NAME = CodexPoolManager;
 			};
 			name = Debug;
 		};
@@ -846,13 +846,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.AIAgentPoolUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CodexPoolManagerUITests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = AIAgentPool;
+				TEST_TARGET_NAME = CodexPoolManager;
 			};
 			name = Release;
 		};
