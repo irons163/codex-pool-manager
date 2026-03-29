@@ -1,5 +1,5 @@
 import Foundation
-@testable import AIAgentPool
+@testable import CodexPoolManager
 
 struct MockCodexUsageClient: CodexUsageClient {
     let responseByToken: [String: CodexUsage]

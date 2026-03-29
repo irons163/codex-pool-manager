@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import AIAgentPool
+@testable import CodexPoolManager
 
 struct PoolDashboardAsyncStateCoordinatorTests {
     @Test

@@ -1,10 +1,10 @@
 import Foundation
 import SwiftUI
 import Testing
-@testable import AIAgentPool
+@testable import CodexPoolManager
 
 @MainActor
-struct AIAgentPoolTests {
+struct CodexPoolManagerTests {
 
     @Test
     func intelligentModeSelectsLowerUsageAccount() {
@@ -201,7 +201,7 @@ struct AIAgentPoolTests {
 
     @Test
     func userDefaultsStoreCanSaveAndLoadSnapshot() {
-        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Cannot create UserDefaults suite")
             return
@@ -968,7 +968,7 @@ struct AIAgentPoolTests {
 
     @Test
     func userDefaultsStoreKeepsTokensOutOfSnapshotPayload() throws {
-        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Cannot create UserDefaults suite")
             return
@@ -1492,7 +1492,7 @@ struct AIAgentPoolTests {
 
     @Test
     func userDefaultsStoreLoadReturnsNilForCorruptedSnapshotData() {
-        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Cannot create UserDefaults suite")
             return
@@ -1512,7 +1512,7 @@ struct AIAgentPoolTests {
 
     @Test
     func userDefaultsStoreSaveRemovesTokenWhenAccountTokenIsEmpty() throws {
-        let suiteName = "AIAgentPoolTests.\(UUID().uuidString)"
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Cannot create UserDefaults suite")
             return
@@ -1552,7 +1552,7 @@ struct AIAgentPoolTests {
     }
 }
 
-extension AIAgentPoolTests {
+extension CodexPoolManagerTests {
 
     @Test
     func poolDashboardBackupCoordinatorExportSnapshotRedactsToken() throws {
@@ -1901,7 +1901,7 @@ extension AIAgentPoolTests {
     }
 }
 
-extension AIAgentPoolTests {
+extension CodexPoolManagerTests {
 
     @Test
     func poolDashboardLifecycleCoordinatorOnAppearPrimesLowUsageAlertState() {
@@ -2582,7 +2582,7 @@ extension AIAgentPoolTests {
     }
 }
 
-extension AIAgentPoolTests {
+extension CodexPoolManagerTests {
 
     @Test
     func oauthAuthorizeURLContainsRequiredParameters() throws {

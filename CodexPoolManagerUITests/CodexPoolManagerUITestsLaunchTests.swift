@@ -1,13 +1,13 @@
 //
-//  AIAgentPoolUITestsLaunchTests.swift
-//  AIAgentPoolUITests
+//  CodexPoolManagerUITestsLaunchTests.swift
+//  CodexPoolManagerUITests
 //
 //  Created by Phil on 2026/3/24.
 //
 
 import XCTest
 
-final class AIAgentPoolUITestsLaunchTests: XCTestCase {
+final class CodexPoolManagerUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
