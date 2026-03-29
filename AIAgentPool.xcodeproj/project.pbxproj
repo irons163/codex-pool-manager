@@ -441,7 +441,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4AFBA57D2F72203A008D97C1 /* Build configuration list for PBXProject "AIAgentPool" */;
+			buildConfigurationList = 4AFBA57D2F72203A008D97C1 /* Build configuration list for PBXProject "CodexPoolManager" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -859,7 +859,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4AFBA57D2F72203A008D97C1 /* Build configuration list for PBXProject "AIAgentPool" */ = {
+		4AFBA57D2F72203A008D97C1 /* Build configuration list for PBXProject "CodexPoolManager" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4AFBA5A32F72203C008D97C1 /* Debug */,

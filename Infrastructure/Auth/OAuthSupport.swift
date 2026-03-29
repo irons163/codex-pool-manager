@@ -470,7 +470,7 @@ enum LocalhostOAuthCallbackExtractor {
 }
 
 final class LocalhostOAuthCallbackServer {
-    private let queue = DispatchQueue(label: "AIAgentPool.LocalhostOAuthCallbackServer")
+    private let queue = DispatchQueue(label: "CodexPoolManager.LocalhostOAuthCallbackServer")
 
     private final class ContinuationState {
         private let lock = NSLock()
