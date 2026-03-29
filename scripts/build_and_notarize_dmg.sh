@@ -44,7 +44,18 @@ hdiutil create \
   "$DMG_PATH"
 
 echo "==> Notarizing DMG"
-xcrun notarytool submit "$DMG_PATH" --keychain-profile "$NOTARY_PROFILE" --wait
+NOTARY_OUTPUT="$(xcrun notarytool submit "$DMG_PATH" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1)"
+echo "$NOTARY_OUTPUT"
+
+if ! grep -qE 'status:[[:space:]]+Accepted' <<<"$NOTARY_OUTPUT"; then
+  SUBMISSION_ID="$(sed -n 's/^[[:space:]]*id:[[:space:]]*//p' <<<"$NOTARY_OUTPUT" | head -n 1)"
+  if [[ -n "$SUBMISSION_ID" ]]; then
+    echo "==> Fetching notarization log"
+    xcrun notarytool log "$SUBMISSION_ID" --keychain-profile "$NOTARY_PROFILE" || true
+  fi
+  echo "Notarization failed (status is not Accepted)." >&2
+  exit 1
+fi
 
 echo "==> Stapling notarization ticket"
 xcrun stapler staple "$DMG_PATH"
