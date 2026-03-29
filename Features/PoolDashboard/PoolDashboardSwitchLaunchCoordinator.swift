@@ -8,12 +8,12 @@ struct PoolDashboardSwitchLaunchCoordinator {
     }
 
     private enum Message {
-        static let missingTokenLog = L10n.text("switch.log.missing_token")
-        static let missingAccountIDLog = L10n.text("switch.log.missing_account_id")
-        static let missingToken = L10n.text("switch.error.missing_token")
-        static let missingAccountID = L10n.text("switch.error.missing_account_id")
-        static let requiresAuthFilePermission = L10n.text("switch.error.requires_auth_file_permission")
-        static let switchFailurePrefix = L10n.text("switch.error.prefix")
+        static var missingTokenLog: String { L10n.text("switch.log.missing_token") }
+        static var missingAccountIDLog: String { L10n.text("switch.log.missing_account_id") }
+        static var missingToken: String { L10n.text("switch.error.missing_token") }
+        static var missingAccountID: String { L10n.text("switch.error.missing_account_id") }
+        static var requiresAuthFilePermission: String { L10n.text("switch.error.requires_auth_file_permission") }
+        static var switchFailurePrefix: String { L10n.text("switch.error.prefix") }
         static let startSwitchFormat = "switch.log.start_format"
         static let errorPrefix = "switch.log.error_prefix"
         static let retryFailurePrefix = "switch.log.retry_failure_prefix"

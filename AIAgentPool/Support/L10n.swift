@@ -86,4 +86,16 @@ enum L10n {
         let format = text(key)
         return String(format: format, locale: Locale(identifier: resolvedLanguageCode), arguments: arguments)
     }
+
+    static func locale(for overrideCode: String? = nil) -> Locale {
+        if let overrideCode, overrideCode != systemLanguageCode, supportedLanguageCodes.contains(overrideCode) {
+            return Locale(identifier: overrideCode)
+        }
+
+        if let selectedOverrideLanguageCode {
+            return Locale(identifier: selectedOverrideLanguageCode)
+        }
+
+        return Locale.autoupdatingCurrent
+    }
 }

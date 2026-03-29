@@ -2,8 +2,8 @@ import Foundation
 
 struct PoolDashboardBackupCoordinator {
     private enum Message {
-        static let exportFailurePrefix = L10n.text("backup.operation.export_failed")
-        static let importFailurePrefix = L10n.text("backup.operation.import_failed")
+        static var exportFailurePrefix: String { L10n.text("backup.operation.export_failed") }
+        static var importFailurePrefix: String { L10n.text("backup.operation.import_failed") }
     }
 
     typealias ExportResult = (json: String?, errorMessage: String?)
