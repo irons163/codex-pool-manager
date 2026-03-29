@@ -334,7 +334,7 @@ struct AccountUsagePanelView: View {
     }
 
     private func isEditingAccountName(_ account: AgentAccount) -> Bool {
-        focusedAccountNameID == account.id || draftAccountNames[account.id] != nil
+        focusedAccountNameID == account.id
     }
 
     private func hasPendingAccountNameChanges(_ account: AgentAccount) -> Bool {
