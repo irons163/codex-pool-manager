@@ -506,6 +506,11 @@ struct PoolDashboardView: View {
     private func workspaceButton(for workspace: Workspace) -> some View {
         Button {
             selectedWorkspace = workspace
+            if isWorkspaceSectionCollapsed {
+                withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
+                    isWorkspaceSectionCollapsed = false
+                }
+            }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: workspace.symbolName)
