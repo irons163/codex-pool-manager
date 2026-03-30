@@ -22,8 +22,12 @@
 "layout.double" = "2列";
 "layout.triple" = "3列";
 "layout.quad" = "4列";
+"group.title" = "グループ";
+"group.all" = "すべて";
+"group.placeholder" = "グループ名";
 
 "add.new_account_name" = "新しいアカウント名";
+"add.group_name" = "グループ";
 "add.quota_format" = "クォータ %d";
 "add.add_account" = "アカウント追加";
 
@@ -48,6 +52,7 @@
 "sync.excluded.title" = "同期対象外";
 "sync.excluded.default_message" = "このアカウントは同期およびプール計算から除外されています。";
 "switch.launch.button" = "切替";
+"duplicate.button" = "複製";
 "delete.button" = "削除";
 
 "oauth.sign_in.title" = "OAuth サインイン";

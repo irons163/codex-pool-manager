@@ -22,8 +22,12 @@
 "layout.double" = "双排";
 "layout.triple" = "三排";
 "layout.quad" = "四排";
+"group.title" = "分组";
+"group.all" = "全部";
+"group.placeholder" = "分组名称";
 
 "add.new_account_name" = "新账号名称";
+"add.group_name" = "分组";
 "add.quota_format" = "配额 %d";
 "add.add_account" = "新增账号";
 
@@ -48,6 +52,7 @@
 "sync.excluded.title" = "已排除同步";
 "sync.excluded.default_message" = "此账号已排除在同步与池调度计算之外。";
 "switch.launch.button" = "切换";
+"duplicate.button" = "复制";
 "delete.button" = "删除";
 
 "oauth.sign_in.title" = "OAuth 登录";

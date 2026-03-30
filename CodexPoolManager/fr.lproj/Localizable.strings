@@ -22,8 +22,12 @@
 "layout.double" = "2 colonnes";
 "layout.triple" = "3 colonnes";
 "layout.quad" = "4 colonnes";
+"group.title" = "Groupe";
+"group.all" = "Tous";
+"group.placeholder" = "Nom du groupe";
 
 "add.new_account_name" = "Nouveau nom de compte";
+"add.group_name" = "Groupe";
 "add.quota_format" = "Quota %d";
 "add.add_account" = "Ajouter un compte";
 
@@ -48,6 +52,7 @@
 "sync.excluded.title" = "Exclu de la synchronisation";
 "sync.excluded.default_message" = "Ce compte est exclu de la synchronisation et du calcul du pool.";
 "switch.launch.button" = "Basculer";
+"duplicate.button" = "Dupliquer";
 "delete.button" = "Supprimer";
 
 "oauth.sign_in.title" = "Connexion OAuth";

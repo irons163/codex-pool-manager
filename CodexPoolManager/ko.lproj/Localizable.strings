@@ -22,8 +22,12 @@
 "layout.double" = "2열";
 "layout.triple" = "3열";
 "layout.quad" = "4열";
+"group.title" = "그룹";
+"group.all" = "전체";
+"group.placeholder" = "그룹 이름";
 
 "add.new_account_name" = "새 계정 이름";
+"add.group_name" = "그룹";
 "add.quota_format" = "할당량 %d";
 "add.add_account" = "계정 추가";
 
@@ -48,6 +52,7 @@
 "sync.excluded.title" = "동기화 제외";
 "sync.excluded.default_message" = "이 계정은 동기화 및 풀 계산에서 제외됩니다.";
 "switch.launch.button" = "전환";
+"duplicate.button" = "복제";
 "delete.button" = "삭제";
 
 "oauth.sign_in.title" = "OAuth 로그인";
