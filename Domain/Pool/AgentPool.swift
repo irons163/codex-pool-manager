@@ -7,6 +7,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var usedUnits: Int
     var quota: Int
     var apiToken: String
+    var email: String?
     var chatGPTAccountID: String?
     var usageWindowName: String?
     var usageWindowResetAt: Date?
@@ -25,6 +26,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         usedUnits: Int,
         quota: Int,
         apiToken: String = "",
+        email: String? = nil,
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
@@ -42,6 +44,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.usedUnits = usedUnits
         self.quota = quota
         self.apiToken = apiToken
+        self.email = email
         self.chatGPTAccountID = chatGPTAccountID
         self.usageWindowName = usageWindowName
         self.usageWindowResetAt = usageWindowResetAt
@@ -62,6 +65,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         usedUnits = try container.decodeIfPresent(Int.self, forKey: .usedUnits) ?? 0
         quota = try container.decodeIfPresent(Int.self, forKey: .quota) ?? 100
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
+        email = try container.decodeIfPresent(String.self, forKey: .email)
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
         usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)
         usageWindowResetAt = try container.decodeIfPresent(Date.self, forKey: .usageWindowResetAt)
@@ -96,6 +100,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             usedUnits: usedUnits,
             quota: quota,
             apiToken: "",
+            email: email,
             chatGPTAccountID: chatGPTAccountID,
             usageWindowName: usageWindowName,
             usageWindowResetAt: usageWindowResetAt,
@@ -460,6 +465,7 @@ struct AccountPoolState {
         name: String,
         quota: Int,
         usedUnits: Int = 0,
+        email: String? = nil,
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
@@ -472,6 +478,7 @@ struct AccountPoolState {
             name: name.isEmpty ? L10n.text("account.unnamed") : name,
             usedUnits: normalizedUsedUnits,
             quota: normalizedQuota,
+            email: email,
             chatGPTAccountID: chatGPTAccountID,
             usageWindowName: usageWindowName,
             usageWindowResetAt: usageWindowResetAt
@@ -509,6 +516,7 @@ struct AccountPoolState {
         quota: Int? = nil,
         usedUnits: Int? = nil,
         apiToken: String? = nil,
+        email: String? = nil,
         chatGPTAccountID: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
@@ -532,6 +540,9 @@ struct AccountPoolState {
         }
         if let apiToken {
             accounts[index].apiToken = apiToken
+        }
+        if let email {
+            accounts[index].email = email
         }
         if let chatGPTAccountID {
             accounts[index].chatGPTAccountID = chatGPTAccountID

@@ -312,62 +312,71 @@ struct AccountUsagePanelView: View {
     }
 
     private func accountNameRow(_ account: AgentAccount) -> some View {
-        HStack(spacing: 8) {
-            TextField(L10n.text("account.name.placeholder"), text: accountNameDraftBinding(account))
-                .focused($focusedAccountNameID, equals: account.id)
-                .onSubmit {
-                    saveAccountName(account)
-                }
-                .dashboardInputFieldStyle()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                TextField(L10n.text("account.name.placeholder"), text: accountNameDraftBinding(account))
+                    .focused($focusedAccountNameID, equals: account.id)
+                    .onSubmit {
+                        saveAccountName(account)
+                    }
+                    .dashboardInputFieldStyle()
 
-            if isEditingAccountName(account) {
-                Button(L10n.text("account.edit.cancel")) {
-                    cancelEditingAccountName(account)
-                }
-                .controlSize(.small)
-                .buttonStyle(.bordered)
+                if isEditingAccountName(account) {
+                    Button(L10n.text("account.edit.cancel")) {
+                        cancelEditingAccountName(account)
+                    }
+                    .controlSize(.small)
+                    .buttonStyle(.bordered)
 
-                Button(L10n.text("account.edit.save")) {
-                    saveAccountName(account)
+                    Button(L10n.text("account.edit.save")) {
+                        saveAccountName(account)
+                    }
+                    .controlSize(.small)
+                    .buttonStyle(.borderedProminent)
+                    .tint(PoolDashboardTheme.glowA)
+                    .disabled(!hasPendingAccountNameChanges(account))
                 }
-                .controlSize(.small)
-                .buttonStyle(.borderedProminent)
-                .tint(PoolDashboardTheme.glowA)
-                .disabled(!hasPendingAccountNameChanges(account))
+
+                if activeAccountID == account.id {
+                    Text(L10n.text("account.current_badge"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(PoolDashboardTheme.glowA.opacity(0.34))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(PoolDashboardTheme.glowA.opacity(0.6), lineWidth: 0.8)
+                        )
+                }
+
+                if isPaidAccount(account) {
+                    Text(L10n.text("account.paid_badge"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.orange.opacity(0.34))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(Color.orange.opacity(0.6), lineWidth: 0.8)
+                        )
+                }
             }
 
-            if activeAccountID == account.id {
-                Text(L10n.text("account.current_badge"))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textPrimary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(PoolDashboardTheme.glowA.opacity(0.34))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(PoolDashboardTheme.glowA.opacity(0.6), lineWidth: 0.8)
-                    )
+            if let email = account.email, !email.isEmpty {
+                Text(email)
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
-
-            if isPaidAccount(account) {
-                Text(L10n.text("account.paid_badge"))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textPrimary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.orange.opacity(0.34))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(Color.orange.opacity(0.6), lineWidth: 0.8)
-                    )
-            }
-
         }
     }
 

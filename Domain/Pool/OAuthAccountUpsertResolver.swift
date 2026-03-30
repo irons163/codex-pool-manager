@@ -19,8 +19,11 @@ enum OAuthAccountUpsertResolver {
 
         if let email,
            !email.isEmpty,
-           let byEmailName = accounts.first(where: { $0.name.caseInsensitiveCompare(email) == .orderedSame }) {
-            return byEmailName.id
+           let byEmail = accounts.first(where: {
+               ($0.email?.caseInsensitiveCompare(email) == .orderedSame)
+               || $0.name.caseInsensitiveCompare(email) == .orderedSame
+           }) {
+            return byEmail.id
         }
 
         return nil

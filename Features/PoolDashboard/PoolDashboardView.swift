@@ -310,33 +310,36 @@ struct PoolDashboardView: View {
     }
 
     private func workspaceCollapseToggle() -> some View {
-        Button {
+        HStack(spacing: 8) {
+            Image(systemName: isWorkspaceSectionCollapsed ? "chevron.right" : "chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .frame(width: 12)
+
+            Text(selectedWorkspace.title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+            Rectangle()
+                .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.9))
+                .frame(height: 1)
+
+            Text(isWorkspaceSectionCollapsed ? L10n.text("drawer.expand") : L10n.text("drawer.collapse"))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+        }
+        .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.45))
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
             withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
                 isWorkspaceSectionCollapsed.toggle()
             }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: isWorkspaceSectionCollapsed ? "chevron.right" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                    .frame(width: 12)
-
-                Text(selectedWorkspace.title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-
-                Rectangle()
-                    .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.9))
-                    .frame(height: 1)
-
-                Text(isWorkspaceSectionCollapsed ? L10n.text("drawer.expand") : L10n.text("drawer.collapse"))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-            }
-            .padding(.vertical, 4)
         }
-        .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     private var workspaceSidebar: some View {
