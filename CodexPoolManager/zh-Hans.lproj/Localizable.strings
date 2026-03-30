@@ -21,6 +21,7 @@
 "layout.single" = "单排";
 "layout.double" = "双排";
 "layout.triple" = "三排";
+"layout.quad" = "四排";
 
 "add.new_account_name" = "新账号名称";
 "add.quota_format" = "配额 %d";

@@ -21,6 +21,7 @@
 "layout.single" = "Una columna";
 "layout.double" = "Dos columnas";
 "layout.triple" = "Tres columnas";
+"layout.quad" = "Cuatro columnas";
 
 "add.new_account_name" = "Nombre de cuenta nueva";
 "add.quota_format" = "Cuota %d";

@@ -27,12 +27,14 @@ struct AccountUsagePanelView: View {
         case single
         case double
         case triple
+        case quad
 
         var id: String {
             switch self {
             case .single: "single"
             case .double: "double"
             case .triple: "triple"
+            case .quad: "quad"
             }
         }
 
@@ -41,6 +43,7 @@ struct AccountUsagePanelView: View {
             case .single: L10n.text("layout.single")
             case .double: L10n.text("layout.double")
             case .triple: L10n.text("layout.triple")
+            case .quad: L10n.text("layout.quad")
             }
         }
 
@@ -49,6 +52,7 @@ struct AccountUsagePanelView: View {
             case .single: 1
             case .double: 2
             case .triple: 3
+            case .quad: 4
             }
         }
     }

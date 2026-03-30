@@ -21,6 +21,7 @@
 "layout.single" = "1列";
 "layout.double" = "2列";
 "layout.triple" = "3列";
+"layout.quad" = "4列";
 
 "add.new_account_name" = "新しいアカウント名";
 "add.quota_format" = "クォータ %d";

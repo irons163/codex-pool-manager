@@ -21,6 +21,7 @@
 "layout.single" = "1열";
 "layout.double" = "2열";
 "layout.triple" = "3열";
+"layout.quad" = "4열";
 
 "add.new_account_name" = "새 계정 이름";
 "add.quota_format" = "할당량 %d";

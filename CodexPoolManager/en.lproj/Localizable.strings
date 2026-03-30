@@ -21,6 +21,7 @@
 "layout.single" = "Single";
 "layout.double" = "Double";
 "layout.triple" = "Triple";
+"layout.quad" = "Quad";
 
 "add.new_account_name" = "New account name";
 "add.quota_format" = "Quota %d";
