@@ -253,6 +253,7 @@ struct AccountUsagePanelView: View {
                 .menuStyle(.borderlessButton)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     private var addRow: some View {
