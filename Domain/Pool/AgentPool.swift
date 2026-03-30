@@ -630,13 +630,18 @@ struct AccountPoolState {
     }
 
     @discardableResult
-    mutating func duplicateAccount(_ accountID: UUID, now: Date = .now) -> UUID? {
+    mutating func duplicateAccount(
+        _ accountID: UUID,
+        intoGroup targetGroupName: String? = nil,
+        now: Date = .now
+    ) -> UUID? {
         guard let source = accounts.first(where: { $0.id == accountID }) else { return nil }
+        let resolvedGroupName = targetGroupName.map { ensureGroupExists($0) } ?? source.groupName
         let copy = AgentAccount(
             id: UUID(),
             createdAt: now,
             name: source.name,
-            groupName: source.groupName,
+            groupName: resolvedGroupName,
             usedUnits: source.usedUnits,
             quota: source.quota,
             apiToken: source.apiToken,

@@ -774,7 +774,7 @@ struct PoolDashboardView: View {
     }
 
     private func handleMoveAccount(accountID: UUID, to groupName: String) {
-        state.updateAccount(accountID, groupName: groupName)
+        _ = state.duplicateAccount(accountID, intoGroup: groupName)
     }
 
     private func handleCreateGroup(name: String) {

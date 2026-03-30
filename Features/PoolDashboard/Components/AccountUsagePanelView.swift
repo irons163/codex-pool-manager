@@ -239,6 +239,19 @@ struct AccountUsagePanelView: View {
             }
             .buttonStyle(.bordered)
             .disabled(selectedGroupName.isEmpty)
+
+            if !outsideGroupAccounts.isEmpty {
+                Menu {
+                    ForEach(outsideGroupAccounts) { account in
+                        Button("\(account.name) (\(account.groupName))") {
+                            onMoveAccountToGroup(account.id, selectedGroupName)
+                        }
+                    }
+                } label: {
+                    Text(L10n.text("group.add_existing"))
+                }
+                .menuStyle(.borderlessButton)
+            }
         }
     }
 
@@ -292,6 +305,13 @@ struct AccountUsagePanelView: View {
                 return lhs.remainingRatio > rhs.remainingRatio
             }
         }
+    }
+
+    private var outsideGroupAccounts: [AgentAccount] {
+        accounts.filter {
+            AgentAccount.normalizedGroupName($0.groupName).caseInsensitiveCompare(selectedGroupName) != .orderedSame
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func accountCard(_ account: AgentAccount) -> some View {
@@ -537,15 +557,6 @@ struct AccountUsagePanelView: View {
 
     private func accountActionButtons(_ account: AgentAccount) -> some View {
         HStack(spacing: 8) {
-            if AgentAccount.normalizedGroupName(account.groupName).caseInsensitiveCompare(selectedGroupName) != .orderedSame {
-                Button(L10n.text("group.move_to_current")) {
-                    onMoveAccountToGroup(account.id, selectedGroupName)
-                }
-                .buttonStyle(.bordered)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            }
-
             Button(L10n.text("switch.launch.button")) {
                 Task {
                     await onSwitchAndLaunch(account)

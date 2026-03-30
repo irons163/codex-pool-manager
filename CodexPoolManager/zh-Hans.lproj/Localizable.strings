@@ -29,6 +29,7 @@
 "group.rename" = "重命名分组";
 "group.rename_action" = "重命名";
 "group.move_to_current" = "移动到分组";
+"group.add_existing" = "加入现有账号";
 
 "add.new_account_name" = "新账号名称";
 "add.group_name" = "分组";
