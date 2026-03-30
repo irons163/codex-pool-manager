@@ -1,6 +1,25 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
+    private enum GroupFilter: Identifiable, Equatable {
+        case all
+        case named(String)
+
+        var id: String {
+            switch self {
+            case .all: "all"
+            case .named(let value): value
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .all: L10n.text("group.all")
+            case .named(let value): value
+            }
+        }
+    }
+
     private enum SortMode: CaseIterable, Identifiable {
         case joinedAt
         case name
@@ -59,10 +78,12 @@ struct AccountUsagePanelView: View {
 
     @State private var sortMode: SortMode = .joinedAt
     @State private var layoutMode: LayoutMode = .single
+    @State private var selectedGroupFilter: GroupFilter = .all
     @State private var draftAccountNames: [UUID: String] = [:]
     @FocusState private var focusedAccountNameID: UUID?
 
     @Binding var newAccountName: String
+    @Binding var newAccountGroup: String
     @Binding var newAccountQuota: Int
 
     let accounts: [AgentAccount]
@@ -73,8 +94,10 @@ struct AccountUsagePanelView: View {
     let onAddAccount: (String, Int) -> Void
     let onSwitchAndLaunch: (AgentAccount) async -> Void
     let onRemoveAccount: (UUID) -> Void
+    let onDuplicateAccount: (UUID) -> Void
 
     let accountNameBinding: (UUID) -> Binding<String>
+    let accountGroupBinding: (UUID) -> Binding<String>
     let accountQuotaBinding: (UUID) -> Binding<Int>
     let accountUsedBinding: (UUID) -> Binding<Int>
 
@@ -176,6 +199,54 @@ struct AccountUsagePanelView: View {
             }
             .menuStyle(.borderlessButton)
 
+            Menu {
+                Button {
+                    selectedGroupFilter = .all
+                } label: {
+                    if selectedGroupFilter == .all {
+                        Label(L10n.text("group.all"), systemImage: "checkmark")
+                    } else {
+                        Text(L10n.text("group.all"))
+                    }
+                }
+                ForEach(groupNames, id: \.self) { groupName in
+                    let filter = GroupFilter.named(groupName)
+                    Button {
+                        selectedGroupFilter = filter
+                    } label: {
+                        if selectedGroupFilter == filter {
+                            Label(groupName, systemImage: "checkmark")
+                        } else {
+                            Text(groupName)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(L10n.text("group.title"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    Text(selectedGroupFilter.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                        .lineLimit(1)
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(PoolDashboardTheme.panelMutedFill.opacity(0.8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.7), lineWidth: 0.8)
+                        )
+                )
+            }
+            .menuStyle(.borderlessButton)
+
             Picker(L10n.text("layout.title"), selection: $layoutMode) {
                 ForEach(LayoutMode.allCases) { mode in
                     Text(mode.title).tag(mode)
@@ -190,11 +261,18 @@ struct AccountUsagePanelView: View {
             TextField(L10n.text("add.new_account_name"), text: $newAccountName)
                 .dashboardInputFieldStyle()
 
+            TextField(L10n.text("add.group_name"), text: $newAccountGroup)
+                .dashboardInputFieldStyle()
+                .frame(maxWidth: 160)
+
             Stepper(L10n.text("add.quota_format", newAccountQuota), value: $newAccountQuota, in: 100...10_000, step: 100)
                 .monospacedDigit()
 
             Button(L10n.text("add.add_account")) {
-                onAddAccount(newAccountName.trimmingCharacters(in: .whitespacesAndNewlines), newAccountQuota)
+                onAddAccount(
+                    newAccountName.trimmingCharacters(in: .whitespacesAndNewlines),
+                    newAccountQuota
+                )
                 newAccountName = ""
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
@@ -207,18 +285,26 @@ struct AccountUsagePanelView: View {
     }
 
     private var sortedAccounts: [AgentAccount] {
+        let filteredAccounts: [AgentAccount]
+        switch selectedGroupFilter {
+        case .all:
+            filteredAccounts = accounts
+        case .named(let value):
+            filteredAccounts = accounts.filter { AgentAccount.normalizedGroupName($0.groupName) == value }
+        }
+
         switch sortMode {
         case .joinedAt:
-            return accounts.sorted { lhs, rhs in
+            return filteredAccounts.sorted { lhs, rhs in
                 if lhs.createdAt == rhs.createdAt {
                     return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                 }
                 return lhs.createdAt > rhs.createdAt
             }
         case .name:
-            return accounts.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            return filteredAccounts.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .remainingHigh:
-            return accounts.sorted { lhs, rhs in
+            return filteredAccounts.sorted { lhs, rhs in
                 if lhs.isUsageSyncExcluded != rhs.isUsageSyncExcluded {
                     return !lhs.isUsageSyncExcluded
                 }
@@ -228,6 +314,11 @@ struct AccountUsagePanelView: View {
                 return lhs.remainingRatio > rhs.remainingRatio
             }
         }
+    }
+
+    private var groupNames: [String] {
+        Array(Set(accounts.map { AgentAccount.normalizedGroupName($0.groupName) }))
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     private func accountCard(_ account: AgentAccount) -> some View {
@@ -374,6 +465,14 @@ struct AccountUsagePanelView: View {
                 }
             }
 
+            HStack(spacing: 8) {
+                Text(L10n.text("group.title"))
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                TextField(L10n.text("group.placeholder"), text: accountGroupBinding(account.id))
+                    .dashboardInputFieldStyle()
+                    .frame(maxWidth: 180)
+            }
         }
     }
 
@@ -470,6 +569,13 @@ struct AccountUsagePanelView: View {
 
     private func accountActionButtons(_ account: AgentAccount) -> some View {
         HStack(spacing: 8) {
+            Button(L10n.text("duplicate.button")) {
+                onDuplicateAccount(account.id)
+            }
+            .buttonStyle(.bordered)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+
             Button(L10n.text("switch.launch.button")) {
                 Task {
                     await onSwitchAndLaunch(account)

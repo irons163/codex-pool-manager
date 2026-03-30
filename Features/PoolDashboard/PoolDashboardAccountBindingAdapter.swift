@@ -25,6 +25,17 @@ struct PoolDashboardAccountBindingAdapter {
         )
     }
 
+    func groupNameBinding(for accountID: UUID) -> Binding<String> {
+        Binding(
+            get: {
+                accountValue(for: accountID, defaultValue: AgentAccount.defaultGroupName) { $0.groupName }
+            },
+            set: { newGroupName in
+                state.wrappedValue.updateAccount(accountID, groupName: newGroupName)
+            }
+        )
+    }
+
     func usedBinding(for accountID: UUID) -> Binding<Int> {
         Binding(
             get: {

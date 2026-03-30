@@ -22,8 +22,12 @@
 "layout.double" = "Double";
 "layout.triple" = "Triple";
 "layout.quad" = "Quad";
+"group.title" = "Group";
+"group.all" = "All";
+"group.placeholder" = "Group name";
 
 "add.new_account_name" = "New account name";
+"add.group_name" = "Group";
 "add.quota_format" = "Quota %d";
 "add.add_account" = "Add Account";
 
@@ -48,6 +52,7 @@
 "sync.excluded.title" = "Excluded from Sync";
 "sync.excluded.default_message" = "This account is excluded from sync and pool calculations.";
 "switch.launch.button" = "Switch";
+"duplicate.button" = "Duplicate";
 "delete.button" = "Delete";
 
 "oauth.sign_in.title" = "OAuth Sign-In";

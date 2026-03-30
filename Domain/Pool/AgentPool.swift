@@ -1,9 +1,12 @@
 import Foundation
 
 struct AgentAccount: Identifiable, Equatable, Codable {
+    static let defaultGroupName = "Default"
+
     let id: UUID
     var createdAt: Date
     var name: String
+    var groupName: String
     var usedUnits: Int
     var quota: Int
     var apiToken: String
@@ -23,6 +26,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         id: UUID,
         createdAt: Date = .now,
         name: String,
+        groupName: String = AgentAccount.defaultGroupName,
         usedUnits: Int,
         quota: Int,
         apiToken: String = "",
@@ -41,6 +45,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.id = id
         self.createdAt = createdAt
         self.name = name
+        self.groupName = AgentAccount.normalizedGroupName(groupName)
         self.usedUnits = usedUnits
         self.quota = quota
         self.apiToken = apiToken
@@ -62,6 +67,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         id = try container.decode(UUID.self, forKey: .id)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .distantPast
         name = try container.decode(String.self, forKey: .name)
+        groupName = AgentAccount.normalizedGroupName(
+            try container.decodeIfPresent(String.self, forKey: .groupName) ?? AgentAccount.defaultGroupName
+        )
         usedUnits = try container.decodeIfPresent(Int.self, forKey: .usedUnits) ?? 0
         quota = try container.decodeIfPresent(Int.self, forKey: .quota) ?? 100
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
@@ -97,6 +105,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             id: id,
             createdAt: createdAt,
             name: name,
+            groupName: groupName,
             usedUnits: usedUnits,
             quota: quota,
             apiToken: "",
@@ -112,6 +121,11 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
+    }
+
+    static func normalizedGroupName(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? defaultGroupName : trimmed
     }
 }
 
@@ -463,6 +477,7 @@ struct AccountPoolState {
     @discardableResult
     mutating func addAccount(
         name: String,
+        groupName: String = AgentAccount.defaultGroupName,
         quota: Int,
         usedUnits: Int = 0,
         email: String? = nil,
@@ -476,6 +491,7 @@ struct AccountPoolState {
         let account = AgentAccount(
             id: UUID(),
             name: name.isEmpty ? L10n.text("account.unnamed") : name,
+            groupName: groupName,
             usedUnits: normalizedUsedUnits,
             quota: normalizedQuota,
             email: email,
@@ -513,6 +529,7 @@ struct AccountPoolState {
     mutating func updateAccount(
         _ accountID: UUID,
         name: String? = nil,
+        groupName: String? = nil,
         quota: Int? = nil,
         usedUnits: Int? = nil,
         apiToken: String? = nil,
@@ -531,6 +548,9 @@ struct AccountPoolState {
 
         if let name {
             accounts[index].name = name.isEmpty ? L10n.text("account.unnamed") : name
+        }
+        if let groupName {
+            accounts[index].groupName = AgentAccount.normalizedGroupName(groupName)
         }
         if let quota {
             accounts[index].quota = max(1, quota)
@@ -571,6 +591,35 @@ struct AccountPoolState {
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)
         evaluate(now: now)
+    }
+
+    @discardableResult
+    mutating func duplicateAccount(_ accountID: UUID, now: Date = .now) -> UUID? {
+        guard let source = accounts.first(where: { $0.id == accountID }) else { return nil }
+        let copy = AgentAccount(
+            id: UUID(),
+            createdAt: now,
+            name: source.name,
+            groupName: source.groupName,
+            usedUnits: source.usedUnits,
+            quota: source.quota,
+            apiToken: source.apiToken,
+            email: source.email,
+            chatGPTAccountID: source.chatGPTAccountID,
+            usageWindowName: source.usageWindowName,
+            usageWindowResetAt: source.usageWindowResetAt,
+            primaryUsagePercent: source.primaryUsagePercent,
+            primaryUsageResetAt: source.primaryUsageResetAt,
+            secondaryUsagePercent: source.secondaryUsagePercent,
+            secondaryUsageResetAt: source.secondaryUsageResetAt,
+            isPaid: source.isPaid,
+            isUsageSyncExcluded: source.isUsageSyncExcluded,
+            usageSyncError: source.usageSyncError
+        )
+        accounts.append(copy)
+        appendActivity(String(format: L10n.text("activity.account_added_format"), copy.name), now: now)
+        evaluate(now: now)
+        return copy.id
     }
 
     mutating func resetUsage(for accountID: UUID, now: Date = .now) {

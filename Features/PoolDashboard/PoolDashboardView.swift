@@ -26,7 +26,6 @@ struct PoolDashboardView: View {
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
     private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
     private let lifecycleFlowCoordinator = PoolDashboardLifecycleFlowCoordinator()
-    private let accountFormFlowCoordinator = PoolDashboardAccountFormFlowCoordinator()
     private let quickActionsFlowCoordinator = PoolDashboardQuickActionsFlowCoordinator()
     private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
     private let localImportFlowCoordinator = PoolDashboardLocalImportFlowCoordinator()
@@ -624,6 +623,7 @@ struct PoolDashboardView: View {
     private var accountUsagePanel: some View {
         AccountUsagePanelView(
             newAccountName: $formState.newAccountName,
+            newAccountGroup: $formState.newAccountGroup,
             newAccountQuota: $formState.newAccountQuota,
             accounts: state.accounts,
             activeAccountID: state.activeAccountID,
@@ -639,8 +639,14 @@ struct PoolDashboardView: View {
             onRemoveAccount: { accountID in
                 handleRemoveAccount(accountID: accountID)
             },
+            onDuplicateAccount: { accountID in
+                handleDuplicateAccount(accountID: accountID)
+            },
             accountNameBinding: { accountID in
                 accountBindings.nameBinding(for: accountID)
+            },
+            accountGroupBinding: { accountID in
+                accountBindings.groupNameBinding(for: accountID)
             },
             accountQuotaBinding: { accountID in
                 accountBindings.quotaBinding(for: accountID)
@@ -741,18 +747,22 @@ struct PoolDashboardView: View {
     // MARK: - Account Actions
 
     private func handleAddAccount(name: String, quota: Int) {
-        let output = accountFormFlowCoordinator.addAccount(
-            from: state,
-            formState: formState,
-            name: name,
+        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else { return }
+        state.addAccount(
+            name: normalizedName,
+            groupName: formState.newAccountGroup,
             quota: quota
         )
-        state = output.state
-        formState = output.formState
+        formState.resetNewAccountInput()
     }
 
     private func handleRemoveAccount(accountID: UUID) {
         applyQuickAction(.removeAccount(accountID))
+    }
+
+    private func handleDuplicateAccount(accountID: UUID) {
+        _ = state.duplicateAccount(accountID)
     }
 
     private func handleSimulateUsage() {
