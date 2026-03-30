@@ -35,6 +35,7 @@ enum AccountPoolSnapshotCodec {
         }
 
         root["accounts"] = accounts
+        root.removeValue(forKey: "activities")
         let data = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
         guard let json = String(data: data, encoding: .utf8) else {
             throw CocoaError(.fileWriteUnknown)
