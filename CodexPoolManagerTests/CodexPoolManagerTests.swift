@@ -3,6 +3,43 @@ import SwiftUI
 import Testing
 @testable import CodexPoolManager
 
+private extension AccountPoolSnapshot {
+    init(
+        accounts: [AgentAccount],
+        activities: [PoolActivity],
+        mode: SwitchMode,
+        activeAccountID: UUID?,
+        manualAccountID: UUID?,
+        focusLockedAccountID: UUID?,
+        minSwitchInterval: TimeInterval,
+        lowUsageThresholdRatio: Double,
+        minUsageRatioDeltaToSwitch: Double,
+        lastSwitchAt: Date?,
+        lastUsageSyncAt: Date? = nil,
+        switchWithoutLaunching: Bool = false,
+        autoSyncEnabled: Bool = true,
+        autoSyncIntervalSeconds: TimeInterval = 30
+    ) {
+        self.init(
+            accounts: accounts,
+            groups: [],
+            activities: activities,
+            mode: mode,
+            activeAccountID: activeAccountID,
+            manualAccountID: manualAccountID,
+            focusLockedAccountID: focusLockedAccountID,
+            minSwitchInterval: minSwitchInterval,
+            lowUsageThresholdRatio: lowUsageThresholdRatio,
+            minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
+            lastSwitchAt: lastSwitchAt,
+            lastUsageSyncAt: lastUsageSyncAt,
+            switchWithoutLaunching: switchWithoutLaunching,
+            autoSyncEnabled: autoSyncEnabled,
+            autoSyncIntervalSeconds: autoSyncIntervalSeconds
+        )
+    }
+}
+
 @MainActor
 struct CodexPoolManagerTests {
 
@@ -197,6 +234,94 @@ struct CodexPoolManagerTests {
         #expect(restored.minSwitchInterval == state.minSwitchInterval)
         #expect(restored.lowUsageThresholdRatio == state.lowUsageThresholdRatio)
         #expect(restored.minUsageRatioDeltaToSwitch == state.minUsageRatioDeltaToSwitch)
+    }
+
+    @Test
+    func createGroupDeduplicatesCaseInsensitiveNames() {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 100)
+            ],
+            mode: .manual
+        )
+
+        let first = state.createGroup("Team Alpha")
+        let second = state.createGroup("team alpha")
+
+        #expect(first == "Team Alpha")
+        #expect(second == nil)
+        #expect(state.groups.contains("Team Alpha"))
+        #expect(state.groups.filter { $0.caseInsensitiveCompare("team alpha") == .orderedSame }.count == 1)
+    }
+
+    @Test
+    func renameGroupUpdatesExistingAccounts() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    groupName: "Old Team",
+                    usedUnits: 10,
+                    quota: 100
+                )
+            ],
+            mode: .manual
+        )
+
+        state.renameGroup(from: "Old Team", to: "New Team")
+
+        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("New Team") == .orderedSame }))
+        #expect(!state.groups.contains(where: { $0.caseInsensitiveCompare("Old Team") == .orderedSame }))
+        #expect(state.accounts.first?.groupName == "New Team")
+    }
+
+    @Test
+    func duplicateAccountIntoGroupCreatesCopyAndGroup() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    groupName: "Default",
+                    usedUnits: 15,
+                    quota: 100,
+                    email: "a@example.com",
+                    chatGPTAccountID: "acct-a"
+                )
+            ],
+            mode: .manual
+        )
+
+        let duplicatedID = state.duplicateAccount(accountID, intoGroup: "Project X")
+
+        #expect(duplicatedID != nil)
+        #expect(state.accounts.count == 2)
+        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("Project X") == .orderedSame }))
+
+        let duplicated = state.accounts.first(where: { $0.id == duplicatedID })
+        #expect(duplicated?.groupName == "Project X")
+        #expect(duplicated?.name == "A")
+        #expect(duplicated?.email == "a@example.com")
+        #expect(duplicated?.chatGPTAccountID == "acct-a")
+    }
+
+    @Test
+    func snapshotExportRemovesActivitiesField() throws {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 100)
+            ],
+            mode: .manual
+        )
+        _ = state.addAccount(name: "B", quota: 100)
+        #expect(!state.activities.isEmpty)
+
+        let json = try AccountPoolSnapshotCodec.exportJSON(state.snapshot, redactSensitive: false)
+
+        #expect(!json.contains("\"activities\""))
     }
 
     @Test
@@ -790,7 +915,13 @@ struct CodexPoolManagerTests {
         let json = try AccountPoolSnapshotCodec.exportJSON(snapshot)
         let decoded = try AccountPoolSnapshotCodec.importJSON(json)
 
-        #expect(decoded == snapshot)
+        #expect(decoded.accounts.count == snapshot.accounts.count)
+        #expect(decoded.accounts.first?.id == snapshot.accounts.first?.id)
+        #expect(decoded.accounts.first?.name == snapshot.accounts.first?.name)
+        #expect(decoded.accounts.first?.usedUnits == snapshot.accounts.first?.usedUnits)
+        #expect(decoded.accounts.first?.quota == snapshot.accounts.first?.quota)
+        #expect(decoded.mode == snapshot.mode)
+        #expect(decoded.activities.isEmpty)
     }
 
     @Test
@@ -2373,7 +2504,8 @@ extension CodexPoolManagerTests {
         let output = PoolDashboardSwitchLaunchCoordinator.Output(
             switchLaunchLog: "line-1",
             errorMessage: "switch-failed",
-            sessionAuthorizedAuthFileURL: expectedURL
+            sessionAuthorizedAuthFileURL: expectedURL,
+            didSwitchAuth: false
         )
         let coordinator = PoolDashboardMutationCoordinator()
 

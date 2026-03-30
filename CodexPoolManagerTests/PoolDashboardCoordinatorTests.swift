@@ -164,7 +164,8 @@ struct PoolDashboardViewMutationCoordinatorTests {
         let output = PoolDashboardSwitchLaunchFlowCoordinator.Output(
             viewModel: LocalOAuthImportViewModel(),
             viewState: nextViewState,
-            sessionAuthorizedAuthFileURL: expectedSessionURL
+            sessionAuthorizedAuthFileURL: expectedSessionURL,
+            didSwitchAuth: false
         )
         let coordinator = PoolDashboardViewMutationCoordinator()
 
