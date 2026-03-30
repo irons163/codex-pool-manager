@@ -370,13 +370,17 @@ struct AccountUsagePanelView: View {
                 }
             }
 
-            if let email = account.email, !email.isEmpty {
-                Text(email)
-                    .font(.caption)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+        }
+    }
+
+    @ViewBuilder
+    private func accountEmailLabel(_ account: AgentAccount) -> some View {
+        if let email = account.email, !email.isEmpty {
+            Text(email)
+                .font(.caption)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
     }
 
@@ -484,13 +488,15 @@ struct AccountUsagePanelView: View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .center, spacing: 10) {
                 syncExcludedWarning(account)
+                accountEmailLabel(account)
                 Spacer(minLength: 0)
                 accountActionButtons(account)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 syncExcludedWarning(account)
-                HStack {
+                HStack(spacing: 10) {
+                    accountEmailLabel(account)
                     Spacer(minLength: 0)
                     accountActionButtons(account)
                 }
