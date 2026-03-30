@@ -18,6 +18,7 @@ struct PoolDashboardView: View {
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
     @State private var sessionAuthorizedAuthFileURL: URL?
     @State private var selectedWorkspace: Workspace = .authentication
+    @State private var selectedGroupName: String = AgentAccount.defaultGroupName
     @State private var isWorkspaceSectionCollapsed = false
     @State private var isSidebarCollapsed = false
     @State private var suppressNextSnapshotDrivenSwitch = false
@@ -175,6 +176,13 @@ struct PoolDashboardView: View {
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
                 selectedWorkspace = .authentication
+            }
+        }
+        .onChange(of: state.groups) { _, groups in
+            if groups.isEmpty {
+                selectedGroupName = AgentAccount.defaultGroupName
+            } else if !groups.contains(where: { $0.caseInsensitiveCompare(selectedGroupName) == .orderedSame }) {
+                selectedGroupName = groups[0]
             }
         }
         .task(id: autoSyncTaskID) {
@@ -623,9 +631,10 @@ struct PoolDashboardView: View {
     private var accountUsagePanel: some View {
         AccountUsagePanelView(
             newAccountName: $formState.newAccountName,
-            newAccountGroup: $formState.newAccountGroup,
             newAccountQuota: $formState.newAccountQuota,
+            selectedGroupName: $selectedGroupName,
             accounts: state.accounts,
+            groups: state.groups,
             activeAccountID: state.activeAccountID,
             switchLaunchError: viewState.switchLaunchError,
             switchLaunchWarning: viewState.switchLaunchWarning,
@@ -639,14 +648,17 @@ struct PoolDashboardView: View {
             onRemoveAccount: { accountID in
                 handleRemoveAccount(accountID: accountID)
             },
-            onDuplicateAccount: { accountID in
-                handleDuplicateAccount(accountID: accountID)
+            onMoveAccountToGroup: { accountID, group in
+                handleMoveAccount(accountID: accountID, to: group)
+            },
+            onCreateGroup: { name in
+                handleCreateGroup(name: name)
+            },
+            onRenameGroup: { oldName, newName in
+                handleRenameGroup(from: oldName, to: newName)
             },
             accountNameBinding: { accountID in
                 accountBindings.nameBinding(for: accountID)
-            },
-            accountGroupBinding: { accountID in
-                accountBindings.groupNameBinding(for: accountID)
             },
             accountQuotaBinding: { accountID in
                 accountBindings.quotaBinding(for: accountID)
@@ -751,7 +763,7 @@ struct PoolDashboardView: View {
         guard !normalizedName.isEmpty else { return }
         state.addAccount(
             name: normalizedName,
-            groupName: formState.newAccountGroup,
+            groupName: selectedGroupName,
             quota: quota
         )
         formState.resetNewAccountInput()
@@ -761,8 +773,19 @@ struct PoolDashboardView: View {
         applyQuickAction(.removeAccount(accountID))
     }
 
-    private func handleDuplicateAccount(accountID: UUID) {
-        _ = state.duplicateAccount(accountID)
+    private func handleMoveAccount(accountID: UUID, to groupName: String) {
+        state.updateAccount(accountID, groupName: groupName)
+    }
+
+    private func handleCreateGroup(name: String) {
+        if let created = state.createGroup(name) {
+            selectedGroupName = created
+        }
+    }
+
+    private func handleRenameGroup(from oldName: String, to newName: String) {
+        state.renameGroup(from: oldName, to: newName)
+        selectedGroupName = AgentAccount.normalizedGroupName(newName)
     }
 
     private func handleSimulateUsage() {

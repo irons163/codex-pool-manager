@@ -25,6 +25,10 @@
 "group.title" = "群組";
 "group.all" = "全部";
 "group.placeholder" = "群組名稱";
+"group.add" = "新增群組";
+"group.rename" = "重新命名群組";
+"group.rename_action" = "重新命名";
+"group.move_to_current" = "移動到群組";
 
 "add.new_account_name" = "新帳號名稱";
 "add.group_name" = "群組";

@@ -195,6 +195,7 @@ struct DestructiveActionLatch {
 
 struct AccountPoolSnapshot: Codable, Equatable {
     var accounts: [AgentAccount]
+    var groups: [String]
     var activities: [PoolActivity]
     var mode: SwitchMode
     var activeAccountID: UUID?
@@ -211,6 +212,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
 
     init(
         accounts: [AgentAccount],
+        groups: [String],
         activities: [PoolActivity],
         mode: SwitchMode,
         activeAccountID: UUID?,
@@ -226,6 +228,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         autoSyncIntervalSeconds: TimeInterval = 30
     ) {
         self.accounts = accounts
+        self.groups = groups
         self.activities = activities
         self.mode = mode
         self.activeAccountID = activeAccountID
@@ -244,6 +247,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         accounts = try container.decode([AgentAccount].self, forKey: .accounts)
+        groups = try container.decodeIfPresent([String].self, forKey: .groups) ?? []
         activities = try container.decodeIfPresent([PoolActivity].self, forKey: .activities) ?? []
         mode = try container.decode(SwitchMode.self, forKey: .mode)
         activeAccountID = try container.decodeIfPresent(UUID.self, forKey: .activeAccountID)
@@ -262,6 +266,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     func redactingAPITokens() -> AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts.map { $0.redactingAPIToken() },
+            groups: groups,
             activities: activities,
             mode: mode,
             activeAccountID: activeAccountID,
@@ -281,6 +286,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
 
 struct AccountPoolState {
     private(set) var accounts: [AgentAccount]
+    private(set) var groups: [String]
     private(set) var activities: [PoolActivity]
     private(set) var mode: SwitchMode
     private(set) var activeAccountID: UUID?
@@ -308,6 +314,7 @@ struct AccountPoolState {
         autoSyncIntervalSeconds: TimeInterval = 30
     ) {
         self.accounts = accounts
+        self.groups = []
         self.activities = []
         self.mode = mode
         self.activeAccountID = nil
@@ -321,10 +328,12 @@ struct AccountPoolState {
         self.switchWithoutLaunching = switchWithoutLaunching
         self.autoSyncEnabled = autoSyncEnabled
         self.autoSyncIntervalSeconds = max(5, min(300, autoSyncIntervalSeconds))
+        rebuildGroups()
     }
 
     init(snapshot: AccountPoolSnapshot) {
         self.accounts = snapshot.accounts
+        self.groups = snapshot.groups
         self.activities = snapshot.activities
         self.mode = snapshot.mode
         self.activeAccountID = snapshot.activeAccountID
@@ -338,6 +347,7 @@ struct AccountPoolState {
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
+        rebuildGroups()
         evaluate(now: .now)
     }
 
@@ -387,6 +397,7 @@ struct AccountPoolState {
     var snapshot: AccountPoolSnapshot {
         AccountPoolSnapshot(
             accounts: accounts,
+            groups: groups,
             activities: activities,
             mode: mode,
             activeAccountID: activeAccountID,
@@ -433,6 +444,29 @@ struct AccountPoolState {
 
     mutating func setAutoSyncIntervalSeconds(_ value: TimeInterval, now: Date = .now) {
         autoSyncIntervalSeconds = max(5, min(300, value))
+        evaluate(now: now)
+    }
+
+    @discardableResult
+    mutating func createGroup(_ name: String) -> String? {
+        let normalized = AgentAccount.normalizedGroupName(name)
+        if groups.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+            return nil
+        }
+        groups.append(normalized)
+        return normalized
+    }
+
+    mutating func renameGroup(from oldName: String, to newName: String, now: Date = .now) {
+        let normalizedOld = AgentAccount.normalizedGroupName(oldName)
+        let normalizedNew = AgentAccount.normalizedGroupName(newName)
+        guard normalizedOld.caseInsensitiveCompare(normalizedNew) != .orderedSame else { return }
+        guard !groups.contains(where: { $0.caseInsensitiveCompare(normalizedNew) == .orderedSame }) else { return }
+        guard let index = groups.firstIndex(where: { $0.caseInsensitiveCompare(normalizedOld) == .orderedSame }) else { return }
+        groups[index] = normalizedNew
+        for accountIndex in accounts.indices where accounts[accountIndex].groupName.caseInsensitiveCompare(normalizedOld) == .orderedSame {
+            accounts[accountIndex].groupName = normalizedNew
+        }
         evaluate(now: now)
     }
 
@@ -488,10 +522,11 @@ struct AccountPoolState {
     ) -> UUID {
         let normalizedQuota = max(1, quota)
         let normalizedUsedUnits = max(0, min(usedUnits, normalizedQuota))
+        let normalizedGroupName = ensureGroupExists(groupName)
         let account = AgentAccount(
             id: UUID(),
             name: name.isEmpty ? L10n.text("account.unnamed") : name,
-            groupName: groupName,
+            groupName: normalizedGroupName,
             usedUnits: normalizedUsedUnits,
             quota: normalizedQuota,
             email: email,
@@ -523,6 +558,7 @@ struct AccountPoolState {
             focusLockedAccountID = nil
         }
 
+        rebuildGroups()
         evaluate(now: now)
     }
 
@@ -550,7 +586,7 @@ struct AccountPoolState {
             accounts[index].name = name.isEmpty ? L10n.text("account.unnamed") : name
         }
         if let groupName {
-            accounts[index].groupName = AgentAccount.normalizedGroupName(groupName)
+            accounts[index].groupName = ensureGroupExists(groupName)
         }
         if let quota {
             accounts[index].quota = max(1, quota)
@@ -766,5 +802,28 @@ struct AccountPoolState {
         if activities.count > 100 {
             activities.removeLast(activities.count - 100)
         }
+    }
+
+    @discardableResult
+    private mutating func ensureGroupExists(_ name: String) -> String {
+        let normalized = AgentAccount.normalizedGroupName(name)
+        if !groups.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+            groups.append(normalized)
+        }
+        return normalized
+    }
+
+    private mutating func rebuildGroups() {
+        var nextGroups = groups.map { AgentAccount.normalizedGroupName($0) }
+        if !nextGroups.contains(where: { $0.caseInsensitiveCompare(AgentAccount.defaultGroupName) == .orderedSame }) {
+            nextGroups.append(AgentAccount.defaultGroupName)
+        }
+        for account in accounts {
+            let normalized = AgentAccount.normalizedGroupName(account.groupName)
+            if !nextGroups.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+                nextGroups.append(normalized)
+            }
+        }
+        groups = nextGroups
     }
 }

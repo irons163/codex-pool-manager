@@ -25,6 +25,10 @@
 "group.title" = "グループ";
 "group.all" = "すべて";
 "group.placeholder" = "グループ名";
+"group.add" = "グループ追加";
+"group.rename" = "グループ名変更";
+"group.rename_action" = "変更";
+"group.move_to_current" = "グループへ移動";
 
 "add.new_account_name" = "新しいアカウント名";
 "add.group_name" = "グループ";

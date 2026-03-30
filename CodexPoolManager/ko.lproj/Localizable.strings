@@ -25,6 +25,10 @@
 "group.title" = "그룹";
 "group.all" = "전체";
 "group.placeholder" = "그룹 이름";
+"group.add" = "그룹 추가";
+"group.rename" = "그룹 이름 변경";
+"group.rename_action" = "변경";
+"group.move_to_current" = "그룹으로 이동";
 
 "add.new_account_name" = "새 계정 이름";
 "add.group_name" = "그룹";

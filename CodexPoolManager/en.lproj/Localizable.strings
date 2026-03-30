@@ -25,6 +25,10 @@
 "group.title" = "Group";
 "group.all" = "All";
 "group.placeholder" = "Group name";
+"group.add" = "Add Group";
+"group.rename" = "Rename group";
+"group.rename_action" = "Rename";
+"group.move_to_current" = "Move to Group";
 
 "add.new_account_name" = "New account name";
 "add.group_name" = "Group";

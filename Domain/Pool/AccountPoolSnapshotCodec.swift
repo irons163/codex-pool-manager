@@ -58,9 +58,11 @@ enum AccountPoolSnapshotCodec {
             return AgentAccount(
                 id: account.id,
                 name: account.name,
+                groupName: account.groupName,
                 usedUnits: 0,
                 quota: 100,
                 apiToken: account.apiToken,
+                email: account.email,
                 chatGPTAccountID: account.chatGPTAccountID,
                 usageWindowName: nil,
                 usageWindowResetAt: nil
@@ -69,6 +71,7 @@ enum AccountPoolSnapshotCodec {
 
         return AccountPoolSnapshot(
             accounts: normalizedAccounts,
+            groups: snapshot.groups,
             activities: snapshot.activities,
             mode: snapshot.mode,
             activeAccountID: snapshot.activeAccountID,
