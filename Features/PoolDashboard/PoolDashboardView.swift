@@ -741,6 +741,7 @@ struct PoolDashboardView: View {
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
         applyLifecycleOnAppearOutput(output)
+        WidgetBridgePublisher.publish(from: state.snapshot)
     }
 
     private func migrateDefaultOAuthClientIDIfNeeded() {
@@ -751,6 +752,7 @@ struct PoolDashboardView: View {
     }
 
     private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
+        WidgetBridgePublisher.publish(from: snapshot)
         let output = lifecycleFlowCoordinator.onSnapshotChanged(
             snapshot: snapshot,
             state: state,
