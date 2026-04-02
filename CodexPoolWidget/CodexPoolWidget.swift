@@ -5,27 +5,47 @@ struct WidgetBridgeSnapshot: Codable {
     let updatedAt: Date
     let status: String
     let source: String
+    let mode: String?
+    let totalAccounts: Int?
+    let availableAccounts: Int?
+    let overallUsagePercent: Int?
+    let activeAccountName: String?
 }
 
 private enum WidgetBridgeSnapshotStore {
-    static let appGroupIdentifier = "group.com.irons.codexpoolbridge"
-    static let snapshotFileName = "snapshot.json"
+    static let bridgeURL = URL(string: "http://127.0.0.1:38477/widget-snapshot")!
+    static let requestTimeout: TimeInterval = 0.35
 
     static func load() -> WidgetBridgeSnapshot? {
-        guard let containerURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
-        ) else {
-            return nil
+        var request = URLRequest(url: bridgeURL)
+        request.timeoutInterval = requestTimeout
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        let sessionConfiguration = URLSessionConfiguration.ephemeral
+        sessionConfiguration.timeoutIntervalForRequest = requestTimeout
+        sessionConfiguration.timeoutIntervalForResource = requestTimeout
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var resolvedSnapshot: WidgetBridgeSnapshot?
+
+        let task = URLSession(configuration: sessionConfiguration).dataTask(with: request) { data, response, _ in
+            defer { semaphore.signal() }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200..<300).contains(httpResponse.statusCode),
+                  let data,
+                  !data.isEmpty else {
+                return
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            resolvedSnapshot = try? decoder.decode(WidgetBridgeSnapshot.self, from: data)
         }
 
-        let url = containerURL.appendingPathComponent(snapshotFileName)
-        guard let data = try? Data(contentsOf: url) else {
-            return nil
-        }
-
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(WidgetBridgeSnapshot.self, from: data)
+        task.resume()
+        _ = semaphore.wait(timeout: .now() + requestTimeout)
+        return resolvedSnapshot
     }
 }
 
@@ -41,7 +61,12 @@ struct CodexPoolWidgetProvider: TimelineProvider {
             snapshot: WidgetBridgeSnapshot(
                 updatedAt: Date(),
                 status: "Loading status...",
-                source: "CodexPoolManager"
+                source: "CodexPoolManager",
+                mode: "intelligent",
+                totalAccounts: 0,
+                availableAccounts: 0,
+                overallUsagePercent: 0,
+                activeAccountName: nil
             )
         )
     }
@@ -74,13 +99,61 @@ struct CodexPoolWidgetEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Codex Pool")
-                .font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Codex Pool")
+                    .font(.headline)
+                Spacer(minLength: 8)
+                Text(entry.date, style: .time)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
 
             if let snapshot = entry.snapshot {
+                if let totalAccounts = snapshot.totalAccounts,
+                   let availableAccounts = snapshot.availableAccounts,
+                   let overallUsagePercent = snapshot.overallUsagePercent {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Available")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("\(availableAccounts)/\(totalAccounts)")
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                        }
+                        Spacer(minLength: 0)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Usage")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("\(overallUsagePercent)%")
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                        }
+                    }
+                }
+
+                if let activeAccountName = snapshot.activeAccountName, !activeAccountName.isEmpty {
+                    Text(activeAccountName)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                } else {
+                    Text(snapshot.status)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                }
+
+                if let mode = snapshot.mode, !mode.isEmpty {
+                    Text("Mode: \(mode.capitalized)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Text(snapshot.status)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
 
                 Text("Updated \(snapshot.updatedAt, style: .relative)")
                     .font(.caption)
@@ -93,11 +166,6 @@ struct CodexPoolWidgetEntryView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Text(entry.date, style: .time)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding()

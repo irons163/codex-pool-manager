@@ -91,13 +91,6 @@
 			remoteGlobalIDString = 4AFBA5812F72203A008D97C1;
 			remoteInfo = CodexPoolManager;
 		};
-		5A17146B60D713D7C0BF7552 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 4AFBA57A2F72203A008D97C1 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = E9B0E371005641ECDA718F8F;
-			remoteInfo = CodexPoolWidget;
-		};
 		8A87FE265BF67BD92F24F282 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4AFBA57A2F72203A008D97C1 /* Project object */;
@@ -200,22 +193,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4AFBA5842F72203A008D97C1 /* CodexPoolManager */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = CodexPoolManager;
 			sourceTree = "<group>";
 		};
 		4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = CodexPoolManagerTests;
 			sourceTree = "<group>";
 		};
 		4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = CodexPoolManagerUITests;
 			sourceTree = "<group>";
 		};
@@ -429,7 +416,6 @@
 				6959EA954386004CC3A082DE /* ContentView.swift */,
 				C7AE6F1F4BA7DCD1EB6CDE16 /* CodexPoolWidgetHost.entitlements */,
 			);
-			name = CodexPoolWidgetHost;
 			path = CodexPoolWidgetHost;
 			sourceTree = "<group>";
 		};
@@ -980,7 +966,6 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager;
 				PRODUCT_NAME = CodexPoolManager;
-				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -1017,7 +1002,6 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager;
 				PRODUCT_NAME = CodexPoolManager;
-				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

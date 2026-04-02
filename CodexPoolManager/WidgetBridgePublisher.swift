@@ -1,39 +1,193 @@
 import Foundation
+import Network
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 enum WidgetBridgePublisher {
-    static let appGroupIdentifier = "group.com.irons.codexpoolbridge"
-    static let snapshotFileName = "snapshot.json"
+    static let widgetKind = "CodexPoolWidget"
+    private static let stateLock = NSLock()
+    private static let minimumPublishInterval: TimeInterval = 30
+    private static var lastPublishedSignature: String?
+    private static var lastPublishedAt: Date = .distantPast
 
     struct Snapshot: Codable {
         let updatedAt: Date
         let status: String
         let source: String
+        let mode: String?
+        let totalAccounts: Int?
+        let availableAccounts: Int?
+        let overallUsagePercent: Int?
+        let activeAccountName: String?
+    }
+
+    static func configureBridge() {
+        WidgetBridgeLocalServer.shared.startIfNeeded()
     }
 
     static func publishFromMainApp(status: String) {
         let snapshot = Snapshot(
             updatedAt: Date(),
             status: status,
-            source: "CodexPoolManager"
+            source: "CodexPoolManager",
+            mode: nil,
+            totalAccounts: nil,
+            availableAccounts: nil,
+            overallUsagePercent: nil,
+            activeAccountName: nil
         )
+        publish(snapshot)
+    }
+
+    static func publish(from poolSnapshot: AccountPoolSnapshot) {
+        let includedAccounts = poolSnapshot.accounts.filter { !$0.isUsageSyncExcluded }
+        let totalAccounts = includedAccounts.count
+        let availableAccounts = includedAccounts.filter { $0.remainingUnits > 0 }.count
+        let totalUsedUnits = includedAccounts.reduce(0) { $0 + $1.usedUnits }
+        let totalQuota = includedAccounts.reduce(0) { $0 + $1.quota }
+        let overallUsagePercent: Int
+        if totalQuota > 0 {
+            overallUsagePercent = Int((Double(totalUsedUnits) / Double(totalQuota) * 100).rounded())
+        } else {
+            overallUsagePercent = 0
+        }
+
+        let activeAccountName = poolSnapshot.accounts.first(where: { $0.id == poolSnapshot.activeAccountID })?.name
+        let status = activeAccountName.map { "Active: \($0)" } ?? "No active account"
+
+        let snapshot = Snapshot(
+            updatedAt: Date(),
+            status: status,
+            source: "CodexPoolManager",
+            mode: poolSnapshot.mode.rawValue,
+            totalAccounts: totalAccounts,
+            availableAccounts: availableAccounts,
+            overallUsagePercent: overallUsagePercent,
+            activeAccountName: activeAccountName
+        )
+        publish(snapshot)
+    }
+
+    private static func publish(_ snapshot: Snapshot) {
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            return
+        }
+
+        let signature = snapshotSignature(for: snapshot)
+        let now = Date()
+        stateLock.lock()
+        let shouldThrottle = lastPublishedSignature == signature &&
+            now.timeIntervalSince(lastPublishedAt) < minimumPublishInterval
+        stateLock.unlock()
+        guard !shouldThrottle else { return }
 
         do {
-            let groupDirectory = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Library/Group Containers/\(appGroupIdentifier)", isDirectory: true)
-
-            try FileManager.default.createDirectory(
-                at: groupDirectory,
-                withIntermediateDirectories: true
-            )
-
-            let snapshotURL = groupDirectory.appendingPathComponent(snapshotFileName)
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
 
             let data = try encoder.encode(snapshot)
-            try data.write(to: snapshotURL, options: .atomic)
+            WidgetBridgeLocalServer.shared.startIfNeeded()
+            WidgetBridgeLocalServer.shared.update(snapshotData: data)
+
+            stateLock.lock()
+            lastPublishedSignature = signature
+            lastPublishedAt = now
+            stateLock.unlock()
+
+            #if canImport(WidgetKit)
+            WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+            #endif
         } catch {
             NSLog("WidgetBridgePublisher failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func snapshotSignature(for snapshot: Snapshot) -> String {
+        [
+            snapshot.status,
+            snapshot.source,
+            snapshot.mode ?? "",
+            snapshot.activeAccountName ?? "",
+            snapshot.totalAccounts.map(String.init) ?? "",
+            snapshot.availableAccounts.map(String.init) ?? "",
+            snapshot.overallUsagePercent.map(String.init) ?? ""
+        ].joined(separator: "|")
+    }
+}
+
+private final class WidgetBridgeLocalServer {
+    static let shared = WidgetBridgeLocalServer()
+
+    private static let port: NWEndpoint.Port = 38477
+    private static let listenerQueue = DispatchQueue(label: "WidgetBridgeLocalServer.queue")
+    private static let endpoint = "http://127.0.0.1:\(port.rawValue)/widget-snapshot"
+
+    private var listener: NWListener?
+    private var latestSnapshotData = Data()
+    private var hasStarted = false
+
+    private init() {}
+
+    func startIfNeeded() {
+        Self.listenerQueue.async {
+            guard !self.hasStarted else { return }
+            self.hasStarted = true
+
+            do {
+                let parameters = NWParameters.tcp
+                parameters.allowLocalEndpointReuse = true
+
+                let listener = try NWListener(using: parameters, on: Self.port)
+                listener.stateUpdateHandler = { state in
+                    switch state {
+                    case .ready:
+                        NSLog("WidgetBridgeLocalServer listening at \(Self.endpoint)")
+                    case .failed(let error):
+                        NSLog("WidgetBridgeLocalServer failed: \(error.localizedDescription)")
+                    default:
+                        break
+                    }
+                }
+                listener.newConnectionHandler = { [weak self] connection in
+                    self?.serve(connection: connection)
+                }
+
+                self.listener = listener
+                listener.start(queue: Self.listenerQueue)
+            } catch {
+                NSLog("WidgetBridgeLocalServer failed to start: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func update(snapshotData: Data) {
+        Self.listenerQueue.async {
+            self.latestSnapshotData = snapshotData
+        }
+    }
+
+    private func serve(connection: NWConnection) {
+        connection.start(queue: Self.listenerQueue)
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] _, _, _, _ in
+            guard let self else {
+                connection.cancel()
+                return
+            }
+
+            let payload = self.latestSnapshotData
+            let statusLine = payload.isEmpty ? "HTTP/1.1 204 No Content\r\n" : "HTTP/1.1 200 OK\r\n"
+            var headers = statusLine
+            headers += "Content-Type: application/json\r\n"
+            headers += "Content-Length: \(payload.count)\r\n"
+            headers += "Connection: close\r\n\r\n"
+
+            var response = Data(headers.utf8)
+            response.append(payload)
+
+            connection.send(content: response, completion: .contentProcessed { _ in
+                connection.cancel()
+            })
         }
     }
 }

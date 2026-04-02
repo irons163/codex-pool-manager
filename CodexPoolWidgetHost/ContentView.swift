@@ -5,27 +5,47 @@ private struct WidgetBridgeSnapshot: Codable {
     let updatedAt: Date
     let status: String
     let source: String
+    let mode: String?
+    let totalAccounts: Int?
+    let availableAccounts: Int?
+    let overallUsagePercent: Int?
+    let activeAccountName: String?
 }
 
 private enum WidgetBridgeSnapshotStore {
-    static let appGroupIdentifier = "group.com.irons.codexpoolbridge"
-    static let snapshotFileName = "snapshot.json"
+    static let bridgeURL = URL(string: "http://127.0.0.1:38477/widget-snapshot")!
+    static let requestTimeout: TimeInterval = 0.5
 
     static func load() -> WidgetBridgeSnapshot? {
-        guard let containerURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
-        ) else {
-            return nil
+        var request = URLRequest(url: bridgeURL)
+        request.timeoutInterval = requestTimeout
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        let sessionConfiguration = URLSessionConfiguration.ephemeral
+        sessionConfiguration.timeoutIntervalForRequest = requestTimeout
+        sessionConfiguration.timeoutIntervalForResource = requestTimeout
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var resolvedSnapshot: WidgetBridgeSnapshot?
+
+        let task = URLSession(configuration: sessionConfiguration).dataTask(with: request) { data, response, _ in
+            defer { semaphore.signal() }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200..<300).contains(httpResponse.statusCode),
+                  let data,
+                  !data.isEmpty else {
+                return
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            resolvedSnapshot = try? decoder.decode(WidgetBridgeSnapshot.self, from: data)
         }
 
-        let url = containerURL.appendingPathComponent(snapshotFileName)
-        guard let data = try? Data(contentsOf: url) else {
-            return nil
-        }
-
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(WidgetBridgeSnapshot.self, from: data)
+        task.resume()
+        _ = semaphore.wait(timeout: .now() + requestTimeout)
+        return resolvedSnapshot
     }
 }
 
@@ -40,6 +60,19 @@ struct ContentView: View {
             if let snapshot {
                 Text("Status: \(snapshot.status)")
                 Text("Source: \(snapshot.source)")
+                if let activeAccountName = snapshot.activeAccountName {
+                    Text("Active: \(activeAccountName)")
+                }
+                if let mode = snapshot.mode {
+                    Text("Mode: \(mode.capitalized)")
+                }
+                if let totalAccounts = snapshot.totalAccounts,
+                   let availableAccounts = snapshot.availableAccounts {
+                    Text("Available: \(availableAccounts)/\(totalAccounts)")
+                }
+                if let overallUsagePercent = snapshot.overallUsagePercent {
+                    Text("Overall Usage: \(overallUsagePercent)%")
+                }
                 Text("Updated: \(snapshot.updatedAt.formatted(date: .abbreviated, time: .standard))")
                     .foregroundStyle(.secondary)
             } else {

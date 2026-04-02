@@ -13,6 +13,7 @@ struct CodexPoolManagerApp: App {
     
     init() {
         LegacySandboxPreferencesMigrator.migrateIfNeeded()
+        WidgetBridgePublisher.configureBridge()
         WidgetBridgePublisher.publishFromMainApp(status: "Codex Pool Manager is running")
     }
 
