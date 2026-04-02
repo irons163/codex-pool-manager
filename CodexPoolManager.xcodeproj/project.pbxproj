@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3522DE181F61CBFFACFACA8F /* CodexPoolWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4969AB27C103A272942164A3 /* CodexPoolWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */; };
 		4A3753432F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */; };
 		4A3753452F743C30008F6AF6 /* PoolDashboardViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */; };
 		4A3753472F744294008F6AF6 /* PoolDashboardFormState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753462F744294008F6AF6 /* PoolDashboardFormState.swift */; };
@@ -68,6 +70,7 @@
 		4AB61F012F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */; };
 		4AB61F132F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */; };
 		4AB61F152F741395001AC4CB /* PoolDashboardMutationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */; };
+		67456F3EC374EED207565FB6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,9 +88,32 @@
 			remoteGlobalIDString = 4AFBA5812F72203A008D97C1;
 			remoteInfo = CodexPoolManager;
 		};
+		5A17146B60D713D7C0BF7552 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4AFBA57A2F72203A008D97C1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9B0E371005641ECDA718F8F;
+			remoteInfo = CodexPoolWidget;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		D85BDDFF05105E599EACEECE /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3522DE181F61CBFFACFACA8F /* CodexPoolWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0DD2922FE9D177DB7B5607A3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardActionCoordinator.swift; sourceTree = "<group>"; };
 		4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardViewState.swift; sourceTree = "<group>"; };
 		4A3753462F744294008F6AF6 /* PoolDashboardFormState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardFormState.swift; sourceTree = "<group>"; };
@@ -152,27 +178,43 @@
 		4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CodexPoolWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CodexPoolWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4AFBA5842F72203A008D97C1 /* CodexPoolManager */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = CodexPoolManager;
 			sourceTree = "<group>";
 		};
 		4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = CodexPoolManagerTests;
 			sourceTree = "<group>";
 		};
 		4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = CodexPoolManagerUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		3B49326A8986DED7E521AEE1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				67456F3EC374EED207565FB6 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4AFBA57F2F72203A008D97C1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -197,6 +239,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4512BE5F92EFB724DB47DC47 /* CodexPoolWidget */ = {
+			isa = PBXGroup;
+			children = (
+				EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */,
+				0DD2922FE9D177DB7B5607A3 /* Info.plist */,
+			);
+			name = CodexPoolWidget;
+			path = CodexPoolWidget;
+			sourceTree = "<group>";
+		};
 		4AB61EA82F739CB1001AC4CB /* Domain */ = {
 			isa = PBXGroup;
 			children = (
@@ -329,6 +381,8 @@
 				4AB61EAA2F739CB1001AC4CB /* Infrastructure */,
 				4AB61EAD2F739CB1001AC4CB /* Features */,
 				4AB61EB02F739CED001AC4CB /* ContentView.swift */,
+				8C30438DAB75AA44B0C8270A /* Frameworks */,
+				4512BE5F92EFB724DB47DC47 /* CodexPoolWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -338,8 +392,25 @@
 				4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */,
 				4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */,
 				4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */,
+				5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8C30438DAB75AA44B0C8270A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9987D367F02FA9D9499C55FC /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9987D367F02FA9D9499C55FC /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */,
+			);
+			name = "OS X";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -352,17 +423,17 @@
 				4AFBA57E2F72203A008D97C1 /* Sources */,
 				4AFBA57F2F72203A008D97C1 /* Frameworks */,
 				4AFBA5802F72203A008D97C1 /* Resources */,
+				D85BDDFF05105E599EACEECE /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				845D4F6CE53E9D7078D53619 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
 			);
 			name = CodexPoolManager;
-			packageProductDependencies = (
-			);
 			productName = CodexPoolManager;
 			productReference = 4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */;
 			productType = "com.apple.product-type.application";
@@ -384,8 +455,6 @@
 				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
 			);
 			name = CodexPoolManagerTests;
-			packageProductDependencies = (
-			);
 			productName = CodexPoolManagerTests;
 			productReference = 4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -407,11 +476,26 @@
 				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
 			);
 			name = CodexPoolManagerUITests;
-			packageProductDependencies = (
-			);
 			productName = CodexPoolManagerUITests;
 			productReference = 4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		E9B0E371005641ECDA718F8F /* CodexPoolWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 60876FCE2E52C5EA3173F38D /* Build configuration list for PBXNativeTarget "CodexPoolWidget" */;
+			buildPhases = (
+				B57DCEA181549466CA8CB7E3 /* Sources */,
+				3B49326A8986DED7E521AEE1 /* Frameworks */,
+				124EF1FC11D7152B7FC58369 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodexPoolWidget;
+			productName = CodexPoolWidget;
+			productReference = 5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -459,11 +543,19 @@
 				4AFBA5812F72203A008D97C1 /* CodexPoolManager */,
 				4AFBA5902F72203C008D97C1 /* CodexPoolManagerTests */,
 				4AFBA59A2F72203C008D97C1 /* CodexPoolManagerUITests */,
+				E9B0E371005641ECDA718F8F /* CodexPoolWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		124EF1FC11D7152B7FC58369 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4AFBA5802F72203A008D97C1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -570,6 +662,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B57DCEA181549466CA8CB7E3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4969AB27C103A272942164A3 /* CodexPoolWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -583,9 +683,53 @@
 			target = 4AFBA5812F72203A008D97C1 /* CodexPoolManager */;
 			targetProxy = 4AFBA59C2F72203C008D97C1 /* PBXContainerItemProxy */;
 		};
+		845D4F6CE53E9D7078D53619 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CodexPoolWidget;
+			target = E9B0E371005641ECDA718F8F /* CodexPoolWidget */;
+			targetProxy = 5A17146B60D713D7C0BF7552 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		48474F48D3CA742635689422 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CodexPoolWidget/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager.CodexPoolWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4AEA257B21F4EB876951EF61 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CodexPoolWidget/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager.CodexPoolWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		4AFBA5A32F72203C008D97C1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -887,6 +1031,15 @@
 			buildConfigurations = (
 				4AFBA5AC2F72203C008D97C1 /* Debug */,
 				4AFBA5AD2F72203C008D97C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		60876FCE2E52C5EA3173F38D /* Build configuration list for PBXNativeTarget "CodexPoolWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4AEA257B21F4EB876951EF61 /* Release */,
+				48474F48D3CA742635689422 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
