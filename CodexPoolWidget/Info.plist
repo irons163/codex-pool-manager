@@ -20,6 +20,11 @@
     <string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>UIDeviceFamily</key>
+    <array>
+        <integer>2</integer>
+        <integer>6</integer>
+    </array>
     <key>NSExtension</key>
     <dict>
         <key>NSExtensionPointIdentifier</key>

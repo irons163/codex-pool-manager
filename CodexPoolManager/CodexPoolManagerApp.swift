@@ -10,6 +10,10 @@ import SwiftUI
 @main
 struct CodexPoolManagerApp: App {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
+    
+    init() {
+        WidgetBridgePublisher.publishFromMainApp(status: "Codex Pool Manager is running")
+    }
 
     var body: some Scene {
         WindowGroup {
