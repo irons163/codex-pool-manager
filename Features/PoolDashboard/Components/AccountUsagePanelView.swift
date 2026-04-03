@@ -1,17 +1,13 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
-    private enum SortMode: CaseIterable, Identifiable {
+    private enum SortMode: String, CaseIterable, Identifiable {
         case joinedAt
         case name
         case remainingHigh
 
         var id: String {
-            switch self {
-            case .joinedAt: "joinedAt"
-            case .name: "name"
-            case .remainingHigh: "remainingHigh"
-            }
+            rawValue
         }
 
         var title: String {
@@ -23,19 +19,14 @@ struct AccountUsagePanelView: View {
         }
     }
 
-    private enum LayoutMode: CaseIterable, Identifiable {
+    private enum LayoutMode: String, CaseIterable, Identifiable {
         case single
         case double
         case triple
         case quad
 
         var id: String {
-            switch self {
-            case .single: "single"
-            case .double: "double"
-            case .triple: "triple"
-            case .quad: "quad"
-            }
+            rawValue
         }
 
         var title: String {
@@ -57,8 +48,10 @@ struct AccountUsagePanelView: View {
         }
     }
 
-    @State private var sortMode: SortMode = .joinedAt
-    @State private var layoutMode: LayoutMode = .single
+    @AppStorage("pool_dashboard.account_usage.sort_mode")
+    private var persistedSortModeRawValue: String = SortMode.joinedAt.rawValue
+    @AppStorage("pool_dashboard.account_usage.layout_mode")
+    private var persistedLayoutModeRawValue: String = LayoutMode.single.rawValue
     @State private var newGroupName = ""
     @State private var renameGroupName = ""
     @State private var draftAccountNames: [UUID: String] = [:]
@@ -88,6 +81,21 @@ struct AccountUsagePanelView: View {
     let isPercentUsageAccount: (AgentAccount) -> Bool
     let remainingLabel: (AgentAccount) -> String
     let usageProgressColor: (AgentAccount) -> Color
+
+    private var sortMode: SortMode {
+        SortMode(rawValue: persistedSortModeRawValue) ?? .joinedAt
+    }
+
+    private var layoutMode: LayoutMode {
+        LayoutMode(rawValue: persistedLayoutModeRawValue) ?? .single
+    }
+
+    private var layoutModeBinding: Binding<LayoutMode> {
+        Binding(
+            get: { layoutMode },
+            set: { persistedLayoutModeRawValue = $0.rawValue }
+        )
+    }
 
     var body: some View {
         GroupBox {
@@ -162,7 +170,7 @@ struct AccountUsagePanelView: View {
             Menu {
                 ForEach(SortMode.allCases) { mode in
                     Button {
-                        sortMode = mode
+                        persistedSortModeRawValue = mode.rawValue
                     } label: {
                         if sortMode == mode {
                             Label(mode.title, systemImage: "checkmark")
@@ -193,7 +201,7 @@ struct AccountUsagePanelView: View {
             }
             .menuStyle(.borderlessButton)
 
-            Picker(L10n.text("layout.title"), selection: $layoutMode) {
+            Picker(L10n.text("layout.title"), selection: layoutModeBinding) {
                 ForEach(LayoutMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }
