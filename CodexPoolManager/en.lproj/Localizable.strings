@@ -111,7 +111,10 @@
 "strategy.switch_mode" = "Switch Mode";
 "strategy.parameters" = "Strategy Parameters";
 "strategy.general_settings" = "General Settings";
-"strategy.low_usage_threshold_format" = "Intelligent remaining threshold: %d%%";
+"strategy.low_usage_threshold_format" = "Intelligent switch threshold: %d%%";
+"strategy.low_usage_alert_threshold_format" = "Low remaining usage alert threshold: %d%%";
+"strategy.low_usage_state_safe_format" = "Current remaining is %d%%, above the %d%% threshold.";
+"strategy.low_usage_state_low_format" = "Current remaining is %d%%, below the %d%% threshold.";
 "strategy.switch_threshold_format" = "Intelligent minimum usage-gap threshold: %d%%";
 "strategy.smart_recommendation.title" = "Smart Recommendation";
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
@@ -285,6 +288,7 @@
 "usage.sync.error.unauthorized" = "Authorization failed. Please check your API token.";
 "usage.sync.error.rate_limited" = "Rate limit reached. Please try again later.";
 "usage.sync.error.network" = "Network error. Please check your connection.";
+"usage.sync.error.timeout" = "Sync timed out. Please try again.";
 "usage.sync.error.unknown" = "Sync failed. Please try again later.";
 "usage.sync.excluded.missing_token" = "Missing API token. Excluded from sync and scheduling calculations.";
 "usage.sync.excluded.missing_account_id" = "Missing Account ID. Excluded from sync and scheduling calculations.";

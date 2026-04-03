@@ -47,6 +47,15 @@ struct PoolDashboardStrategyBindingAdapter {
         )
     }
 
+    var lowUsageAlertThreshold: Binding<Double> {
+        Binding(
+            get: { state.wrappedValue.lowUsageAlertThresholdRatio },
+            set: { newValue in
+                updateSwitchSettings(lowUsageAlertThresholdRatio: newValue)
+            }
+        )
+    }
+
     var minUsageDelta: Binding<Double> {
         Binding(
             get: { state.wrappedValue.minUsageRatioDeltaToSwitch },
@@ -86,11 +95,13 @@ struct PoolDashboardStrategyBindingAdapter {
     private func updateSwitchSettings(
         minSwitchInterval: Double? = nil,
         lowUsageThresholdRatio: Double? = nil,
+        lowUsageAlertThresholdRatio: Double? = nil,
         minUsageRatioDeltaToSwitch: Double? = nil
     ) {
         state.wrappedValue.updateSwitchSettings(
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
+            lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch
         )
     }

@@ -2,6 +2,7 @@ import Foundation
 
 struct PoolDashboardViewState {
     var showLowUsageAlert = false
+    var lowUsageAlertMessage: String?
     var isSyncingUsage = false
     var isSigningInOAuth = false
 

@@ -2,6 +2,9 @@ import SwiftUI
 import UserNotifications
 
 struct PoolDashboardView: View {
+    private enum SyncPolicy {
+        static let timeoutNanoseconds: UInt64 = 45_000_000_000
+    }
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
@@ -161,6 +164,10 @@ struct PoolDashboardView: View {
             handleOnAppear()
         }
         .onChange(of: state.snapshot) { previousSnapshot, snapshot in
+            showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
+                previousSnapshot: previousSnapshot,
+                currentSnapshot: snapshot
+            )
             handleSnapshotChange(snapshot)
             guard !suppressNextSnapshotDrivenSwitch else {
                 suppressNextSnapshotDrivenSwitch = false
@@ -196,14 +203,16 @@ struct PoolDashboardView: View {
             }
         }
         .alert(L10n.text("alert.low_usage.title"), isPresented: $viewState.showLowUsageAlert) {
-            Button(L10n.text("alert.dismiss"), role: .cancel) { }
+            Button(L10n.text("alert.dismiss"), role: .cancel) {
+                viewState.lowUsageAlertMessage = nil
+            }
         } message: {
-            Text(
-                alertPresenter.lowUsageAlertMessage(
+            let message = viewState.lowUsageAlertMessage
+                ?? alertPresenter.lowUsageAlertMessage(
                     activeAccount: state.activeAccount,
-                    thresholdRatio: state.lowUsageThresholdRatio
+                    thresholdRatio: state.lowUsageAlertThresholdRatio
                 )
-            )
+            Text(message)
         }
     }
 
@@ -591,13 +600,16 @@ struct PoolDashboardView: View {
         StrategySettingsPanelView(
             mode: state.mode == .manual ? .intelligent : state.mode,
             accounts: state.accounts,
+            activeAccount: state.activeAccount,
             intelligentCandidateName: intelligentCandidateName,
             canIntelligentSwitch: state.canIntelligentSwitch(),
             intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
+            hasLowUsageWarning: state.hasLowUsageWarning,
             modeBinding: strategyBindings.mode,
             manualSelectionBinding: strategyBindings.manualSelection,
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
-            lowThresholdBinding: strategyBindings.lowThreshold
+            switchThresholdBinding: strategyBindings.lowThreshold,
+            lowUsageAlertThresholdBinding: strategyBindings.lowUsageAlertThreshold
         )
     }
 
@@ -617,7 +629,7 @@ struct PoolDashboardView: View {
             mode: state.mode,
             isFocusLockActive: state.isFocusLockActive,
             hasLowUsageWarning: state.hasLowUsageWarning,
-            lowUsageThresholdRatio: state.lowUsageThresholdRatio,
+            lowUsageAlertThresholdRatio: state.lowUsageAlertThresholdRatio,
             showSimulationControl: isDeveloperBuild,
             onSimulateUsage: {
                 handleSimulateUsage()
@@ -759,6 +771,36 @@ struct PoolDashboardView: View {
         applyLifecycleSnapshotChangeOutput(output)
     }
 
+    private func showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
+        previousSnapshot: AccountPoolSnapshot,
+        currentSnapshot: AccountPoolSnapshot
+    ) {
+        guard previousSnapshot.mode == .intelligent, currentSnapshot.mode == .intelligent else { return }
+        guard previousSnapshot.activeAccountID != currentSnapshot.activeAccountID else { return }
+        guard let previousAccountID = previousSnapshot.activeAccountID,
+              let previousAccount = previousSnapshot.accounts.first(where: { $0.id == previousAccountID })
+        else {
+            return
+        }
+
+        let thresholdRatio = previousSnapshot.lowUsageThresholdRatio
+        guard intelligentRemainingRatio(for: previousAccount) <= thresholdRatio else { return }
+
+        viewState.lowUsageAlertMessage = alertPresenter.lowUsageAlertMessage(
+            activeAccount: previousAccount,
+            thresholdRatio: thresholdRatio
+        )
+        viewState.showLowUsageAlert = true
+    }
+
+    private func intelligentRemainingRatio(for account: AgentAccount) -> Double {
+        if account.isPaid, let primaryUsagePercent = account.primaryUsagePercent {
+            let clampedUsagePercent = min(max(primaryUsagePercent, 0), 100)
+            return Double(100 - clampedUsagePercent) / 100
+        }
+        return account.remainingRatio
+    }
+
     // MARK: - Account Actions
 
     private func handleAddAccount(name: String, quota: Int) {
@@ -897,7 +939,7 @@ struct PoolDashboardView: View {
         let previousActiveAccountID = state.activeAccountID
         let previousSyncError = viewState.syncError
 
-        let output = await usageSyncFlowCoordinator.syncCodexUsage(
+        let output = await syncCodexUsageWithTimeout(
             from: state,
             viewState: viewState
         )
@@ -922,6 +964,43 @@ struct PoolDashboardView: View {
             previousMode: previousMode,
             previousActiveAccountID: previousActiveAccountID
         )
+    }
+
+    @MainActor
+    private func syncCodexUsageWithTimeout(
+        from state: AccountPoolState,
+        viewState: PoolDashboardViewState
+    ) async -> PoolDashboardUsageSyncFlowCoordinator.Output {
+        let timeoutErrorMessage = L10n.text(
+            "sync.failure.with_description_format",
+            L10n.text("sync.failure.prefix"),
+            L10n.text("usage.sync.error.timeout")
+        )
+
+        return await withTaskGroup(of: PoolDashboardUsageSyncFlowCoordinator.Output.self) { group in
+            group.addTask {
+                await usageSyncFlowCoordinator.syncCodexUsage(
+                    from: state,
+                    viewState: viewState
+                )
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: SyncPolicy.timeoutNanoseconds)
+                var timedOutViewState = viewState
+                timedOutViewState.syncError = timeoutErrorMessage
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: state,
+                    viewState: timedOutViewState
+                )
+            }
+
+            let firstOutput = await group.next() ?? PoolDashboardUsageSyncFlowCoordinator.Output(
+                state: state,
+                viewState: viewState
+            )
+            group.cancelAll()
+            return firstOutput
+        }
     }
 
     // MARK: - OAuth

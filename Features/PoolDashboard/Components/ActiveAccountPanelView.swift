@@ -5,7 +5,7 @@ struct ActiveAccountPanelView: View {
     let mode: SwitchMode
     let isFocusLockActive: Bool
     let hasLowUsageWarning: Bool
-    let lowUsageThresholdRatio: Double
+    let lowUsageAlertThresholdRatio: Double
     let showSimulationControl: Bool
 
     let onSimulateUsage: () -> Void
@@ -43,9 +43,9 @@ struct ActiveAccountPanelView: View {
                         )
                     }
 
-                    if mode == .focus && hasLowUsageWarning {
+                    if (mode == .focus || mode == .intelligent) && hasLowUsageWarning {
                         PanelStatusCalloutView(
-                            message: L10n.text("active_account.low_usage.message_format", Int(lowUsageThresholdRatio * 100)),
+                            message: L10n.text("active_account.low_usage.message_format", Int(lowUsageAlertThresholdRatio * 100)),
                             title: L10n.text("active_account.low_usage.title"),
                             tone: .warning
                         )

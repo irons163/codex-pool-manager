@@ -128,6 +128,27 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func enteringFocusModeKeepsCurrentActiveAccount() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 300, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 100, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        #expect(state.activeAccount?.id == a)
+
+        state.setMode(.focus, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.activeAccount?.id == a)
+        #expect(state.focusLockedID == a)
+    }
+
+    @Test
     func focusModeLocksBestAccountUntilModeChanges() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
@@ -364,20 +385,45 @@ struct CodexPoolManagerTests {
             mode: .intelligent
         )
 
-        state.updateSwitchSettings(minSwitchInterval: 5, lowUsageThresholdRatio: 2, minUsageRatioDeltaToSwitch: 9)
+        state.updateSwitchSettings(
+            minSwitchInterval: 5,
+            lowUsageThresholdRatio: 2,
+            lowUsageAlertThresholdRatio: 2,
+            minUsageRatioDeltaToSwitch: 9
+        )
 
         #expect(state.minSwitchInterval == 30)
         #expect(state.lowUsageThresholdRatio == 0.9)
+        #expect(state.lowUsageAlertThresholdRatio == 0.9)
         #expect(state.minUsageRatioDeltaToSwitch == 0.5)
     }
 
     @Test
-    func lowUsageAlertPolicyTriggersOnlyOnEnteringLowStateInFocusMode() {
+    func lowUsageWarningUsesDedicatedAlertThreshold() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: accountID, name: "A", usedUnits: 85, quota: 100)
+            ],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.2,
+            lowUsageAlertThresholdRatio: 0.1
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        #expect(!state.hasLowUsageWarning)
+
+        state.updateSwitchSettings(lowUsageAlertThresholdRatio: 0.16, now: Date(timeIntervalSince1970: 1))
+        #expect(state.hasLowUsageWarning)
+    }
+
+    @Test
+    func lowUsageAlertPolicyTriggersOnlyOnEnteringLowStateInManagedModes() {
         var policy = LowUsageAlertPolicy()
 
-        let first = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
-        let second = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
-        let third = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: false)
+        let first = policy.shouldTriggerAlert(mode: .intelligent, hasLowUsageWarning: true)
+        let second = policy.shouldTriggerAlert(mode: .intelligent, hasLowUsageWarning: true)
+        let third = policy.shouldTriggerAlert(mode: .intelligent, hasLowUsageWarning: false)
         let fourth = policy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
 
         #expect(first)
@@ -387,13 +433,11 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func lowUsageAlertPolicyDoesNotTriggerOutsideFocusMode() {
+    func lowUsageAlertPolicyDoesNotTriggerOutsideManagedModes() {
         var policy = LowUsageAlertPolicy()
 
-        let intelligent = policy.shouldTriggerAlert(mode: .intelligent, hasLowUsageWarning: true)
         let manual = policy.shouldTriggerAlert(mode: .manual, hasLowUsageWarning: true)
 
-        #expect(!intelligent)
         #expect(!manual)
     }
 
@@ -588,6 +632,7 @@ struct CodexPoolManagerTests {
         let data = try #require(legacyJSON.data(using: .utf8))
         let snapshot = try JSONDecoder().decode(AccountPoolSnapshot.self, from: data)
 
+        #expect(snapshot.lowUsageAlertThresholdRatio == 0.15)
         #expect(snapshot.minUsageRatioDeltaToSwitch == 0)
     }
 
@@ -1970,12 +2015,14 @@ extension CodexPoolManagerTests {
         adapter.manualSelection.wrappedValue = id
         adapter.minSwitchInterval.wrappedValue = 420
         adapter.lowThreshold.wrappedValue = 0.2
+        adapter.lowUsageAlertThreshold.wrappedValue = 0.25
         adapter.minUsageDelta.wrappedValue = 0.1
 
         #expect(state.mode == .focus)
         #expect(state.manualAccountID == id)
         #expect(state.minSwitchInterval == 420)
         #expect(state.lowUsageThresholdRatio == 0.2)
+        #expect(state.lowUsageAlertThresholdRatio == 0.25)
         #expect(state.minUsageRatioDeltaToSwitch == 0.1)
     }
 

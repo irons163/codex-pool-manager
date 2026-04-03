@@ -80,6 +80,7 @@ enum AccountPoolSnapshotCodec {
             focusLockedAccountID: snapshot.focusLockedAccountID,
             minSwitchInterval: snapshot.minSwitchInterval,
             lowUsageThresholdRatio: snapshot.lowUsageThresholdRatio,
+            lowUsageAlertThresholdRatio: snapshot.lowUsageAlertThresholdRatio,
             minUsageRatioDeltaToSwitch: snapshot.minUsageRatioDeltaToSwitch,
             lastSwitchAt: snapshot.lastSwitchAt,
             lastUsageSyncAt: snapshot.lastUsageSyncAt,

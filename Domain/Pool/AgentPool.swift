@@ -170,7 +170,8 @@ struct LowUsageAlertPolicy {
     private var lowWarningWasActive = false
 
     mutating func shouldTriggerAlert(mode: SwitchMode, hasLowUsageWarning: Bool) -> Bool {
-        let isCurrentlyLow = (mode == .focus) && hasLowUsageWarning
+        let isManagedMode = mode == .focus || mode == .intelligent
+        let isCurrentlyLow = isManagedMode && hasLowUsageWarning
         defer { lowWarningWasActive = isCurrentlyLow }
         return isCurrentlyLow && !lowWarningWasActive
     }
@@ -203,6 +204,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var focusLockedAccountID: UUID?
     var minSwitchInterval: TimeInterval
     var lowUsageThresholdRatio: Double
+    var lowUsageAlertThresholdRatio: Double
     var minUsageRatioDeltaToSwitch: Double
     var lastSwitchAt: Date?
     var lastUsageSyncAt: Date?
@@ -220,6 +222,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         focusLockedAccountID: UUID?,
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
+        lowUsageAlertThresholdRatio: Double? = nil,
         minUsageRatioDeltaToSwitch: Double,
         lastSwitchAt: Date?,
         lastUsageSyncAt: Date? = nil,
@@ -236,6 +239,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.focusLockedAccountID = focusLockedAccountID
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
+        self.lowUsageAlertThresholdRatio = lowUsageAlertThresholdRatio ?? lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = minUsageRatioDeltaToSwitch
         self.lastSwitchAt = lastSwitchAt
         self.lastUsageSyncAt = lastUsageSyncAt
@@ -255,6 +259,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         focusLockedAccountID = try container.decodeIfPresent(UUID.self, forKey: .focusLockedAccountID)
         minSwitchInterval = try container.decode(TimeInterval.self, forKey: .minSwitchInterval)
         lowUsageThresholdRatio = try container.decode(Double.self, forKey: .lowUsageThresholdRatio)
+        lowUsageAlertThresholdRatio = try container.decodeIfPresent(Double.self, forKey: .lowUsageAlertThresholdRatio) ?? lowUsageThresholdRatio
         minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
         lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
         lastUsageSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastUsageSyncAt)
@@ -274,6 +279,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
             focusLockedAccountID: focusLockedAccountID,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
+            lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
@@ -298,6 +304,7 @@ struct AccountPoolState {
 
     private(set) var minSwitchInterval: TimeInterval
     private(set) var lowUsageThresholdRatio: Double
+    private(set) var lowUsageAlertThresholdRatio: Double
     private(set) var minUsageRatioDeltaToSwitch: Double
     private(set) var switchWithoutLaunching: Bool
     private(set) var autoSyncEnabled: Bool
@@ -308,6 +315,7 @@ struct AccountPoolState {
         mode: SwitchMode = .intelligent,
         minSwitchInterval: TimeInterval = 300,
         lowUsageThresholdRatio: Double = 0.15,
+        lowUsageAlertThresholdRatio: Double? = nil,
         minUsageRatioDeltaToSwitch: Double = 0,
         switchWithoutLaunching: Bool = false,
         autoSyncEnabled: Bool = true,
@@ -324,6 +332,7 @@ struct AccountPoolState {
         self.lastUsageSyncAt = nil
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
+        self.lowUsageAlertThresholdRatio = lowUsageAlertThresholdRatio ?? lowUsageThresholdRatio
         self.minUsageRatioDeltaToSwitch = max(0, min(0.5, minUsageRatioDeltaToSwitch))
         self.switchWithoutLaunching = switchWithoutLaunching
         self.autoSyncEnabled = autoSyncEnabled
@@ -346,6 +355,7 @@ struct AccountPoolState {
         self.autoSyncIntervalSeconds = max(5, min(300, snapshot.autoSyncIntervalSeconds))
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
+        self.lowUsageAlertThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageAlertThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
         rebuildGroups()
         evaluate(now: .now)
@@ -358,7 +368,7 @@ struct AccountPoolState {
 
     var hasLowUsageWarning: Bool {
         guard let activeAccount else { return false }
-        return intelligentRemainingRatio(for: activeAccount) <= lowUsageThresholdRatio
+        return intelligentRemainingRatio(for: activeAccount) <= lowUsageAlertThresholdRatio
     }
 
     var totalUsedUnits: Int {
@@ -405,6 +415,7 @@ struct AccountPoolState {
             focusLockedAccountID: focusLockedAccountID,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
+            lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
@@ -417,6 +428,7 @@ struct AccountPoolState {
     mutating func updateSwitchSettings(
         minSwitchInterval: TimeInterval? = nil,
         lowUsageThresholdRatio: Double? = nil,
+        lowUsageAlertThresholdRatio: Double? = nil,
         minUsageRatioDeltaToSwitch: Double? = nil,
         now: Date = .now
     ) {
@@ -425,6 +437,9 @@ struct AccountPoolState {
         }
         if let lowUsageThresholdRatio {
             self.lowUsageThresholdRatio = min(0.9, max(0.01, lowUsageThresholdRatio))
+        }
+        if let lowUsageAlertThresholdRatio {
+            self.lowUsageAlertThresholdRatio = min(0.9, max(0.01, lowUsageAlertThresholdRatio))
         }
         if let minUsageRatioDeltaToSwitch {
             self.minUsageRatioDeltaToSwitch = min(0.5, max(0, minUsageRatioDeltaToSwitch))
@@ -523,8 +538,13 @@ struct AccountPoolState {
 
     mutating func setMode(_ newMode: SwitchMode, now: Date = .now) {
         if mode != newMode {
+            let previousActiveAccountID = activeAccountID
             mode = newMode
-            if newMode != .focus {
+            if newMode == .focus {
+                // Preserve the current account when entering focus mode so the UI
+                // doesn't unexpectedly jump to a different account.
+                focusLockedAccountID = previousActiveAccountID
+            } else {
                 focusLockedAccountID = nil
             }
         }

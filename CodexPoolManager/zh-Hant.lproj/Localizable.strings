@@ -111,7 +111,10 @@
 "strategy.switch_mode" = "切換模式";
 "strategy.parameters" = "策略參數";
 "strategy.general_settings" = "一般設定";
-"strategy.low_usage_threshold_format" = "智能切換剩餘門檻：%d%%";
+"strategy.low_usage_threshold_format" = "智能切換門檻：%d%%";
+"strategy.low_usage_alert_threshold_format" = "低剩餘用量提醒門檻：%d%%";
+"strategy.low_usage_state_safe_format" = "目前剩餘 %d%%，尚未低於 %d%% 門檻。";
+"strategy.low_usage_state_low_format" = "目前剩餘 %d%%，已低於 %d%% 門檻。";
 "strategy.switch_threshold_format" = "智能切換最小用量差門檻：%d%%";
 "strategy.smart_recommendation.title" = "智慧建議";
 "strategy.smart_recommendation.message_format" = "建議下一個帳號為 %@。";
@@ -247,6 +250,7 @@
 "usage.sync.error.unauthorized" = "授權失敗，請檢查 API Token。";
 "usage.sync.error.rate_limited" = "已達速率限制，請稍後再試。";
 "usage.sync.error.network" = "網路異常，請檢查連線。";
+"usage.sync.error.timeout" = "同步逾時，請稍後再試。";
 "usage.sync.error.unknown" = "同步失敗，請稍後再試。";
 "usage.sync.excluded.missing_token" = "缺少 API Token，已排除於同步與調度計算";
 "usage.sync.excluded.missing_account_id" = "缺少 Account ID，已排除於同步與調度計算";

@@ -3,14 +3,17 @@ import SwiftUI
 struct StrategySettingsPanelView: View {
     let mode: SwitchMode
     let accounts: [AgentAccount]
+    let activeAccount: AgentAccount?
     let intelligentCandidateName: String?
     let canIntelligentSwitch: Bool
     let intelligentCooldownRemaining: Int
+    let hasLowUsageWarning: Bool
 
     let modeBinding: Binding<SwitchMode>
     let manualSelectionBinding: Binding<UUID>
     let minSwitchIntervalBinding: Binding<Double>
-    let lowThresholdBinding: Binding<Double>
+    let switchThresholdBinding: Binding<Double>
+    let lowUsageAlertThresholdBinding: Binding<Double>
     private var visibleModes: [SwitchMode] {
         [.intelligent, .focus]
     }
@@ -36,12 +39,29 @@ struct StrategySettingsPanelView: View {
         GroupBox(L10n.text("strategy.parameters")) {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
                 VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                    Text(L10n.text("strategy.low_usage_threshold_format", Int(lowThresholdBinding.wrappedValue * 100)))
+                    Text(L10n.text("strategy.low_usage_threshold_format", Int(switchThresholdBinding.wrappedValue * 100)))
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    Slider(value: lowThresholdBinding, in: 0.05...0.5, step: 0.01)
+                    Slider(value: switchThresholdBinding, in: 0.05...0.5, step: 0.01)
                         .tint(PoolDashboardTheme.glowA)
                 }
                 .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Text(
+                        L10n.text(
+                            "strategy.low_usage_alert_threshold_format",
+                            Int(lowUsageAlertThresholdBinding.wrappedValue * 100)
+                        )
+                    )
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    Slider(value: lowUsageAlertThresholdBinding, in: 0.05...0.5, step: 0.01)
+                        .tint(PoolDashboardTheme.glowA)
+                }
+                .dashboardInfoCard()
+
+                if hasLowUsageWarning {
+                    lowUsageStatusCallout
+                }
 
                 if mode == .intelligent {
                     if let intelligentCandidateName {
@@ -65,6 +85,33 @@ struct StrategySettingsPanelView: View {
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
 
+    }
+
+    @ViewBuilder
+    private var lowUsageStatusCallout: some View {
+        if let activeAccount {
+            let thresholdPercent = Int((lowUsageAlertThresholdBinding.wrappedValue * 100).rounded())
+            let remainingPercent = intelligentRemainingPercent(for: activeAccount)
+
+            PanelStatusCalloutView(
+                message: L10n.text("strategy.low_usage_state_low_format", remainingPercent, thresholdPercent),
+                title: L10n.text("active_account.low_usage.title"),
+                tone: .warning
+            )
+        } else {
+            PanelStatusCalloutView(
+                message: L10n.text("active_account.none"),
+                title: L10n.text("active_account.low_usage.title"),
+                tone: .info
+            )
+        }
+    }
+
+    private func intelligentRemainingPercent(for account: AgentAccount) -> Int {
+        if account.isPaid, let primaryUsagePercent = account.primaryUsagePercent {
+            return max(0, min(100, 100 - primaryUsagePercent))
+        }
+        return max(0, min(100, Int((account.remainingRatio * 100).rounded())))
     }
 
     private func localizedModeTitle(_ mode: SwitchMode) -> String {
