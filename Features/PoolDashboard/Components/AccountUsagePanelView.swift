@@ -56,6 +56,7 @@ struct AccountUsagePanelView: View {
     private var persistedLayoutModeRawValue: String = LayoutMode.single.rawValue
     @State private var newGroupName = ""
     @State private var renameGroupName = ""
+    @State private var isGroupRenameEditorVisible = false
     @State private var draftAccountNames: [UUID: String] = [:]
     @FocusState private var focusedAccountNameID: UUID?
 
@@ -229,6 +230,20 @@ struct AccountUsagePanelView: View {
             .pickerStyle(.menu)
             .frame(maxWidth: 220)
 
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isGroupRenameEditorVisible.toggle()
+                    if isGroupRenameEditorVisible {
+                        renameGroupName = selectedGroupName
+                    }
+                }
+            } label: {
+                Image(systemName: "pencil")
+            }
+            .buttonStyle(.bordered)
+            .disabled(selectedGroupName.isEmpty)
+            .help(L10n.text("group.rename"))
+
             TextField(L10n.text("group.placeholder"), text: $newGroupName)
                 .dashboardInputFieldStyle()
                 .frame(maxWidth: 180)
@@ -243,19 +258,24 @@ struct AccountUsagePanelView: View {
             .buttonStyle(.borderedProminent)
             .tint(PoolDashboardTheme.glowA)
 
-            TextField(L10n.text("group.rename"), text: $renameGroupName)
-                .dashboardInputFieldStyle()
-                .frame(maxWidth: 180)
+            if isGroupRenameEditorVisible {
+                TextField(L10n.text("group.rename"), text: $renameGroupName)
+                    .dashboardInputFieldStyle()
+                    .frame(maxWidth: 180)
 
-            Button(L10n.text("group.rename_action")) {
-                let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !draft.isEmpty else { return }
-                let previous = selectedGroupName
-                onRenameGroup(previous, draft)
-                selectedGroupName = draft
+                Button(L10n.text("group.rename_action")) {
+                    let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !draft.isEmpty else { return }
+                    let previous = selectedGroupName
+                    onRenameGroup(previous, draft)
+                    selectedGroupName = draft
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isGroupRenameEditorVisible = false
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(selectedGroupName.isEmpty)
             }
-            .buttonStyle(.bordered)
-            .disabled(selectedGroupName.isEmpty)
 
             if !outsideGroupAccounts.isEmpty {
                 Menu {
