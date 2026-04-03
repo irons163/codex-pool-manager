@@ -20,6 +20,8 @@ enum WidgetBridgePublisher {
         let availableAccounts: Int?
         let overallUsagePercent: Int?
         let activeAccountName: String?
+        let activeRemainingUnits: Int?
+        let activeQuota: Int?
     }
 
     static func configureBridge() {
@@ -35,7 +37,9 @@ enum WidgetBridgePublisher {
             totalAccounts: nil,
             availableAccounts: nil,
             overallUsagePercent: nil,
-            activeAccountName: nil
+            activeAccountName: nil,
+            activeRemainingUnits: nil,
+            activeQuota: nil
         )
         publish(snapshot)
     }
@@ -53,7 +57,8 @@ enum WidgetBridgePublisher {
             overallUsagePercent = 0
         }
 
-        let activeAccountName = poolSnapshot.accounts.first(where: { $0.id == poolSnapshot.activeAccountID })?.name
+        let activeAccount = poolSnapshot.accounts.first(where: { $0.id == poolSnapshot.activeAccountID })
+        let activeAccountName = activeAccount?.name
         let status = activeAccountName.map { "Active: \($0)" } ?? "No active account"
 
         let snapshot = Snapshot(
@@ -64,7 +69,9 @@ enum WidgetBridgePublisher {
             totalAccounts: totalAccounts,
             availableAccounts: availableAccounts,
             overallUsagePercent: overallUsagePercent,
-            activeAccountName: activeAccountName
+            activeAccountName: activeAccountName,
+            activeRemainingUnits: activeAccount?.remainingUnits,
+            activeQuota: activeAccount?.quota
         )
         publish(snapshot)
     }
@@ -104,14 +111,22 @@ enum WidgetBridgePublisher {
     }
 
     private static func snapshotSignature(for snapshot: Snapshot) -> String {
-        [
+        let activeRemaining = snapshot.activeRemainingUnits.map(String.init) ?? ""
+        let activeQuota = snapshot.activeQuota.map(String.init) ?? ""
+        let totalAccounts = snapshot.totalAccounts.map(String.init) ?? ""
+        let availableAccounts = snapshot.availableAccounts.map(String.init) ?? ""
+        let overallUsagePercent = snapshot.overallUsagePercent.map(String.init) ?? ""
+
+        return [
             snapshot.status,
             snapshot.source,
             snapshot.mode ?? "",
             snapshot.activeAccountName ?? "",
-            snapshot.totalAccounts.map(String.init) ?? "",
-            snapshot.availableAccounts.map(String.init) ?? "",
-            snapshot.overallUsagePercent.map(String.init) ?? ""
+            activeRemaining,
+            activeQuota,
+            totalAccounts,
+            availableAccounts,
+            overallUsagePercent
         ].joined(separator: "|")
     }
 }

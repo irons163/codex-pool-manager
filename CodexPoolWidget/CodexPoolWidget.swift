@@ -10,6 +10,8 @@ struct WidgetBridgeSnapshot: Codable {
     let availableAccounts: Int?
     let overallUsagePercent: Int?
     let activeAccountName: String?
+    let activeRemainingUnits: Int?
+    let activeQuota: Int?
 }
 
 private enum WidgetBridgeSnapshotStore {
@@ -66,7 +68,9 @@ struct CodexPoolWidgetProvider: TimelineProvider {
                 totalAccounts: 0,
                 availableAccounts: 0,
                 overallUsagePercent: 0,
-                activeAccountName: nil
+                activeAccountName: nil,
+                activeRemainingUnits: nil,
+                activeQuota: nil
             )
         )
     }
@@ -142,6 +146,22 @@ struct CodexPoolWidgetEntryView: View {
                     Text(snapshot.status)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
+                }
+
+                if let activeRemainingUnits = snapshot.activeRemainingUnits {
+                    if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
+                        Text("Remaining: \(activeRemainingUnits)/\(activeQuota)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .monospacedDigit()
+                    } else {
+                        Text("Remaining: \(activeRemainingUnits)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .monospacedDigit()
+                    }
                 }
 
                 if let mode = snapshot.mode, !mode.isEmpty {
