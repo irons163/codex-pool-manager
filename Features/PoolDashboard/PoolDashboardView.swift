@@ -597,8 +597,7 @@ struct PoolDashboardView: View {
             modeBinding: strategyBindings.mode,
             manualSelectionBinding: strategyBindings.manualSelection,
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
-            lowThresholdBinding: strategyBindings.lowThreshold,
-            minUsageDeltaBinding: strategyBindings.minUsageDelta
+            lowThresholdBinding: strategyBindings.lowThreshold
         )
     }
 

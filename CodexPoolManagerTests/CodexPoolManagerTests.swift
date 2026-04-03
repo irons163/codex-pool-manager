@@ -493,7 +493,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func intelligentModeSwitchesWhenImprovementMeetsThreshold() {
+    func intelligentModeDoesNotSwitchWhenCurrentRemainingIsAboveThreshold() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
         var state = AccountPoolState(
@@ -505,6 +505,60 @@ struct CodexPoolManagerTests {
         )
         state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
         state.updateSwitchSettings(minUsageRatioDeltaToSwitch: 0.05, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
+
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
+    func intelligentModeSwitchesWhenRemainingIsBelowThresholdEvenWithLargeUsageGapSetting() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 700, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 600, quota: 1000)
+            ],
+            mode: .manual
+        )
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(
+            lowUsageThresholdRatio: 0.35,
+            minUsageRatioDeltaToSwitch: 0.2,
+            now: Date(timeIntervalSince1970: 0)
+        )
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
+
+        #expect(state.activeAccount?.id == b)
+    }
+
+    @Test
+    func intelligentModeUsesFiveHourRemainingForPaidAccounts() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 20,
+                    quota: 100,
+                    primaryUsagePercent: 70,
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: b,
+                    name: "B",
+                    usedUnits: 50,
+                    quota: 100,
+                    primaryUsagePercent: 40,
+                    isPaid: true
+                )
+            ],
+            mode: .manual
+        )
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(lowUsageThresholdRatio: 0.35, now: Date(timeIntervalSince1970: 0))
         state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
 
         #expect(state.activeAccount?.id == b)

@@ -358,7 +358,7 @@ struct AccountPoolState {
 
     var hasLowUsageWarning: Bool {
         guard let activeAccount else { return false }
-        return activeAccount.remainingRatio <= lowUsageThresholdRatio
+        return intelligentRemainingRatio(for: activeAccount) <= lowUsageThresholdRatio
     }
 
     var totalUsedUnits: Int {
@@ -484,12 +484,18 @@ struct AccountPoolState {
 
         guard current.id != candidate.id else { return false }
 
-        if current.remainingUnits == 0 {
+        let currentRemainingRatio = intelligentRemainingRatio(for: current)
+        let candidateRemainingRatio = intelligentRemainingRatio(for: candidate)
+
+        if currentRemainingRatio <= 0 {
             return true
         }
 
-        let usageRatioDelta = current.usageRatio - candidate.usageRatio
-        guard usageRatioDelta >= minUsageRatioDeltaToSwitch else {
+        guard currentRemainingRatio <= lowUsageThresholdRatio else {
+            return false
+        }
+
+        guard candidateRemainingRatio > currentRemainingRatio else {
             return false
         }
 
@@ -506,9 +512,11 @@ struct AccountPoolState {
         }
 
         guard current.id != candidate.id else { return 0 }
-        guard current.remainingUnits > 0 else { return 0 }
-        let usageRatioDelta = current.usageRatio - candidate.usageRatio
-        guard usageRatioDelta >= minUsageRatioDeltaToSwitch else { return 0 }
+        let currentRemainingRatio = intelligentRemainingRatio(for: current)
+        let candidateRemainingRatio = intelligentRemainingRatio(for: candidate)
+        guard currentRemainingRatio > 0 else { return 0 }
+        guard currentRemainingRatio <= lowUsageThresholdRatio else { return 0 }
+        guard candidateRemainingRatio > currentRemainingRatio else { return 0 }
 
         return switchCooldownRemaining(now: now)
     }
@@ -768,7 +776,10 @@ struct AccountPoolState {
                 return
             }
 
-            if current.remainingUnits == 0 {
+            let currentRemainingRatio = intelligentRemainingRatio(for: current)
+            let candidateRemainingRatio = intelligentRemainingRatio(for: candidate)
+
+            if currentRemainingRatio <= 0 {
                 switchActive(to: candidate.id, now: now)
                 return
             }
@@ -777,8 +788,11 @@ struct AccountPoolState {
                 return
             }
 
-            let usageRatioDelta = current.usageRatio - candidate.usageRatio
-            guard usageRatioDelta >= minUsageRatioDeltaToSwitch else {
+            guard currentRemainingRatio <= lowUsageThresholdRatio else {
+                return
+            }
+
+            guard candidateRemainingRatio > currentRemainingRatio else {
                 return
             }
 
@@ -791,18 +805,31 @@ struct AccountPoolState {
     }
 
     private func intelligentCandidateAccountID() -> UUID? {
-        let availableAccounts = syncIncludedAccounts.filter { $0.remainingUnits > 0 }
+        let availableAccounts = syncIncludedAccounts.filter { intelligentRemainingRatio(for: $0) > 0 }
         guard !availableAccounts.isEmpty else { return nil }
 
         return availableAccounts
             .sorted {
-                if $0.usageRatio == $1.usageRatio {
-                    return $0.remainingUnits > $1.remainingUnits
+                let lhsRemainingRatio = intelligentRemainingRatio(for: $0)
+                let rhsRemainingRatio = intelligentRemainingRatio(for: $1)
+                if lhsRemainingRatio == rhsRemainingRatio {
+                    if $0.usageRatio == $1.usageRatio {
+                        return $0.remainingUnits > $1.remainingUnits
+                    }
+                    return $0.usageRatio < $1.usageRatio
                 }
-                return $0.usageRatio < $1.usageRatio
+                return lhsRemainingRatio > rhsRemainingRatio
             }
             .first?
             .id
+    }
+
+    private func intelligentRemainingRatio(for account: AgentAccount) -> Double {
+        if account.isPaid, let primaryUsagePercent = account.primaryUsagePercent {
+            let clampedUsagePercent = min(max(primaryUsagePercent, 0), 100)
+            return Double(100 - clampedUsagePercent) / 100
+        }
+        return account.remainingRatio
     }
 
     private func bestRemainingAccountID() -> UUID? {
