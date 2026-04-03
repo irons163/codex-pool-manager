@@ -432,7 +432,7 @@ struct PoolDashboardView: View {
 
     private var hasWorkspaceContextPanel: Bool {
         switch selectedWorkspace {
-        case .runtime, .settings:
+        case .runtime, .settings, .safety:
             return false
         default:
             return true
@@ -465,30 +465,10 @@ struct PoolDashboardView: View {
         case .settings:
             EmptyView()
         case .safety:
-            safetyContextPanel
+            EmptyView()
         case .developer:
             developerContextPanel
         }
-    }
-
-    private var safetyContextPanel: some View {
-        GroupBox(L10n.text("safety.signals.title")) {
-            VStack(alignment: .leading, spacing: 10) {
-                PanelStatusCalloutView(
-                    message: L10n.text("safety.operational.message"),
-                    title: L10n.text("safety.operational.title"),
-                    tone: .info
-                )
-
-                if isDeveloperBuild {
-                    Text(L10n.text("safety.developer_available"))
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        .dashboardInfoCard()
-                }
-            }
-        }
-        .sectionCardStyle()
     }
 
     private var developerContextPanel: some View {
@@ -540,6 +520,7 @@ struct PoolDashboardView: View {
 
                 Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
             .background(
@@ -552,6 +533,9 @@ struct PoolDashboardView: View {
                                 lineWidth: 1
                             )
                     )
+            )
+            .contentShape(
+                RoundedRectangle(cornerRadius: PoolDashboardTheme.workspaceSidebarItemCornerRadius, style: .continuous)
             )
         }
         .buttonStyle(.plain)
