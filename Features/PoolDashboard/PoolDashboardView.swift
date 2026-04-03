@@ -809,7 +809,7 @@ struct PoolDashboardView: View {
             )
         DesktopNotifier.post(
             key: "low-usage-alert",
-            title: "Codex Pool \(L10n.text(\"alert.low_usage.title\"))",
+            title: "Codex Pool \(L10n.text("alert.low_usage.title"))",
             body: message,
             minInterval: 60
         )

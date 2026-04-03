@@ -787,6 +787,12 @@ struct AccountPoolState {
             guard let candidateID = intelligentCandidateAccountID(),
                   let candidate = accounts.first(where: { $0.id == candidateID })
             else {
+                // Keep the current active account when candidates are temporarily unavailable.
+                // This prevents a later recovery cycle from forcing a switch without threshold checks.
+                if let activeAccountID,
+                   accounts.contains(where: { $0.id == activeAccountID }) {
+                    return
+                }
                 activeAccountID = nil
                 return
             }

@@ -193,13 +193,20 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let isPaid = inferPaidStatus(from: payload)
         let primaryWindow = payload.rateLimit?.primaryWindow
         let secondaryWindow = payload.rateLimit?.secondaryWindow
-        let selectedWindow = isPaid ? (secondaryWindow ?? primaryWindow) : (primaryWindow ?? secondaryWindow)
-        let usageWindowName = selectedWindow?.name
-            ?? (isPaid ? "secondary_window" : "primary_window")
+        let resolvedWindows = resolveUsageWindows(
+            isPaid: isPaid,
+            primaryWindow: primaryWindow,
+            secondaryWindow: secondaryWindow
+        )
+        let selectedWindow = resolvedWindows.selectedWindow
+        let usageWindowName = selectedWindow?.name ?? resolvedWindows.defaultWindowName
         let usageWindowResetAt = selectedWindow?.resetAt
-            ?? (isPaid ? primaryWindow?.resetAt : secondaryWindow?.resetAt)
-        let primaryUsagePercent = percentValue(from: primaryWindow?.usedPercent)
-        let secondaryUsagePercent = percentValue(from: secondaryWindow?.usedPercent)
+            ?? resolvedWindows.weeklyWindow?.resetAt
+            ?? resolvedWindows.fiveHourWindow?.resetAt
+        // Normalize paid-account semantics:
+        // primaryUsage* => 5h window, secondaryUsage* => weekly window.
+        let primaryUsagePercent = percentValue(from: resolvedWindows.fiveHourWindow?.usedPercent)
+        let secondaryUsagePercent = percentValue(from: resolvedWindows.weeklyWindow?.usedPercent)
         let accountID = payload.accountID
         let accountEmail = payload.email
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
@@ -211,9 +218,9 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 accountID: accountID,
                 accountEmail: accountEmail,
                 primaryUsagePercent: primaryUsagePercent,
-                primaryUsageResetAt: primaryWindow?.resetAt,
+                primaryUsageResetAt: resolvedWindows.fiveHourWindow?.resetAt,
                 secondaryUsagePercent: secondaryUsagePercent,
-                secondaryUsageResetAt: secondaryWindow?.resetAt,
+                secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
                 isPaid: isPaid
             )
         }
@@ -229,13 +236,121 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 accountID: accountID,
                 accountEmail: accountEmail,
                 primaryUsagePercent: primaryUsagePercent,
-                primaryUsageResetAt: primaryWindow?.resetAt,
+                primaryUsageResetAt: resolvedWindows.fiveHourWindow?.resetAt,
                 secondaryUsagePercent: secondaryUsagePercent,
-                secondaryUsageResetAt: secondaryWindow?.resetAt,
+                secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
                 isPaid: isPaid
             )
         }
         throw CodexSyncError.unknown
+    }
+
+    private struct ResolvedUsageWindows {
+        let selectedWindow: Window?
+        let fiveHourWindow: Window?
+        let weeklyWindow: Window?
+        let defaultWindowName: String
+    }
+
+    private enum PaidWindowRole {
+        case fiveHour
+        case weekly
+    }
+
+    private func resolveUsageWindows(
+        isPaid: Bool,
+        primaryWindow: Window?,
+        secondaryWindow: Window?
+    ) -> ResolvedUsageWindows {
+        if !isPaid {
+            return ResolvedUsageWindows(
+                selectedWindow: primaryWindow ?? secondaryWindow,
+                fiveHourWindow: primaryWindow,
+                weeklyWindow: secondaryWindow,
+                defaultWindowName: "primary_window"
+            )
+        }
+
+        let roles = resolvePaidWindowRoles(primaryWindow: primaryWindow, secondaryWindow: secondaryWindow)
+        return ResolvedUsageWindows(
+            selectedWindow: roles.weekly ?? primaryWindow ?? secondaryWindow,
+            fiveHourWindow: roles.fiveHour,
+            weeklyWindow: roles.weekly,
+            defaultWindowName: "weekly_window"
+        )
+    }
+
+    private func resolvePaidWindowRoles(
+        primaryWindow: Window?,
+        secondaryWindow: Window?
+    ) -> (fiveHour: Window?, weekly: Window?) {
+        switch (primaryWindow, secondaryWindow) {
+        case (nil, nil):
+            return (nil, nil)
+        case let (window?, nil), let (nil, window?):
+            return (window, window)
+        case let (primary?, secondary?):
+            if let roles = rolesFromWindowNames(primary: primary, secondary: secondary) {
+                return roles
+            }
+            if let roles = rolesFromWindowDurations(primary: primary, secondary: secondary) {
+                return roles
+            }
+            if let roles = rolesFromWindowResetTime(primary: primary, secondary: secondary) {
+                return roles
+            }
+            // Fallback to legacy assumption if no signal is available.
+            return (primary, secondary)
+        }
+    }
+
+    private func rolesFromWindowNames(primary: Window, secondary: Window) -> (fiveHour: Window, weekly: Window)? {
+        let primaryRole = inferRole(from: primary)
+        let secondaryRole = inferRole(from: secondary)
+        if primaryRole == .fiveHour && secondaryRole == .weekly {
+            return (primary, secondary)
+        }
+        if primaryRole == .weekly && secondaryRole == .fiveHour {
+            return (secondary, primary)
+        }
+        return nil
+    }
+
+    private func rolesFromWindowDurations(primary: Window, secondary: Window) -> (fiveHour: Window, weekly: Window)? {
+        if let primaryDuration = primary.limitWindowSeconds,
+           let secondaryDuration = secondary.limitWindowSeconds,
+           primaryDuration != secondaryDuration {
+            return primaryDuration < secondaryDuration ? (primary, secondary) : (secondary, primary)
+        }
+        if let primaryDuration = primary.resetAfterSeconds,
+           let secondaryDuration = secondary.resetAfterSeconds,
+           primaryDuration != secondaryDuration {
+            return primaryDuration < secondaryDuration ? (primary, secondary) : (secondary, primary)
+        }
+        return nil
+    }
+
+    private func rolesFromWindowResetTime(primary: Window, secondary: Window) -> (fiveHour: Window, weekly: Window)? {
+        guard let primaryReset = primary.resetAt,
+              let secondaryReset = secondary.resetAt,
+              primaryReset != secondaryReset else {
+            return nil
+        }
+        return primaryReset < secondaryReset ? (primary, secondary) : (secondary, primary)
+    }
+
+    private func inferRole(from window: Window) -> PaidWindowRole? {
+        guard let name = window.name?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !name.isEmpty else {
+            return nil
+        }
+        if name.contains("week") {
+            return .weekly
+        }
+        if name.contains("5h") || name.contains("five") || name.contains("hour") {
+            return .fiveHour
+        }
+        return nil
     }
 
     private struct UsagePayload: Decodable {
@@ -292,12 +407,22 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let usedPercent: Double?
         let name: String?
         let resetAt: Date?
+        let limitWindowSeconds: Double?
+        let resetAfterSeconds: Double?
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: DynamicCodingKey.self)
             usedPercent = try container.decodeIfPresent(Double.self, forKeys: ["used_percent", "usedPercent"])
             name = try container.decodeIfPresent(String.self, forKeys: ["name", "window_name", "windowName"])
             resetAt = try container.decodeDateIfPresent(forKeys: ["reset_at", "resets_at", "resetAt", "resetsAt"])
+            limitWindowSeconds = try container.decodeIfPresent(
+                Double.self,
+                forKeys: ["limit_window_seconds", "limitWindowSeconds"]
+            )
+            resetAfterSeconds = try container.decodeIfPresent(
+                Double.self,
+                forKeys: ["reset_after_seconds", "resetAfterSeconds"]
+            )
         }
     }
 

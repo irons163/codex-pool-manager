@@ -109,10 +109,19 @@ private final class MenuBarSnapshotModel: ObservableObject {
 
         var segments: [String] = []
 
-        if let remaining = snapshot.activeRemainingUnits,
+        if snapshot.activeIsPaid == true,
+           let remaining = snapshot.activeRemainingUnits,
            let quota = snapshot.activeQuota,
            quota > 0 {
-            segments.append("\(remaining)/\(quota)")
+            let ratio = Double(remaining) / Double(quota)
+            let weeklyRemainingPercent = max(0, min(100, Int((ratio * 100).rounded())))
+            segments.append("w \(weeklyRemainingPercent)%")
+        } else if let remaining = snapshot.activeRemainingUnits,
+                  let quota = snapshot.activeQuota,
+                  quota > 0 {
+            let ratio = Double(remaining) / Double(quota)
+            let remainingPercent = max(0, min(100, Int((ratio * 100).rounded())))
+            segments.append("\(remainingPercent)%")
         } else if let remaining = snapshot.activeRemainingUnits {
             segments.append("\(remaining)")
         } else {

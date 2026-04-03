@@ -609,6 +609,45 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func intelligentModeKeepsActiveAccountWhenCandidatesTemporarilyDisappear() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 33,
+                    quota: 100,
+                    primaryUsagePercent: 33,
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: b,
+                    name: "B",
+                    usedUnits: 20,
+                    quota: 100,
+                    primaryUsagePercent: 20,
+                    isPaid: true
+                )
+            ],
+            mode: .manual
+        )
+
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(lowUsageThresholdRatio: 0.24, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
+        #expect(state.activeAccount?.id == a)
+
+        state.setUsageSyncExclusion(for: a, reason: "sync-failed", now: Date(timeIntervalSince1970: 302))
+        state.setUsageSyncExclusion(for: b, reason: "sync-failed", now: Date(timeIntervalSince1970: 303))
+        #expect(state.activeAccount?.id == a)
+
+        state.setUsageSyncExclusion(for: b, reason: nil, now: Date(timeIntervalSince1970: 304))
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
     func snapshotDecodingSupportsLegacyPayloadWithoutNewFields() throws {
         let legacyJSON = """
         {
@@ -1423,6 +1462,98 @@ struct CodexPoolManagerTests {
         #expect(usage.accountEmail == "philtest@example.com")
         #expect(usage.usageWindowResetAt == Date(timeIntervalSince1970: 1_774_885_346))
         #expect(rawCapture.value?.contains("\"used_percent\": 11") == true)
+    }
+
+    @Test
+    func openAICodexUsageClientNormalizesPaidWindowRolesWhenAPIOrderIsReversed() async throws {
+        let responseJSON = """
+        {
+          "account_id": "acct-paid",
+          "email": "paid@example.com",
+          "plan_type": "plus",
+          "rate_limit": {
+            "primary_window": {
+              "name": "weekly_window",
+              "used_percent": 22,
+              "limit_window_seconds": 604800,
+              "reset_after_seconds": 400000,
+              "reset_at": 1775000000
+            },
+            "secondary_window": {
+              "name": "five_hour_window",
+              "used_percent": 80,
+              "limit_window_seconds": 18000,
+              "reset_after_seconds": 1200,
+              "reset_at": 1774600000
+            }
+          }
+        }
+        """
+        let data = Data(responseJSON.utf8)
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=paid-reversed"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: data
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token-paid", accountID: "acct-paid")
+
+        #expect(usage.isPaid)
+        #expect(usage.primaryUsagePercent == 80)
+        #expect(usage.secondaryUsagePercent == 22)
+        #expect(usage.primaryUsageResetAt == Date(timeIntervalSince1970: 1_774_600_000))
+        #expect(usage.secondaryUsageResetAt == Date(timeIntervalSince1970: 1_775_000_000))
+        #expect(usage.usedUnits == 22)
+        #expect(usage.quota == 100)
+        #expect(usage.usageWindowName == "weekly_window")
+    }
+
+    @Test
+    func openAICodexUsageClientKeepsPaidWindowSemanticsWhenAPIOrderIsLegacy() async throws {
+        let responseJSON = """
+        {
+          "account_id": "acct-paid",
+          "email": "paid@example.com",
+          "plan_type": "plus",
+          "rate_limit": {
+            "primary_window": {
+              "name": "five_hour_window",
+              "used_percent": 70,
+              "limit_window_seconds": 18000,
+              "reset_after_seconds": 900,
+              "reset_at": 1774600000
+            },
+            "secondary_window": {
+              "name": "weekly_window",
+              "used_percent": 18,
+              "limit_window_seconds": 604800,
+              "reset_after_seconds": 350000,
+              "reset_at": 1775000000
+            }
+          }
+        }
+        """
+        let data = Data(responseJSON.utf8)
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=paid-legacy"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: data
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token-paid", accountID: "acct-paid")
+
+        #expect(usage.isPaid)
+        #expect(usage.primaryUsagePercent == 70)
+        #expect(usage.secondaryUsagePercent == 18)
+        #expect(usage.primaryUsageResetAt == Date(timeIntervalSince1970: 1_774_600_000))
+        #expect(usage.secondaryUsageResetAt == Date(timeIntervalSince1970: 1_775_000_000))
+        #expect(usage.usedUnits == 18)
+        #expect(usage.quota == 100)
+        #expect(usage.usageWindowName == "weekly_window")
     }
 
     @Test
