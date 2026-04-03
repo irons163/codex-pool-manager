@@ -10,8 +10,10 @@ struct WidgetBridgeSnapshot: Codable {
     let availableAccounts: Int?
     let overallUsagePercent: Int?
     let activeAccountName: String?
+    let activeIsPaid: Bool?
     let activeRemainingUnits: Int?
     let activeQuota: Int?
+    let activeFiveHourRemainingPercent: Int?
 }
 
 private enum WidgetBridgeSnapshotStore {
@@ -69,8 +71,10 @@ struct CodexPoolWidgetProvider: TimelineProvider {
                 availableAccounts: 0,
                 overallUsagePercent: 0,
                 activeAccountName: nil,
+                activeIsPaid: nil,
                 activeRemainingUnits: nil,
-                activeQuota: nil
+                activeQuota: nil,
+                activeFiveHourRemainingPercent: nil
             )
         )
     }
@@ -148,7 +152,34 @@ struct CodexPoolWidgetEntryView: View {
                         .lineLimit(1)
                 }
 
-                if let activeRemainingUnits = snapshot.activeRemainingUnits {
+                if snapshot.activeIsPaid == true {
+                    Text("Plan: Paid")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    if let weeklyRemaining = snapshot.activeRemainingUnits {
+                        if let weeklyQuota = snapshot.activeQuota, weeklyQuota > 0 {
+                            Text("Weekly left: \(weeklyRemaining)/\(weeklyQuota)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .monospacedDigit()
+                        } else {
+                            Text("Weekly left: \(weeklyRemaining)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .monospacedDigit()
+                        }
+                    }
+                    if let fiveHourRemaining = snapshot.activeFiveHourRemainingPercent {
+                        Text("5h left: \(fiveHourRemaining)%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .monospacedDigit()
+                    }
+                } else if let activeRemainingUnits = snapshot.activeRemainingUnits {
                     if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
                         Text("Remaining: \(activeRemainingUnits)/\(activeQuota)")
                             .font(.caption)

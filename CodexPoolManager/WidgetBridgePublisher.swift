@@ -20,8 +20,10 @@ enum WidgetBridgePublisher {
         let availableAccounts: Int?
         let overallUsagePercent: Int?
         let activeAccountName: String?
+        let activeIsPaid: Bool?
         let activeRemainingUnits: Int?
         let activeQuota: Int?
+        let activeFiveHourRemainingPercent: Int?
     }
 
     static func configureBridge() {
@@ -38,8 +40,10 @@ enum WidgetBridgePublisher {
             availableAccounts: nil,
             overallUsagePercent: nil,
             activeAccountName: nil,
+            activeIsPaid: nil,
             activeRemainingUnits: nil,
-            activeQuota: nil
+            activeQuota: nil,
+            activeFiveHourRemainingPercent: nil
         )
         publish(snapshot)
     }
@@ -60,6 +64,7 @@ enum WidgetBridgePublisher {
         let activeAccount = poolSnapshot.accounts.first(where: { $0.id == poolSnapshot.activeAccountID })
         let activeAccountName = activeAccount?.name
         let status = activeAccountName.map { "Active: \($0)" } ?? "No active account"
+        let activeFiveHourRemainingPercent = activeAccount?.primaryUsagePercent.map { max(0, min(100, 100 - $0)) }
 
         let snapshot = Snapshot(
             updatedAt: Date(),
@@ -70,8 +75,10 @@ enum WidgetBridgePublisher {
             availableAccounts: availableAccounts,
             overallUsagePercent: overallUsagePercent,
             activeAccountName: activeAccountName,
+            activeIsPaid: activeAccount?.isPaid,
             activeRemainingUnits: activeAccount?.remainingUnits,
-            activeQuota: activeAccount?.quota
+            activeQuota: activeAccount?.quota,
+            activeFiveHourRemainingPercent: activeFiveHourRemainingPercent
         )
         publish(snapshot)
     }
@@ -113,6 +120,8 @@ enum WidgetBridgePublisher {
     private static func snapshotSignature(for snapshot: Snapshot) -> String {
         let activeRemaining = snapshot.activeRemainingUnits.map(String.init) ?? ""
         let activeQuota = snapshot.activeQuota.map(String.init) ?? ""
+        let activeIsPaid = snapshot.activeIsPaid.map { $0 ? "1" : "0" } ?? ""
+        let activeFiveHourRemaining = snapshot.activeFiveHourRemainingPercent.map(String.init) ?? ""
         let totalAccounts = snapshot.totalAccounts.map(String.init) ?? ""
         let availableAccounts = snapshot.availableAccounts.map(String.init) ?? ""
         let overallUsagePercent = snapshot.overallUsagePercent.map(String.init) ?? ""
@@ -122,8 +131,10 @@ enum WidgetBridgePublisher {
             snapshot.source,
             snapshot.mode ?? "",
             snapshot.activeAccountName ?? "",
+            activeIsPaid,
             activeRemaining,
             activeQuota,
+            activeFiveHourRemaining,
             totalAccounts,
             availableAccounts,
             overallUsagePercent

@@ -10,8 +10,10 @@ private struct WidgetBridgeSnapshot: Codable {
     let availableAccounts: Int?
     let overallUsagePercent: Int?
     let activeAccountName: String?
+    let activeIsPaid: Bool?
     let activeRemainingUnits: Int?
     let activeQuota: Int?
+    let activeFiveHourRemainingPercent: Int?
 }
 
 private enum WidgetBridgeSnapshotStore {
@@ -68,7 +70,19 @@ struct ContentView: View {
                 if let mode = snapshot.mode {
                     Text("Mode: \(mode.capitalized)")
                 }
-                if let activeRemainingUnits = snapshot.activeRemainingUnits {
+                if snapshot.activeIsPaid == true {
+                    Text("Plan: Paid")
+                    if let weeklyRemaining = snapshot.activeRemainingUnits {
+                        if let weeklyQuota = snapshot.activeQuota, weeklyQuota > 0 {
+                            Text("Weekly left: \(weeklyRemaining)/\(weeklyQuota)")
+                        } else {
+                            Text("Weekly left: \(weeklyRemaining)")
+                        }
+                    }
+                    if let fiveHourRemaining = snapshot.activeFiveHourRemainingPercent {
+                        Text("5h left: \(fiveHourRemaining)%")
+                    }
+                } else if let activeRemainingUnits = snapshot.activeRemainingUnits {
                     if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
                         Text("Remaining: \(activeRemainingUnits)/\(activeQuota)")
                     } else {
