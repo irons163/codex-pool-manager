@@ -112,7 +112,7 @@
 "strategy.parameters" = "策略參數";
 "strategy.general_settings" = "一般設定";
 "strategy.low_usage_threshold_format" = "低用量提醒門檻：%d%%";
-"strategy.switch_threshold_format" = "智能切換低剩餘用量門檻：%d%%";
+"strategy.switch_threshold_format" = "智能切換最小用量差門檻：%d%%";
 "strategy.smart_recommendation.title" = "智慧建議";
 "strategy.smart_recommendation.message_format" = "建議下一個帳號為 %@。";
 "strategy.switch_allowed.title" = "允許切換";

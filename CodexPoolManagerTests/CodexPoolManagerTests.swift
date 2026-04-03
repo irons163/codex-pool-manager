@@ -445,10 +445,12 @@ struct CodexPoolManagerTests {
         )
 
         state.evaluate(now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(minUsageRatioDeltaToSwitch: 0.2, now: Date(timeIntervalSince1970: 0))
         state.recordUsage(units: 900, now: Date(timeIntervalSince1970: 30))
 
-        #expect(state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 30)))
-        #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 30)) == 0)
+        #expect(!state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 30)))
+        #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 30)) == 270)
+        #expect(state.activeAccount?.id == a)
     }
 
     @Test
@@ -465,6 +467,8 @@ struct CodexPoolManagerTests {
         )
 
         state.evaluate(now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(minUsageRatioDeltaToSwitch: 0.2, now: Date(timeIntervalSince1970: 0))
+        state.recordUsage(units: 900, now: Date(timeIntervalSince1970: 30))
 
         #expect(state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 300)))
         #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 300)) == 0)
@@ -668,7 +672,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func intelligentCooldownPersistsAcrossSnapshotRestore() {
+    func intelligentRestoreDoesNotReportCooldownWhenNoSwitchIsPending() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
         var state = AccountPoolState(
@@ -685,7 +689,7 @@ struct CodexPoolManagerTests {
         let restored = AccountPoolState(snapshot: snapshot)
 
         #expect(restored.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 100)) == 0)
-        #expect(restored.canIntelligentSwitch(now: Date(timeIntervalSince1970: 100)))
+        #expect(!restored.canIntelligentSwitch(now: Date(timeIntervalSince1970: 100)))
     }
 
     @Test

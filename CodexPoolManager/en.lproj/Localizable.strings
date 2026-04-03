@@ -112,7 +112,7 @@
 "strategy.parameters" = "Strategy Parameters";
 "strategy.general_settings" = "General Settings";
 "strategy.low_usage_threshold_format" = "Low-usage alert threshold: %d%%";
-"strategy.switch_threshold_format" = "Intelligent low-remaining-usage threshold: %d%%";
+"strategy.switch_threshold_format" = "Intelligent minimum usage-gap threshold: %d%%";
 "strategy.smart_recommendation.title" = "Smart Recommendation";
 "strategy.smart_recommendation.message_format" = "Recommended next account is %@.";
 "strategy.switch_allowed.title" = "Switch Allowed";

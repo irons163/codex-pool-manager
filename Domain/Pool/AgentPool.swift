@@ -471,11 +471,46 @@ struct AccountPoolState {
     }
 
     func canIntelligentSwitch(now: Date = .now) -> Bool {
-        mode == .intelligent
+        guard mode == .intelligent else { return false }
+        guard let candidateID = intelligentCandidateAccountID(),
+              let candidate = accounts.first(where: { $0.id == candidateID })
+        else {
+            return false
+        }
+
+        guard let current = activeAccount else {
+            return true
+        }
+
+        guard current.id != candidate.id else { return false }
+
+        if current.remainingUnits == 0 {
+            return true
+        }
+
+        let usageRatioDelta = current.usageRatio - candidate.usageRatio
+        guard usageRatioDelta >= minUsageRatioDeltaToSwitch else {
+            return false
+        }
+
+        return switchCooldownRemaining(now: now) == 0
     }
 
     func intelligentSwitchCooldownRemaining(now: Date = .now) -> Int {
-        0
+        guard mode == .intelligent else { return 0 }
+        guard let candidateID = intelligentCandidateAccountID(),
+              let candidate = accounts.first(where: { $0.id == candidateID }),
+              let current = activeAccount
+        else {
+            return 0
+        }
+
+        guard current.id != candidate.id else { return 0 }
+        guard current.remainingUnits > 0 else { return 0 }
+        let usageRatioDelta = current.usageRatio - candidate.usageRatio
+        guard usageRatioDelta >= minUsageRatioDeltaToSwitch else { return 0 }
+
+        return switchCooldownRemaining(now: now)
     }
 
     mutating func setMode(_ newMode: SwitchMode, now: Date = .now) {
@@ -721,30 +756,37 @@ struct AccountPoolState {
 
         case .intelligent:
             focusLockedAccountID = nil
-            guard let candidateID = intelligentCandidateAccountID() else {
+            guard let candidateID = intelligentCandidateAccountID(),
+                  let candidate = accounts.first(where: { $0.id == candidateID })
+            else {
                 activeAccountID = nil
                 return
             }
 
             guard let current = activeAccount else {
-                switchActive(to: candidateID, now: now)
+                switchActive(to: candidate.id, now: now)
                 return
             }
 
             if current.remainingUnits == 0 {
-                switchActive(to: candidateID, now: now)
+                switchActive(to: candidate.id, now: now)
                 return
             }
 
-            guard current.id != candidateID else {
+            guard current.id != candidate.id else {
                 return
             }
 
-            guard current.remainingRatio <= minUsageRatioDeltaToSwitch else {
+            let usageRatioDelta = current.usageRatio - candidate.usageRatio
+            guard usageRatioDelta >= minUsageRatioDeltaToSwitch else {
                 return
             }
 
-            switchActive(to: candidateID, now: now)
+            guard switchCooldownRemaining(now: now) == 0 else {
+                return
+            }
+
+            switchActive(to: candidate.id, now: now)
         }
     }
 
@@ -769,6 +811,14 @@ struct AccountPoolState {
 
     private var syncIncludedAccounts: [AgentAccount] {
         accounts.filter { !$0.isUsageSyncExcluded }
+    }
+
+    private func switchCooldownRemaining(now: Date) -> Int {
+        guard let lastSwitchAt else { return 0 }
+        let elapsed = now.timeIntervalSince(lastSwitchAt)
+        let remaining = minSwitchInterval - elapsed
+        guard remaining > 0 else { return 0 }
+        return Int(ceil(remaining))
     }
 
     private mutating func switchActive(to accountID: UUID, now: Date) {
