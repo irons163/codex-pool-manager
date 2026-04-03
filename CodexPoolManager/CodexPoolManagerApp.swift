@@ -107,15 +107,26 @@ private final class MenuBarSnapshotModel: ObservableObject {
     var menuBarTitle: String {
         guard let snapshot else { return "Codex --" }
 
+        var segments: [String] = []
+
         if let remaining = snapshot.activeRemainingUnits,
            let quota = snapshot.activeQuota,
            quota > 0 {
-            return "Codex \(remaining)/\(quota)"
+            segments.append("\(remaining)/\(quota)")
+        } else if let remaining = snapshot.activeRemainingUnits {
+            segments.append("\(remaining)")
+        } else {
+            segments.append("--")
         }
-        if let remaining = snapshot.activeRemainingUnits {
-            return "Codex \(remaining)"
+
+        if snapshot.activeIsPaid == true,
+           let fiveHourLeft = snapshot.activeFiveHourRemainingPercent {
+            segments.append("5h \(fiveHourLeft)%")
         }
-        return "Codex --"
+
+        segments.append(shortAgeText(since: snapshot.updatedAt))
+
+        return "Codex " + segments.joined(separator: " · ")
     }
 
     init() {
@@ -166,6 +177,21 @@ private final class MenuBarSnapshotModel: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    private func shortAgeText(since date: Date) -> String {
+        let seconds = max(0, Int(Date().timeIntervalSince(date)))
+        if seconds < 10 { return "now" }
+        if seconds < 60 { return "\(seconds)s" }
+
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes)m" }
+
+        let hours = minutes / 60
+        if hours < 24 { return "\(hours)h" }
+
+        let days = hours / 24
+        return "\(days)d"
     }
 }
 
