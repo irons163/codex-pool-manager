@@ -337,26 +337,21 @@ struct AccountUsagePanelView: View {
             }
 
             if paidAccount {
-                if let weeklyUsageRecordText = weeklyUsageRecordText(for: account) {
-                    Text(weeklyUsageRecordText)
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                }
-                ProgressView(value: account.usageRatio)
-                    .tint(usageProgressColor(account))
-                Text(resetRecordText(for: account))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
-
                 if let fiveHourPercent = account.primaryUsagePercent {
-                    Text(L10n.text("account.five_hour_usage_percent_format", fiveHourPercent))
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                    ProgressView(value: Double(fiveHourPercent) / 100)
-                        .tint(usageColor(forPercent: fiveHourPercent))
-                    Text(fiveHourResetRecordText(for: account))
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 12) {
+                            paidWeeklyUsageSection(for: account)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        VStack(alignment: .leading, spacing: 10) {
+                            paidWeeklyUsageSection(for: account)
+                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                        }
+                    }
+                } else {
+                    paidWeeklyUsageSection(for: account)
                 }
             } else {
                 if isPercentUsageAccount(account) {
@@ -531,6 +526,69 @@ struct AccountUsagePanelView: View {
             return L10n.text("account.weekly_usage_percent_format", account.usedUnits)
         } else {
             return L10n.text("account.weekly_usage_units_format", account.usedUnits, account.quota)
+        }
+    }
+
+    private func weeklyRemainingRecordText(for account: AgentAccount) -> String? {
+        guard isPaidAccount(account) else { return nil }
+
+        if isPercentUsageAccount(account) {
+            let used = max(0, min(100, account.usedUnits))
+            return L10n.text("usage.remaining_percent_format", 100 - used)
+        } else {
+            return L10n.text("usage.remaining_units_format", account.remainingUnits)
+        }
+    }
+
+    private func fiveHourRemainingRecordText(fiveHourPercent: Int) -> String {
+        let used = max(0, min(100, fiveHourPercent))
+        return L10n.text("usage.remaining_percent_format", 100 - used)
+    }
+
+    @ViewBuilder
+    private func paidWeeklyUsageSection(for account: AgentAccount) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let weeklyUsageRecordText = weeklyUsageRecordText(for: account),
+               let weeklyRemainingRecordText = weeklyRemainingRecordText(for: account) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(weeklyUsageRecordText)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    Spacer(minLength: 0)
+                    Text(weeklyRemainingRecordText)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                }
+            } else if let weeklyUsageRecordText = weeklyUsageRecordText(for: account) {
+                Text(weeklyUsageRecordText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+            }
+            ProgressView(value: account.usageRatio)
+                .tint(usageProgressColor(account))
+            Text(resetRecordText(for: account))
+                .font(.footnote)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+        }
+    }
+
+    @ViewBuilder
+    private func paidFiveHourUsageSection(for account: AgentAccount, fiveHourPercent: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(L10n.text("account.five_hour_usage_percent_format", fiveHourPercent))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+                Spacer(minLength: 0)
+                Text(fiveHourRemainingRecordText(fiveHourPercent: fiveHourPercent))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+            }
+            ProgressView(value: Double(fiveHourPercent) / 100)
+                .tint(usageColor(forPercent: fiveHourPercent))
+            Text(fiveHourResetRecordText(for: account))
+                .font(.footnote)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
         }
     }
 
