@@ -117,10 +117,17 @@ struct CodexPoolWidgetEntryView: View {
                 Text("Codex Pool")
                     .font(.headline)
                 Spacer(minLength: 8)
-                Text(entry.date, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                if let snapshot = entry.snapshot {
+                    Text("Updated \(snapshot.updatedAt, style: .relative)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else {
+                    Text(entry.date, style: .time)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
             }
 
             if let snapshot = entry.snapshot {
@@ -201,10 +208,6 @@ struct CodexPoolWidgetEntryView: View {
             }
         }
 
-        Text("Updated \(snapshot.updatedAt, style: .relative)")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
     }
 
     @ViewBuilder
@@ -297,9 +300,6 @@ struct CodexPoolWidgetEntryView: View {
                 .foregroundStyle(.secondary)
         }
 
-        Text("Updated \(snapshot.updatedAt, style: .relative)")
-            .font(.caption)
-            .foregroundStyle(.secondary)
     }
 
     private func metricRow(title: String, value: String, trailing: Bool) -> some View {
