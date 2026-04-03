@@ -14,11 +14,13 @@ struct WidgetBridgeSnapshot: Codable {
     let activeRemainingUnits: Int?
     let activeQuota: Int?
     let activeFiveHourRemainingPercent: Int?
+    let activeWeeklyResetAt: Date?
+    let activeFiveHourResetAt: Date?
 }
 
 private enum WidgetBridgeSnapshotStore {
     static let bridgeURL = URL(string: "http://127.0.0.1:38477/widget-snapshot")!
-    static let requestTimeout: TimeInterval = 0.35
+    static let requestTimeout: TimeInterval = 1.0
 
     static func load() -> WidgetBridgeSnapshot? {
         var request = URLRequest(url: bridgeURL)
@@ -74,7 +76,9 @@ struct CodexPoolWidgetProvider: TimelineProvider {
                 activeIsPaid: nil,
                 activeRemainingUnits: nil,
                 activeQuota: nil,
-                activeFiveHourRemainingPercent: nil
+                activeFiveHourRemainingPercent: nil,
+                activeWeeklyResetAt: nil,
+                activeFiveHourResetAt: nil
             )
         )
     }
@@ -90,12 +94,13 @@ struct CodexPoolWidgetProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CodexPoolWidgetEntry>) -> Void) {
         let currentDate = Date()
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: currentDate)
-            ?? currentDate.addingTimeInterval(900)
+        let snapshot = WidgetBridgeSnapshotStore.load()
+        let refreshInterval: TimeInterval = snapshot == nil ? 10 : 60
+        let nextUpdate = currentDate.addingTimeInterval(refreshInterval)
 
         let entry = CodexPoolWidgetEntry(
-            date: currentDate,
-            snapshot: WidgetBridgeSnapshotStore.load()
+            date: snapshot?.updatedAt ?? currentDate,
+            snapshot: snapshot
         )
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
@@ -104,6 +109,7 @@ struct CodexPoolWidgetProvider: TimelineProvider {
 
 struct CodexPoolWidgetEntryView: View {
     let entry: CodexPoolWidgetProvider.Entry
+    @Environment(\.widgetFamily) private var widgetFamily
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -118,97 +124,11 @@ struct CodexPoolWidgetEntryView: View {
             }
 
             if let snapshot = entry.snapshot {
-                if let totalAccounts = snapshot.totalAccounts,
-                   let availableAccounts = snapshot.availableAccounts,
-                   let overallUsagePercent = snapshot.overallUsagePercent {
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Available")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            Text("\(availableAccounts)/\(totalAccounts)")
-                                .font(.subheadline.weight(.semibold))
-                                .monospacedDigit()
-                        }
-                        Spacer(minLength: 0)
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("Usage")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            Text("\(overallUsagePercent)%")
-                                .font(.subheadline.weight(.semibold))
-                                .monospacedDigit()
-                        }
-                    }
-                }
-
-                if let activeAccountName = snapshot.activeAccountName, !activeAccountName.isEmpty {
-                    Text(activeAccountName)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
+                if widgetFamily == .systemMedium {
+                    mediumLayout(for: snapshot)
                 } else {
-                    Text(snapshot.status)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
+                    compactLayout(for: snapshot)
                 }
-
-                if snapshot.activeIsPaid == true {
-                    Text("Plan: Paid")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    if let weeklyRemaining = snapshot.activeRemainingUnits {
-                        if let weeklyQuota = snapshot.activeQuota, weeklyQuota > 0 {
-                            Text("Weekly left: \(weeklyRemaining)/\(weeklyQuota)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .monospacedDigit()
-                        } else {
-                            Text("Weekly left: \(weeklyRemaining)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .monospacedDigit()
-                        }
-                    }
-                    if let fiveHourRemaining = snapshot.activeFiveHourRemainingPercent {
-                        Text("5h left: \(fiveHourRemaining)%")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .monospacedDigit()
-                    }
-                } else if let activeRemainingUnits = snapshot.activeRemainingUnits {
-                    if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
-                        Text("Remaining: \(activeRemainingUnits)/\(activeQuota)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .monospacedDigit()
-                    } else {
-                        Text("Remaining: \(activeRemainingUnits)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .monospacedDigit()
-                    }
-                }
-
-                if let mode = snapshot.mode, !mode.isEmpty {
-                    Text("Mode: \(mode.capitalized)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(snapshot.status)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                Text("Updated \(snapshot.updatedAt, style: .relative)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             } else {
                 Text("No snapshot available")
                     .font(.subheadline.weight(.semibold))
@@ -221,6 +141,181 @@ struct CodexPoolWidgetEntryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding()
         .containerBackground(.fill.tertiary, for: .widget)
+    }
+
+    @ViewBuilder
+    private func mediumLayout(for snapshot: WidgetBridgeSnapshot) -> some View {
+        if let activeAccountName = snapshot.activeAccountName, !activeAccountName.isEmpty {
+            Text(activeAccountName)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+        } else {
+            Text(snapshot.status)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+        }
+
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                if let totalAccounts = snapshot.totalAccounts,
+                   let availableAccounts = snapshot.availableAccounts {
+                    metricRow(title: "Available", value: "\(availableAccounts)/\(totalAccounts)", trailing: false)
+                }
+                if snapshot.activeIsPaid == true {
+                    metricRow(title: "Plan", value: "Paid", trailing: false)
+                }
+                if let weeklyRemaining = snapshot.activeRemainingUnits {
+                    if let weeklyQuota = snapshot.activeQuota, weeklyQuota > 0 {
+                        metricRow(title: "Weekly left", value: "\(weeklyRemaining)/\(weeklyQuota)", trailing: false)
+                    } else {
+                        metricRow(title: "Remaining", value: "\(weeklyRemaining)", trailing: false)
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .trailing, spacing: 6) {
+                if snapshot.activeIsPaid == true {
+                    metricRow(
+                        title: "Weekly reset",
+                        value: snapshot.activeWeeklyResetAt.map(formatResetTime) ?? "--",
+                        trailing: true
+                    )
+                } else if let weeklyResetAt = snapshot.activeWeeklyResetAt {
+                    metricRow(title: "Reset", value: formatResetTime(weeklyResetAt), trailing: true)
+                }
+                if let fiveHourRemaining = snapshot.activeFiveHourRemainingPercent {
+                    metricRow(title: "5h left", value: "\(fiveHourRemaining)%", trailing: true)
+                }
+                if snapshot.activeIsPaid == true {
+                    metricRow(
+                        title: "5h reset",
+                        value: snapshot.activeFiveHourResetAt.map(formatResetTime) ?? "--",
+                        trailing: true
+                    )
+                }
+                if let mode = snapshot.mode, !mode.isEmpty {
+                    metricRow(title: "Mode", value: mode.capitalized, trailing: true)
+                }
+            }
+        }
+
+        Text("Updated \(snapshot.updatedAt, style: .relative)")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+    }
+
+    @ViewBuilder
+    private func compactLayout(for snapshot: WidgetBridgeSnapshot) -> some View {
+        if let totalAccounts = snapshot.totalAccounts,
+           let availableAccounts = snapshot.availableAccounts {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Available")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text("\(availableAccounts)/\(totalAccounts)")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                }
+                Spacer(minLength: 0)
+            }
+        }
+
+        if let activeAccountName = snapshot.activeAccountName, !activeAccountName.isEmpty {
+            Text(activeAccountName)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+        } else {
+            Text(snapshot.status)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+        }
+
+        if snapshot.activeIsPaid == true {
+            Text("Plan: Paid")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            if let weeklyRemaining = snapshot.activeRemainingUnits {
+                if let weeklyQuota = snapshot.activeQuota, weeklyQuota > 0 {
+                    Text("Weekly left: \(weeklyRemaining)/\(weeklyQuota)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .monospacedDigit()
+                } else {
+                    Text("Weekly left: \(weeklyRemaining)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .monospacedDigit()
+                }
+            }
+            if let fiveHourRemaining = snapshot.activeFiveHourRemainingPercent {
+                Text("5h left: \(fiveHourRemaining)%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .monospacedDigit()
+            }
+            Text("Weekly reset: \(snapshot.activeWeeklyResetAt.map(formatResetTime) ?? "--")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Text("5h reset: \(snapshot.activeFiveHourResetAt.map(formatResetTime) ?? "--")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        } else if let activeRemainingUnits = snapshot.activeRemainingUnits {
+            if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
+                Text("Remaining: \(activeRemainingUnits)/\(activeQuota)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .monospacedDigit()
+            } else {
+                Text("Remaining: \(activeRemainingUnits)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .monospacedDigit()
+            }
+            if let weeklyResetAt = snapshot.activeWeeklyResetAt {
+                Text("Reset: \(formatResetTime(weeklyResetAt))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+
+        if let mode = snapshot.mode, !mode.isEmpty {
+            Text("Mode: \(mode.capitalized)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        Text("Updated \(snapshot.updatedAt, style: .relative)")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+    private func metricRow(title: String, value: String, trailing: Bool) -> some View {
+        VStack(alignment: trailing ? .trailing : .leading, spacing: 1) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+        }
+    }
+
+    private func formatResetTime(_ date: Date) -> String {
+        date.formatted(.dateTime.month().day().hour().minute())
     }
 }
 

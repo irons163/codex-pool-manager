@@ -7,7 +7,7 @@ import WidgetKit
 enum WidgetBridgePublisher {
     static let widgetKind = "CodexPoolWidget"
     private static let stateLock = NSLock()
-    private static let minimumPublishInterval: TimeInterval = 30
+    private static let minimumPublishInterval: TimeInterval = 10
     private static var lastPublishedSignature: String?
     private static var lastPublishedAt: Date = .distantPast
 
@@ -24,6 +24,8 @@ enum WidgetBridgePublisher {
         let activeRemainingUnits: Int?
         let activeQuota: Int?
         let activeFiveHourRemainingPercent: Int?
+        let activeWeeklyResetAt: Date?
+        let activeFiveHourResetAt: Date?
     }
 
     static func configureBridge() {
@@ -43,7 +45,9 @@ enum WidgetBridgePublisher {
             activeIsPaid: nil,
             activeRemainingUnits: nil,
             activeQuota: nil,
-            activeFiveHourRemainingPercent: nil
+            activeFiveHourRemainingPercent: nil,
+            activeWeeklyResetAt: nil,
+            activeFiveHourResetAt: nil
         )
         publish(snapshot)
     }
@@ -78,7 +82,9 @@ enum WidgetBridgePublisher {
             activeIsPaid: activeAccount?.isPaid,
             activeRemainingUnits: activeAccount?.remainingUnits,
             activeQuota: activeAccount?.quota,
-            activeFiveHourRemainingPercent: activeFiveHourRemainingPercent
+            activeFiveHourRemainingPercent: activeFiveHourRemainingPercent,
+            activeWeeklyResetAt: activeAccount?.usageWindowResetAt,
+            activeFiveHourResetAt: activeAccount?.primaryUsageResetAt
         )
         publish(snapshot)
     }
@@ -111,6 +117,7 @@ enum WidgetBridgePublisher {
 
             #if canImport(WidgetKit)
             WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+            WidgetCenter.shared.reloadAllTimelines()
             #endif
         } catch {
             NSLog("WidgetBridgePublisher failed: \(error.localizedDescription)")
@@ -122,6 +129,8 @@ enum WidgetBridgePublisher {
         let activeQuota = snapshot.activeQuota.map(String.init) ?? ""
         let activeIsPaid = snapshot.activeIsPaid.map { $0 ? "1" : "0" } ?? ""
         let activeFiveHourRemaining = snapshot.activeFiveHourRemainingPercent.map(String.init) ?? ""
+        let activeWeeklyReset = snapshot.activeWeeklyResetAt.map { String($0.timeIntervalSince1970) } ?? ""
+        let activeFiveHourReset = snapshot.activeFiveHourResetAt.map { String($0.timeIntervalSince1970) } ?? ""
         let totalAccounts = snapshot.totalAccounts.map(String.init) ?? ""
         let availableAccounts = snapshot.availableAccounts.map(String.init) ?? ""
         let overallUsagePercent = snapshot.overallUsagePercent.map(String.init) ?? ""
@@ -135,6 +144,8 @@ enum WidgetBridgePublisher {
             activeRemaining,
             activeQuota,
             activeFiveHourRemaining,
+            activeWeeklyReset,
+            activeFiveHourReset,
             totalAccounts,
             availableAccounts,
             overallUsagePercent

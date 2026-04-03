@@ -14,6 +14,8 @@ private struct WidgetBridgeSnapshot: Codable {
     let activeRemainingUnits: Int?
     let activeQuota: Int?
     let activeFiveHourRemainingPercent: Int?
+    let activeWeeklyResetAt: Date?
+    let activeFiveHourResetAt: Date?
 }
 
 private enum WidgetBridgeSnapshotStore {
@@ -82,19 +84,25 @@ struct ContentView: View {
                     if let fiveHourRemaining = snapshot.activeFiveHourRemainingPercent {
                         Text("5h left: \(fiveHourRemaining)%")
                     }
+                    Text(
+                        "Weekly reset: \(snapshot.activeWeeklyResetAt?.formatted(date: .abbreviated, time: .shortened) ?? "--")"
+                    )
+                    Text(
+                        "5h reset: \(snapshot.activeFiveHourResetAt?.formatted(date: .abbreviated, time: .shortened) ?? "--")"
+                    )
                 } else if let activeRemainingUnits = snapshot.activeRemainingUnits {
                     if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
                         Text("Remaining: \(activeRemainingUnits)/\(activeQuota)")
                     } else {
                         Text("Remaining: \(activeRemainingUnits)")
                     }
+                    if let resetAt = snapshot.activeWeeklyResetAt {
+                        Text("Reset: \(resetAt.formatted(date: .abbreviated, time: .shortened))")
+                    }
                 }
                 if let totalAccounts = snapshot.totalAccounts,
                    let availableAccounts = snapshot.availableAccounts {
                     Text("Available: \(availableAccounts)/\(totalAccounts)")
-                }
-                if let overallUsagePercent = snapshot.overallUsagePercent {
-                    Text("Overall Usage: \(overallUsagePercent)%")
                 }
                 Text("Updated: \(snapshot.updatedAt.formatted(date: .abbreviated, time: .standard))")
                     .foregroundStyle(.secondary)
