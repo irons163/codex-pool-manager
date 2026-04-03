@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct PoolDashboardView: View {
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
@@ -497,6 +498,17 @@ struct PoolDashboardView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
+                Button("測試右上角通知") {
+                    DesktopNotifier.post(
+                        key: "manual-test-notification",
+                        title: "Codex Pool 測試通知",
+                        body: notificationUsageSummary(for: state.activeAccount),
+                        minInterval: 0
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PoolDashboardTheme.glowA)
+
                 activityLogPanel
             }
         }
@@ -732,6 +744,7 @@ struct PoolDashboardView: View {
 
     private func handleOnAppear() {
         migrateDefaultOAuthClientIDIfNeeded()
+        DesktopNotifier.requestAuthorizationIfNeeded()
 
         let output = lifecycleFlowCoordinator.onAppear(
             state: state,
@@ -899,12 +912,28 @@ struct PoolDashboardView: View {
 
         let previousMode = state.mode
         let previousActiveAccountID = state.activeAccountID
+        let previousSyncError = viewState.syncError
 
         let output = await usageSyncFlowCoordinator.syncCodexUsage(
             from: state,
             viewState: viewState
         )
         applyUsageSyncOutput(output)
+        if let syncError = viewState.syncError, !syncError.isEmpty {
+            DesktopNotifier.post(
+                key: "usage-sync-error",
+                title: "Codex Pool 同步失敗",
+                body: "\(syncError)\n\n\(notificationUsageSummary(for: state.activeAccount))",
+                minInterval: 300
+            )
+        } else if previousSyncError != nil {
+            DesktopNotifier.post(
+                key: "usage-sync-recovered",
+                title: "Codex Pool 已恢復同步",
+                body: notificationUsageSummary(for: state.activeAccount),
+                minInterval: 60
+            )
+        }
 
         await triggerAutomaticSwitchActionIfNeeded(
             previousMode: previousMode,
@@ -1017,10 +1046,26 @@ struct PoolDashboardView: View {
         if output.didSwitchAuth {
             suppressNextSnapshotDrivenSwitch = true
             state.markActiveAccountForSwitchLaunch(account.id)
+            DesktopNotifier.post(
+                key: "auto-switch-\(account.id.uuidString)",
+                title: "Codex Pool 已自動切換帳號",
+                body: notificationUsageSummary(
+                    for: state.accounts.first(where: { $0.id == account.id }) ?? account
+                ),
+                minInterval: 15
+            )
         } else if let previousActiveAccountID,
                   state.accounts.contains(where: { $0.id == previousActiveAccountID }) {
             suppressNextSnapshotDrivenSwitch = true
             state.markActiveAccountForSwitchLaunch(previousActiveAccountID)
+            if let errorMessage = output.viewState.switchLaunchError, !errorMessage.isEmpty {
+                DesktopNotifier.post(
+                    key: "auto-switch-failed",
+                    title: "Codex Pool 自動切換失敗",
+                    body: errorMessage,
+                    minInterval: 120
+                )
+            }
         }
         applySwitchLaunchOutput(output)
     }
@@ -1055,8 +1100,145 @@ struct PoolDashboardView: View {
         if output.didSwitchAuth {
             suppressNextSnapshotDrivenSwitch = true
             state.markActiveAccountForSwitchLaunch(account.id)
+            DesktopNotifier.post(
+                key: "manual-switch-\(account.id.uuidString)",
+                title: "Codex Pool 已切換帳號",
+                body: notificationUsageSummary(
+                    for: state.accounts.first(where: { $0.id == account.id }) ?? account
+                ),
+                minInterval: 5
+            )
+        } else if let errorMessage = output.viewState.switchLaunchError, !errorMessage.isEmpty {
+            DesktopNotifier.post(
+                key: "manual-switch-failed",
+                title: "Codex Pool 切換失敗",
+                body: errorMessage,
+                minInterval: 120
+            )
         }
         applySwitchLaunchOutput(output)
+    }
+
+    private func notificationUsageSummary(for account: AgentAccount?) -> String {
+        guard let account else {
+            return "目前沒有啟用帳號。"
+        }
+
+        var lines: [String] = []
+        lines.append("帳號：\(account.name)")
+        lines.append("剩餘：\(account.remainingUnits)/\(account.quota)")
+
+        if account.isPaid {
+            if let primaryUsagePercent = account.primaryUsagePercent {
+                let fiveHourRemaining = max(0, min(100, 100 - primaryUsagePercent))
+                lines.append("5h 剩餘：\(fiveHourRemaining)%")
+            } else {
+                lines.append("5h 剩餘：--")
+            }
+            lines.append("週重置：\(notificationDateText(account.usageWindowResetAt))")
+            lines.append("5h 重置：\(notificationDateText(account.primaryUsageResetAt))")
+        } else {
+            lines.append("重置：\(notificationDateText(account.usageWindowResetAt))")
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func notificationDateText(_ date: Date?) -> String {
+        guard let date else { return "--" }
+        return date.formatted(.dateTime.month().day().hour().minute())
+    }
+}
+
+private enum DesktopNotifier {
+    private static let lock = NSLock()
+    private static var didRequestAuthorization = false
+    private static var didConfigureCenter = false
+    private static var lastSentAtByKey: [String: Date] = [:]
+    private static let delegate = NotificationCenterDelegate()
+
+    static func requestAuthorizationIfNeeded() {
+        configureCenterIfNeeded()
+
+        lock.lock()
+        guard !didRequestAuthorization else {
+            lock.unlock()
+            return
+        }
+        didRequestAuthorization = true
+        lock.unlock()
+
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error {
+                NSLog("DesktopNotifier authorization failed: \(error.localizedDescription)")
+                return
+            }
+            if !granted {
+                NSLog("DesktopNotifier authorization denied by user.")
+            }
+        }
+    }
+
+    static func post(
+        key: String,
+        title: String,
+        body: String,
+        minInterval: TimeInterval
+    ) {
+        configureCenterIfNeeded()
+        guard shouldPost(key: key, minInterval: minInterval) else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "codexpool.notification.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                NSLog("DesktopNotifier post failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private static func shouldPost(key: String, minInterval: TimeInterval) -> Bool {
+        let now = Date()
+        lock.lock()
+        defer { lock.unlock() }
+
+        if minInterval > 0,
+           let last = lastSentAtByKey[key],
+           now.timeIntervalSince(last) < minInterval {
+            return false
+        }
+        lastSentAtByKey[key] = now
+        return true
+    }
+
+    private static func configureCenterIfNeeded() {
+        lock.lock()
+        guard !didConfigureCenter else {
+            lock.unlock()
+            return
+        }
+        didConfigureCenter = true
+        lock.unlock()
+
+        UNUserNotificationCenter.current().delegate = delegate
+    }
+
+    private final class NotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
+        func userNotificationCenter(
+            _ center: UNUserNotificationCenter,
+            willPresent notification: UNNotification,
+            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+        ) {
+            completionHandler([.banner, .list, .sound])
+        }
     }
 }
 

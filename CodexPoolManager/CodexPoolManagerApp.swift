@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import AppKit
+import Combine
 
 @main
 struct CodexPoolManagerApp: App {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
+    @StateObject private var menuBarModel = MenuBarSnapshotModel()
     
     init() {
         LegacySandboxPreferencesMigrator.migrateIfNeeded()
@@ -28,6 +31,14 @@ struct CodexPoolManagerApp: App {
         .commands {
             SidebarCommands()
         }
+
+        MenuBarExtra {
+            MenuBarStatusMenuView(model: menuBarModel)
+        } label: {
+            Text(menuBarModel.menuBarTitle)
+                .monospacedDigit()
+        }
+        .menuBarExtraStyle(.menu)
     }
 }
 
@@ -73,5 +84,149 @@ private enum LegacySandboxPreferencesMigrator {
         if migrated {
             NSLog("Migrated account pool preferences from sandbox container.")
         }
+    }
+}
+
+private struct MenuBarBridgeSnapshot: Codable {
+    let updatedAt: Date
+    let activeAccountName: String?
+    let activeIsPaid: Bool?
+    let activeRemainingUnits: Int?
+    let activeQuota: Int?
+    let activeFiveHourRemainingPercent: Int?
+    let activeWeeklyResetAt: Date?
+    let activeFiveHourResetAt: Date?
+}
+
+@MainActor
+private final class MenuBarSnapshotModel: ObservableObject {
+    @Published private(set) var snapshot: MenuBarBridgeSnapshot?
+
+    private var timer: Timer?
+
+    var menuBarTitle: String {
+        guard let snapshot else { return "Codex --" }
+
+        if let remaining = snapshot.activeRemainingUnits,
+           let quota = snapshot.activeQuota,
+           quota > 0 {
+            return "Codex \(remaining)/\(quota)"
+        }
+        if let remaining = snapshot.activeRemainingUnits {
+            return "Codex \(remaining)"
+        }
+        return "Codex --"
+    }
+
+    init() {
+        refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            self?.refresh()
+        }
+        if let timer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+
+    func refresh() {
+        Task {
+            let latest = await Self.fetchSnapshot()
+            if let latest {
+                snapshot = latest
+            }
+        }
+    }
+
+    private static func fetchSnapshot() async -> MenuBarBridgeSnapshot? {
+        guard let url = URL(string: "http://127.0.0.1:38477/widget-snapshot") else { return nil }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1.0
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 1.0
+        configuration.timeoutIntervalForResource = 1.0
+
+        do {
+            let (data, response) = try await URLSession(configuration: configuration).data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode),
+                  !data.isEmpty else {
+                return nil
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(MenuBarBridgeSnapshot.self, from: data)
+        } catch {
+            return nil
+        }
+    }
+}
+
+private struct MenuBarStatusMenuView: View {
+    @ObservedObject var model: MenuBarSnapshotModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let snapshot = model.snapshot {
+                if let accountName = snapshot.activeAccountName, !accountName.isEmpty {
+                    Text(accountName)
+                        .font(.headline)
+                        .lineLimit(1)
+                } else {
+                    Text("No active account")
+                        .font(.headline)
+                }
+
+                if let remaining = snapshot.activeRemainingUnits,
+                   let quota = snapshot.activeQuota,
+                   quota > 0 {
+                    Text("Remaining: \(remaining)/\(quota)")
+                        .monospacedDigit()
+                } else if let remaining = snapshot.activeRemainingUnits {
+                    Text("Remaining: \(remaining)")
+                        .monospacedDigit()
+                }
+
+                if snapshot.activeIsPaid == true {
+                    if let fiveHourLeft = snapshot.activeFiveHourRemainingPercent {
+                        Text("5h left: \(fiveHourLeft)%")
+                            .monospacedDigit()
+                    }
+                    Text("Weekly reset: \(formatDate(snapshot.activeWeeklyResetAt))")
+                    Text("5h reset: \(formatDate(snapshot.activeFiveHourResetAt))")
+                } else {
+                    Text("Reset: \(formatDate(snapshot.activeWeeklyResetAt))")
+                }
+
+                Text("Updated \(snapshot.updatedAt, style: .relative)")
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("No snapshot available")
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            Button("Refresh") {
+                model.refresh()
+            }
+            Button("Open CodexPoolManager") {
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
+        .padding(.vertical, 2)
+        .frame(minWidth: 280, alignment: .leading)
+    }
+
+    private func formatDate(_ value: Date?) -> String {
+        guard let value else { return "--" }
+        return value.formatted(.dateTime.month().day().hour().minute())
     }
 }
