@@ -50,6 +50,8 @@ struct AccountUsagePanelView: View {
 
     @AppStorage("pool_dashboard.account_usage.sort_mode")
     private var persistedSortModeRawValue: String = SortMode.joinedAt.rawValue
+    @AppStorage("pool_dashboard.account_usage.active_first")
+    private var persistedActiveAccountFirst: Bool = true
     @AppStorage("pool_dashboard.account_usage.layout_mode")
     private var persistedLayoutModeRawValue: String = LayoutMode.single.rawValue
     @State private var newGroupName = ""
@@ -167,6 +169,13 @@ struct AccountUsagePanelView: View {
 
     private var sortingLayoutControls: some View {
         HStack(spacing: 10) {
+            Toggle(isOn: $persistedActiveAccountFirst) {
+                Text(L10n.text("sort.active_first"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+            }
+            .toggleStyle(.checkbox)
+
             Menu {
                 ForEach(SortMode.allCases) { mode in
                     Button {
@@ -293,18 +302,19 @@ struct AccountUsagePanelView: View {
             AgentAccount.normalizedGroupName($0.groupName).caseInsensitiveCompare(selectedGroupName) == .orderedSame
         }
 
+        let baseSorted: [AgentAccount]
         switch sortMode {
         case .joinedAt:
-            return filteredAccounts.sorted { lhs, rhs in
+            baseSorted = filteredAccounts.sorted { lhs, rhs in
                 if lhs.createdAt == rhs.createdAt {
                     return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                 }
                 return lhs.createdAt > rhs.createdAt
             }
         case .name:
-            return filteredAccounts.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            baseSorted = filteredAccounts.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .remainingHigh:
-            return filteredAccounts.sorted { lhs, rhs in
+            baseSorted = filteredAccounts.sorted { lhs, rhs in
                 if lhs.isUsageSyncExcluded != rhs.isUsageSyncExcluded {
                     return !lhs.isUsageSyncExcluded
                 }
@@ -314,6 +324,17 @@ struct AccountUsagePanelView: View {
                 return lhs.remainingRatio > rhs.remainingRatio
             }
         }
+
+        guard persistedActiveAccountFirst,
+              let activeAccountID,
+              let activeIndex = baseSorted.firstIndex(where: { $0.id == activeAccountID }) else {
+            return baseSorted
+        }
+
+        var reordered = baseSorted
+        let activeAccount = reordered.remove(at: activeIndex)
+        reordered.insert(activeAccount, at: 0)
+        return reordered
     }
 
     private var outsideGroupAccounts: [AgentAccount] {

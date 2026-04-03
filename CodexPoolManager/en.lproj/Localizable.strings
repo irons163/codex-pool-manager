@@ -13,6 +13,7 @@
 
 "account_usage.title" = "Account Usage";
 "sort.title" = "Sort";
+"sort.active_first" = "Keep current account first";
 "sort.joined_at" = "Joined Time";
 "sort.name" = "Name";
 "sort.remaining_high" = "Remaining (High to Low)";

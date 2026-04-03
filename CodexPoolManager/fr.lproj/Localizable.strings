@@ -13,6 +13,7 @@
 
 "account_usage.title" = "Utilisation des comptes";
 "sort.title" = "Tri";
+"sort.active_first" = "Garder le compte actif en premier";
 "sort.joined_at" = "Date d'ajout";
 "sort.name" = "Nom";
 "sort.remaining_high" = "Restant (décroissant)";

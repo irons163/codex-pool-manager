@@ -13,6 +13,7 @@
 
 "account_usage.title" = "계정 사용량";
 "sort.title" = "정렬";
+"sort.active_first" = "현재 사용 계정을 맨 위에";
 "sort.joined_at" = "추가 시간";
 "sort.name" = "이름";
 "sort.remaining_high" = "남은 사용량 높은 순";

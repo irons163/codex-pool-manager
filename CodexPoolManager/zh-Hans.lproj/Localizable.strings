@@ -13,6 +13,7 @@
 
 "account_usage.title" = "账号用量";
 "sort.title" = "排序";
+"sort.active_first" = "当前使用账号排在第一位";
 "sort.joined_at" = "加入时间";
 "sort.name" = "名称";
 "sort.remaining_high" = "剩余用量高到低";
