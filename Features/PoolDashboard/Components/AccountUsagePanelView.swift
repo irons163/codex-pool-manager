@@ -222,41 +222,47 @@ struct AccountUsagePanelView: View {
 
     private var groupManagerRow: some View {
         HStack(spacing: 10) {
-            Picker(L10n.text("group.title"), selection: $selectedGroupName) {
-                ForEach(groups, id: \.self) { group in
-                    Text(group).tag(group)
-                }
-            }
-            .pickerStyle(.menu)
-            .frame(maxWidth: 220)
+            HStack(spacing: 8) {
+                Text(L10n.text("group.title"))
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
 
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isGroupRenameEditorVisible.toggle()
-                    if isGroupRenameEditorVisible {
-                        renameGroupName = selectedGroupName
+                Picker("", selection: $selectedGroupName) {
+                    ForEach(groups, id: \.self) { group in
+                        Text(group).tag(group)
                     }
                 }
-            } label: {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.bordered)
-            .disabled(selectedGroupName.isEmpty)
-            .help(L10n.text("group.rename"))
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .accessibilityLabel(L10n.text("group.title"))
 
-            TextField(L10n.text("group.placeholder"), text: $newGroupName)
-                .dashboardInputFieldStyle()
-                .frame(maxWidth: 180)
-
-            Button(L10n.text("group.add")) {
-                let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !draft.isEmpty else { return }
-                onCreateGroup(draft)
-                selectedGroupName = draft
-                newGroupName = ""
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isGroupRenameEditorVisible.toggle()
+                        if isGroupRenameEditorVisible {
+                            renameGroupName = selectedGroupName
+                        }
+                    }
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PoolDashboardTheme.glowA)
+                        .frame(width: 26, height: 26)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .disabled(selectedGroupName.isEmpty)
+                .help(L10n.text("group.rename"))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(PoolDashboardTheme.glowA)
+            .fixedSize(horizontal: true, vertical: false)
 
             if isGroupRenameEditorVisible {
                 TextField(L10n.text("group.rename"), text: $renameGroupName)
@@ -276,6 +282,20 @@ struct AccountUsagePanelView: View {
                 .buttonStyle(.bordered)
                 .disabled(selectedGroupName.isEmpty)
             }
+
+            TextField(L10n.text("group.placeholder"), text: $newGroupName)
+                .dashboardInputFieldStyle()
+                .frame(maxWidth: 180)
+
+            Button(L10n.text("group.add")) {
+                let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !draft.isEmpty else { return }
+                onCreateGroup(draft)
+                selectedGroupName = draft
+                newGroupName = ""
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PoolDashboardTheme.glowA)
 
             if !outsideGroupAccounts.isEmpty {
                 Menu {
