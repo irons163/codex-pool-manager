@@ -266,7 +266,7 @@
 "debug_tools.no_data" = "データなし";
 "common.clear" = "クリア";
 "common.choose" = "選択";
-"alert.low_usage.message.account_format" = "%@ の残量 %d はしきい値 %d%% を下回っています。";
+"alert.low_usage.message.account_format" = "%@ の残量 %d%% はしきい値 %d%% を下回っています。";
 "alert.low_usage.message.generic" = "アクティブアカウントの残り使用量が少なくなっています。";
 "usage.source.percent" = "ソース: response.rate_limit.primary_window.used_percent";
 "usage.source.units" = "ソース: response.used_units / quota";

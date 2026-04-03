@@ -266,7 +266,7 @@
 "debug_tools.no_data" = "无数据";
 "common.clear" = "清除";
 "common.choose" = "选择";
-"alert.low_usage.message.account_format" = "%@ 剩余 %d，已低于 %d%% 阈值。";
+"alert.low_usage.message.account_format" = "%@ 剩余 %d%%，已低于 %d%% 阈值。";
 "alert.low_usage.message.generic" = "当前账号剩余用量偏低。";
 "usage.source.percent" = "来源：response.rate_limit.primary_window.used_percent";
 "usage.source.units" = "来源：response.used_units / quota";

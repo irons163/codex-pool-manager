@@ -211,7 +211,7 @@
 "common.clear" = "Clear";
 "common.choose" = "Choose";
 
-"alert.low_usage.message.account_format" = "%@ remaining %d, below threshold %d%%.";
+"alert.low_usage.message.account_format" = "%@ remaining %d%%, below threshold %d%%.";
 "alert.low_usage.message.generic" = "Active account remaining usage is low.";
 
 "usage.source.percent" = "Source: response.rate_limit.primary_window.used_percent";

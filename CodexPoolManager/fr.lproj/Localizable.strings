@@ -266,7 +266,7 @@
 "debug_tools.no_data" = "Aucune donnée";
 "common.clear" = "Effacer";
 "common.choose" = "Choisir";
-"alert.low_usage.message.account_format" = "%@ restant %d, sous le seuil de %d%%.";
+"alert.low_usage.message.account_format" = "%@ restant %d%%, sous le seuil de %d%%.";
 "alert.low_usage.message.generic" = "L'usage restant du compte actif est faible.";
 "usage.source.percent" = "Source : response.rate_limit.primary_window.used_percent";
 "usage.source.units" = "Source : response.used_units / quota";

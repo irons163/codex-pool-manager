@@ -266,7 +266,7 @@
 "debug_tools.no_data" = "Sin datos";
 "common.clear" = "Borrar";
 "common.choose" = "Elegir";
-"alert.low_usage.message.account_format" = "A %@ le quedan %d, por debajo del umbral de %d%%.";
+"alert.low_usage.message.account_format" = "A %@ le quedan %d%%, por debajo del umbral de %d%%.";
 "alert.low_usage.message.generic" = "El uso restante de la cuenta activa es bajo.";
 "usage.source.percent" = "Origen: response.rate_limit.primary_window.used_percent";
 "usage.source.units" = "Origen: response.used_units / quota";

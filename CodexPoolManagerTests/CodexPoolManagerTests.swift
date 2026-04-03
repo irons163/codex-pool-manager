@@ -2885,7 +2885,27 @@ extension CodexPoolManagerTests {
             thresholdRatio: 0.15
         )
 
-        #expect(message == "Codex A 剩餘 10，已低於 15% 門檻。")
+        #expect(message == "Codex A 剩餘 10%，已低於 15% 門檻。")
+    }
+
+    @Test
+    func poolDashboardAlertPresenterUsesFiveHourRemainingPercentForPaidAccount() {
+        let presenter = PoolDashboardAlertPresenter()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Codex Paid",
+            usedUnits: 94,
+            quota: 100,
+            primaryUsagePercent: 50,
+            isPaid: true
+        )
+
+        let message = presenter.lowUsageAlertMessage(
+            activeAccount: account,
+            thresholdRatio: 0.50
+        )
+
+        #expect(message == "Codex Paid 剩餘 50%，已低於 50% 門檻。")
     }
 
     @Test

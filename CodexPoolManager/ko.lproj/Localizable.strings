@@ -266,7 +266,7 @@
 "debug_tools.no_data" = "데이터 없음";
 "common.clear" = "지우기";
 "common.choose" = "선택";
-"alert.low_usage.message.account_format" = "%@ 잔여 %d, 임계값 %d%% 미만입니다.";
+"alert.low_usage.message.account_format" = "%@ 잔여 %d%%, 임계값 %d%% 미만입니다.";
 "alert.low_usage.message.generic" = "활성 계정의 잔여 사용량이 낮습니다.";
 "usage.source.percent" = "출처: response.rate_limit.primary_window.used_percent";
 "usage.source.units" = "출처: response.used_units / quota";
