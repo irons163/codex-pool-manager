@@ -32,7 +32,7 @@ struct SyncToolbarView: View {
 
             if let lastSyncAt {
                 PanelStatusCalloutView(
-                    message: lastSyncAt.formatted(date: .omitted, time: .standard),
+                    message: localizedSyncTimeText(lastSyncAt),
                     title: L10n.text("sync.last_successful_sync"),
                     tone: .info
                 )
@@ -48,5 +48,14 @@ struct SyncToolbarView: View {
                 .frame(maxWidth: PoolDashboardTheme.syncBadgeMaxWidth, alignment: .leading)
             }
         }
+    }
+
+    private func localizedSyncTimeText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateStyle = .none
+        formatter.timeStyle = .medium
+        return formatter.string(from: date)
     }
 }
