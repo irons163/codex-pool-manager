@@ -39,14 +39,6 @@ struct StrategySettingsPanelView: View {
         GroupBox(L10n.text("strategy.parameters")) {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
                 VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                    Text(L10n.text("strategy.low_usage_threshold_format", Int(switchThresholdBinding.wrappedValue * 100)))
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    Slider(value: switchThresholdBinding, in: 0.05...0.5, step: 0.01)
-                        .tint(PoolDashboardTheme.glowA)
-                }
-                .dashboardInfoCard()
-
-                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
                     Text(
                         L10n.text(
                             "strategy.low_usage_alert_threshold_format",
@@ -58,6 +50,16 @@ struct StrategySettingsPanelView: View {
                         .tint(PoolDashboardTheme.glowA)
                 }
                 .dashboardInfoCard()
+
+                if mode == .intelligent {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                        Text(L10n.text("strategy.low_usage_threshold_format", Int(switchThresholdBinding.wrappedValue * 100)))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        Slider(value: switchThresholdBinding, in: 0.05...0.5, step: 0.01)
+                            .tint(PoolDashboardTheme.glowA)
+                    }
+                    .dashboardInfoCard()
+                }
 
                 if hasLowUsageWarning {
                     lowUsageStatusCallout

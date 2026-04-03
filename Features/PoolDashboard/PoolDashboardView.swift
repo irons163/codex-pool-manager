@@ -164,11 +164,15 @@ struct PoolDashboardView: View {
             handleOnAppear()
         }
         .onChange(of: state.snapshot) { previousSnapshot, snapshot in
+            let wasShowingLowUsageAlert = viewState.showLowUsageAlert
             showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
                 previousSnapshot: previousSnapshot,
                 currentSnapshot: snapshot
             )
             handleSnapshotChange(snapshot)
+            postLowUsageDesktopNotificationIfNeeded(
+                wasShowingLowUsageAlert: wasShowingLowUsageAlert
+            )
             guard !suppressNextSnapshotDrivenSwitch else {
                 suppressNextSnapshotDrivenSwitch = false
                 return
@@ -791,6 +795,24 @@ struct PoolDashboardView: View {
             thresholdRatio: thresholdRatio
         )
         viewState.showLowUsageAlert = true
+    }
+
+    private func postLowUsageDesktopNotificationIfNeeded(
+        wasShowingLowUsageAlert: Bool
+    ) {
+        guard !wasShowingLowUsageAlert, viewState.showLowUsageAlert else { return }
+
+        let message = viewState.lowUsageAlertMessage
+            ?? alertPresenter.lowUsageAlertMessage(
+                activeAccount: state.activeAccount,
+                thresholdRatio: state.lowUsageAlertThresholdRatio
+            )
+        DesktopNotifier.post(
+            key: "low-usage-alert",
+            title: "Codex Pool \(L10n.text(\"alert.low_usage.title\"))",
+            body: message,
+            minInterval: 60
+        )
     }
 
     private func intelligentRemainingRatio(for account: AgentAccount) -> Double {
