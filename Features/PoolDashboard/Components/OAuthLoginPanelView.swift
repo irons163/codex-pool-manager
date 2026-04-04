@@ -59,6 +59,12 @@ struct OAuthLoginPanelView: View {
                             title: L10n.text("oauth.workspace_id.label"),
                             tone: .info
                         )
+
+                        PanelStatusCalloutView(
+                            message: L10n.text("oauth.client_id.public_hint"),
+                            title: L10n.text("oauth.client_id.label"),
+                            tone: .info
+                        )
                     }
                     .padding(.top, 8)
                     .dashboardInfoCard()

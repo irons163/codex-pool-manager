@@ -81,6 +81,7 @@
 "oauth.workspace_id.label" = "Workspace ID";
 "oauth.workspace_id.optional" = "選填";
 "oauth.workspace_id.hint" = "Workspace ID 僅在組織管理的 OAuth 流程需要，個人帳號可留空。";
+"oauth.client_id.public_hint" = "Client Id: app_EMoamEEZ73f0CkXaXp7hrann 是官方公開的 Client Id，請放心使用。";
 "oauth.signing_in" = "登入中...";
 "oauth.sign_in_import" = "登入並匯入";
 "oauth.import_completed" = "匯入完成";

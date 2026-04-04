@@ -57,7 +57,7 @@ enum PoolDashboardTheme {
     static let contentWidth: CGFloat = 1180
     static let minWidth: CGFloat = 860
     static let minHeight: CGFloat = 680
-    static let subtitleReadableWidth: CGFloat = 560
+    static let subtitleReadableWidth: CGFloat = 660
     static let standardAnimationDuration: Double = 0.24
     static let fastAnimationDuration: Double = 0.18
     static let listRowVerticalInset: CGFloat = 3

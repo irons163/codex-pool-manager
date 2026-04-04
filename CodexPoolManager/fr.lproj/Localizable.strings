@@ -66,7 +66,7 @@
 "delete.button" = "Supprimer";
 
 "oauth.sign_in.title" = "Connexion OAuth";
-"oauth.sign_in.subtitle" = "Use your own OAuth client to sign in, then import the resulting account into the pool.";
+"oauth.sign_in.subtitle" = "Use a public OAuth client to sign in, then import the resulting account into the pool. You may also use your own OAuth client.";
 "oauth.import_target.title" = "Cible d'import";
 "oauth.account_name.label" = "Nom du compte";
 "oauth.account_name.placeholder" = "Nom après connexion";
@@ -81,6 +81,7 @@
 "oauth.workspace_id.label" = "Workspace ID";
 "oauth.workspace_id.optional" = "Optionnel";
 "oauth.workspace_id.hint" = "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.";
+"oauth.client_id.public_hint" = "Client ID: app_EMoamEEZ73f0CkXaXp7hrann is the official public Client ID and safe to use.";
 "oauth.signing_in" = "Connexion...";
 "oauth.sign_in_import" = "Se connecter et importer";
 "oauth.import_completed" = "Import terminé";

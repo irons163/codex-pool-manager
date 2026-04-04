@@ -81,6 +81,7 @@
 "oauth.workspace_id.label" = "Workspace ID";
 "oauth.workspace_id.optional" = "선택 사항";
 "oauth.workspace_id.hint" = "Workspace ID는 조직 관리 OAuth 흐름에서만 필요합니다. 개인 계정은 비워 두세요.";
+"oauth.client_id.public_hint" = "Client ID: app_EMoamEEZ73f0CkXaXp7hrann is the official public Client ID and safe to use.";
 "oauth.signing_in" = "로그인 중...";
 "oauth.sign_in_import" = "로그인 및 가져오기";
 "oauth.import_completed" = "가져오기 완료";
