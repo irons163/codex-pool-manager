@@ -404,7 +404,7 @@ struct AccountUsagePanelView: View {
                             paidWeeklyUsageSection(for: account)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                         VStack(alignment: .leading, spacing: 10) {
                             paidWeeklyUsageSection(for: account)
@@ -611,11 +611,10 @@ struct AccountUsagePanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             if let weeklyUsageRecordText = weeklyUsageRecordText(for: account),
                let weeklyRemainingRecordText = weeklyRemainingRecordText(for: account) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(weeklyUsageRecordText)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textPrimary)
-                    Spacer(minLength: 0)
                     Text(weeklyRemainingRecordText)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textPrimary)
@@ -635,34 +634,37 @@ struct AccountUsagePanelView: View {
 
     @ViewBuilder
     private func paidFiveHourUsageSection(for account: AgentAccount, fiveHourPercent: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        VStack(alignment: .trailing, spacing: 6) {
+            VStack(alignment: .trailing, spacing: 2) {
                 Text(L10n.text("account.five_hour_usage_percent_format", fiveHourPercent))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
-                Spacer(minLength: 0)
                 Text(fiveHourRemainingRecordText(fiveHourPercent: fiveHourPercent))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
             }
             ProgressView(value: Double(fiveHourPercent) / 100)
                 .tint(usageColor(forPercent: fiveHourPercent))
+                .frame(maxWidth: .infinity)
             Text(fiveHourResetRecordText(for: account))
                 .font(.footnote)
                 .foregroundStyle(PoolDashboardTheme.textMuted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
     private func resetRecordText(for account: AgentAccount) -> String {
-        let resetText = account.usageWindowResetAt?
-            .formatted(.dateTime.month().day().hour().minute()) ?? "--"
+        let resetText = account.usageWindowResetAt.map(localizedMonthDayHourMinuteText) ?? "--"
         return L10n.text("account.weekly_resets_format", resetText)
     }
 
     private func fiveHourResetRecordText(for account: AgentAccount) -> String {
-        let resetText = account.primaryUsageResetAt?
-            .formatted(.dateTime.month().day().hour().minute()) ?? "--"
+        let resetText = account.primaryUsageResetAt.map(localizedMonthDayHourMinuteText) ?? "--"
         return L10n.text("account.five_hour_resets_format", resetText)
+    }
+
+    private func localizedMonthDayHourMinuteText(_ date: Date) -> String {
+        date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
 
     private func usageColor(forPercent percent: Int) -> Color {

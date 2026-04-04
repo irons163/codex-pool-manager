@@ -129,6 +129,25 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     }
 }
 
+extension AgentAccount {
+    // Paid accounts use 5-hour remaining by default, but when weekly remaining is exhausted,
+    // weekly remaining becomes the source of truth for smart switching.
+    var smartSwitchRemainingRatio: Double {
+        let weeklyRemainingRatio = max(0, min(1, remainingRatio))
+        guard isPaid else { return weeklyRemainingRatio }
+        guard weeklyRemainingRatio > 0 else { return 0 }
+        if let primaryUsagePercent {
+            let clampedUsagePercent = min(max(primaryUsagePercent, 0), 100)
+            return Double(100 - clampedUsagePercent) / 100
+        }
+        return weeklyRemainingRatio
+    }
+
+    var smartSwitchRemainingPercent: Int {
+        max(0, min(100, Int((smartSwitchRemainingRatio * 100).rounded())))
+    }
+}
+
 struct PoolActivity: Identifiable, Codable, Equatable {
     let id: UUID
     let timestamp: Date
@@ -851,11 +870,7 @@ struct AccountPoolState {
     }
 
     private func intelligentRemainingRatio(for account: AgentAccount) -> Double {
-        if account.isPaid, let primaryUsagePercent = account.primaryUsagePercent {
-            let clampedUsagePercent = min(max(primaryUsagePercent, 0), 100)
-            return Double(100 - clampedUsagePercent) / 100
-        }
-        return account.remainingRatio
+        account.smartSwitchRemainingRatio
     }
 
     private func bestRemainingAccountID() -> UUID? {

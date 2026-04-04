@@ -33,7 +33,7 @@ struct PoolAccountUsagePresenter {
             segments.append(
                 L10n.text(
                     "usage.resets_format",
-                    resetAt.formatted(.dateTime.month().day().hour().minute())
+                    resetAt.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
                 )
             )
         }

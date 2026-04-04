@@ -609,6 +609,39 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func intelligentModeUsesWeeklyRemainingWhenPaidWeeklyIsExhausted() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 100,
+                    quota: 100,
+                    primaryUsagePercent: 0,
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: b,
+                    name: "B",
+                    usedUnits: 2,
+                    quota: 100,
+                    primaryUsagePercent: 7,
+                    isPaid: true
+                )
+            ],
+            mode: .manual
+        )
+
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.updateSwitchSettings(lowUsageThresholdRatio: 0.24, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 301))
+
+        #expect(state.activeAccount?.id == b)
+    }
+
+    @Test
     func intelligentModeKeepsActiveAccountWhenCandidatesTemporarilyDisappear() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!

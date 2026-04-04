@@ -33,7 +33,7 @@ struct ActivityLogPanelView: View {
 
                     List(activities.prefix(12)) { activity in
                         HStack(spacing: 8) {
-                            Text(activity.timestamp.formatted(date: .omitted, time: .standard))
+                            Text(localizedTimeText(activity.timestamp))
                                 .monospacedDigit()
                                 .foregroundStyle(PoolDashboardTheme.textMuted)
                                 .frame(width: 104, alignment: .leading)
@@ -50,5 +50,14 @@ struct ActivityLogPanelView: View {
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+    }
+
+    private func localizedTimeText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateStyle = .none
+        formatter.timeStyle = .medium
+        return formatter.string(from: date)
     }
 }

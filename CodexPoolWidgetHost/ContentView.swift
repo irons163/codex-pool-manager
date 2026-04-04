@@ -18,6 +18,21 @@ private struct WidgetBridgeSnapshot: Codable {
     let activeFiveHourResetAt: Date?
 }
 
+private enum WidgetHostLocaleResolver {
+    private static let languageOverrideKey = "app_language_override"
+    private static let systemLanguageCode = "system"
+    private static let supportedLanguageCodes = ["en", "zh-Hant", "zh-Hans", "fr", "es", "ja", "ko"]
+
+    static func currentLocale() -> Locale {
+        guard let overrideCode = UserDefaults.standard.string(forKey: languageOverrideKey),
+              overrideCode != systemLanguageCode,
+              supportedLanguageCodes.contains(overrideCode) else {
+            return .autoupdatingCurrent
+        }
+        return Locale(identifier: overrideCode)
+    }
+}
+
 private enum WidgetBridgeSnapshotStore {
     static let bridgeURL = URL(string: "http://127.0.0.1:38477/widget-snapshot")!
     static let requestTimeout: TimeInterval = 0.5
@@ -57,6 +72,7 @@ private enum WidgetBridgeSnapshotStore {
 
 struct ContentView: View {
     @State private var snapshot = WidgetBridgeSnapshotStore.load()
+    private let displayLocale = WidgetHostLocaleResolver.currentLocale()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -85,10 +101,10 @@ struct ContentView: View {
                         Text("5h left: \(fiveHourRemaining)%")
                     }
                     Text(
-                        "Weekly reset: \(snapshot.activeWeeklyResetAt?.formatted(date: .abbreviated, time: .shortened) ?? "--")"
+                        "Weekly reset: \(snapshot.activeWeeklyResetAt.map(localizedAbbreviatedDateTimeText) ?? "--")"
                     )
                     Text(
-                        "5h reset: \(snapshot.activeFiveHourResetAt?.formatted(date: .abbreviated, time: .shortened) ?? "--")"
+                        "5h reset: \(snapshot.activeFiveHourResetAt.map(localizedAbbreviatedDateTimeText) ?? "--")"
                     )
                 } else if let activeRemainingUnits = snapshot.activeRemainingUnits {
                     if let activeQuota = snapshot.activeQuota, activeQuota > 0 {
@@ -97,14 +113,14 @@ struct ContentView: View {
                         Text("Remaining: \(activeRemainingUnits)")
                     }
                     if let resetAt = snapshot.activeWeeklyResetAt {
-                        Text("Reset: \(resetAt.formatted(date: .abbreviated, time: .shortened))")
+                        Text("Reset: \(localizedAbbreviatedDateTimeText(resetAt))")
                     }
                 }
                 if let totalAccounts = snapshot.totalAccounts,
                    let availableAccounts = snapshot.availableAccounts {
                     Text("Available: \(availableAccounts)/\(totalAccounts)")
                 }
-                Text("Updated: \(snapshot.updatedAt.formatted(date: .abbreviated, time: .standard))")
+                Text("Updated: \(localizedAbbreviatedDateTimeText(snapshot.updatedAt))")
                     .foregroundStyle(.secondary)
             } else {
                 Text("No snapshot found. Open CodexPoolManager once to publish data.")
@@ -123,9 +139,19 @@ struct ContentView: View {
         }
         .padding(24)
         .frame(minWidth: 460, minHeight: 240, alignment: .topLeading)
+        .environment(\.locale, displayLocale)
         .onAppear {
             snapshot = WidgetBridgeSnapshotStore.load()
         }
+    }
+
+    private func localizedAbbreviatedDateTimeText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = displayLocale
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

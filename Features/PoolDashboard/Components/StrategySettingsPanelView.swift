@@ -110,10 +110,7 @@ struct StrategySettingsPanelView: View {
     }
 
     private func intelligentRemainingPercent(for account: AgentAccount) -> Int {
-        if account.isPaid, let primaryUsagePercent = account.primaryUsagePercent {
-            return max(0, min(100, 100 - primaryUsagePercent))
-        }
-        return max(0, min(100, Int((account.remainingRatio * 100).rounded())))
+        account.smartSwitchRemainingPercent
     }
 
     private func localizedModeTitle(_ mode: SwitchMode) -> String {

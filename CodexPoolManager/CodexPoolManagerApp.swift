@@ -240,7 +240,7 @@ private struct MenuBarStatusMenuView: View {
                     Text("Reset: \(formatDate(snapshot.activeWeeklyResetAt))")
                 }
 
-                Text("Updated \(snapshot.updatedAt, style: .relative)")
+                Text("Updated \(localizedRelativeText(for: snapshot.updatedAt))")
                     .foregroundStyle(.secondary)
             } else {
                 Text("No snapshot available")
@@ -262,6 +262,13 @@ private struct MenuBarStatusMenuView: View {
 
     private func formatDate(_ value: Date?) -> String {
         guard let value else { return "--" }
-        return value.formatted(.dateTime.month().day().hour().minute())
+        return value.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+    }
+
+    private func localizedRelativeText(for date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = L10n.locale()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }

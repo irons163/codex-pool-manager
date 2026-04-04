@@ -816,11 +816,7 @@ struct PoolDashboardView: View {
     }
 
     private func intelligentRemainingRatio(for account: AgentAccount) -> Double {
-        if account.isPaid, let primaryUsagePercent = account.primaryUsagePercent {
-            let clampedUsagePercent = min(max(primaryUsagePercent, 0), 100)
-            return Double(100 - clampedUsagePercent) / 100
-        }
-        return account.remainingRatio
+        account.smartSwitchRemainingRatio
     }
 
     // MARK: - Account Actions
@@ -1230,7 +1226,7 @@ struct PoolDashboardView: View {
 
     private func notificationDateText(_ date: Date?) -> String {
         guard let date else { return "--" }
-        return date.formatted(.dateTime.month().day().hour().minute())
+        return date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
 }
 

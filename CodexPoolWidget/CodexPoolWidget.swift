@@ -18,6 +18,21 @@ struct WidgetBridgeSnapshot: Codable {
     let activeFiveHourResetAt: Date?
 }
 
+private enum WidgetLocaleResolver {
+    private static let languageOverrideKey = "app_language_override"
+    private static let systemLanguageCode = "system"
+    private static let supportedLanguageCodes = ["en", "zh-Hant", "zh-Hans", "fr", "es", "ja", "ko"]
+
+    static func currentLocale() -> Locale {
+        guard let overrideCode = UserDefaults.standard.string(forKey: languageOverrideKey),
+              overrideCode != systemLanguageCode,
+              supportedLanguageCodes.contains(overrideCode) else {
+            return .autoupdatingCurrent
+        }
+        return Locale(identifier: overrideCode)
+    }
+}
+
 private enum WidgetBridgeSnapshotStore {
     static let bridgeURL = URL(string: "http://127.0.0.1:38477/widget-snapshot")!
     static let requestTimeout: TimeInterval = 1.0
@@ -110,6 +125,7 @@ struct CodexPoolWidgetProvider: TimelineProvider {
 struct CodexPoolWidgetEntryView: View {
     let entry: CodexPoolWidgetProvider.Entry
     @Environment(\.widgetFamily) private var widgetFamily
+    private let displayLocale = WidgetLocaleResolver.currentLocale()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -118,12 +134,12 @@ struct CodexPoolWidgetEntryView: View {
                     .font(.headline)
                 Spacer(minLength: 8)
                 if let snapshot = entry.snapshot {
-                    Text("Updated \(snapshot.updatedAt, style: .relative)")
+                    Text("Updated \(localizedRelativeText(snapshot.updatedAt))")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 } else {
-                    Text(entry.date, style: .time)
+                    Text(localizedTimeText(entry.date))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
@@ -148,6 +164,7 @@ struct CodexPoolWidgetEntryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding()
         .containerBackground(.fill.tertiary, for: .widget)
+        .environment(\.locale, displayLocale)
     }
 
     @ViewBuilder
@@ -315,7 +332,23 @@ struct CodexPoolWidgetEntryView: View {
     }
 
     private func formatResetTime(_ date: Date) -> String {
-        date.formatted(.dateTime.month().day().hour().minute())
+        date.formatted(.dateTime.locale(displayLocale).month().day().hour().minute())
+    }
+
+    private func localizedRelativeText(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = displayLocale
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func localizedTimeText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = displayLocale
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
