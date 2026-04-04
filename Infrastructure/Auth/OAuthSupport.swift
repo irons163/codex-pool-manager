@@ -138,6 +138,12 @@ struct OAuthTokens: Equatable {
     let idToken: String?
 }
 
+struct OAuthManualSignInPreparation: Equatable {
+    let authorizationURL: URL
+    let state: String
+    let codeVerifier: String
+}
+
 struct OAuthIDTokenClaims: Equatable {
     let subject: String?
     let accountID: String?
@@ -251,13 +257,8 @@ final class OAuthLoginService: NSObject {
     }
 
     func signIn(configuration: OAuthClientConfiguration) async throws -> OAuthTokens {
-        let pkce = PKCECodes.make()
-        let state = UUID().uuidString
-        let request = OAuthAuthorizationRequest(state: state, codeChallenge: pkce.codeChallenge)
-        let authorizeURL = try OAuthAuthorizationRequestBuilder.makeAuthorizeURL(
-            config: configuration,
-            request: request
-        )
+        let manualPreparation = try prepareManualSignIn(configuration: configuration)
+        let authorizeURL = manualPreparation.authorizationURL
 
         let callbackURL: URL
         if let redirectURL = URL(string: configuration.redirectURI),
@@ -276,13 +277,45 @@ final class OAuthLoginService: NSObject {
             )
         }
         let payload = try OAuthCallbackParser.parse(callbackURL: callbackURL)
-        guard payload.state == state else {
+        guard payload.state == manualPreparation.state else {
             throw OAuthLoginError.stateMismatch
         }
 
         return try await exchangeCodeForTokens(
             code: payload.code,
-            pkce: pkce,
+            codeVerifier: manualPreparation.codeVerifier,
+            configuration: configuration
+        )
+    }
+
+    func prepareManualSignIn(configuration: OAuthClientConfiguration) throws -> OAuthManualSignInPreparation {
+        let pkce = PKCECodes.make()
+        let state = UUID().uuidString
+        let request = OAuthAuthorizationRequest(state: state, codeChallenge: pkce.codeChallenge)
+        let authorizeURL = try OAuthAuthorizationRequestBuilder.makeAuthorizeURL(
+            config: configuration,
+            request: request
+        )
+        return OAuthManualSignInPreparation(
+            authorizationURL: authorizeURL,
+            state: state,
+            codeVerifier: pkce.codeVerifier
+        )
+    }
+
+    func completeManualSignIn(
+        configuration: OAuthClientConfiguration,
+        callbackURL: URL,
+        expectedState: String,
+        codeVerifier: String
+    ) async throws -> OAuthTokens {
+        let payload = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+        guard payload.state == expectedState else {
+            throw OAuthLoginError.stateMismatch
+        }
+        return try await exchangeCodeForTokens(
+            code: payload.code,
+            codeVerifier: codeVerifier,
             configuration: configuration
         )
     }
@@ -347,7 +380,7 @@ final class OAuthLoginService: NSObject {
 
     private func exchangeCodeForTokens(
         code: String,
-        pkce: PKCECodes,
+        codeVerifier: String,
         configuration: OAuthClientConfiguration
     ) async throws -> OAuthTokens {
         var request = URLRequest(url: configuration.tokenEndpoint)
@@ -357,7 +390,7 @@ final class OAuthLoginService: NSObject {
             clientID: configuration.clientID,
             code: code,
             redirectURI: configuration.redirectURI,
-            codeVerifier: pkce.codeVerifier
+            codeVerifier: codeVerifier
         )
 
         let (data, response) = try await session.data(for: request)

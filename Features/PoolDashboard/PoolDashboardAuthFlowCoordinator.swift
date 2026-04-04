@@ -76,6 +76,16 @@ struct PoolDashboardAuthFlowCoordinator {
         usageClient: CodexUsageFetching
     ) async throws -> OAuthSignInContext {
         let tokens = try await loginService.signIn(configuration: configuration)
+        return await makeOAuthSignInContext(
+            tokens: tokens,
+            usageClient: usageClient
+        )
+    }
+
+    func makeOAuthSignInContext(
+        tokens: OAuthTokens,
+        usageClient: CodexUsageFetching
+    ) async -> OAuthSignInContext {
         let claims = OAuthIDTokenClaimsParser.parse(tokens.idToken)
 
         var usage: CodexUsage?

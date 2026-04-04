@@ -30,6 +30,13 @@ struct PoolDashboardRuntimeCoordinator {
         let shouldRefreshLocalOAuthAccounts: Bool
     }
 
+    struct ManualOAuthPreparationOutput {
+        let authorizationURL: URL?
+        let expectedState: String?
+        let codeVerifier: String?
+        let oauthError: String?
+    }
+
     private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
     private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
 
@@ -56,6 +63,75 @@ struct PoolDashboardRuntimeCoordinator {
             let context = try await authFlowCoordinator.fetchOAuthSignInContext(
                 configuration: oauthConfiguration,
                 loginService: OAuthLoginService(),
+                usageClient: OpenAICodexUsageClient()
+            )
+
+            var nextState = state
+            let successMessage = authFlowCoordinator.applyOAuthSignIn(
+                state: &nextState,
+                context: context,
+                accountNameInput: input.accountNameInput,
+                fallbackQuota: input.fallbackQuota
+            )
+
+            return oauthSuccessOutput(
+                state: nextState,
+                successMessage: successMessage
+            )
+        } catch {
+            return oauthFailureOutput(
+                state: state,
+                accountNameInput: input.accountNameInput,
+                error: error
+            )
+        }
+    }
+
+    func prepareManualOAuthSignIn(
+        input: OAuthSignInInput
+    ) -> ManualOAuthPreparationOutput {
+        do {
+            let oauthConfiguration = try makeOAuthConfiguration(input: input)
+            let preparation = try OAuthLoginService().prepareManualSignIn(configuration: oauthConfiguration)
+            return ManualOAuthPreparationOutput(
+                authorizationURL: preparation.authorizationURL,
+                expectedState: preparation.state,
+                codeVerifier: preparation.codeVerifier,
+                oauthError: nil
+            )
+        } catch {
+            return ManualOAuthPreparationOutput(
+                authorizationURL: nil,
+                expectedState: nil,
+                codeVerifier: nil,
+                oauthError: error.localizedDescription
+            )
+        }
+    }
+
+    func importManualOAuthCallback(
+        from state: AccountPoolState,
+        input: OAuthSignInInput,
+        callbackURLString: String,
+        expectedState: String,
+        codeVerifier: String
+    ) async -> OAuthSignInOutput {
+        do {
+            let oauthConfiguration = try makeOAuthConfiguration(input: input)
+            let trimmedCallbackURL = callbackURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let callbackURL = URL(string: trimmedCallbackURL), !trimmedCallbackURL.isEmpty else {
+                throw OAuthLoginError.invalidCallback
+            }
+
+            let tokens = try await OAuthLoginService().completeManualSignIn(
+                configuration: oauthConfiguration,
+                callbackURL: callbackURL,
+                expectedState: expectedState,
+                codeVerifier: codeVerifier
+            )
+
+            let context = await authFlowCoordinator.makeOAuthSignInContext(
+                tokens: tokens,
                 usageClient: OpenAICodexUsageClient()
             )
 

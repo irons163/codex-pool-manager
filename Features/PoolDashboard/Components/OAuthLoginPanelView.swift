@@ -9,11 +9,16 @@ struct OAuthLoginPanelView: View {
     @Binding var oauthWorkspaceID: String
     @Binding var oauthAccountName: String
     @Binding var oauthAccountQuota: Int
+    @Binding var manualCallbackURL: String
 
     let isSigningInOAuth: Bool
     let oauthSuccessMessage: String?
     let oauthError: String?
+    let manualAuthorizationURLOverride: String?
+    let showManualImportSection: Bool
     let onSignIn: () async -> Void
+    let onCopyURLAndManualSignIn: () async -> Void
+    let onManualImport: () async -> Void
 
     private let advancedColumns = [
         GridItem(.flexible(minimum: 220), spacing: 12),
@@ -67,6 +72,23 @@ struct OAuthLoginPanelView: View {
                 PanelAdaptiveActionRowView {
                     actionRow
                 }
+
+                if showManualImportSection {
+                    VStack(alignment: .leading, spacing: 10) {
+                        advancedField(
+                            L10n.text("oauth.manual.callback_url.label"),
+                            placeholder: L10n.text("oauth.manual.callback_url.placeholder"),
+                            text: $manualCallbackURL
+                        )
+
+                        Button(L10n.text("oauth.manual.import")) {
+                            Task { await onManualImport() }
+                        }
+                        .buttonStyle(DashboardPrimaryButtonStyle())
+                        .disabled(isSigningInOAuth || manualCallbackURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .dashboardInfoCard()
+                }
             }
         }
         .sectionCardStyle()
@@ -81,6 +103,13 @@ struct OAuthLoginPanelView: View {
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSigningInOAuth || oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityIdentifier("auth.oauth.signInButton")
+
+            Button(L10n.text("oauth.manual.copy_sign_in")) {
+                Task { await onCopyURLAndManualSignIn() }
+            }
+            .buttonStyle(DashboardPrimaryButtonStyle())
+            .disabled(isSigningInOAuth || oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("auth.oauth.copyManualSignInButton")
 
             if let oauthSuccessMessage {
                 PanelStatusCalloutView(
@@ -136,6 +165,13 @@ struct OAuthLoginPanelView: View {
     }
 
     private var authorizationURLText: String {
+        if let manualAuthorizationURLOverride {
+            let trimmed = manualAuthorizationURLOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+
         let trimmedIssuer = oauthIssuer.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedClientID = oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedScopes = oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines)

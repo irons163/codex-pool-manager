@@ -18,6 +18,13 @@ struct PoolDashboardOAuthSignInFlowCoordinator {
         let shouldRefreshLocalOAuthAccounts: Bool
     }
 
+    struct ManualPreparationOutput {
+        let authorizationURL: URL?
+        let expectedState: String?
+        let codeVerifier: String?
+        let oauthError: String?
+    }
+
     private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
     private let mutationCoordinator = PoolDashboardMutationCoordinator()
 
@@ -34,6 +41,55 @@ struct PoolDashboardOAuthSignInFlowCoordinator {
         let runtimeOutput = await runtimeCoordinator.signInWithOAuth(
             from: state,
             input: input.runtimeInput(accountNameInput: oauthAccountName)
+        )
+        let shouldRefreshLocalOAuthAccounts = mutationCoordinator.applyOAuthOutput(
+            runtimeOutput,
+            state: &nextState,
+            viewState: &nextViewState,
+            oauthAccountName: &nextOAuthAccountName
+        )
+
+        return Output(
+            state: nextState,
+            viewState: nextViewState,
+            oauthAccountName: nextOAuthAccountName,
+            shouldRefreshLocalOAuthAccounts: shouldRefreshLocalOAuthAccounts
+        )
+    }
+
+    func prepareManualOAuthSignIn(
+        input: Input
+    ) -> ManualPreparationOutput {
+        let runtimeOutput = runtimeCoordinator.prepareManualOAuthSignIn(
+            input: input.runtimeInput(accountNameInput: "")
+        )
+        return ManualPreparationOutput(
+            authorizationURL: runtimeOutput.authorizationURL,
+            expectedState: runtimeOutput.expectedState,
+            codeVerifier: runtimeOutput.codeVerifier,
+            oauthError: runtimeOutput.oauthError
+        )
+    }
+
+    func importManualOAuthCallback(
+        from state: AccountPoolState,
+        viewState: PoolDashboardViewState,
+        oauthAccountName: String,
+        input: Input,
+        callbackURLString: String,
+        expectedState: String,
+        codeVerifier: String
+    ) async -> Output {
+        var nextState = state
+        var nextViewState = viewState
+        var nextOAuthAccountName = oauthAccountName
+
+        let runtimeOutput = await runtimeCoordinator.importManualOAuthCallback(
+            from: state,
+            input: input.runtimeInput(accountNameInput: oauthAccountName),
+            callbackURLString: callbackURLString,
+            expectedState: expectedState,
+            codeVerifier: codeVerifier
         )
         let shouldRefreshLocalOAuthAccounts = mutationCoordinator.applyOAuthOutput(
             runtimeOutput,

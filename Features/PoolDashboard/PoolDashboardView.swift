@@ -1,5 +1,8 @@
 import SwiftUI
 import UserNotifications
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct PoolDashboardView: View {
     private enum SyncPolicy {
@@ -7,6 +10,11 @@ struct PoolDashboardView: View {
     }
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+    private struct PendingManualOAuthContext {
+        let expectedState: String
+        let codeVerifier: String
+        let authorizationURL: URL
+    }
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
     @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
@@ -26,6 +34,8 @@ struct PoolDashboardView: View {
     @State private var isWorkspaceSectionCollapsed = false
     @State private var isSidebarCollapsed = false
     @State private var suppressNextSnapshotDrivenSwitch = false
+    @State private var pendingManualOAuthContext: PendingManualOAuthContext?
+    @State private var manualOAuthCallbackURL = ""
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -575,11 +585,20 @@ struct PoolDashboardView: View {
             oauthWorkspaceID: $oauthWorkspaceID,
             oauthAccountName: $formState.oauthAccountName,
             oauthAccountQuota: $formState.oauthAccountQuota,
+            manualCallbackURL: $manualOAuthCallbackURL,
             isSigningInOAuth: viewState.isSigningInOAuth,
             oauthSuccessMessage: viewState.oauthSuccessMessage,
             oauthError: viewState.oauthError,
+            manualAuthorizationURLOverride: pendingManualOAuthContext?.authorizationURL.absoluteString,
+            showManualImportSection: pendingManualOAuthContext != nil,
             onSignIn: {
                 await signInWithOAuth()
+            },
+            onCopyURLAndManualSignIn: {
+                await prepareManualOAuthSignIn()
+            },
+            onManualImport: {
+                await importManualOAuthCallback()
             }
         )
     }
@@ -1058,6 +1077,82 @@ struct PoolDashboardView: View {
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
         }
+    }
+
+    @MainActor
+    private func prepareManualOAuthSignIn() async {
+        let output = oauthSignInFlowCoordinator.prepareManualOAuthSignIn(
+            input: .init(
+                issuer: oauthIssuer,
+                clientID: oauthClientID,
+                scopes: oauthScopes,
+                redirectURI: oauthRedirectURI,
+                originator: oauthOriginator,
+                workspaceID: oauthWorkspaceID,
+                fallbackQuota: formState.oauthAccountQuota
+            )
+        )
+
+        guard let authorizationURL = output.authorizationURL,
+              let expectedState = output.expectedState,
+              let codeVerifier = output.codeVerifier else {
+            viewState.oauthError = output.oauthError ?? L10n.text("oauth.error.invalid_authorize_url")
+            viewState.oauthSuccessMessage = nil
+            return
+        }
+
+        pendingManualOAuthContext = PendingManualOAuthContext(
+            expectedState: expectedState,
+            codeVerifier: codeVerifier,
+            authorizationURL: authorizationURL
+        )
+        copyTextToClipboard(authorizationURL.absoluteString)
+        viewState.oauthError = nil
+        viewState.oauthSuccessMessage = L10n.text("oauth.manual.copy_success")
+    }
+
+    @MainActor
+    private func importManualOAuthCallback() async {
+        guard let pendingManualOAuthContext else {
+            viewState.oauthError = L10n.text("oauth.error.invalid_callback")
+            viewState.oauthSuccessMessage = nil
+            return
+        }
+
+        guard asyncStateCoordinator.beginOAuthSignIn(viewState: &viewState) else { return }
+        defer { asyncStateCoordinator.endOAuthSignIn(viewState: &viewState) }
+
+        let output = await oauthSignInFlowCoordinator.importManualOAuthCallback(
+            from: state,
+            viewState: viewState,
+            oauthAccountName: formState.oauthAccountName,
+            input: .init(
+                issuer: oauthIssuer,
+                clientID: oauthClientID,
+                scopes: oauthScopes,
+                redirectURI: oauthRedirectURI,
+                originator: oauthOriginator,
+                workspaceID: oauthWorkspaceID,
+                fallbackQuota: formState.oauthAccountQuota
+            ),
+            callbackURLString: manualOAuthCallbackURL,
+            expectedState: pendingManualOAuthContext.expectedState,
+            codeVerifier: pendingManualOAuthContext.codeVerifier
+        )
+        applyOAuthSignInOutput(output)
+        if output.shouldRefreshLocalOAuthAccounts {
+            refreshLocalOAuthAccounts()
+            manualOAuthCallbackURL = ""
+            self.pendingManualOAuthContext = nil
+        }
+    }
+
+    private func copyTextToClipboard(_ text: String) {
+        #if canImport(AppKit)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        #endif
     }
 
     // MARK: - Local Accounts
