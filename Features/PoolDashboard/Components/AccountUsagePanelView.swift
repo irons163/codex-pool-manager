@@ -598,7 +598,10 @@ struct AccountUsagePanelView: View {
                     )
             }
         }
-        .shadow(color: isCurrentAccount ? PoolDashboardTheme.glowA.opacity(0.35) : .clear, radius: isCurrentAccount ? 12 : 0)
+        .shadow(
+            color: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? PoolDashboardTheme.glowA.opacity(0.35) : .clear,
+            radius: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? 12 : 0
+        )
     }
 
     private func accountNameRow(_ account: AgentAccount) -> some View {

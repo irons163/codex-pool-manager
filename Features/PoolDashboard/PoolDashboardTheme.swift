@@ -4,7 +4,7 @@ import AppKit
 #endif
 
 enum PoolDashboardTheme {
-    private static var prefersLightPalette: Bool {
+    static var isLightPalette: Bool {
         switch AppAppearancePreference(rawValue: UserDefaults.standard.string(forKey: AppAppearancePreference.storageKey) ?? "") ?? .system {
         case .light:
             return true
@@ -21,64 +21,64 @@ enum PoolDashboardTheme {
     }
 
     static var canvasTop: Color {
-        prefersLightPalette
-            ? Color(red: 0.97, green: 0.94, blue: 0.86)
+        isLightPalette
+            ? Color(red: 0.996, green: 0.988, blue: 0.966)
             : Color(red: 0.03, green: 0.08, blue: 0.16)
     }
 
     static var canvasBottom: Color {
-        prefersLightPalette
-            ? Color(red: 0.92, green: 0.86, blue: 0.75)
+        isLightPalette
+            ? Color(red: 0.984, green: 0.968, blue: 0.930)
             : Color(red: 0.02, green: 0.03, blue: 0.06)
     }
 
     static var glowA: Color {
-        prefersLightPalette
-            ? Color(red: 0.20, green: 0.50, blue: 0.95)
+        isLightPalette
+            ? Color(red: 0.27, green: 0.57, blue: 0.94)
             : Color(red: 0.20, green: 0.50, blue: 0.95)
     }
 
     static var glowB: Color {
-        prefersLightPalette
-            ? Color(red: 0.35, green: 0.67, blue: 0.56)
+        isLightPalette
+            ? Color(red: 0.58, green: 0.74, blue: 0.56)
             : Color(red: 0.08, green: 0.78, blue: 0.68)
     }
 
     static var panelFill: Color {
-        prefersLightPalette ? Color.black.opacity(0.055) : Color.white.opacity(0.07)
+        isLightPalette ? Color.white.opacity(0.94) : Color.white.opacity(0.07)
     }
 
     static var panelStroke: Color {
-        prefersLightPalette ? Color.black.opacity(0.16) : Color.white.opacity(0.14)
+        isLightPalette ? Color(red: 0.67, green: 0.57, blue: 0.45).opacity(0.20) : Color.white.opacity(0.14)
     }
 
     static var panelInnerStroke: Color {
-        prefersLightPalette ? Color.black.opacity(0.10) : Color.white.opacity(0.08)
+        isLightPalette ? Color(red: 0.67, green: 0.57, blue: 0.45).opacity(0.12) : Color.white.opacity(0.08)
     }
 
     static let panelBorderWidth: CGFloat = 1
     static let tileBorderWidth: CGFloat = 1
     static var panelMutedFill: Color {
-        prefersLightPalette ? Color.black.opacity(0.042) : Color.white.opacity(0.04)
+        isLightPalette ? Color.white.opacity(0.92) : Color.white.opacity(0.04)
     }
 
     static var panelStrongFill: Color {
-        prefersLightPalette ? Color.black.opacity(0.085) : Color.white.opacity(0.11)
+        isLightPalette ? Color.white.opacity(0.97) : Color.white.opacity(0.11)
     }
 
     static let panelTopHighlightOpacity: Double = 0.09
     static let panelBottomShadeOpacity: Double = 0.14
     static let panelSpecularOpacity: Double = 0.22
     static var textPrimary: Color {
-        prefersLightPalette ? Color(red: 0.14, green: 0.12, blue: 0.09) : Color.white
+        isLightPalette ? Color(red: 0.17, green: 0.14, blue: 0.10) : Color.white
     }
 
     static var textSecondary: Color {
-        prefersLightPalette ? Color(red: 0.22, green: 0.18, blue: 0.14).opacity(0.82) : Color.white.opacity(0.78)
+        isLightPalette ? Color(red: 0.24, green: 0.20, blue: 0.15).opacity(0.90) : Color.white.opacity(0.78)
     }
 
     static var textMuted: Color {
-        prefersLightPalette ? Color(red: 0.25, green: 0.22, blue: 0.18).opacity(0.68) : Color.white.opacity(0.62)
+        isLightPalette ? Color(red: 0.30, green: 0.25, blue: 0.20).opacity(0.76) : Color.white.opacity(0.62)
     }
 
     static let groupLabelOpacity: Double = 0.92
@@ -97,11 +97,18 @@ enum PoolDashboardTheme {
         )
     }
 
-    static var glowAOpacity: Double { prefersLightPalette ? 0.16 : 0.30 }
-    static var glowBOpacity: Double { prefersLightPalette ? 0.12 : 0.22 }
+    static var glowAOpacity: Double { isLightPalette ? 0.045 : 0.30 }
+    static var glowBOpacity: Double { isLightPalette ? 0.03 : 0.22 }
     static var vignetteEndColor: Color {
-        prefersLightPalette ? Color(red: 0.42, green: 0.32, blue: 0.20).opacity(0.10) : Color.black.opacity(0.24)
+        isLightPalette ? Color(red: 0.52, green: 0.41, blue: 0.27).opacity(0.015) : Color.black.opacity(0.24)
     }
+    static var sectionCardShadowColor: Color { isLightPalette ? Color.black.opacity(0.06) : Color.clear }
+    static var sectionCardShadowRadius: CGFloat { isLightPalette ? 10 : 0 }
+    static var sectionCardShadowYOffset: CGFloat { isLightPalette ? 2 : 0 }
+    static var chromeStrongOpacity: Double { isLightPalette ? 0.90 : 0.78 }
+    static var chromeBaseOpacity: Double { isLightPalette ? 0.82 : 0.52 }
+    static var chromeSidebarOpacity: Double { isLightPalette ? 0.86 : 0.72 }
+    static var chromeFooterOpacity: Double { isLightPalette ? 0.88 : 0.82 }
 
     static let sectionSpacing: CGFloat = 26
     static let sectionHeaderSpacing: CGFloat = 8
@@ -170,10 +177,15 @@ private struct SectionCardStyle: ViewModifier {
             .padding(PoolDashboardTheme.sectionCardPadding)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelFill.opacity(0.34))
+                    .fill(PoolDashboardTheme.isLightPalette ? Color.white.opacity(0.90) : PoolDashboardTheme.panelFill.opacity(0.34))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.tileCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.7), lineWidth: 0.8)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(PoolDashboardTheme.isLightPalette ? 1 : 0.7), lineWidth: 0.8)
+                    )
+                    .shadow(
+                        color: PoolDashboardTheme.sectionCardShadowColor,
+                        radius: PoolDashboardTheme.sectionCardShadowRadius,
+                        y: PoolDashboardTheme.sectionCardShadowYOffset
                     )
             )
     }
@@ -221,10 +233,15 @@ extension View {
             .padding(PoolDashboardTheme.sectionCardInnerPadding)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.infoCardCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.8))
+                    .fill(PoolDashboardTheme.isLightPalette ? Color.white.opacity(0.94) : PoolDashboardTheme.panelMutedFill.opacity(0.8))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.infoCardCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.65), lineWidth: 0.8)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(PoolDashboardTheme.isLightPalette ? 0.9 : 0.65), lineWidth: 0.8)
+                    )
+                    .shadow(
+                        color: PoolDashboardTheme.isLightPalette ? Color.black.opacity(0.04) : .clear,
+                        radius: PoolDashboardTheme.isLightPalette ? 6 : 0,
+                        y: PoolDashboardTheme.isLightPalette ? 1 : 0
                     )
             )
     }
@@ -235,15 +252,20 @@ extension View {
             .padding(.horizontal, 2)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.78))
+                    .fill(PoolDashboardTheme.isLightPalette ? Color.white.opacity(0.96) : PoolDashboardTheme.panelMutedFill.opacity(0.78))
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.9), lineWidth: 1)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(PoolDashboardTheme.isLightPalette ? 0.85 : 0.9), lineWidth: 1)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
-                            .stroke(PoolDashboardTheme.glowA.opacity(0.15), lineWidth: 0.6)
+                            .stroke(PoolDashboardTheme.glowA.opacity(PoolDashboardTheme.isLightPalette ? 0.08 : 0.15), lineWidth: 0.6)
                             .padding(1)
+                    )
+                    .shadow(
+                        color: PoolDashboardTheme.isLightPalette ? Color.black.opacity(0.035) : .clear,
+                        radius: PoolDashboardTheme.isLightPalette ? 5 : 0,
+                        y: PoolDashboardTheme.isLightPalette ? 1 : 0
                     )
             )
     }

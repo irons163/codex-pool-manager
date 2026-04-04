@@ -273,7 +273,7 @@ struct PoolDashboardView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 10)
                     .background(
-                        PoolDashboardTheme.panelStrongFill.opacity(0.82)
+                        PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeFooterOpacity)
                             .overlay(alignment: .top) {
                                 Rectangle()
                                     .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
@@ -288,7 +288,7 @@ struct PoolDashboardView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(PoolDashboardTheme.panelStrongFill.opacity(0.52))
+        .background(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeBaseOpacity))
         .groupBoxStyle(DashboardGroupBoxStyle())
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: state.mode)
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: viewState.isSyncingUsage)
@@ -324,7 +324,7 @@ struct PoolDashboardView: View {
         .frame(width: 40, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top, 14)
-        .background(PoolDashboardTheme.panelMutedFill.opacity(0.72))
+        .background(PoolDashboardTheme.panelMutedFill.opacity(PoolDashboardTheme.chromeSidebarOpacity))
     }
 
     private var workspaceDrawerPanel: some View {
@@ -339,7 +339,7 @@ struct PoolDashboardView: View {
                     .padding(.vertical, 12)
             }
             .frame(minHeight: 300, maxHeight: 440, alignment: .topLeading)
-            .background(PoolDashboardTheme.panelStrongFill.opacity(0.78))
+            .background(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeStrongOpacity))
         }
     }
 
@@ -366,7 +366,7 @@ struct PoolDashboardView: View {
         .padding(.horizontal, 6)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.45))
+                .fill(PoolDashboardTheme.panelMutedFill.opacity(PoolDashboardTheme.isLightPalette ? 0.72 : 0.45))
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -414,7 +414,7 @@ struct PoolDashboardView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.vertical, PoolDashboardTheme.workspaceSidebarPadding)
         .padding(.horizontal, 10)
-        .background(PoolDashboardTheme.panelMutedFill.opacity(0.72))
+        .background(PoolDashboardTheme.panelMutedFill.opacity(PoolDashboardTheme.chromeSidebarOpacity))
     }
 
     private var visibleWorkspaces: [Workspace] {
