@@ -125,6 +125,10 @@
 "strategy.switch_allowed.title" = "전환 가능";
 "strategy.switch_allowed.message" = "스마트 전환 조건이 충족되었습니다.";
 "strategy.language" = "언어";
+"strategy.appearance" = "모양";
+"strategy.appearance.system" = "시스템 설정 따르기";
+"strategy.appearance.dark" = "다크";
+"strategy.appearance.light" = "라이트";
 
 "overview.title" = "풀 개요";
 "overview.subtitle" = "전체 용량을 모니터링하고 통제된 유지보수 창에서 사용량을 초기화합니다.";

@@ -5,6 +5,7 @@ struct WorkspaceSettingsPanelView: View {
     let autoSyncEnabledBinding: Binding<Bool>
     let autoSyncIntervalSecondsBinding: Binding<Double>
     let languageOverrideBinding: Binding<String>
+    let appearanceOverrideBinding: Binding<String>
     let languageOptions: [L10n.LanguageOption]
 
     private var switchAndLaunchBinding: Binding<Bool> {
@@ -51,6 +52,20 @@ struct WorkspaceSettingsPanelView: View {
                         ForEach(languageOptions) { option in
                             Text(option.title).tag(option.code)
                         }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(PoolDashboardTheme.glowA)
+                }
+                .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Text(L10n.text("strategy.appearance"))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    Picker(L10n.text("strategy.appearance"), selection: appearanceOverrideBinding) {
+                        Text(L10n.text("strategy.appearance.system")).tag(AppAppearancePreference.system.rawValue)
+                        Text(L10n.text("strategy.appearance.dark")).tag(AppAppearancePreference.dark.rawValue)
+                        Text(L10n.text("strategy.appearance.light")).tag(AppAppearancePreference.light.rawValue)
                     }
                     .pickerStyle(.menu)
                     .tint(PoolDashboardTheme.glowA)

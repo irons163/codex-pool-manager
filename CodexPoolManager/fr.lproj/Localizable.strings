@@ -125,6 +125,10 @@
 "strategy.switch_allowed.title" = "Bascule autorisée";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
 "strategy.language" = "Langue";
+"strategy.appearance" = "Apparence";
+"strategy.appearance.system" = "Suivre le système";
+"strategy.appearance.dark" = "Sombre";
+"strategy.appearance.light" = "Clair";
 
 "overview.title" = "Vue d'ensemble du pool";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

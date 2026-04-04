@@ -136,6 +136,10 @@
 "strategy.auto_sync_enabled" = "Auto-sync Codex usage";
 "strategy.auto_sync_interval_seconds_format" = "Auto-sync interval: %d sec";
 "strategy.language" = "Language";
+"strategy.appearance" = "Appearance";
+"strategy.appearance.system" = "Follow System";
+"strategy.appearance.dark" = "Dark";
+"strategy.appearance.light" = "Light";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

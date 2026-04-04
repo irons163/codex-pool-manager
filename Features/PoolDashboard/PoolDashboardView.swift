@@ -22,6 +22,7 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
+    @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
     @State private var resetAllLatch = DestructiveActionLatch()
@@ -145,13 +146,13 @@ struct PoolDashboardView: View {
             PoolDashboardTheme.backgroundGradient
                 .ignoresSafeArea()
             Circle()
-                .fill(PoolDashboardTheme.glowA.opacity(0.30))
+                .fill(PoolDashboardTheme.glowA.opacity(PoolDashboardTheme.glowAOpacity))
                 .frame(width: PoolDashboardTheme.glowLargeSize, height: PoolDashboardTheme.glowLargeSize)
                 .blur(radius: PoolDashboardTheme.glowLargeBlur)
                 .offset(x: -300, y: -260)
                 .allowsHitTesting(false)
             Circle()
-                .fill(PoolDashboardTheme.glowB.opacity(0.22))
+                .fill(PoolDashboardTheme.glowB.opacity(PoolDashboardTheme.glowBOpacity))
                 .frame(width: PoolDashboardTheme.glowMediumSize, height: PoolDashboardTheme.glowMediumSize)
                 .blur(radius: PoolDashboardTheme.glowMediumBlur)
                 .offset(x: 340, y: 220)
@@ -159,7 +160,7 @@ struct PoolDashboardView: View {
             Rectangle()
                 .fill(
                     RadialGradient(
-                        colors: [.clear, Color.black.opacity(0.24)],
+                        colors: [.clear, PoolDashboardTheme.vignetteEndColor],
                         center: .center,
                         startRadius: 120,
                         endRadius: 920
@@ -229,6 +230,7 @@ struct PoolDashboardView: View {
                 )
             Text(message)
         }
+        .preferredColorScheme(AppAppearancePreference.preferredColorScheme(for: appAppearanceOverride))
     }
 
     private var dashboardContent: some View {
@@ -650,6 +652,7 @@ struct PoolDashboardView: View {
             autoSyncEnabledBinding: strategyBindings.autoSyncEnabled,
             autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds,
             languageOverrideBinding: $appLanguageOverride,
+            appearanceOverrideBinding: $appAppearanceOverride,
             languageOptions: L10n.languageOptions
         )
     }
@@ -773,6 +776,7 @@ struct PoolDashboardView: View {
 
     private func handleOnAppear() {
         migrateDefaultOAuthClientIDIfNeeded()
+        migrateAppearancePreferenceIfNeeded()
         DesktopNotifier.requestAuthorizationIfNeeded()
 
         let output = lifecycleFlowCoordinator.onAppear(
@@ -791,6 +795,10 @@ struct PoolDashboardView: View {
             return
         }
         oauthClientID = Self.defaultOAuthClientID
+    }
+
+    private func migrateAppearancePreferenceIfNeeded() {
+        appAppearanceOverride = AppAppearancePreference.normalizedRawValue(appAppearanceOverride)
     }
 
     private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
@@ -1460,5 +1468,4 @@ private enum DesktopNotifier {
 
 #Preview {
     PoolDashboardView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
-        .preferredColorScheme(.dark)
 }

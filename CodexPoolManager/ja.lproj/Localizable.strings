@@ -125,6 +125,10 @@
 "strategy.switch_allowed.title" = "切替可能";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
 "strategy.language" = "言語";
+"strategy.appearance" = "外観";
+"strategy.appearance.system" = "システムに従う";
+"strategy.appearance.dark" = "ダーク";
+"strategy.appearance.light" = "ライト";
 
 "overview.title" = "プール概要";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

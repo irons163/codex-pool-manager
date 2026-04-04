@@ -130,6 +130,10 @@
 "strategy.switch_allowed.title" = "允许切换";
 "strategy.switch_allowed.message" = "已满足智能切换条件。";
 "strategy.language" = "语言";
+"strategy.appearance" = "外观";
+"strategy.appearance.system" = "跟随系统";
+"strategy.appearance.dark" = "深色";
+"strategy.appearance.light" = "浅色";
 
 "overview.title" = "池概览";
 "overview.subtitle" = "监控整体容量，并在维护窗口重置用量。";

@@ -136,6 +136,10 @@
 "strategy.auto_sync_enabled" = "自動同步 Codex 用量";
 "strategy.auto_sync_interval_seconds_format" = "自動同步間隔：%d 秒";
 "strategy.language" = "語言";
+"strategy.appearance" = "外觀";
+"strategy.appearance.system" = "跟隨系統";
+"strategy.appearance.dark" = "深色";
+"strategy.appearance.light" = "淺色";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";

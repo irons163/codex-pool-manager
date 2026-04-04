@@ -1,36 +1,107 @@
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 enum PoolDashboardTheme {
-    static let canvasTop = Color(red: 0.03, green: 0.08, blue: 0.16)
-    static let canvasBottom = Color(red: 0.02, green: 0.03, blue: 0.06)
-    static let glowA = Color(red: 0.20, green: 0.50, blue: 0.95)
-    static let glowB = Color(red: 0.08, green: 0.78, blue: 0.68)
-    static let panelFill = Color.white.opacity(0.07)
-    static let panelStroke = Color.white.opacity(0.14)
-    static let panelInnerStroke = Color.white.opacity(0.08)
+    private static var prefersLightPalette: Bool {
+        switch AppAppearancePreference(rawValue: UserDefaults.standard.string(forKey: AppAppearancePreference.storageKey) ?? "") ?? .system {
+        case .light:
+            return true
+        case .dark:
+            return false
+        case .system:
+            #if canImport(AppKit)
+            if let match = NSApp?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) {
+                return match == .aqua
+            }
+            #endif
+            return false
+        }
+    }
+
+    static var canvasTop: Color {
+        prefersLightPalette
+            ? Color(red: 0.97, green: 0.94, blue: 0.86)
+            : Color(red: 0.03, green: 0.08, blue: 0.16)
+    }
+
+    static var canvasBottom: Color {
+        prefersLightPalette
+            ? Color(red: 0.92, green: 0.86, blue: 0.75)
+            : Color(red: 0.02, green: 0.03, blue: 0.06)
+    }
+
+    static var glowA: Color {
+        prefersLightPalette
+            ? Color(red: 0.20, green: 0.50, blue: 0.95)
+            : Color(red: 0.20, green: 0.50, blue: 0.95)
+    }
+
+    static var glowB: Color {
+        prefersLightPalette
+            ? Color(red: 0.35, green: 0.67, blue: 0.56)
+            : Color(red: 0.08, green: 0.78, blue: 0.68)
+    }
+
+    static var panelFill: Color {
+        prefersLightPalette ? Color.black.opacity(0.055) : Color.white.opacity(0.07)
+    }
+
+    static var panelStroke: Color {
+        prefersLightPalette ? Color.black.opacity(0.16) : Color.white.opacity(0.14)
+    }
+
+    static var panelInnerStroke: Color {
+        prefersLightPalette ? Color.black.opacity(0.10) : Color.white.opacity(0.08)
+    }
+
     static let panelBorderWidth: CGFloat = 1
     static let tileBorderWidth: CGFloat = 1
-    static let panelMutedFill = Color.white.opacity(0.04)
-    static let panelStrongFill = Color.white.opacity(0.11)
+    static var panelMutedFill: Color {
+        prefersLightPalette ? Color.black.opacity(0.042) : Color.white.opacity(0.04)
+    }
+
+    static var panelStrongFill: Color {
+        prefersLightPalette ? Color.black.opacity(0.085) : Color.white.opacity(0.11)
+    }
+
     static let panelTopHighlightOpacity: Double = 0.09
     static let panelBottomShadeOpacity: Double = 0.14
     static let panelSpecularOpacity: Double = 0.22
-    static let textPrimary = Color.white
-    static let textSecondary = Color.white.opacity(0.78)
-    static let textMuted = Color.white.opacity(0.62)
-    static let groupLabelOpacity: Double = 0.92
-    static let success = Color(red: 0.22, green: 0.84, blue: 0.66)
-    static let warning = Color(red: 0.98, green: 0.64, blue: 0.26)
-    static let danger = Color(red: 0.95, green: 0.37, blue: 0.40)
+    static var textPrimary: Color {
+        prefersLightPalette ? Color(red: 0.14, green: 0.12, blue: 0.09) : Color.white
+    }
 
-    static let backgroundGradient = LinearGradient(
-        colors: [
-            canvasTop,
-            canvasBottom
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static var textSecondary: Color {
+        prefersLightPalette ? Color(red: 0.22, green: 0.18, blue: 0.14).opacity(0.82) : Color.white.opacity(0.78)
+    }
+
+    static var textMuted: Color {
+        prefersLightPalette ? Color(red: 0.25, green: 0.22, blue: 0.18).opacity(0.68) : Color.white.opacity(0.62)
+    }
+
+    static let groupLabelOpacity: Double = 0.92
+    static var success: Color { Color(red: 0.22, green: 0.84, blue: 0.66) }
+    static var warning: Color { Color(red: 0.98, green: 0.64, blue: 0.26) }
+    static var danger: Color { Color(red: 0.95, green: 0.37, blue: 0.40) }
+
+    static var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                canvasTop,
+                canvasBottom
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static var glowAOpacity: Double { prefersLightPalette ? 0.16 : 0.30 }
+    static var glowBOpacity: Double { prefersLightPalette ? 0.12 : 0.22 }
+    static var vignetteEndColor: Color {
+        prefersLightPalette ? Color(red: 0.42, green: 0.32, blue: 0.20).opacity(0.10) : Color.black.opacity(0.24)
+    }
 
     static let sectionSpacing: CGFloat = 26
     static let sectionHeaderSpacing: CGFloat = 8
@@ -183,7 +254,7 @@ struct DashboardGroupBoxStyle: GroupBoxStyle {
         VStack(alignment: .leading, spacing: 10) {
             configuration.label
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(PoolDashboardTheme.groupLabelOpacity))
+                .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
             configuration.content
         }
     }

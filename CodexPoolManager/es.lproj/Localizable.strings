@@ -125,6 +125,10 @@
 "strategy.switch_allowed.title" = "Cambio permitido";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
 "strategy.language" = "Idioma";
+"strategy.appearance" = "Apariencia";
+"strategy.appearance.system" = "Seguir el sistema";
+"strategy.appearance.dark" = "Oscuro";
+"strategy.appearance.light" = "Claro";
 
 "overview.title" = "Resumen del pool";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
