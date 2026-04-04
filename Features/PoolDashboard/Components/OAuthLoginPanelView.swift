@@ -61,6 +61,7 @@ struct OAuthLoginPanelView: View {
                     L10n.text("oauth.authorization_url.label"),
                     value: authorizationURLText
                 )
+                .frame(maxWidth: 600, alignment: .leading)
                 .dashboardInfoCard()
 
                 PanelAdaptiveActionRowView {
