@@ -42,12 +42,18 @@ struct LocalOAuthAccountsPanelView: View {
             Button(L10n.text("local_oauth.scan_button")) {
                 onScan()
             }
-            .buttonStyle(DashboardSubtleButtonStyle())
+            .buttonStyle(DashboardPrimaryButtonStyle())
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
+            .fixedSize(horizontal: true, vertical: false)
 
             Button(L10n.text("local_oauth.choose_button")) {
                 onChooseAuthFile()
             }
-            .buttonStyle(DashboardSubtleButtonStyle())
+            .buttonStyle(DashboardPrimaryButtonStyle())
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
+            .fixedSize(horizontal: true, vertical: false)
 
             if let errorMessage {
                 PanelStatusCalloutView(

@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 struct BackupRestorePanelView: View {
     @Binding var backupJSON: String
@@ -21,11 +23,7 @@ struct BackupRestorePanelView: View {
                     importButton
                 }
 
-                PanelStatusCalloutView(
-                    message: L10n.text("backup_restore.sensitive.message"),
-                    title: L10n.text("backup_restore.sensitive.title"),
-                    tone: .warning
-                )
+                sensitiveCalloutRow
 
                 PanelCodeEditorView(
                     text: $backupJSON,
@@ -46,6 +44,39 @@ struct BackupRestorePanelView: View {
         .tint(PoolDashboardTheme.glowA)
     }
 
+    private var sensitiveCalloutRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 10) {
+                PanelStatusCalloutView(
+                    message: L10n.text("backup_restore.sensitive.message"),
+                    title: L10n.text("backup_restore.sensitive.title"),
+                    tone: .warning
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 8) {
+                    clearButton
+                    saveButton
+                }
+                .fixedSize(horizontal: true, vertical: false)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                PanelStatusCalloutView(
+                    message: L10n.text("backup_restore.sensitive.message"),
+                    title: L10n.text("backup_restore.sensitive.title"),
+                    tone: .warning
+                )
+
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+                    clearButton
+                    saveButton
+                }
+            }
+        }
+    }
+
     private var exportButton: some View {
         Button(L10n.text("backup_restore.export_json"), action: onExport)
             .buttonStyle(DashboardSubtleButtonStyle())
@@ -61,5 +92,38 @@ struct BackupRestorePanelView: View {
         Button(L10n.text("backup_restore.import_json"), action: onImport)
             .buttonStyle(DashboardPrimaryButtonStyle())
             .accessibilityIdentifier("backup.importJsonButton")
+    }
+
+    private var clearButton: some View {
+        Button(L10n.text("common.clear")) {
+            backupJSON = ""
+            backupError = nil
+        }
+        .buttonStyle(DashboardSubtleButtonStyle())
+        .disabled(backupJSON.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    private var saveButton: some View {
+        Button(L10n.text("account.edit.save")) {
+            saveBackupJSONToFile()
+        }
+        .buttonStyle(DashboardPrimaryButtonStyle())
+        .disabled(backupJSON.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    private func saveBackupJSONToFile() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "codex-pool-backup.json"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try Data(backupJSON.utf8).write(to: url, options: .atomic)
+            backupError = nil
+        } catch {
+            backupError = error.localizedDescription
+        }
     }
 }

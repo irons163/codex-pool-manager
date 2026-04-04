@@ -130,6 +130,22 @@ struct AgentAccount: Identifiable, Equatable, Codable {
 }
 
 extension AgentAccount {
+    var deduplicationKey: String {
+        if let chatGPTAccountID = normalizedIdentityComponent(chatGPTAccountID) {
+            return "account:\(chatGPTAccountID)"
+        }
+
+        if let email = normalizedIdentityComponent(email) {
+            return "email:\(email)"
+        }
+
+        if let token = normalizedTokenComponent(apiToken) {
+            return "token:\(token)"
+        }
+
+        return "id:\(id.uuidString.lowercased())"
+    }
+
     // Paid accounts use 5-hour remaining by default, but when weekly remaining is exhausted,
     // weekly remaining becomes the source of truth for smart switching.
     var smartSwitchRemainingRatio: Double {
@@ -145,6 +161,17 @@ extension AgentAccount {
 
     var smartSwitchRemainingPercent: Int {
         max(0, min(100, Int((smartSwitchRemainingRatio * 100).rounded())))
+    }
+
+    private func normalizedIdentityComponent(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized.isEmpty ? nil : normalized
+    }
+
+    private func normalizedTokenComponent(_ value: String) -> String? {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalized.isEmpty ? nil : normalized
     }
 }
 
@@ -391,11 +418,11 @@ struct AccountPoolState {
     }
 
     var totalUsedUnits: Int {
-        syncIncludedAccounts.reduce(0) { $0 + $1.usedUnits }
+        syncIncludedUniqueAccounts.reduce(0) { $0 + $1.usedUnits }
     }
 
     var totalQuota: Int {
-        syncIncludedAccounts.reduce(0) { $0 + $1.quota }
+        syncIncludedUniqueAccounts.reduce(0) { $0 + $1.quota }
     }
 
     var overallUsageRatio: Double {
@@ -404,11 +431,15 @@ struct AccountPoolState {
     }
 
     var availableAccountsCount: Int {
-        syncIncludedAccounts.filter { $0.remainingUnits > 0 }.count
+        syncIncludedUniqueAccounts.filter { $0.remainingUnits > 0 }.count
+    }
+
+    var uniqueAccountsCount: Int {
+        uniqueAccounts(from: accounts).count
     }
 
     var isPoolExhausted: Bool {
-        !syncIncludedAccounts.isEmpty && availableAccountsCount == 0
+        !syncIncludedUniqueAccounts.isEmpty && availableAccountsCount == 0
     }
 
     var intelligentCandidateID: UUID? {
@@ -899,6 +930,24 @@ struct AccountPoolState {
 
     private var syncIncludedAccounts: [AgentAccount] {
         accounts.filter { !$0.isUsageSyncExcluded }
+    }
+
+    private var syncIncludedUniqueAccounts: [AgentAccount] {
+        uniqueAccounts(from: syncIncludedAccounts)
+    }
+
+    private func uniqueAccounts(from accounts: [AgentAccount]) -> [AgentAccount] {
+        var seen = Set<String>()
+        var unique: [AgentAccount] = []
+        unique.reserveCapacity(accounts.count)
+
+        for account in accounts {
+            if seen.insert(account.deduplicationKey).inserted {
+                unique.append(account)
+            }
+        }
+
+        return unique
     }
 
     private func switchCooldownRemaining(now: Date) -> Int {

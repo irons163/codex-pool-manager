@@ -776,6 +776,25 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageSummaryDoesNotDoubleCountDuplicatedAccounts() {
+        let sharedAccountID = "acct-shared"
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A1", groupName: "Default", usedUnits: 200, quota: 1000, chatGPTAccountID: sharedAccountID),
+                AgentAccount(id: UUID(), name: "A2", groupName: "Team", usedUnits: 200, quota: 1000, chatGPTAccountID: sharedAccountID),
+                AgentAccount(id: UUID(), name: "B", groupName: "Default", usedUnits: 300, quota: 500, chatGPTAccountID: "acct-b")
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.uniqueAccountsCount == 2)
+        #expect(state.totalUsedUnits == 500)
+        #expect(state.totalQuota == 1500)
+        #expect(state.availableAccountsCount == 2)
+        #expect(state.overallUsageRatio == 1.0 / 3.0)
+    }
+
+    @Test
     func usageSummaryIsZeroWhenNoAccounts() {
         let state = AccountPoolState(accounts: [], mode: .intelligent)
 

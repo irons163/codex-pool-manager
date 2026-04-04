@@ -240,7 +240,7 @@ struct PoolDashboardView: View {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
                         HStack(alignment: .top, spacing: 12) {
                             DashboardHeaderSectionView(
-                                accountCount: state.accounts.count,
+                                accountCount: state.uniqueAccountsCount,
                                 availableCount: state.availableAccountsCount,
                                 overallUsagePercent: Int(state.overallUsageRatio * 100),
                                 modeTitle: state.mode.rawValue

@@ -54,10 +54,11 @@ enum WidgetBridgePublisher {
 
     static func publish(from poolSnapshot: AccountPoolSnapshot) {
         let includedAccounts = poolSnapshot.accounts.filter { !$0.isUsageSyncExcluded }
-        let totalAccounts = includedAccounts.count
-        let availableAccounts = includedAccounts.filter { $0.remainingUnits > 0 }.count
-        let totalUsedUnits = includedAccounts.reduce(0) { $0 + $1.usedUnits }
-        let totalQuota = includedAccounts.reduce(0) { $0 + $1.quota }
+        let uniqueIncludedAccounts = uniqueAccounts(from: includedAccounts)
+        let totalAccounts = uniqueIncludedAccounts.count
+        let availableAccounts = uniqueIncludedAccounts.filter { $0.remainingUnits > 0 }.count
+        let totalUsedUnits = uniqueIncludedAccounts.reduce(0) { $0 + $1.usedUnits }
+        let totalQuota = uniqueIncludedAccounts.reduce(0) { $0 + $1.quota }
         let overallUsagePercent: Int
         if totalQuota > 0 {
             overallUsagePercent = Int((Double(totalUsedUnits) / Double(totalQuota) * 100).rounded())
@@ -150,6 +151,20 @@ enum WidgetBridgePublisher {
             availableAccounts,
             overallUsagePercent
         ].joined(separator: "|")
+    }
+
+    private static func uniqueAccounts(from accounts: [AgentAccount]) -> [AgentAccount] {
+        var seen = Set<String>()
+        var unique: [AgentAccount] = []
+        unique.reserveCapacity(accounts.count)
+
+        for account in accounts {
+            if seen.insert(account.deduplicationKey).inserted {
+                unique.append(account)
+            }
+        }
+
+        return unique
     }
 }
 
