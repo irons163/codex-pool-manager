@@ -78,6 +78,7 @@
 "oauth.scopes.label" = "Scopes";
 "oauth.redirect_uri.label" = "Redirect URI";
 "oauth.originator.label" = "Originator";
+"oauth.authorization_url.label" = "Authorization URL";
 "oauth.workspace_id.label" = "Workspace ID";
 "oauth.workspace_id.optional" = "Optional";
 "oauth.workspace_id.hint" = "Workspace ID is only required for org-managed OAuth flows. Leave empty for personal accounts.";

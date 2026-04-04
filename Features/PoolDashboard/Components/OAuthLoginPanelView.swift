@@ -57,6 +57,12 @@ struct OAuthLoginPanelView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
 
+                advancedReadOnlyField(
+                    L10n.text("oauth.authorization_url.label"),
+                    value: authorizationURLText
+                )
+                .dashboardInfoCard()
+
                 PanelAdaptiveActionRowView {
                     actionRow
                 }
@@ -103,5 +109,38 @@ struct OAuthLoginPanelView: View {
             TextField(placeholder, text: text)
                 .dashboardInputFieldStyle()
         }
+    }
+
+    private func advancedReadOnlyField(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            Text(value)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                        .fill(PoolDashboardTheme.panelMutedFill.opacity(0.82))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PoolDashboardTheme.controlCornerRadius, style: .continuous)
+                                .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                        )
+                )
+                .textSelection(.enabled)
+        }
+    }
+
+    private var authorizationURLText: String {
+        let trimmedIssuer = oauthIssuer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let issuerURL = URL(string: trimmedIssuer), !trimmedIssuer.isEmpty else {
+            return "--"
+        }
+
+        let endpoint = URL(string: "/oauth/authorize", relativeTo: issuerURL)?.absoluteURL
+        return endpoint?.absoluteString ?? "--"
     }
 }

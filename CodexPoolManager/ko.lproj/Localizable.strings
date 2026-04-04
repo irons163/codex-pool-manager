@@ -78,6 +78,7 @@
 "oauth.scopes.label" = "Scopes";
 "oauth.redirect_uri.label" = "Redirect URI";
 "oauth.originator.label" = "Originator";
+"oauth.authorization_url.label" = "Authorization URL";
 "oauth.workspace_id.label" = "Workspace ID";
 "oauth.workspace_id.optional" = "선택 사항";
 "oauth.workspace_id.hint" = "Workspace ID는 조직 관리 OAuth 흐름에서만 필요합니다. 개인 계정은 비워 두세요.";
