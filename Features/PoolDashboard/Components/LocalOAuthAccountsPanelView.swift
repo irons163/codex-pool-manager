@@ -14,8 +14,17 @@ struct LocalOAuthAccountsPanelView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                PanelAdaptiveActionRowView {
-                    headerActions
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: PoolDashboardTheme.actionRowSpacing) {
+                        headerPrimaryButtons
+                        Spacer(minLength: 0)
+                        headerStatusView
+                    }
+
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.actionRowSpacing) {
+                        headerPrimaryButtons
+                        headerStatusView
+                    }
                 }
 
                 if accounts.isEmpty {
@@ -37,7 +46,7 @@ struct LocalOAuthAccountsPanelView: View {
         .tint(PoolDashboardTheme.glowA)
     }
 
-    private var headerActions: some View {
+    private var headerPrimaryButtons: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
             Button(L10n.text("local_oauth.scan_button")) {
                 onScan()
@@ -54,18 +63,26 @@ struct LocalOAuthAccountsPanelView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.9)
             .fixedSize(horizontal: true, vertical: false)
+        }
+    }
 
-            if let errorMessage {
-                PanelStatusCalloutView(
-                    message: errorMessage,
-                    title: L10n.text("local_oauth.scan_failed"),
-                    tone: .danger
-                )
-                .frame(maxWidth: PoolDashboardTheme.localBadgeMaxWidth, alignment: .leading)
-            } else {
-                Text(L10n.text("local_oauth.session_count_format", accounts.count))
-                    .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
-            }
+    @ViewBuilder
+    private var headerStatusView: some View {
+        if let errorMessage {
+            PanelStatusCalloutView(
+                message: errorMessage,
+                title: L10n.text("local_oauth.scan_failed"),
+                tone: .danger
+            )
+            .frame(maxWidth: 460, alignment: .leading)
+            .layoutPriority(1)
+        } else {
+            Text(L10n.text("local_oauth.session_count_format", accounts.count))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(minWidth: 100, alignment: .center)
+                .statusBadge(tone: PoolDashboardTheme.panelMutedFill)
+                .layoutPriority(1)
         }
     }
 

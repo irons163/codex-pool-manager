@@ -98,14 +98,14 @@
 "oauth.error.invalid_response" = "Invalid response.";
 "oauth.error.invalid_port" = "Invalid port.";
 
-"local_oauth.title" = "Local OAuth Sessions";
-"local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
-"local_oauth.no_session.title" = "No Session Detected";
-"local_oauth.no_session.message" = "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
-"local_oauth.scan_button" = "Scan Local Sessions";
+"local_oauth.title" = "Local OAuth Accounts";
+"local_oauth.subtitle" = "Discover signed-in Codex accounts from local auth data and import them as managed pool accounts.";
+"local_oauth.no_session.title" = "No Account Detected";
+"local_oauth.no_session.message" = "No local OAuth account was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
+"local_oauth.scan_button" = "Scan Local Accounts";
 "local_oauth.choose_button" = "Choose auth.json";
 "local_oauth.scan_failed" = "Scan Failed";
-"local_oauth.session_count_format" = "%d session(s) found";
+"local_oauth.session_count_format" = "Accounts found: %d";
 "local_oauth.account_id_format" = "Account ID: %@";
 "local_oauth.missing_id.title" = "Missing Account ID";
 "local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
@@ -159,7 +159,7 @@
 
 "workspace.list_title" = "Workspaces";
 "workspace.authentication.title" = "Authentication";
-"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
+"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex accounts.";
 "workspace.runtime.title" = "Runtime Strategy";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
 "workspace.settings.title" = "Settings";

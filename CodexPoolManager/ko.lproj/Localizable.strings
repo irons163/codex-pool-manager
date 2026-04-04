@@ -98,14 +98,14 @@
 "oauth.error.invalid_response" = "유효하지 않은 응답입니다.";
 "oauth.error.invalid_port" = "유효하지 않은 포트입니다.";
 
-"local_oauth.title" = "로컬 OAuth 세션";
-"local_oauth.subtitle" = "로컬 인증 데이터에서 로그인된 Codex 세션을 찾아 관리형 풀 계정으로 가져옵니다.";
-"local_oauth.no_session.title" = "세션을 찾을 수 없음";
-"local_oauth.no_session.message" = "로컬 OAuth 세션을 찾지 못했습니다. Codex에 로그인되어 있다면 ~/.codex/auth.json을 수동으로 선택하세요.";
-"local_oauth.scan_button" = "로컬 세션 스캔";
+"local_oauth.title" = "로컬 OAuth 계정";
+"local_oauth.subtitle" = "로컬 인증 데이터에서 로그인된 Codex 계정을 찾아 관리형 풀 계정으로 가져옵니다.";
+"local_oauth.no_session.title" = "계정을 찾을 수 없음";
+"local_oauth.no_session.message" = "로컬 OAuth 계정을 찾지 못했습니다. Codex에 로그인되어 있다면 ~/.codex/auth.json을 수동으로 선택하세요.";
+"local_oauth.scan_button" = "로컬 계정 스캔";
 "local_oauth.choose_button" = "auth.json 선택";
 "local_oauth.scan_failed" = "스캔 실패";
-"local_oauth.session_count_format" = "%d개 세션 발견";
+"local_oauth.session_count_format" = "%d개 계정 발견";
 "local_oauth.account_id_format" = "계정 ID: %@";
 "local_oauth.missing_id.title" = "계정 ID 누락";
 "local_oauth.missing_id.message" = "이 계정에는 ChatGPT account id가 없어 사용량 동기화를 사용할 수 없습니다.";
@@ -155,7 +155,7 @@
 
 "workspace.list_title" = "워크스페이스";
 "workspace.authentication.title" = "인증";
-"workspace.authentication.subtitle" = "로그인 흐름을 관리하고 로컬 Codex 세션을 가져옵니다.";
+"workspace.authentication.subtitle" = "로그인 흐름을 관리하고 로컬 Codex 계정을 가져옵니다.";
 "workspace.runtime.title" = "런타임 전략";
 "workspace.runtime.subtitle" = "전환 정책을 구성하고 활성 실행 계정을 모니터링합니다.";
 "workspace.settings.title" = "설정";

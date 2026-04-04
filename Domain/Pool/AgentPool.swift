@@ -901,7 +901,9 @@ struct AccountPoolState {
     }
 
     private func intelligentCandidateAccountID() -> UUID? {
-        let availableAccounts = syncIncludedAccounts.filter { intelligentRemainingRatio(for: $0) > 0 }
+        let availableAccounts = syncIncludedAccounts.filter {
+            weeklyRemainingRatio(for: $0) > 0 && intelligentRemainingRatio(for: $0) > 0
+        }
         guard !availableAccounts.isEmpty else { return nil }
 
         return availableAccounts
@@ -922,6 +924,10 @@ struct AccountPoolState {
 
     private func intelligentRemainingRatio(for account: AgentAccount) -> Double {
         account.smartSwitchRemainingRatio
+    }
+
+    private func weeklyRemainingRatio(for account: AgentAccount) -> Double {
+        account.remainingRatio
     }
 
     private func bestRemainingAccountID() -> UUID? {

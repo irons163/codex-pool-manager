@@ -98,14 +98,14 @@
 "oauth.error.invalid_response" = "無效回應";
 "oauth.error.invalid_port" = "port 無效";
 
-"local_oauth.title" = "本機 OAuth 工作階段";
-"local_oauth.subtitle" = "從本機認證資料探索已登入的 Codex 工作階段，並匯入為受管理帳號。";
-"local_oauth.no_session.title" = "未偵測到工作階段";
-"local_oauth.no_session.message" = "找不到本機 OAuth 工作階段。若 Codex 已登入，請手動選擇 ~/.codex/auth.json。";
-"local_oauth.scan_button" = "掃描本機工作階段";
+"local_oauth.title" = "本機 OAuth 帳號";
+"local_oauth.subtitle" = "從本機認證資料探索已登入的 Codex 帳號，並匯入為受管理帳號。";
+"local_oauth.no_session.title" = "未偵測到帳號";
+"local_oauth.no_session.message" = "找不到本機 OAuth 帳號。若 Codex 已登入，請手動選擇 ~/.codex/auth.json。";
+"local_oauth.scan_button" = "掃描本機帳號";
 "local_oauth.choose_button" = "選擇 auth.json";
 "local_oauth.scan_failed" = "掃描失敗";
-"local_oauth.session_count_format" = "找到 %d 個工作階段";
+"local_oauth.session_count_format" = "找到 %d 個帳號";
 "local_oauth.account_id_format" = "帳號 ID：%@";
 "local_oauth.missing_id.title" = "缺少帳號 ID";
 "local_oauth.missing_id.message" = "此帳號沒有 ChatGPT account id，因此無法進行用量同步。";
@@ -161,7 +161,7 @@
 
 "workspace.list_title" = "工作區";
 "workspace.authentication.title" = "驗證";
-"workspace.authentication.subtitle" = "管理登入流程並匯入本機 Codex 工作階段。";
+"workspace.authentication.subtitle" = "管理登入流程並匯入本機 Codex 帳號。";
 "workspace.runtime.title" = "執行策略";
 "workspace.runtime.subtitle" = "設定切換策略並監控目前執行帳號。";
 "workspace.settings.title" = "設定";

@@ -98,14 +98,14 @@
 "oauth.error.invalid_response" = "無効なレスポンスです。";
 "oauth.error.invalid_port" = "無効なポートです。";
 
-"local_oauth.title" = "ローカル OAuth セッション";
-"local_oauth.subtitle" = "Discover signed-in Codex sessions from local auth data and import them as managed pool accounts.";
-"local_oauth.no_session.title" = "セッション未検出";
-"local_oauth.no_session.message" = "No local OAuth session was found. If Codex is signed in, choose ~/.codex/auth.json manually.";
-"local_oauth.scan_button" = "ローカルセッションをスキャン";
+"local_oauth.title" = "ローカル OAuth アカウント";
+"local_oauth.subtitle" = "ローカル認証データからサインイン済みの Codex アカウントを検出し、管理対象プールアカウントとして取り込みます。";
+"local_oauth.no_session.title" = "アカウント未検出";
+"local_oauth.no_session.message" = "ローカル OAuth アカウントが見つかりません。Codex にサインイン済みの場合は、~/.codex/auth.json を手動で選択してください。";
+"local_oauth.scan_button" = "ローカルアカウントをスキャン";
 "local_oauth.choose_button" = "auth.json を選択";
 "local_oauth.scan_failed" = "スキャン失敗";
-"local_oauth.session_count_format" = "%d 件のセッションが見つかりました";
+"local_oauth.session_count_format" = "%d 件のアカウントが見つかりました";
 "local_oauth.account_id_format" = "アカウント ID: %@";
 "local_oauth.missing_id.title" = "アカウント ID 不足";
 "local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
@@ -155,7 +155,7 @@
 
 "workspace.list_title" = "ワークスペース";
 "workspace.authentication.title" = "認証";
-"workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex sessions.";
+"workspace.authentication.subtitle" = "サインインフローを管理し、ローカルの Codex アカウントを取り込みます。";
 "workspace.runtime.title" = "ランタイム戦略";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
 "workspace.settings.title" = "設定";

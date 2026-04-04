@@ -90,7 +90,7 @@ enum PoolDashboardTheme {
     static let workspaceSidebarWidth: CGFloat = 240
     static let workspaceSidebarPadding: CGFloat = 12
     static let workspaceSidebarItemCornerRadius: CGFloat = 11
-    static let workspaceContextWidth: CGFloat = 360
+    static let workspaceContextWidth: CGFloat = 480
 }
 
 private struct SectionCardStyle: ViewModifier {

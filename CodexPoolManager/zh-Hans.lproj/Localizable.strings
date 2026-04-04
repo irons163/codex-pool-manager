@@ -98,14 +98,14 @@
 "oauth.error.invalid_response" = "无效响应";
 "oauth.error.invalid_port" = "port 无效";
 
-"local_oauth.title" = "本地 OAuth 会话";
-"local_oauth.subtitle" = "从本地认证数据发现已登录的 Codex 会话，并导入为受管账号。";
-"local_oauth.no_session.title" = "未检测到会话";
-"local_oauth.no_session.message" = "未找到本地 OAuth 会话。如果 Codex 已登录，请手动选择 ~/.codex/auth.json。";
-"local_oauth.scan_button" = "扫描本地会话";
+"local_oauth.title" = "本地 OAuth 账号";
+"local_oauth.subtitle" = "从本地认证数据发现已登录的 Codex 账号，并导入为受管账号。";
+"local_oauth.no_session.title" = "未检测到账号";
+"local_oauth.no_session.message" = "未找到本地 OAuth 账号。如果 Codex 已登录，请手动选择 ~/.codex/auth.json。";
+"local_oauth.scan_button" = "扫描本地账号";
 "local_oauth.choose_button" = "选择 auth.json";
 "local_oauth.scan_failed" = "扫描失败";
-"local_oauth.session_count_format" = "找到 %d 个会话";
+"local_oauth.session_count_format" = "找到 %d 个账号";
 "local_oauth.account_id_format" = "账号 ID：%@";
 "local_oauth.missing_id.title" = "缺少账号 ID";
 "local_oauth.missing_id.message" = "该账号缺少 ChatGPT account id，因此无法同步用量。";
@@ -155,7 +155,7 @@
 
 "workspace.list_title" = "工作区";
 "workspace.authentication.title" = "认证";
-"workspace.authentication.subtitle" = "管理登录流程并导入本地 Codex 会话。";
+"workspace.authentication.subtitle" = "管理登录流程并导入本地 Codex 账号。";
 "workspace.runtime.title" = "运行策略";
 "workspace.runtime.subtitle" = "配置切换策略并监控当前执行账号。";
 "workspace.settings.title" = "设置";

@@ -862,6 +862,42 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func intelligentCandidateExcludesAccountsWithZeroWeeklyRemaining() {
+        let weeklyExhausted = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let lowFiveHourRemaining = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let healthyWeeklyRemaining = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: weeklyExhausted,
+                    name: "Weekly Exhausted",
+                    usedUnits: 100,
+                    quota: 100,
+                    primaryUsagePercent: 0,
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: lowFiveHourRemaining,
+                    name: "Low 5h",
+                    usedUnits: 80,
+                    quota: 100,
+                    primaryUsagePercent: 95,
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: healthyWeeklyRemaining,
+                    name: "Healthy Weekly",
+                    usedUnits: 90,
+                    quota: 1000
+                )
+            ],
+            mode: .intelligent
+        )
+
+        #expect(state.intelligentCandidateID == healthyWeeklyRemaining)
+    }
+
+    @Test
     func intelligentCandidateIsNilWhenAllAccountsExhausted() {
         let state = AccountPoolState(
             accounts: [
