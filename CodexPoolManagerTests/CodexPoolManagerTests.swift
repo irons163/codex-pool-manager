@@ -330,6 +330,41 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func deleteGroupMovesAccountsToDefaultGroup() {
+        let first = UUID()
+        let second = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: first, name: "A", groupName: "Team Red", usedUnits: 10, quota: 100),
+                AgentAccount(id: second, name: "B", groupName: "Default", usedUnits: 20, quota: 100)
+            ],
+            mode: .manual
+        )
+
+        let deleted = state.deleteGroup("Team Red")
+
+        #expect(deleted)
+        #expect(!state.groups.contains(where: { $0.caseInsensitiveCompare("Team Red") == .orderedSame }))
+        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("Default") == .orderedSame }))
+        #expect(state.accounts.first(where: { $0.id == first })?.groupName == "Default")
+    }
+
+    @Test
+    func deleteGroupKeepsDefaultGroupIntact() {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", groupName: "Default", usedUnits: 10, quota: 100)
+            ],
+            mode: .manual
+        )
+
+        let deleted = state.deleteGroup("Default")
+
+        #expect(!deleted)
+        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("Default") == .orderedSame }))
+    }
+
+    @Test
     func snapshotExportRemovesActivitiesField() throws {
         var state = AccountPoolState(
             accounts: [

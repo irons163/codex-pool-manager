@@ -76,6 +76,7 @@ struct AccountUsagePanelView: View {
     let onMoveAccountToGroup: (UUID, String) -> Void
     let onCreateGroup: (String) -> Void
     let onRenameGroup: (String, String) -> Void
+    let onDeleteGroup: (String) -> Void
 
     let accountNameBinding: (UUID) -> Binding<String>
     let accountQuotaBinding: (UUID) -> Binding<Int>
@@ -98,6 +99,12 @@ struct AccountUsagePanelView: View {
             get: { layoutMode },
             set: { persistedLayoutModeRawValue = $0.rawValue }
         )
+    }
+
+    private var canDeleteSelectedGroup: Bool {
+        let normalized = AgentAccount.normalizedGroupName(selectedGroupName)
+        return !selectedGroupName.isEmpty
+            && normalized.caseInsensitiveCompare(AgentAccount.defaultGroupName) != .orderedSame
     }
 
     var body: some View {
@@ -261,6 +268,31 @@ struct AccountUsagePanelView: View {
                 .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .disabled(selectedGroupName.isEmpty)
                 .help(L10n.text("group.rename"))
+
+                Button {
+                    guard canDeleteSelectedGroup else { return }
+                    onDeleteGroup(selectedGroupName)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isGroupRenameEditorVisible = false
+                    }
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.red.opacity(0.9))
+                        .frame(width: 26, height: 26)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .disabled(!canDeleteSelectedGroup)
+                .help(L10n.text("group.delete"))
             }
             .fixedSize(horizontal: true, vertical: false)
 

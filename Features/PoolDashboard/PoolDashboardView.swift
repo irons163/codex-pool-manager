@@ -673,6 +673,9 @@ struct PoolDashboardView: View {
             onRenameGroup: { oldName, newName in
                 handleRenameGroup(from: oldName, to: newName)
             },
+            onDeleteGroup: { name in
+                handleDeleteGroup(name: name)
+            },
             accountNameBinding: { accountID in
                 accountBindings.nameBinding(for: accountID)
             },
@@ -849,6 +852,15 @@ struct PoolDashboardView: View {
     private func handleRenameGroup(from oldName: String, to newName: String) {
         state.renameGroup(from: oldName, to: newName)
         selectedGroupName = AgentAccount.normalizedGroupName(newName)
+    }
+
+    private func handleDeleteGroup(name: String) {
+        let normalized = AgentAccount.normalizedGroupName(name)
+        guard state.deleteGroup(normalized) else { return }
+
+        if selectedGroupName.caseInsensitiveCompare(normalized) == .orderedSame {
+            selectedGroupName = AgentAccount.defaultGroupName
+        }
     }
 
     private func handleSimulateUsage() {

@@ -29,6 +29,7 @@
 "group.add" = "新增群組";
 "group.rename" = "重新命名群組";
 "group.rename_action" = "重新命名";
+"group.delete" = "刪除群組";
 "group.move_to_current" = "移動到群組";
 "group.add_existing" = "加入現有帳號";
 

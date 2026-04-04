@@ -29,6 +29,7 @@
 "group.add" = "그룹 추가";
 "group.rename" = "그룹 이름 변경";
 "group.rename_action" = "변경";
+"group.delete" = "그룹 삭제";
 "group.move_to_current" = "그룹으로 이동";
 "group.add_existing" = "기존 계정 추가";
 

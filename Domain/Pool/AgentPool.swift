@@ -504,6 +504,25 @@ struct AccountPoolState {
         evaluate(now: now)
     }
 
+    @discardableResult
+    mutating func deleteGroup(_ name: String, now: Date = .now) -> Bool {
+        let normalized = AgentAccount.normalizedGroupName(name)
+        guard normalized.caseInsensitiveCompare(AgentAccount.defaultGroupName) != .orderedSame else {
+            return false
+        }
+        guard let index = groups.firstIndex(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) else {
+            return false
+        }
+
+        groups.remove(at: index)
+        let fallbackGroup = ensureGroupExists(AgentAccount.defaultGroupName)
+        for accountIndex in accounts.indices where accounts[accountIndex].groupName.caseInsensitiveCompare(normalized) == .orderedSame {
+            accounts[accountIndex].groupName = fallbackGroup
+        }
+        evaluate(now: now)
+        return true
+    }
+
     func canIntelligentSwitch(now: Date = .now) -> Bool {
         guard mode == .intelligent else { return false }
         guard let candidateID = intelligentCandidateAccountID(),
