@@ -258,7 +258,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func createGroupDeduplicatesCaseInsensitiveNames() {
+    func createGroupAllowsCaseDistinctNames() {
         var state = AccountPoolState(
             accounts: [
                 AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 100)
@@ -270,9 +270,25 @@ struct CodexPoolManagerTests {
         let second = state.createGroup("team alpha")
 
         #expect(first == "Team Alpha")
-        #expect(second == nil)
+        #expect(second == "team alpha")
         #expect(state.groups.contains("Team Alpha"))
-        #expect(state.groups.filter { $0.caseInsensitiveCompare("team alpha") == .orderedSame }.count == 1)
+        #expect(state.groups.contains("team alpha"))
+    }
+
+    @Test
+    func renameGroupAllowsCaseOnlyChange() {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", groupName: "Team Alpha", usedUnits: 10, quota: 100)
+            ],
+            mode: .manual
+        )
+
+        state.renameGroup(from: "Team Alpha", to: "team alpha")
+
+        #expect(state.groups.contains("team alpha"))
+        #expect(!state.groups.contains("Team Alpha"))
+        #expect(state.accounts.first?.groupName == "team alpha")
     }
 
     @Test
@@ -293,8 +309,8 @@ struct CodexPoolManagerTests {
 
         state.renameGroup(from: "Old Team", to: "New Team")
 
-        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("New Team") == .orderedSame }))
-        #expect(!state.groups.contains(where: { $0.caseInsensitiveCompare("Old Team") == .orderedSame }))
+        #expect(state.groups.contains("New Team"))
+        #expect(!state.groups.contains("Old Team"))
         #expect(state.accounts.first?.groupName == "New Team")
     }
 
@@ -320,7 +336,7 @@ struct CodexPoolManagerTests {
 
         #expect(duplicatedID != nil)
         #expect(state.accounts.count == 2)
-        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("Project X") == .orderedSame }))
+        #expect(state.groups.contains("Project X"))
 
         let duplicated = state.accounts.first(where: { $0.id == duplicatedID })
         #expect(duplicated?.groupName == "Project X")
@@ -344,7 +360,7 @@ struct CodexPoolManagerTests {
         let deleted = state.deleteGroup("Team Red")
 
         #expect(deleted)
-        #expect(!state.groups.contains(where: { $0.caseInsensitiveCompare("Team Red") == .orderedSame }))
+        #expect(!state.groups.contains("Team Red"))
         #expect(state.accounts.count == 1)
         #expect(state.accounts.first(where: { $0.id == first }) == nil)
         #expect(state.accounts.first(where: { $0.id == second }) != nil)
@@ -362,7 +378,7 @@ struct CodexPoolManagerTests {
         let deleted = state.deleteGroup("Default")
 
         #expect(!deleted)
-        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("Default") == .orderedSame }))
+        #expect(state.groups.contains("Default"))
     }
 
     @Test

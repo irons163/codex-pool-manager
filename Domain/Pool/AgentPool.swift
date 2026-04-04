@@ -484,7 +484,10 @@ struct AccountPoolState {
     @discardableResult
     mutating func createGroup(_ name: String) -> String? {
         let normalized = AgentAccount.normalizedGroupName(name)
-        if groups.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+        guard normalized.caseInsensitiveCompare(AgentAccount.defaultGroupName) != .orderedSame else {
+            return nil
+        }
+        if groups.contains(normalized) {
             return nil
         }
         groups.append(normalized)
@@ -494,11 +497,12 @@ struct AccountPoolState {
     mutating func renameGroup(from oldName: String, to newName: String, now: Date = .now) {
         let normalizedOld = AgentAccount.normalizedGroupName(oldName)
         let normalizedNew = AgentAccount.normalizedGroupName(newName)
-        guard normalizedOld.caseInsensitiveCompare(normalizedNew) != .orderedSame else { return }
-        guard !groups.contains(where: { $0.caseInsensitiveCompare(normalizedNew) == .orderedSame }) else { return }
-        guard let index = groups.firstIndex(where: { $0.caseInsensitiveCompare(normalizedOld) == .orderedSame }) else { return }
+        guard normalizedNew.caseInsensitiveCompare(AgentAccount.defaultGroupName) != .orderedSame else { return }
+        guard normalizedOld != normalizedNew else { return }
+        guard !groups.contains(normalizedNew) else { return }
+        guard let index = groups.firstIndex(of: normalizedOld) else { return }
         groups[index] = normalizedNew
-        for accountIndex in accounts.indices where accounts[accountIndex].groupName.caseInsensitiveCompare(normalizedOld) == .orderedSame {
+        for accountIndex in accounts.indices where accounts[accountIndex].groupName == normalizedOld {
             accounts[accountIndex].groupName = normalizedNew
         }
         evaluate(now: now)
@@ -510,12 +514,12 @@ struct AccountPoolState {
         guard normalized.caseInsensitiveCompare(AgentAccount.defaultGroupName) != .orderedSame else {
             return false
         }
-        guard let index = groups.firstIndex(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) else {
+        guard let index = groups.firstIndex(of: normalized) else {
             return false
         }
 
         groups.remove(at: index)
-        accounts.removeAll { $0.groupName.caseInsensitiveCompare(normalized) == .orderedSame }
+        accounts.removeAll { $0.groupName == normalized }
         evaluate(now: now)
         return true
     }
@@ -946,7 +950,7 @@ struct AccountPoolState {
     @discardableResult
     private mutating func ensureGroupExists(_ name: String) -> String {
         let normalized = AgentAccount.normalizedGroupName(name)
-        if !groups.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+        if !groups.contains(normalized) {
             groups.append(normalized)
         }
         return normalized
@@ -954,12 +958,12 @@ struct AccountPoolState {
 
     private mutating func rebuildGroups() {
         var nextGroups = groups.map { AgentAccount.normalizedGroupName($0) }
-        if !nextGroups.contains(where: { $0.caseInsensitiveCompare(AgentAccount.defaultGroupName) == .orderedSame }) {
+        if !nextGroups.contains(AgentAccount.defaultGroupName) {
             nextGroups.append(AgentAccount.defaultGroupName)
         }
         for account in accounts {
             let normalized = AgentAccount.normalizedGroupName(account.groupName)
-            if !nextGroups.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+            if !nextGroups.contains(normalized) {
                 nextGroups.append(normalized)
             }
         }

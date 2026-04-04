@@ -193,7 +193,7 @@ struct PoolDashboardView: View {
         .onChange(of: state.groups) { _, groups in
             if groups.isEmpty {
                 selectedGroupName = AgentAccount.defaultGroupName
-            } else if !groups.contains(where: { $0.caseInsensitiveCompare(selectedGroupName) == .orderedSame }) {
+            } else if !groups.contains(selectedGroupName) {
                 selectedGroupName = groups[0]
             }
         }
@@ -858,7 +858,7 @@ struct PoolDashboardView: View {
         let normalized = AgentAccount.normalizedGroupName(name)
         guard state.deleteGroup(normalized) else { return }
 
-        if selectedGroupName.caseInsensitiveCompare(normalized) == .orderedSame {
+        if selectedGroupName == normalized {
             selectedGroupName = AgentAccount.defaultGroupName
         }
     }

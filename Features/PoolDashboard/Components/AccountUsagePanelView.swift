@@ -154,7 +154,7 @@ struct AccountUsagePanelView: View {
                 focusedAccountNameID = nil
                 if groups.isEmpty {
                     selectedGroupName = AgentAccount.defaultGroupName
-                } else if !groups.contains(where: { $0.caseInsensitiveCompare(selectedGroupName) == .orderedSame }) {
+                } else if !groups.contains(selectedGroupName) {
                     selectedGroupName = groups[0]
                 }
                 renameGroupName = selectedGroupName
@@ -381,8 +381,9 @@ struct AccountUsagePanelView: View {
     }
 
     private var sortedAccounts: [AgentAccount] {
+        let selectedGroup = AgentAccount.normalizedGroupName(selectedGroupName)
         let filteredAccounts = accounts.filter {
-            AgentAccount.normalizedGroupName($0.groupName).caseInsensitiveCompare(selectedGroupName) == .orderedSame
+            AgentAccount.normalizedGroupName($0.groupName) == selectedGroup
         }
 
         let baseSorted: [AgentAccount]
@@ -421,8 +422,9 @@ struct AccountUsagePanelView: View {
     }
 
     private var outsideGroupAccounts: [AgentAccount] {
-        accounts.filter {
-            AgentAccount.normalizedGroupName($0.groupName).caseInsensitiveCompare(selectedGroupName) != .orderedSame
+        let selectedGroup = AgentAccount.normalizedGroupName(selectedGroupName)
+        return accounts.filter {
+            AgentAccount.normalizedGroupName($0.groupName) != selectedGroup
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
