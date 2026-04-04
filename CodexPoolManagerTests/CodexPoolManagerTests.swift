@@ -451,6 +451,19 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func updateSwitchSettingsAllowsZeroSmartSwitchThreshold() {
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 10, quota: 1000)],
+            mode: .intelligent,
+            lowUsageThresholdRatio: 0.2
+        )
+
+        state.updateSwitchSettings(lowUsageThresholdRatio: 0)
+
+        #expect(state.lowUsageThresholdRatio == 0)
+    }
+
+    @Test
     func lowUsageWarningUsesDedicatedAlertThreshold() {
         let accountID = UUID()
         var state = AccountPoolState(

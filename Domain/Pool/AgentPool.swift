@@ -400,7 +400,7 @@ struct AccountPoolState {
         self.autoSyncEnabled = snapshot.autoSyncEnabled
         self.autoSyncIntervalSeconds = max(5, min(300, snapshot.autoSyncIntervalSeconds))
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
-        self.lowUsageThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageThresholdRatio))
+        self.lowUsageThresholdRatio = min(0.9, max(0, snapshot.lowUsageThresholdRatio))
         self.lowUsageAlertThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageAlertThresholdRatio))
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
         rebuildGroups()
@@ -486,7 +486,7 @@ struct AccountPoolState {
             self.minSwitchInterval = max(30, minSwitchInterval)
         }
         if let lowUsageThresholdRatio {
-            self.lowUsageThresholdRatio = min(0.9, max(0.01, lowUsageThresholdRatio))
+            self.lowUsageThresholdRatio = min(0.9, max(0, lowUsageThresholdRatio))
         }
         if let lowUsageAlertThresholdRatio {
             self.lowUsageAlertThresholdRatio = min(0.9, max(0.01, lowUsageAlertThresholdRatio))

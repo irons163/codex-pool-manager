@@ -55,7 +55,7 @@ struct StrategySettingsPanelView: View {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
                         Text(L10n.text("strategy.low_usage_threshold_format", Int(switchThresholdBinding.wrappedValue * 100)))
                             .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        Slider(value: switchThresholdBinding, in: 0.05...0.5, step: 0.01)
+                        Slider(value: switchThresholdBinding, in: 0...0.5, step: 0.01)
                             .tint(PoolDashboardTheme.glowA)
                     }
                     .dashboardInfoCard()
