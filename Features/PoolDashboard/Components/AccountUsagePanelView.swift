@@ -109,6 +109,20 @@ struct AccountUsagePanelView: View {
             && normalized.caseInsensitiveCompare(AgentAccount.defaultGroupName) != .orderedSame
     }
 
+    private var activeAccount: AgentAccount? {
+        guard let activeAccountID else { return nil }
+        return accounts.first(where: { $0.id == activeAccountID })
+    }
+
+    private var activeAccountGroupName: String? {
+        activeAccount.map { AgentAccount.normalizedGroupName($0.groupName) }
+    }
+
+    private var selectedGroupHasCurrentAccount: Bool {
+        guard let activeAccountGroupName else { return false }
+        return AgentAccount.normalizedGroupName(selectedGroupName) == activeAccountGroupName
+    }
+
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
@@ -243,117 +257,141 @@ struct AccountUsagePanelView: View {
     }
 
     private var groupManagerRow: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Text(L10n.text("group.title"))
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+        VStack(alignment: .trailing, spacing: 6) {
+            HStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    Text(L10n.text("group.title"))
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
 
-                Picker("", selection: $selectedGroupName) {
-                    ForEach(groups, id: \.self) { group in
-                        Text(group).tag(group)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .accessibilityLabel(L10n.text("group.title"))
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isGroupRenameEditorVisible.toggle()
-                        if isGroupRenameEditorVisible {
-                            renameGroupName = selectedGroupName
+                    Picker("", selection: $selectedGroupName) {
+                        ForEach(groups, id: \.self) { group in
+                            Text(groupPickerLabel(group)).tag(group)
                         }
                     }
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PoolDashboardTheme.glowA)
-                        .frame(width: 26, height: 26)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .disabled(selectedGroupName.isEmpty)
-                .help(L10n.text("group.rename"))
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .accessibilityLabel(L10n.text("group.title"))
 
-                Button {
-                    requestDeleteSelectedGroup()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.red.opacity(0.9))
-                        .frame(width: 26, height: 26)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .disabled(!canDeleteSelectedGroup)
-                .help(L10n.text("group.delete"))
-            }
-            .fixedSize(horizontal: true, vertical: false)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isGroupRenameEditorVisible.toggle()
+                            if isGroupRenameEditorVisible {
+                                renameGroupName = selectedGroupName
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(PoolDashboardTheme.glowA)
+                            .frame(width: 26, height: 26)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .disabled(selectedGroupName.isEmpty)
+                    .help(L10n.text("group.rename"))
 
-            if isGroupRenameEditorVisible {
-                TextField(L10n.text("group.rename"), text: $renameGroupName)
+                    Button {
+                        requestDeleteSelectedGroup()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.red.opacity(0.9))
+                            .frame(width: 26, height: 26)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .disabled(!canDeleteSelectedGroup)
+                    .help(L10n.text("group.delete"))
+                }
+
+                if isGroupRenameEditorVisible {
+                    TextField(L10n.text("group.rename"), text: $renameGroupName)
+                        .dashboardInputFieldStyle()
+                        .frame(maxWidth: 180)
+
+                    Button(L10n.text("group.rename_action")) {
+                        let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !draft.isEmpty else { return }
+                        let previous = selectedGroupName
+                        onRenameGroup(previous, draft)
+                        selectedGroupName = draft
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isGroupRenameEditorVisible = false
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(selectedGroupName.isEmpty)
+                }
+
+                TextField(L10n.text("group.placeholder"), text: $newGroupName)
                     .dashboardInputFieldStyle()
                     .frame(maxWidth: 180)
 
-                Button(L10n.text("group.rename_action")) {
-                    let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                Button(L10n.text("group.add")) {
+                    let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !draft.isEmpty else { return }
-                    let previous = selectedGroupName
-                    onRenameGroup(previous, draft)
+                    onCreateGroup(draft)
                     selectedGroupName = draft
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isGroupRenameEditorVisible = false
-                    }
+                    newGroupName = ""
                 }
-                .buttonStyle(.bordered)
-                .disabled(selectedGroupName.isEmpty)
-            }
+                .buttonStyle(.borderedProminent)
+                .tint(PoolDashboardTheme.glowA)
 
-            TextField(L10n.text("group.placeholder"), text: $newGroupName)
-                .dashboardInputFieldStyle()
-                .frame(maxWidth: 180)
-
-            Button(L10n.text("group.add")) {
-                let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !draft.isEmpty else { return }
-                onCreateGroup(draft)
-                selectedGroupName = draft
-                newGroupName = ""
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(PoolDashboardTheme.glowA)
-
-            if !outsideGroupAccounts.isEmpty {
-                Menu {
-                    ForEach(outsideGroupAccounts) { account in
-                        Button("\(account.name) (\(account.groupName))") {
-                            onMoveAccountToGroup(account.id, selectedGroupName)
+                if !outsideGroupAccounts.isEmpty {
+                    Menu {
+                        ForEach(outsideGroupAccounts) { account in
+                            Button("\(account.name) (\(account.groupName))") {
+                                onMoveAccountToGroup(account.id, selectedGroupName)
+                            }
                         }
+                    } label: {
+                        Text(L10n.text("group.add_existing"))
                     }
-                } label: {
-                    Text(L10n.text("group.add_existing"))
+                    .menuStyle(.borderlessButton)
                 }
-                .menuStyle(.borderlessButton)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+
+            if let activeAccount, !selectedGroupHasCurrentAccount {
+                Button {
+                    selectedGroupName = AgentAccount.normalizedGroupName(activeAccount.groupName)
+                } label: {
+                    Text("\(L10n.text("account.current_badge")): \(activeAccount.name) (\(activeAccount.groupName))")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .buttonStyle(.plain)
+                .help(L10n.text("account.current_badge"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private func groupPickerLabel(_ group: String) -> String {
+        guard let activeAccountGroupName else { return group }
+        if AgentAccount.normalizedGroupName(group) == activeAccountGroupName {
+            return "\(group) • \(L10n.text("account.current_badge"))"
+        }
+        return group
     }
 
     private var addRow: some View {
