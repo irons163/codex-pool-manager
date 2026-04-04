@@ -30,6 +30,8 @@
 "group.rename" = "Renommer le groupe";
 "group.rename_action" = "Renommer";
 "group.delete" = "Supprimer le groupe";
+"group.delete_confirm_title" = "Supprimer le groupe";
+"group.delete_confirm_message_format" = "Supprimer \"%@\" ? Les comptes de ce groupe seront également supprimés.";
 "group.move_to_current" = "Déplacer vers le groupe";
 "group.add_existing" = "Ajouter un compte existant";
 

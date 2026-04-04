@@ -330,7 +330,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func deleteGroupMovesAccountsToDefaultGroup() {
+    func deleteGroupRemovesAccountsInThatGroup() {
         let first = UUID()
         let second = UUID()
         var state = AccountPoolState(
@@ -345,8 +345,9 @@ struct CodexPoolManagerTests {
 
         #expect(deleted)
         #expect(!state.groups.contains(where: { $0.caseInsensitiveCompare("Team Red") == .orderedSame }))
-        #expect(state.groups.contains(where: { $0.caseInsensitiveCompare("Default") == .orderedSame }))
-        #expect(state.accounts.first(where: { $0.id == first })?.groupName == "Default")
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts.first(where: { $0.id == first }) == nil)
+        #expect(state.accounts.first(where: { $0.id == second }) != nil)
     }
 
     @Test

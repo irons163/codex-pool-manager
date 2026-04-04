@@ -30,6 +30,8 @@
 "group.rename" = "重新命名群組";
 "group.rename_action" = "重新命名";
 "group.delete" = "刪除群組";
+"group.delete_confirm_title" = "刪除群組";
+"group.delete_confirm_message_format" = "要刪除「%@」嗎？此群組內的帳號會一併刪除。";
 "group.move_to_current" = "移動到群組";
 "group.add_existing" = "加入現有帳號";
 

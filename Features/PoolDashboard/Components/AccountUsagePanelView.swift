@@ -57,6 +57,8 @@ struct AccountUsagePanelView: View {
     @State private var newGroupName = ""
     @State private var renameGroupName = ""
     @State private var isGroupRenameEditorVisible = false
+    @State private var isDeleteGroupConfirmationVisible = false
+    @State private var pendingDeleteGroupName = ""
     @State private var draftAccountNames: [UUID: String] = [:]
     @FocusState private var focusedAccountNameID: UUID?
 
@@ -160,6 +162,19 @@ struct AccountUsagePanelView: View {
         }
         .onChange(of: selectedGroupName) { _, value in
             renameGroupName = value
+        }
+        .alert(L10n.text("group.delete_confirm_title"), isPresented: $isDeleteGroupConfirmationVisible) {
+            Button(L10n.text("account.edit.cancel"), role: .cancel) {}
+            Button(L10n.text("delete.button"), role: .destructive) {
+                confirmDeleteGroup()
+            }
+        } message: {
+            Text(
+                L10n.text(
+                    "group.delete_confirm_message_format",
+                    pendingDeleteGroupName
+                )
+            )
         }
     }
 
@@ -270,11 +285,7 @@ struct AccountUsagePanelView: View {
                 .help(L10n.text("group.rename"))
 
                 Button {
-                    guard canDeleteSelectedGroup else { return }
-                    onDeleteGroup(selectedGroupName)
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isGroupRenameEditorVisible = false
-                    }
+                    requestDeleteSelectedGroup()
                 } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 13, weight: .semibold))
@@ -610,6 +621,22 @@ struct AccountUsagePanelView: View {
 
     private func isPaidAccount(_ account: AgentAccount) -> Bool {
         account.isPaid
+    }
+
+    private func requestDeleteSelectedGroup() {
+        guard canDeleteSelectedGroup else { return }
+        pendingDeleteGroupName = selectedGroupName
+        isDeleteGroupConfirmationVisible = true
+    }
+
+    private func confirmDeleteGroup() {
+        let targetGroup = pendingDeleteGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !targetGroup.isEmpty else { return }
+        onDeleteGroup(targetGroup)
+        pendingDeleteGroupName = ""
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isGroupRenameEditorVisible = false
+        }
     }
 
     private func weeklyUsageRecordText(for account: AgentAccount) -> String? {

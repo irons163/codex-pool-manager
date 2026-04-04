@@ -30,6 +30,8 @@
 "group.rename" = "重命名分组";
 "group.rename_action" = "重命名";
 "group.delete" = "删除分组";
+"group.delete_confirm_title" = "删除分组";
+"group.delete_confirm_message_format" = "要删除“%@”吗？该分组内的账号也会一并删除。";
 "group.move_to_current" = "移动到分组";
 "group.add_existing" = "加入现有账号";
 

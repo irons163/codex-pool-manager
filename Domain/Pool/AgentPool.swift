@@ -515,10 +515,7 @@ struct AccountPoolState {
         }
 
         groups.remove(at: index)
-        let fallbackGroup = ensureGroupExists(AgentAccount.defaultGroupName)
-        for accountIndex in accounts.indices where accounts[accountIndex].groupName.caseInsensitiveCompare(normalized) == .orderedSame {
-            accounts[accountIndex].groupName = fallbackGroup
-        }
+        accounts.removeAll { $0.groupName.caseInsensitiveCompare(normalized) == .orderedSame }
         evaluate(now: now)
         return true
     }
