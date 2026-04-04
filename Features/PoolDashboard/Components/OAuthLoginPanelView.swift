@@ -136,11 +136,39 @@ struct OAuthLoginPanelView: View {
 
     private var authorizationURLText: String {
         let trimmedIssuer = oauthIssuer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedClientID = oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedScopes = oauthScopes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedRedirectURI = oauthRedirectURI.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedOriginator = oauthOriginator.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedWorkspaceID = oauthWorkspaceID.trimmingCharacters(in: .whitespacesAndNewlines)
+
         guard let issuerURL = URL(string: trimmedIssuer), !trimmedIssuer.isEmpty else {
             return "--"
         }
 
-        let endpoint = URL(string: "/oauth/authorize", relativeTo: issuerURL)?.absoluteURL
-        return endpoint?.absoluteString ?? "--"
+        guard let endpoint = URL(string: "/oauth/authorize", relativeTo: issuerURL)?.absoluteURL else {
+            return "--"
+        }
+
+        var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "response_type", value: "code"),
+            URLQueryItem(name: "client_id", value: trimmedClientID),
+            URLQueryItem(name: "redirect_uri", value: trimmedRedirectURI),
+            URLQueryItem(name: "scope", value: trimmedScopes),
+            URLQueryItem(name: "code_challenge", value: "<CODE_CHALLENGE>"),
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "id_token_add_organizations", value: "true"),
+            URLQueryItem(name: "codex_cli_simplified_flow", value: "true"),
+            URLQueryItem(name: "state", value: "<STATE>"),
+            URLQueryItem(name: "originator", value: trimmedOriginator)
+        ]
+
+        if !trimmedWorkspaceID.isEmpty {
+            queryItems.append(URLQueryItem(name: "allowed_workspace_id", value: trimmedWorkspaceID))
+        }
+
+        components?.queryItems = queryItems
+        return components?.url?.absoluteString ?? "--"
     }
 }
