@@ -106,7 +106,7 @@
 "local_oauth.choose_button" = "auth.json 선택";
 "local_oauth.scan_failed" = "스캔 실패";
 "local_oauth.session_count_format" = "%d개 계정 발견";
-"local_oauth.account_id_format" = "계정 ID: %@";
+"local_oauth.account_id_format" = "계정 이름: %@";
 "local_oauth.missing_id.title" = "계정 ID 누락";
 "local_oauth.missing_id.message" = "이 계정에는 ChatGPT account id가 없어 사용량 동기화를 사용할 수 없습니다.";
 "local_oauth.import_button" = "가져오기";

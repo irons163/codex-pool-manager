@@ -106,7 +106,7 @@
 "local_oauth.choose_button" = "Choisir auth.json";
 "local_oauth.scan_failed" = "Échec du scan";
 "local_oauth.session_count_format" = "Comptes trouvés : %d";
-"local_oauth.account_id_format" = "ID du compte : %@";
+"local_oauth.account_id_format" = "Nom du compte : %@";
 "local_oauth.missing_id.title" = "ID du compte manquant";
 "local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
 "local_oauth.import_button" = "Importer";

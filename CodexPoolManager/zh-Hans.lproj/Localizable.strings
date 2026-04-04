@@ -106,7 +106,7 @@
 "local_oauth.choose_button" = "选择 auth.json";
 "local_oauth.scan_failed" = "扫描失败";
 "local_oauth.session_count_format" = "找到 %d 个账号";
-"local_oauth.account_id_format" = "账号 ID：%@";
+"local_oauth.account_id_format" = "账号名称：%@";
 "local_oauth.missing_id.title" = "缺少账号 ID";
 "local_oauth.missing_id.message" = "该账号缺少 ChatGPT account id，因此无法同步用量。";
 "local_oauth.import_button" = "导入";

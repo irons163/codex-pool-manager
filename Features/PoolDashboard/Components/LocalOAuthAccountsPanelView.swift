@@ -105,11 +105,12 @@ struct LocalOAuthAccountsPanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                     .lineLimit(1)
 
-                if let chatGPTAccountID = account.chatGPTAccountID {
-                    Text(L10n.text("local_oauth.account_id_format", chatGPTAccountID))
-                        .font(.footnote)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                } else {
+                let accountName = resolvedAccountName(for: account)
+                Text(L10n.text("local_oauth.account_id_format", accountName))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                if account.chatGPTAccountID == nil {
                     PanelStatusCalloutView(
                         message: L10n.text("local_oauth.missing_id.message"),
                         title: L10n.text("local_oauth.missing_id.title"),
@@ -137,5 +138,51 @@ struct LocalOAuthAccountsPanelView: View {
         .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
         .padding(.horizontal, 10)
         .dashboardInfoCard()
+    }
+
+    private func resolvedAccountName(for account: LocalCodexOAuthAccount) -> String {
+        if let email = normalizedNonEmpty(account.email) {
+            return email
+        }
+        if let tokenEmail = emailFromJWTPayload(account.accessToken) {
+            return tokenEmail
+        }
+        return account.displayName
+    }
+
+    private func normalizedNonEmpty(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func emailFromJWTPayload(_ token: String) -> String? {
+        let segments = token.split(separator: ".")
+        guard segments.count >= 2 else { return nil }
+
+        let normalizedPayload = segments[1]
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let paddedPayload = normalizedPayload.padding(
+            toLength: ((normalizedPayload.count + 3) / 4) * 4,
+            withPad: "=",
+            startingAt: 0
+        )
+
+        guard let payloadData = Data(base64Encoded: paddedPayload),
+              let payload = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any]
+        else {
+            return nil
+        }
+
+        if let email = normalizedNonEmpty(payload["email"] as? String) {
+            return email
+        }
+
+        if let profile = payload["https://api.openai.com/profile"] as? [String: Any] {
+            return normalizedNonEmpty(profile["email"] as? String)
+        }
+
+        return nil
     }
 }
