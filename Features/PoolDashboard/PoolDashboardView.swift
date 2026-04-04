@@ -1064,6 +1064,9 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func signInWithOAuth() async {
+        pendingManualOAuthContext = nil
+        manualOAuthCallbackURL = ""
+
         guard asyncStateCoordinator.beginOAuthSignIn(viewState: &viewState) else { return }
         defer { asyncStateCoordinator.endOAuthSignIn(viewState: &viewState) }
 
