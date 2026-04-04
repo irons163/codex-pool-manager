@@ -85,7 +85,7 @@
 "oauth.client_id.public_hint" = "Client ID: app_EMoamEEZ73f0CkXaXp7hrann is the official public Client ID and safe to use.";
 "oauth.signing_in" = "サインイン中...";
 "oauth.sign_in_import" = "サインインしてインポート";
-"oauth.import_completed" = "インポート完了";
+"oauth.import_completed" = "操作完了";
 "oauth.sign_in_failed" = "サインイン失敗";
 "oauth.error.invalid_authorize_url" = "認可 URL が無効です。";
 "oauth.error.invalid_redirect_uri" = "Redirect URI の設定が無効です。";

@@ -90,7 +90,7 @@
 "oauth.manual.callback_url.placeholder" = "貼上 callback URL";
 "oauth.manual.import" = "匯入";
 "oauth.manual.copy_success" = "已複製授權 URL。請在瀏覽器完成登入後，將 callback URL 貼到下方再匯入。";
-"oauth.import_completed" = "匯入完成";
+"oauth.import_completed" = "操作完成";
 "oauth.sign_in_failed" = "登入失敗";
 "oauth.error.invalid_authorize_url" = "授權網址無效";
 "oauth.error.invalid_redirect_uri" = "Redirect URI 設定無效";

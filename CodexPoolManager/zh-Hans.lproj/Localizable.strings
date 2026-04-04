@@ -90,7 +90,7 @@
 "oauth.manual.callback_url.placeholder" = "粘贴 callback URL";
 "oauth.manual.import" = "导入";
 "oauth.manual.copy_success" = "已复制授权 URL。请在浏览器完成登录后，将 callback URL 粘贴到下方再导入。";
-"oauth.import_completed" = "导入完成";
+"oauth.import_completed" = "操作完成";
 "oauth.sign_in_failed" = "登录失败";
 "oauth.error.invalid_authorize_url" = "授权网址无效";
 "oauth.error.invalid_redirect_uri" = "Redirect URI 设置无效";

@@ -90,7 +90,7 @@
 "oauth.manual.callback_url.placeholder" = "Paste callback URL";
 "oauth.manual.import" = "Import";
 "oauth.manual.copy_success" = "Authorization URL copied. Complete sign-in in browser, then paste callback URL below.";
-"oauth.import_completed" = "Import Completed";
+"oauth.import_completed" = "Action Completed";
 "oauth.sign_in_failed" = "Sign-In Failed";
 "oauth.error.invalid_authorize_url" = "Invalid authorization URL.";
 "oauth.error.invalid_redirect_uri" = "Invalid Redirect URI configuration.";
