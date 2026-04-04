@@ -36,6 +36,7 @@ struct PoolDashboardView: View {
     @State private var suppressNextSnapshotDrivenSwitch = false
     @State private var pendingManualOAuthContext: PendingManualOAuthContext?
     @State private var manualOAuthCallbackURL = ""
+    @State private var oauthSignInTask: Task<Void, Never>?
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -592,13 +593,20 @@ struct PoolDashboardView: View {
             manualAuthorizationURLOverride: pendingManualOAuthContext?.authorizationURL.absoluteString,
             showManualImportSection: pendingManualOAuthContext != nil,
             onSignIn: {
-                await signInWithOAuth()
+                startOAuthTask {
+                    await signInWithOAuth()
+                }
             },
             onCopyURLAndManualSignIn: {
-                await prepareManualOAuthSignIn()
+                prepareManualOAuthSignIn()
             },
             onManualImport: {
-                await importManualOAuthCallback()
+                startOAuthTask {
+                    await importManualOAuthCallback()
+                }
+            },
+            onCancelSignIn: {
+                cancelOAuthSignIn()
             }
         )
     }
@@ -1073,6 +1081,7 @@ struct PoolDashboardView: View {
                 fallbackQuota: formState.oauthAccountQuota
             )
         )
+        guard !Task.isCancelled else { return }
         applyOAuthSignInOutput(output)
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
@@ -1080,7 +1089,7 @@ struct PoolDashboardView: View {
     }
 
     @MainActor
-    private func prepareManualOAuthSignIn() async {
+    private func prepareManualOAuthSignIn() {
         let output = oauthSignInFlowCoordinator.prepareManualOAuthSignIn(
             input: .init(
                 issuer: oauthIssuer,
@@ -1139,12 +1148,29 @@ struct PoolDashboardView: View {
             expectedState: pendingManualOAuthContext.expectedState,
             codeVerifier: pendingManualOAuthContext.codeVerifier
         )
+        guard !Task.isCancelled else { return }
         applyOAuthSignInOutput(output)
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
             manualOAuthCallbackURL = ""
             self.pendingManualOAuthContext = nil
         }
+    }
+
+    @MainActor
+    private func startOAuthTask(_ operation: @escaping @MainActor () async -> Void) {
+        guard oauthSignInTask == nil else { return }
+        oauthSignInTask = Task { @MainActor in
+            await operation()
+            oauthSignInTask = nil
+        }
+    }
+
+    @MainActor
+    private func cancelOAuthSignIn() {
+        oauthSignInTask?.cancel()
+        oauthSignInTask = nil
+        viewState.isSigningInOAuth = false
     }
 
     private func copyTextToClipboard(_ text: String) {

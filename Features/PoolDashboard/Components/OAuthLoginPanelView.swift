@@ -16,9 +16,10 @@ struct OAuthLoginPanelView: View {
     let oauthError: String?
     let manualAuthorizationURLOverride: String?
     let showManualImportSection: Bool
-    let onSignIn: () async -> Void
-    let onCopyURLAndManualSignIn: () async -> Void
-    let onManualImport: () async -> Void
+    let onSignIn: () -> Void
+    let onCopyURLAndManualSignIn: () -> Void
+    let onManualImport: () -> Void
+    let onCancelSignIn: () -> Void
 
     private let advancedColumns = [
         GridItem(.flexible(minimum: 220), spacing: 12),
@@ -82,7 +83,7 @@ struct OAuthLoginPanelView: View {
                         )
 
                         Button(L10n.text("oauth.manual.import")) {
-                            Task { await onManualImport() }
+                            onManualImport()
                         }
                         .buttonStyle(DashboardPrimaryButtonStyle())
                         .disabled(isSigningInOAuth || manualCallbackURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -98,14 +99,22 @@ struct OAuthLoginPanelView: View {
     private var actionRow: some View {
         HStack(spacing: PoolDashboardTheme.actionRowSpacing) {
             Button(isSigningInOAuth ? L10n.text("oauth.signing_in") : L10n.text("oauth.sign_in_import")) {
-                Task { await onSignIn() }
+                onSignIn()
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSigningInOAuth || oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityIdentifier("auth.oauth.signInButton")
 
+            if isSigningInOAuth {
+                Button(L10n.text("account.edit.cancel")) {
+                    onCancelSignIn()
+                }
+                .buttonStyle(DashboardPrimaryButtonStyle())
+                .accessibilityIdentifier("auth.oauth.cancelSignInButton")
+            }
+
             Button(L10n.text("oauth.manual.copy_sign_in")) {
-                Task { await onCopyURLAndManualSignIn() }
+                onCopyURLAndManualSignIn()
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSigningInOAuth || oauthClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

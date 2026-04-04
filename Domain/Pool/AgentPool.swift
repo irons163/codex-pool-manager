@@ -822,6 +822,39 @@ struct AccountPoolState {
         lastUsageSyncAt = now
     }
 
+    mutating func mergeUsageSyncState(from syncedState: AccountPoolState, now: Date = .now) {
+        let syncedAccountsByID = Dictionary(uniqueKeysWithValues: syncedState.accounts.map { ($0.id, $0) })
+        var didUpdate = false
+
+        for index in accounts.indices {
+            guard let synced = syncedAccountsByID[accounts[index].id] else {
+                continue
+            }
+
+            accounts[index].quota = max(1, synced.quota)
+            accounts[index].usedUnits = min(max(0, synced.usedUnits), accounts[index].quota)
+            accounts[index].usageWindowName = synced.usageWindowName
+            accounts[index].usageWindowResetAt = synced.usageWindowResetAt
+            accounts[index].primaryUsagePercent = synced.primaryUsagePercent.map { min(max($0, 0), 100) }
+            accounts[index].primaryUsageResetAt = synced.primaryUsageResetAt
+            accounts[index].secondaryUsagePercent = synced.secondaryUsagePercent.map { min(max($0, 0), 100) }
+            accounts[index].secondaryUsageResetAt = synced.secondaryUsageResetAt
+            accounts[index].isPaid = synced.isPaid
+            accounts[index].isUsageSyncExcluded = synced.isUsageSyncExcluded
+            accounts[index].usageSyncError = synced.usageSyncError
+            didUpdate = true
+        }
+
+        if let syncedAt = syncedState.lastUsageSyncAt {
+            lastUsageSyncAt = syncedAt
+            didUpdate = true
+        }
+
+        if didUpdate {
+            evaluate(now: now)
+        }
+    }
+
     mutating func setUsageSyncExclusion(
         for accountID: UUID,
         reason: String?,

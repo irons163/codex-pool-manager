@@ -257,35 +257,41 @@ final class OAuthLoginService: NSObject {
     }
 
     func signIn(configuration: OAuthClientConfiguration) async throws -> OAuthTokens {
-        let manualPreparation = try prepareManualSignIn(configuration: configuration)
-        let authorizeURL = manualPreparation.authorizationURL
+        try await withTaskCancellationHandler {
+            let manualPreparation = try prepareManualSignIn(configuration: configuration)
+            let authorizeURL = manualPreparation.authorizationURL
 
-        let callbackURL: URL
-        if let redirectURL = URL(string: configuration.redirectURI),
-           let localhostConfig = LocalhostOAuthCallbackConfig(redirectURI: redirectURL) {
-            callbackURL = try await beginLocalhostBrowserAuthentication(
-                authorizeURL: authorizeURL,
-                callbackConfig: localhostConfig
-            )
-        } else {
-            guard let callbackScheme = configuration.callbackURLScheme else {
-                throw OAuthLoginError.invalidRedirectURI
+            let callbackURL: URL
+            if let redirectURL = URL(string: configuration.redirectURI),
+               let localhostConfig = LocalhostOAuthCallbackConfig(redirectURI: redirectURL) {
+                callbackURL = try await beginLocalhostBrowserAuthentication(
+                    authorizeURL: authorizeURL,
+                    callbackConfig: localhostConfig
+                )
+            } else {
+                guard let callbackScheme = configuration.callbackURLScheme else {
+                    throw OAuthLoginError.invalidRedirectURI
+                }
+                callbackURL = try await beginWebAuthentication(
+                    authorizeURL: authorizeURL,
+                    callbackScheme: callbackScheme
+                )
             }
-            callbackURL = try await beginWebAuthentication(
-                authorizeURL: authorizeURL,
-                callbackScheme: callbackScheme
-            )
-        }
-        let payload = try OAuthCallbackParser.parse(callbackURL: callbackURL)
-        guard payload.state == manualPreparation.state else {
-            throw OAuthLoginError.stateMismatch
-        }
+            let payload = try OAuthCallbackParser.parse(callbackURL: callbackURL)
+            guard payload.state == manualPreparation.state else {
+                throw OAuthLoginError.stateMismatch
+            }
 
-        return try await exchangeCodeForTokens(
-            code: payload.code,
-            codeVerifier: manualPreparation.codeVerifier,
-            configuration: configuration
-        )
+            return try await exchangeCodeForTokens(
+                code: payload.code,
+                codeVerifier: manualPreparation.codeVerifier,
+                configuration: configuration
+            )
+        } onCancel: { [weak self] in
+            Task { @MainActor in
+                self?.cancelPendingSignIn()
+            }
+        }
     }
 
     func prepareManualSignIn(configuration: OAuthClientConfiguration) throws -> OAuthManualSignInPreparation {
@@ -318,6 +324,12 @@ final class OAuthLoginService: NSObject {
             codeVerifier: codeVerifier,
             configuration: configuration
         )
+    }
+
+    private func cancelPendingSignIn() {
+        webAuthenticationSession?.cancel()
+        webAuthenticationSession = nil
+        localhostCallbackServer.cancelPendingWait()
     }
 
     private func beginWebAuthentication(authorizeURL: URL, callbackScheme: String) async throws -> URL {
@@ -504,6 +516,8 @@ enum LocalhostOAuthCallbackExtractor {
 
 final class LocalhostOAuthCallbackServer {
     private let queue = DispatchQueue(label: "CodexPoolManager.LocalhostOAuthCallbackServer")
+    private let activeStateLock = NSLock()
+    private var activeState: ContinuationState?
 
     private final class ContinuationState {
         private let lock = NSLock()
@@ -511,9 +525,11 @@ final class LocalhostOAuthCallbackServer {
         private var completed = false
         private var readySignaled = false
         var listener: NWListener?
+        private let onComplete: () -> Void
 
-        init(_ continuation: CheckedContinuation<URL, Error>) {
+        init(_ continuation: CheckedContinuation<URL, Error>, onComplete: @escaping () -> Void) {
             self.continuation = continuation
+            self.onComplete = onComplete
         }
 
         func complete(with result: Result<URL, Error>) {
@@ -529,6 +545,7 @@ final class LocalhostOAuthCallbackServer {
             lock.unlock()
 
             listener?.cancel()
+            onComplete()
             continuation.resume(with: result)
         }
 
@@ -550,7 +567,10 @@ final class LocalhostOAuthCallbackServer {
         onReadyToReceiveCallback: @escaping () -> Bool = { true }
     ) async throws -> URL {
         return try await withCheckedThrowingContinuation { continuation in
-            let state = ContinuationState(continuation)
+            let state = ContinuationState(continuation) { [weak self] in
+                self?.clearActiveState()
+            }
+            setActiveState(state)
 
             let listener: NWListener
             do {
@@ -622,6 +642,26 @@ final class LocalhostOAuthCallbackServer {
                 state.complete(with: .failure(OAuthLoginError.localhostCallbackTimedOut))
             }
         }
+    }
+
+    func cancelPendingWait() {
+        activeStateLock.lock()
+        let state = activeState
+        activeStateLock.unlock()
+
+        state?.complete(with: .failure(CancellationError()))
+    }
+
+    private func setActiveState(_ state: ContinuationState) {
+        activeStateLock.lock()
+        activeState = state
+        activeStateLock.unlock()
+    }
+
+    private func clearActiveState() {
+        activeStateLock.lock()
+        activeState = nil
+        activeStateLock.unlock()
     }
 
     private func sendHTTPResponse(status: String, body: String, on connection: NWConnection) {

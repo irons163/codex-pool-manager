@@ -86,6 +86,98 @@ struct PoolDashboardSwitchLaunchCoordinatorTests {
 @MainActor
 struct PoolDashboardViewMutationCoordinatorTests {
     @Test
+    func poolDashboardViewMutationCoordinatorApplyUsageSyncOutputMergesWithoutRevertingConcurrentChanges() {
+        let accountAID = UUID()
+        let accountBID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountAID,
+                    name: "Edited Name",
+                    groupName: "Runtime",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "token-a"
+                ),
+                AgentAccount(
+                    id: accountBID,
+                    name: "New During Sync",
+                    usedUnits: 5,
+                    quota: 50,
+                    apiToken: "token-b"
+                )
+            ],
+            mode: .focus
+        )
+        state.setMode(.focus)
+
+        var viewState = PoolDashboardViewState()
+        viewState.oauthSuccessMessage = "keep-this-message"
+
+        var syncedState = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountAID,
+                    name: "Old Name",
+                    groupName: "Default",
+                    usedUnits: 70,
+                    quota: 200,
+                    apiToken: "old-token",
+                    usageWindowName: "weekly_window",
+                    usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000),
+                    primaryUsagePercent: 33,
+                    primaryUsageResetAt: Date(timeIntervalSince1970: 1_700_000_123),
+                    secondaryUsagePercent: 70,
+                    secondaryUsageResetAt: Date(timeIntervalSince1970: 1_700_000_456),
+                    isPaid: true,
+                    isUsageSyncExcluded: true,
+                    usageSyncError: "sync failed"
+                )
+            ],
+            mode: .intelligent
+        )
+        let syncedAt = Date(timeIntervalSince1970: 1_700_000_789)
+        syncedState.markUsageSynced(at: syncedAt)
+
+        var syncedViewState = PoolDashboardViewState()
+        syncedViewState.syncError = "sync-timeout"
+        syncedViewState.lastUsageRawJSON = "{\"ok\":true}"
+
+        let output = PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: syncedState,
+            viewState: syncedViewState
+        )
+        let coordinator = PoolDashboardViewMutationCoordinator()
+
+        coordinator.applyUsageSyncOutput(
+            output,
+            state: &state,
+            viewState: &viewState
+        )
+
+        let updatedA = state.accounts.first(where: { $0.id == accountAID })
+        let preservedB = state.accounts.first(where: { $0.id == accountBID })
+
+        #expect(state.mode == .focus)
+        #expect(updatedA?.name == "Edited Name")
+        #expect(updatedA?.groupName == "Runtime")
+        #expect(updatedA?.usedUnits == 70)
+        #expect(updatedA?.quota == 200)
+        #expect(updatedA?.usageWindowName == "weekly_window")
+        #expect(updatedA?.primaryUsagePercent == 33)
+        #expect(updatedA?.secondaryUsagePercent == 70)
+        #expect(updatedA?.isPaid == true)
+        #expect(updatedA?.isUsageSyncExcluded == true)
+        #expect(updatedA?.usageSyncError == "sync failed")
+        #expect(preservedB?.name == "New During Sync")
+        #expect(state.lastUsageSyncAt == syncedAt)
+
+        #expect(viewState.oauthSuccessMessage == "keep-this-message")
+        #expect(viewState.syncError == "sync-timeout")
+        #expect(viewState.lastUsageRawJSON == "{\"ok\":true}")
+    }
+
+    @Test
     func poolDashboardViewMutationCoordinatorApplyLifecycleOnAppearOutputUpdatesAllTargets() {
         var state = AccountPoolState(accounts: [], mode: .manual)
         var policy = LowUsageAlertPolicy()

@@ -28,12 +28,11 @@ struct PoolDashboardViewMutationCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
-        applyStateAndViewState(
-            state: &state,
-            viewState: &viewState,
-            nextState: output.state,
-            nextViewState: output.viewState
-        )
+        state.mergeUsageSyncState(from: output.state)
+        viewState.syncError = output.viewState.syncError
+        if !output.viewState.lastUsageRawJSON.isEmpty {
+            viewState.lastUsageRawJSON = output.viewState.lastUsageRawJSON
+        }
     }
 
     func applyOAuthSignInOutput(
