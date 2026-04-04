@@ -40,7 +40,11 @@ struct PoolDashboardMutationCoordinator {
         state: inout AccountPoolState,
         viewState: inout PoolDashboardViewState
     ) {
+        let preservedMode = state.mode
         state = output.state
+        if state.mode != preservedMode {
+            state.setMode(preservedMode)
+        }
         if let rawResponse = output.lastUsageRawJSON {
             viewState.lastUsageRawJSON = rawResponse
         }

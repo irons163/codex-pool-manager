@@ -3598,6 +3598,32 @@ extension CodexPoolManagerTests {
     }
 
     @Test
+    func poolDashboardMutationCoordinatorApplySyncOutputPreservesCurrentMode() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "Current", usedUnits: 10, quota: 100)],
+            mode: .intelligent
+        )
+        var viewState = PoolDashboardViewState()
+        let output = PoolDashboardRuntimeCoordinator.SyncOutput(
+            state: AccountPoolState(
+                accounts: [AgentAccount(id: UUID(), name: "Synced", usedUnits: 20, quota: 100)],
+                mode: .focus
+            ),
+            syncError: nil,
+            lastUsageRawJSON: nil
+        )
+
+        coordinator.applySyncOutput(
+            output,
+            state: &state,
+            viewState: &viewState
+        )
+
+        #expect(state.mode == .intelligent)
+    }
+
+    @Test
     func poolDashboardMutationCoordinatorApplyOAuthOutputReturnsRefreshFlagAndWritesFields() {
         let coordinator = PoolDashboardMutationCoordinator()
         var state = AccountPoolState(accounts: [], mode: .manual)
