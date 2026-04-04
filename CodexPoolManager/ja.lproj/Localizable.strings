@@ -14,6 +14,7 @@
 "account_usage.title" = "アカウント使用量";
 "sort.title" = "並び替え";
 "sort.active_first" = "現在のアカウントを先頭に固定";
+"sort.paid_first" = "有料アカウントを先頭に";
 "sort.joined_at" = "追加日時";
 "sort.name" = "名前";
 "sort.remaining_high" = "残量（多い順）";

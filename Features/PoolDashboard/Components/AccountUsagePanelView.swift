@@ -52,6 +52,8 @@ struct AccountUsagePanelView: View {
     private var persistedSortModeRawValue: String = SortMode.joinedAt.rawValue
     @AppStorage("pool_dashboard.account_usage.active_first")
     private var persistedActiveAccountFirst: Bool = true
+    @AppStorage("pool_dashboard.account_usage.paid_first")
+    private var persistedPaidAccountFirst: Bool = false
     @AppStorage("pool_dashboard.account_usage.layout_mode")
     private var persistedLayoutModeRawValue: String = LayoutMode.single.rawValue
     @State private var newGroupName = ""
@@ -61,6 +63,8 @@ struct AccountUsagePanelView: View {
     @State private var pendingDeleteGroupName = ""
     @State private var draftAccountNames: [UUID: String] = [:]
     @FocusState private var focusedAccountNameID: UUID?
+    @FocusState private var isRenameGroupNameFocused: Bool
+    @FocusState private var isNewGroupNameFocused: Bool
 
     @Binding var newAccountName: String
     @Binding var newAccountQuota: Int
@@ -161,6 +165,8 @@ struct AccountUsagePanelView: View {
         .onAppear {
             DispatchQueue.main.async {
                 focusedAccountNameID = nil
+                isRenameGroupNameFocused = false
+                isNewGroupNameFocused = false
                 if groups.isEmpty {
                     selectedGroupName = AgentAccount.defaultGroupName
                 } else if !groups.contains(selectedGroupName) {
@@ -203,6 +209,13 @@ struct AccountUsagePanelView: View {
         HStack(spacing: 10) {
             Toggle(isOn: $persistedActiveAccountFirst) {
                 Text(L10n.text("sort.active_first"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+            }
+            .toggleStyle(.checkbox)
+
+            Toggle(isOn: $persistedPaidAccountFirst) {
+                Text(L10n.text("sort.paid_first"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
             }
@@ -269,13 +282,16 @@ struct AccountUsagePanelView: View {
                     .accessibilityLabel(L10n.text("group.title"))
 
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isGroupRenameEditorVisible.toggle()
-                            if isGroupRenameEditorVisible {
-                                renameGroupName = selectedGroupName
-                            }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isGroupRenameEditorVisible.toggle()
+                        if isGroupRenameEditorVisible {
+                            renameGroupName = selectedGroupName
+                            isRenameGroupNameFocused = true
+                        } else {
+                            isRenameGroupNameFocused = false
                         }
-                    } label: {
+                    }
+                } label: {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(PoolDashboardTheme.glowA)
@@ -318,6 +334,7 @@ struct AccountUsagePanelView: View {
 
                 if isGroupRenameEditorVisible {
                     TextField(L10n.text("group.rename"), text: $renameGroupName)
+                        .focused($isRenameGroupNameFocused)
                         .dashboardInputFieldStyle()
                         .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
                         .layoutPriority(1)
@@ -330,6 +347,7 @@ struct AccountUsagePanelView: View {
                         selectedGroupName = draft
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isGroupRenameEditorVisible = false
+                            isRenameGroupNameFocused = false
                         }
                     }
                     .buttonStyle(.bordered)
@@ -337,6 +355,7 @@ struct AccountUsagePanelView: View {
                 }
 
                 TextField(L10n.text("group.placeholder"), text: $newGroupName)
+                    .focused($isNewGroupNameFocused)
                     .dashboardInputFieldStyle()
                     .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
                     .layoutPriority(1)
@@ -479,14 +498,18 @@ struct AccountUsagePanelView: View {
             }
         }
 
-        guard persistedActiveAccountFirst,
-              let activeIndex = baseSorted.firstIndex(where: isCurrentEquivalentAccount) else {
-            return baseSorted
+        var reordered = baseSorted
+
+        if persistedPaidAccountFirst {
+            reordered = reordered.stablePartitioned { $0.isPaid }
         }
 
-        var reordered = baseSorted
-        let activeAccount = reordered.remove(at: activeIndex)
-        reordered.insert(activeAccount, at: 0)
+        if persistedActiveAccountFirst,
+           let activeIndex = reordered.firstIndex(where: isCurrentEquivalentAccount) {
+            let activeAccount = reordered.remove(at: activeIndex)
+            reordered.insert(activeAccount, at: 0)
+        }
+
         return reordered
     }
 
@@ -707,6 +730,7 @@ struct AccountUsagePanelView: View {
         pendingDeleteGroupName = ""
         withAnimation(.easeInOut(duration: 0.2)) {
             isGroupRenameEditorVisible = false
+            isRenameGroupNameFocused = false
         }
     }
 
@@ -853,5 +877,24 @@ struct AccountUsagePanelView: View {
                 }
             }
         }
+    }
+}
+
+private extension Array {
+    func stablePartitioned(by predicate: (Element) -> Bool) -> [Element] {
+        var matching: [Element] = []
+        var nonMatching: [Element] = []
+        matching.reserveCapacity(count)
+        nonMatching.reserveCapacity(count)
+
+        for element in self {
+            if predicate(element) {
+                matching.append(element)
+            } else {
+                nonMatching.append(element)
+            }
+        }
+
+        return matching + nonMatching
     }
 }
