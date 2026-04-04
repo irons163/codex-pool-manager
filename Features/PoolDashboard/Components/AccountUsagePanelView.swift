@@ -319,7 +319,8 @@ struct AccountUsagePanelView: View {
                 if isGroupRenameEditorVisible {
                     TextField(L10n.text("group.rename"), text: $renameGroupName)
                         .dashboardInputFieldStyle()
-                        .frame(maxWidth: 180)
+                        .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
+                        .layoutPriority(1)
 
                     Button(L10n.text("group.rename_action")) {
                         let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -337,7 +338,8 @@ struct AccountUsagePanelView: View {
 
                 TextField(L10n.text("group.placeholder"), text: $newGroupName)
                     .dashboardInputFieldStyle()
-                    .frame(maxWidth: 180)
+                    .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
+                    .layoutPriority(1)
 
                 Button(L10n.text("group.add")) {
                     let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
