@@ -28,21 +28,6 @@ struct OAuthLoginPanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
                     .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
 
-                GroupBox(L10n.text("oauth.import_target.title")) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.text("oauth.account_name.label"))
-                            .font(PoolDashboardTheme.metadataFont.weight(.semibold))
-                            .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        TextField(L10n.text("oauth.account_name.placeholder"), text: $oauthAccountName)
-                            .dashboardInputFieldStyle()
-
-                        Text(L10n.text("oauth.quota.hint"))
-                            .font(.caption)
-                            .foregroundStyle(PoolDashboardTheme.textMuted)
-                    }
-                }
-                .sectionCardStyle()
-
                 DisclosureGroup(L10n.text("oauth.advanced.title")) {
                     VStack(alignment: .leading, spacing: 10) {
                         LazyVGrid(columns: advancedColumns, alignment: .leading, spacing: 10) {
