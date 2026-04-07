@@ -10,7 +10,21 @@ enum AppAppearancePreference: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     static func normalizedRawValue(_ rawValue: String) -> String {
-        AppAppearancePreference(rawValue: rawValue)?.rawValue ?? AppAppearancePreference.system.rawValue
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let exact = AppAppearancePreference(rawValue: trimmed) {
+            return exact.rawValue
+        }
+
+        switch trimmed.lowercased() {
+        case "system", "follow system":
+            return AppAppearancePreference.system.rawValue
+        case "dark":
+            return AppAppearancePreference.dark.rawValue
+        case "light":
+            return AppAppearancePreference.light.rawValue
+        default:
+            return AppAppearancePreference.system.rawValue
+        }
     }
 
     static func preferredColorScheme(for rawValue: String) -> ColorScheme? {

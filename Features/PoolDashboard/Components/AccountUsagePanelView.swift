@@ -197,7 +197,7 @@ struct AccountUsagePanelView: View {
         HStack(alignment: .center, spacing: 10) {
             Text(L10n.text("account_usage.title"))
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(PoolDashboardTheme.groupLabelOpacity))
+                .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
 
             Spacer(minLength: 0)
 

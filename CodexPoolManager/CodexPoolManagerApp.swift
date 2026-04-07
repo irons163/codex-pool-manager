@@ -16,6 +16,7 @@ struct CodexPoolManagerApp: App {
     
     init() {
         LegacySandboxPreferencesMigrator.migrateIfNeeded()
+        PreferenceValueNormalizer.normalizeIfNeeded()
         WidgetBridgePublisher.configureBridge()
         WidgetBridgePublisher.publishFromMainApp(status: "Codex Pool Manager is running")
     }
@@ -83,6 +84,24 @@ private enum LegacySandboxPreferencesMigrator {
         defaults.set(true, forKey: migrationMarkerKey)
         if migrated {
             NSLog("Migrated account pool preferences from sandbox container.")
+        }
+    }
+}
+
+private enum PreferenceValueNormalizer {
+    static func normalizeIfNeeded(defaults: UserDefaults = .standard) {
+        let normalizedAppearance = AppAppearancePreference.normalizedRawValue(
+            defaults.string(forKey: AppAppearancePreference.storageKey) ?? ""
+        )
+        if defaults.string(forKey: AppAppearancePreference.storageKey) != normalizedAppearance {
+            defaults.set(normalizedAppearance, forKey: AppAppearancePreference.storageKey)
+        }
+
+        let normalizedLanguage = L10n.normalizedLanguageOverrideCode(
+            defaults.string(forKey: L10n.languageOverrideKey) ?? L10n.systemLanguageCode
+        )
+        if defaults.string(forKey: L10n.languageOverrideKey) != normalizedLanguage {
+            defaults.set(normalizedLanguage, forKey: L10n.languageOverrideKey)
         }
     }
 }

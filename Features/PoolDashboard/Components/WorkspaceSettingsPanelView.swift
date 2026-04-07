@@ -15,6 +15,20 @@ struct WorkspaceSettingsPanelView: View {
         )
     }
 
+    private var normalizedLanguageBinding: Binding<String> {
+        Binding(
+            get: { L10n.normalizedLanguageOverrideCode(languageOverrideBinding.wrappedValue) },
+            set: { languageOverrideBinding.wrappedValue = L10n.normalizedLanguageOverrideCode($0) }
+        )
+    }
+
+    private var normalizedAppearanceBinding: Binding<String> {
+        Binding(
+            get: { AppAppearancePreference.normalizedRawValue(appearanceOverrideBinding.wrappedValue) },
+            set: { appearanceOverrideBinding.wrappedValue = AppAppearancePreference.normalizedRawValue($0) }
+        )
+    }
+
     var body: some View {
         GroupBox(L10n.text("strategy.general_settings")) {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
@@ -48,7 +62,7 @@ struct WorkspaceSettingsPanelView: View {
                     Text(L10n.text("strategy.language"))
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
 
-                    Picker(L10n.text("strategy.language"), selection: languageOverrideBinding) {
+                    Picker(L10n.text("strategy.language"), selection: normalizedLanguageBinding) {
                         ForEach(languageOptions) { option in
                             Text(option.title).tag(option.code)
                         }
@@ -62,7 +76,7 @@ struct WorkspaceSettingsPanelView: View {
                     Text(L10n.text("strategy.appearance"))
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
 
-                    Picker(L10n.text("strategy.appearance"), selection: appearanceOverrideBinding) {
+                    Picker(L10n.text("strategy.appearance"), selection: normalizedAppearanceBinding) {
                         Text(L10n.text("strategy.appearance.system")).tag(AppAppearancePreference.system.rawValue)
                         Text(L10n.text("strategy.appearance.dark")).tag(AppAppearancePreference.dark.rawValue)
                         Text(L10n.text("strategy.appearance.light")).tag(AppAppearancePreference.light.rawValue)

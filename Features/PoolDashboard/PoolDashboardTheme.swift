@@ -4,31 +4,49 @@ import AppKit
 #endif
 
 enum PoolDashboardTheme {
+    private static var forcedLightPalette: Bool?
+
+    private static var systemPrefersDarkMode: Bool {
+        #if canImport(AppKit)
+        let style = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? ""
+        return style.caseInsensitiveCompare("Dark") == .orderedSame
+        #else
+        return false
+        #endif
+    }
+
     static var isLightPalette: Bool {
-        switch AppAppearancePreference(rawValue: UserDefaults.standard.string(forKey: AppAppearancePreference.storageKey) ?? "") ?? .system {
+        if let forcedLightPalette {
+            return forcedLightPalette
+        }
+        let rawValue = UserDefaults.standard.string(forKey: AppAppearancePreference.storageKey) ?? ""
+        let normalized = AppAppearancePreference.normalizedRawValue(rawValue)
+        switch AppAppearancePreference(rawValue: normalized) ?? .system {
         case .light:
             return true
         case .dark:
             return false
         case .system:
-            #if canImport(AppKit)
-            if let match = NSApp?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) {
-                return match == .aqua
-            }
-            #endif
-            return false
+            return !systemPrefersDarkMode
         }
+    }
+
+    @discardableResult
+    static func forcePalette(isLight: Bool) -> Bool {
+        let changed = forcedLightPalette != isLight
+        forcedLightPalette = isLight
+        return changed
     }
 
     static var canvasTop: Color {
         isLightPalette
-            ? Color(red: 0.996, green: 0.988, blue: 0.966)
+            ? Color(red: 0.995, green: 0.985, blue: 0.952)
             : Color(red: 0.03, green: 0.08, blue: 0.16)
     }
 
     static var canvasBottom: Color {
         isLightPalette
-            ? Color(red: 0.984, green: 0.968, blue: 0.930)
+            ? Color(red: 0.982, green: 0.962, blue: 0.905)
             : Color(red: 0.02, green: 0.03, blue: 0.06)
     }
 
@@ -74,11 +92,11 @@ enum PoolDashboardTheme {
     }
 
     static var textSecondary: Color {
-        isLightPalette ? Color(red: 0.24, green: 0.20, blue: 0.15).opacity(0.90) : Color.white.opacity(0.78)
+        isLightPalette ? Color(red: 0.22, green: 0.18, blue: 0.13).opacity(0.94) : Color.white.opacity(0.78)
     }
 
     static var textMuted: Color {
-        isLightPalette ? Color(red: 0.30, green: 0.25, blue: 0.20).opacity(0.76) : Color.white.opacity(0.62)
+        isLightPalette ? Color(red: 0.28, green: 0.23, blue: 0.17).opacity(0.86) : Color.white.opacity(0.62)
     }
 
     static let groupLabelOpacity: Double = 0.92

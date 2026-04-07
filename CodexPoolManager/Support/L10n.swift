@@ -24,6 +24,31 @@ enum L10n {
         LanguageOption(code: "ko", title: "한국어")
     ]
 
+    static func normalizedLanguageOverrideCode(_ rawValue: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return systemLanguageCode }
+        if trimmed == systemLanguageCode || supportedLanguageCodes.contains(trimmed) {
+            return trimmed
+        }
+
+        let lowercased = trimmed.lowercased()
+        if lowercased == "system" || lowercased == "follow system" {
+            return systemLanguageCode
+        }
+        if lowercased.hasPrefix("zh-hant") || lowercased.hasPrefix("zh-tw") || lowercased.hasPrefix("zh-hk") {
+            return "zh-Hant"
+        }
+        if lowercased.hasPrefix("zh-hans") || lowercased.hasPrefix("zh-cn") || lowercased.hasPrefix("zh-sg") {
+            return "zh-Hans"
+        }
+        if lowercased.hasPrefix("en") { return "en" }
+        if lowercased.hasPrefix("fr") { return "fr" }
+        if lowercased.hasPrefix("es") { return "es" }
+        if lowercased.hasPrefix("ja") { return "ja" }
+        if lowercased.hasPrefix("ko") { return "ko" }
+        return systemLanguageCode
+    }
+
     private static var selectedOverrideLanguageCode: String? {
         guard let value = UserDefaults.standard.string(forKey: languageOverrideKey),
               value != systemLanguageCode,

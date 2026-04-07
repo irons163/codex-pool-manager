@@ -23,6 +23,7 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue
+    @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
     @State private var resetAllLatch = DestructiveActionLatch()
@@ -34,6 +35,7 @@ struct PoolDashboardView: View {
     @State private var selectedGroupName: String = AgentAccount.defaultGroupName
     @State private var isWorkspaceSectionCollapsed = false
     @State private var isSidebarCollapsed = false
+    @State private var themeRenderToken = 0
     @State private var suppressNextSnapshotDrivenSwitch = false
     @State private var pendingManualOAuthContext: PendingManualOAuthContext?
     @State private var manualOAuthCallbackURL = ""
@@ -170,9 +172,11 @@ struct PoolDashboardView: View {
                 .allowsHitTesting(false)
 
             dashboardContent
+                .id(themeRenderToken)
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
+            syncThemePaletteIfNeeded()
             handleOnAppear()
         }
         .onChange(of: state.snapshot) { previousSnapshot, snapshot in
@@ -209,6 +213,22 @@ struct PoolDashboardView: View {
                 selectedGroupName = groups[0]
             }
         }
+        .onChange(of: appLanguageOverride) { _, value in
+            let normalized = L10n.normalizedLanguageOverrideCode(value)
+            if normalized != value {
+                appLanguageOverride = normalized
+            }
+        }
+        .onChange(of: appAppearanceOverride) { _, value in
+            let normalized = AppAppearancePreference.normalizedRawValue(value)
+            if normalized != value {
+                appAppearanceOverride = normalized
+            }
+            syncThemePaletteIfNeeded()
+        }
+        .onChange(of: colorScheme) { _, _ in
+            syncThemePaletteIfNeeded()
+        }
         .task(id: autoSyncTaskID) {
             guard state.autoSyncEnabled else { return }
             await syncCodexUsage()
@@ -230,7 +250,11 @@ struct PoolDashboardView: View {
                 )
             Text(message)
         }
-        .preferredColorScheme(AppAppearancePreference.preferredColorScheme(for: appAppearanceOverride))
+        .preferredColorScheme(
+            AppAppearancePreference.preferredColorScheme(
+                for: AppAppearancePreference.normalizedRawValue(appAppearanceOverride)
+            )
+        )
     }
 
     private var dashboardContent: some View {
@@ -289,9 +313,11 @@ struct PoolDashboardView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeBaseOpacity))
+        #if canImport(AppKit)
+        .environment(\.controlActiveState, .active)
+        #endif
         .groupBoxStyle(DashboardGroupBoxStyle())
         .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: state.mode)
-        .animation(.easeInOut(duration: PoolDashboardTheme.standardAnimationDuration), value: viewState.isSyncingUsage)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showUsageRawJSON)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showSwitchLaunchLog)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: selectedWorkspace)
@@ -776,6 +802,7 @@ struct PoolDashboardView: View {
 
     private func handleOnAppear() {
         migrateDefaultOAuthClientIDIfNeeded()
+        migrateLanguagePreferenceIfNeeded()
         migrateAppearancePreferenceIfNeeded()
         DesktopNotifier.requestAuthorizationIfNeeded()
 
@@ -799,6 +826,29 @@ struct PoolDashboardView: View {
 
     private func migrateAppearancePreferenceIfNeeded() {
         appAppearanceOverride = AppAppearancePreference.normalizedRawValue(appAppearanceOverride)
+    }
+
+    private func migrateLanguagePreferenceIfNeeded() {
+        appLanguageOverride = L10n.normalizedLanguageOverrideCode(appLanguageOverride)
+    }
+
+    private func syncThemePaletteIfNeeded() {
+        let isLight = resolvedLightPalette()
+        if PoolDashboardTheme.forcePalette(isLight: isLight) {
+            themeRenderToken &+= 1
+        }
+    }
+
+    private func resolvedLightPalette() -> Bool {
+        let normalizedAppearance = AppAppearancePreference.normalizedRawValue(appAppearanceOverride)
+        switch AppAppearancePreference(rawValue: normalizedAppearance) ?? .system {
+        case .light:
+            return true
+        case .dark:
+            return false
+        case .system:
+            return colorScheme == .light
+        }
     }
 
     private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
