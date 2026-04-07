@@ -81,6 +81,8 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         let missingTokenMessage = L10n.text("usage.sync.excluded.missing_token")
         let missingAccountIDMessage = L10n.text("usage.sync.excluded.missing_account_id")
         for account in state.accounts {
+            try Task.checkCancellation()
+
             guard !account.apiToken.isEmpty else {
                 state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now)
                 continue
@@ -109,6 +111,8 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     now: now
                 )
                 state.setUsageSyncExclusion(for: account.id, reason: nil, now: now)
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 let mapped = mapSyncError(error)
                 state.setUsageSyncExclusion(
@@ -118,14 +122,19 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 )
             }
         }
+
+        try Task.checkCancellation()
         state.markUsageSynced(at: now)
     }
 
     private func fetchUsageWithRetry(accessToken: String, accountID: String) async throws -> CodexUsage {
         var attempt = 0
         while true {
+            try Task.checkCancellation()
             do {
                 return try await client.fetchUsage(accessToken: accessToken, accountID: accountID)
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 if attempt >= maxRetries {
                     throw mapSyncError(error)

@@ -1542,6 +1542,36 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncStopsImmediatelyOnCancellation() async {
+        let accountAID = UUID()
+        let accountBID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: accountAID, name: "A", usedUnits: 0, quota: 100, apiToken: "token-a"),
+                AgentAccount(id: accountBID, name: "B", usedUnits: 0, quota: 100, apiToken: "token-b")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(accountAID, chatGPTAccountID: "acct-a")
+        state.updateAccount(accountBID, chatGPTAccountID: "acct-b")
+
+        let client = CancellingCodexUsageClient()
+        let sync = CodexUsageSyncService(client: client)
+
+        do {
+            try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 999))
+            Issue.record("Expected cancellation")
+        } catch is CancellationError {
+            // expected
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await client.callCount() == 1)
+        #expect(state.lastUsageSyncAt == nil)
+    }
+
+    @Test
     func openAICodexUsageClientParsesUsedUnitsPayloadAndSendsRequiredHeaders() async throws {
         let responseJSON = """
         {

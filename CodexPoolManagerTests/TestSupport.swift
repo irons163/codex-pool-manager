@@ -130,3 +130,16 @@ actor FlakyCodexUsageClient: CodexUsageClient {
         return successUsage
     }
 }
+
+actor CancellingCodexUsageClient: CodexUsageClient {
+    private var _callCount = 0
+
+    func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
+        _callCount += 1
+        throw CancellationError()
+    }
+
+    func callCount() -> Int {
+        _callCount
+    }
+}

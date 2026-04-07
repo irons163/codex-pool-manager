@@ -1048,7 +1048,6 @@ struct PoolDashboardView: View {
     @MainActor
     private func syncCodexUsage() async {
         guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
-        defer { asyncStateCoordinator.endUsageSync(viewState: &viewState) }
 
         let previousMode = state.mode
         let previousActiveAccountID = state.activeAccountID
@@ -1059,6 +1058,7 @@ struct PoolDashboardView: View {
             viewState: viewState
         )
         applyUsageSyncOutput(output)
+        asyncStateCoordinator.endUsageSync(viewState: &viewState)
         if let syncError = viewState.syncError, !syncError.isEmpty {
             DesktopNotifier.post(
                 key: "usage-sync-error",
