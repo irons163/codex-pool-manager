@@ -30,21 +30,21 @@ Languages: [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md
 
 ## Screenshots
 
-Screenshots below are from real/test runs of the app.
+All screenshots below use mock or non-sensitive test data.
 
-### Main Dashboard (Dark)
+### Main Dashboard (Dark, Mock Data)
 
-![Main Dashboard (Dark)](docs/images/app-screenshot.png)
+![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)
 
-### Main Dashboard (Light)
+### Header Overview (Light, Mock Data)
 
-![Main Dashboard (Light)](docs/images/dashboard-light.png)
+![Header Overview (Light, Mock Data)](docs/images/dashboard-light.png)
 
-### Menu Bar Status
+### Menu Bar Status (Mock Data)
 
 ![Menu Bar Status](docs/images/menu-bar.png)
 
-### Widget (Empty-State Example)
+### Widget (Empty-State Example, Mock State)
 
 ![Widget Empty State](docs/images/widget-empty-state.png)
 
