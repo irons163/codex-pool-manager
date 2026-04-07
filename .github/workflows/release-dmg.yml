@@ -11,6 +11,14 @@ permissions:
 jobs:
   build-dmg:
     runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - id: arm64
+            label: apple-silicon
+          - id: x86_64
+            label: intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,31 +116,52 @@ jobs:
             --issuer "$APPLE_API_ISSUER_ID"
 
       - name: Build and notarize DMG
+        id: build
         shell: bash
         env:
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ARCH_ID: ${{ matrix.arch.id }}
+          ARCH_LABEL: ${{ matrix.arch.label }}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           chmod +x scripts/build_and_notarize_dmg.sh
-          VERSION="${GITHUB_REF_NAME#refs/tags/}"
-          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
-            VERSION="${GITHUB_SHA::7}"
+
+          VERSION=""
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
           fi
+
+          VERSION="${VERSION#refs/tags/}"
+          VERSION="${VERSION#v}"
+          VERSION="${VERSION#V}"
+
+          if [[ -z "$VERSION" ]]; then
+            VERSION="$(xcodebuild -project CodexPoolManager.xcodeproj -scheme CodexPoolManager -configuration Release -showBuildSettings | awk -F ' = ' '/MARKETING_VERSION/ {print $2; exit}')"
+          fi
+          if [[ -z "$VERSION" ]]; then
+            echo "Failed to resolve app version." >&2
+            exit 1
+          fi
+
           APP_NAME=CodexPoolManager \
           SCHEME=CodexPoolManager \
           PROJECT_PATH=CodexPoolManager.xcodeproj \
           DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
           VERSION="$VERSION" \
+          ARCHS="$ARCH_ID" \
+          ARCH_LABEL="$ARCH_LABEL" \
           NOTARY_PROFILE=AC_NOTARY \
           scripts/build_and_notarize_dmg.sh
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dmg
+          name: dmg-${{ matrix.arch.label }}
           path: dist/*.dmg
 
       - name: Attach DMG to GitHub Release

@@ -9,11 +9,24 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-AC_NOTARY}"
 VERSION="${VERSION:-${GITHUB_REF_NAME:-$(date +%Y.%m.%d.%H%M)}}"
 CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:-Developer ID Application}"
 DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
+ARCHS="${ARCHS:-}"
+ARCH_LABEL="${ARCH_LABEL:-}"
 
 WORK_DIR="$(pwd)/build/release"
 ARCHIVE_PATH="$WORK_DIR/${APP_NAME}.xcarchive"
 STAGING_DIR="$WORK_DIR/staging"
-DMG_NAME="${APP_NAME}-${VERSION}.dmg"
+SAFE_VERSION="$(sed -E 's/[^A-Za-z0-9._-]+/-/g; s/^-+//; s/-+$//' <<<"$VERSION")"
+if [[ -z "$SAFE_VERSION" ]]; then
+  SAFE_VERSION="0.0.0"
+fi
+if [[ -n "$ARCH_LABEL" ]]; then
+  DMG_SUFFIX="-$ARCH_LABEL"
+elif [[ -n "$ARCHS" ]]; then
+  DMG_SUFFIX="-$ARCHS"
+else
+  DMG_SUFFIX=""
+fi
+DMG_NAME="${APP_NAME}-${SAFE_VERSION}${DMG_SUFFIX}.dmg"
 DMG_PATH="$WORK_DIR/${DMG_NAME}"
 
 rm -rf "$WORK_DIR" dist
@@ -25,24 +38,49 @@ if [[ -z "$DEVELOPMENT_TEAM" ]]; then
 fi
 
 echo "==> Archiving app"
-xcodebuild \
-  -project "$PROJECT_PATH" \
-  -scheme "$SCHEME" \
-  -configuration "$CONFIGURATION" \
-  -archivePath "$ARCHIVE_PATH" \
-  CODE_SIGN_STYLE=Manual \
-  DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
-  CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
-  OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
-  ENABLE_HARDENED_RUNTIME=YES \
-  CODE_SIGNING_REQUIRED=YES \
-  CODE_SIGNING_ALLOWED=YES \
+XCODEBUILD_ARGS=(
+  -project "$PROJECT_PATH"
+  -scheme "$SCHEME"
+  -configuration "$CONFIGURATION"
+  -destination "generic/platform=macOS"
+  -archivePath "$ARCHIVE_PATH"
+  CODE_SIGN_STYLE=Manual
+  DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM"
+  CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY"
+  OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime"
+  ENABLE_HARDENED_RUNTIME=YES
+  CODE_SIGNING_REQUIRED=YES
+  CODE_SIGNING_ALLOWED=YES
   archive
+)
+if [[ -n "$ARCHS" ]]; then
+  XCODEBUILD_ARGS+=(ARCHS="$ARCHS" ONLY_ACTIVE_ARCH=NO)
+fi
+xcodebuild "${XCODEBUILD_ARGS[@]}"
 
 APP_PATH="$ARCHIVE_PATH/Products/Applications/${APP_NAME}.app"
 if [[ ! -d "$APP_PATH" ]]; then
   echo "Archive did not produce ${APP_NAME}.app at expected path: $APP_PATH" >&2
   exit 1
+fi
+
+APP_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
+if [[ ! -f "$APP_BINARY" ]]; then
+  APP_BINARY="$(find "$APP_PATH/Contents/MacOS" -maxdepth 1 -type f | head -n 1)"
+fi
+if [[ ! -f "$APP_BINARY" ]]; then
+  echo "Unable to locate app executable in archive." >&2
+  exit 1
+fi
+APP_BINARY_ARCHS="$(lipo -archs "$APP_BINARY" 2>/dev/null || true)"
+echo "Built app binary architectures: ${APP_BINARY_ARCHS:-unknown}"
+if [[ -n "$ARCHS" ]]; then
+  for expected_arch in $ARCHS; do
+    if ! grep -qw "$expected_arch" <<<"$APP_BINARY_ARCHS"; then
+      echo "Archive binary is missing expected architecture: $expected_arch" >&2
+      exit 1
+    fi
+  done
 fi
 
 echo "==> Verifying code signature"
