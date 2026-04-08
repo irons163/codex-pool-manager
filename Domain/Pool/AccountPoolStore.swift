@@ -47,3 +47,54 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
         defaults.set(data, forKey: key)
     }
 }
+
+struct DeveloperAwareAccountPoolStore: AccountPoolStoring {
+    private let defaults: UserDefaults
+    private let productionSnapshotKey: String
+    private let productionTokenKey: String
+    private let developerSnapshotKey: String
+    private let developerTokenKey: String
+    private let developerMockModeKey: String
+
+    init(
+        defaults: UserDefaults = .standard,
+        productionSnapshotKey: String = "account_pool_snapshot",
+        productionTokenKey: String = "account_pool_tokens",
+        developerSnapshotKey: String = "account_pool_snapshot_developer",
+        developerTokenKey: String = "account_pool_tokens_developer",
+        developerMockModeKey: String = "pool_dashboard.developer.mock_mode"
+    ) {
+        self.defaults = defaults
+        self.productionSnapshotKey = productionSnapshotKey
+        self.productionTokenKey = productionTokenKey
+        self.developerSnapshotKey = developerSnapshotKey
+        self.developerTokenKey = developerTokenKey
+        self.developerMockModeKey = developerMockModeKey
+    }
+
+    func load() -> AccountPoolSnapshot? {
+        resolvedStore.load()
+    }
+
+    func save(_ snapshot: AccountPoolSnapshot) {
+        resolvedStore.save(snapshot)
+    }
+
+    private var resolvedStore: UserDefaultsAccountPoolStore {
+        #if DEBUG
+        if defaults.bool(forKey: developerMockModeKey) {
+            return UserDefaultsAccountPoolStore(
+                defaults: defaults,
+                key: developerSnapshotKey,
+                tokenVault: UserDefaultsAccountTokenVault(defaults: defaults, key: developerTokenKey)
+            )
+        }
+        #endif
+
+        return UserDefaultsAccountPoolStore(
+            defaults: defaults,
+            key: productionSnapshotKey,
+            tokenVault: UserDefaultsAccountTokenVault(defaults: defaults, key: productionTokenKey)
+        )
+    }
+}

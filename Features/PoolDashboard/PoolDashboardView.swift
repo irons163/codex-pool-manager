@@ -10,6 +10,11 @@ struct PoolDashboardView: View {
     }
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+    private static let productionSnapshotKey = "account_pool_snapshot"
+    private static let productionTokenKey = "account_pool_tokens"
+    private static let developerSnapshotKey = "account_pool_snapshot_developer"
+    private static let developerTokenKey = "account_pool_tokens_developer"
+    private static let developerMockModeKey = "pool_dashboard.developer.mock_mode"
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
@@ -23,6 +28,7 @@ struct PoolDashboardView: View {
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue
+    @AppStorage(Self.developerMockModeKey) private var developerMockModeEnabled = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
@@ -69,10 +75,12 @@ struct PoolDashboardView: View {
 
     private static var defaultAccounts: [AgentAccount] {
         #if DEBUG
-        [
-            AgentAccount(id: UUID(), name: "Codex-Team-A", usedUnits: 120, quota: PoolDashboardFormState.defaultQuota),
-            AgentAccount(id: UUID(), name: "Codex-Team-B", usedUnits: 460, quota: PoolDashboardFormState.defaultQuota),
-            AgentAccount(id: UUID(), name: "Codex-Team-C", usedUnits: 780, quota: PoolDashboardFormState.defaultQuota)
+        guard UserDefaults.standard.bool(forKey: developerMockModeKey) else { return [] }
+        return [
+            AgentAccount(id: UUID(), name: "alpha@demo.local", usedUnits: 110, quota: PoolDashboardFormState.defaultQuota),
+            AgentAccount(id: UUID(), name: "beta@demo.local", usedUnits: 420, quota: PoolDashboardFormState.defaultQuota),
+            AgentAccount(id: UUID(), name: "gamma@demo.local", usedUnits: 730, quota: PoolDashboardFormState.defaultQuota),
+            AgentAccount(id: UUID(), name: "delta@demo.local", usedUnits: 20, quota: PoolDashboardFormState.defaultQuota)
         ]
         #else
         []
@@ -131,20 +139,24 @@ struct PoolDashboardView: View {
         }
     }
 
-    init(store: AccountPoolStoring = UserDefaultsAccountPoolStore()) {
+    init(store: AccountPoolStoring = DeveloperAwareAccountPoolStore()) {
         self.store = store
         if let snapshot = store.load() {
             _state = State(initialValue: AccountPoolState(snapshot: snapshot))
         } else {
-            var defaultState = AccountPoolState(
-                accounts: Self.defaultAccounts,
-                mode: .intelligent,
-                minSwitchInterval: 300,
-                lowUsageThresholdRatio: 0.15
-            )
+            var defaultState = Self.makeDefaultState(accounts: Self.defaultAccounts)
             defaultState.evaluate(now: .now)
             _state = State(initialValue: defaultState)
         }
+    }
+
+    private static func makeDefaultState(accounts: [AgentAccount]) -> AccountPoolState {
+        AccountPoolState(
+            accounts: accounts,
+            mode: .intelligent,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15
+        )
     }
 
     var body: some View {
@@ -209,6 +221,10 @@ struct PoolDashboardView: View {
             if !isEnabled && selectedWorkspace == .developer {
                 selectedWorkspace = .authentication
             }
+        }
+        .onChange(of: developerMockModeEnabled) { _, _ in
+            guard isDeveloperBuild else { return }
+            reloadStateForCurrentDataMode()
         }
         .onChange(of: state.groups) { _, groups in
             if groups.isEmpty {
@@ -538,6 +554,36 @@ struct PoolDashboardView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
+                GroupBox(L10n.text("developer.data_mode.title")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(L10n.text("developer.data_mode.toggle"), isOn: $developerMockModeEnabled)
+                            .toggleStyle(.switch)
+
+                        Text(
+                            developerMockModeEnabled
+                            ? L10n.text("developer.data_mode.enabled_hint")
+                            : L10n.text("developer.data_mode.disabled_hint")
+                        )
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                        HStack(spacing: 8) {
+                            Button(L10n.text("developer.data_mode.seed")) {
+                                seedDeveloperMockData()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(PoolDashboardTheme.glowA)
+                            .disabled(!developerMockModeEnabled)
+
+                            Button(L10n.text("developer.data_mode.clear")) {
+                                clearCurrentDataModeStore()
+                            }
+                            .buttonStyle(DashboardWarningButtonStyle())
+                        }
+                    }
+                }
+                .sectionCardStyle()
+
                 Button("測試右上角通知") {
                     DesktopNotifier.post(
                         key: "manual-test-notification",
@@ -827,6 +873,51 @@ struct PoolDashboardView: View {
         )
         applyLifecycleOnAppearOutput(output)
         WidgetBridgePublisher.publish(from: state.snapshot)
+    }
+
+    // MARK: - Developer Data Mode
+
+    private func reloadStateForCurrentDataMode() {
+        if let snapshot = store.load() {
+            state = AccountPoolState(snapshot: snapshot)
+        } else {
+            var defaultState = Self.makeDefaultState(accounts: Self.defaultAccounts)
+            defaultState.evaluate(now: .now)
+            state = defaultState
+        }
+
+        if state.groups.isEmpty {
+            selectedGroupName = AgentAccount.defaultGroupName
+        } else if !state.groups.contains(selectedGroupName) {
+            selectedGroupName = state.groups[0]
+        }
+
+        lowUsageAlertPolicy = LowUsageAlertPolicy()
+        viewState.showLowUsageAlert = false
+        viewState.lowUsageAlertMessage = nil
+        WidgetBridgePublisher.publish(from: state.snapshot)
+    }
+
+    private func seedDeveloperMockData() {
+        guard isDeveloperBuild, developerMockModeEnabled else { return }
+
+        var seededState = Self.makeDefaultState(accounts: Self.defaultAccounts)
+        seededState.evaluate(now: .now)
+        state = seededState
+        store.save(seededState.snapshot)
+        WidgetBridgePublisher.publish(from: seededState.snapshot)
+    }
+
+    private func clearCurrentDataModeStore() {
+        let defaults = UserDefaults.standard
+        if isDeveloperBuild && developerMockModeEnabled {
+            defaults.removeObject(forKey: Self.developerSnapshotKey)
+            defaults.removeObject(forKey: Self.developerTokenKey)
+        } else {
+            defaults.removeObject(forKey: Self.productionSnapshotKey)
+            defaults.removeObject(forKey: Self.productionTokenKey)
+        }
+        reloadStateForCurrentDataMode()
     }
 
     private func migrateDefaultOAuthClientIDIfNeeded() {

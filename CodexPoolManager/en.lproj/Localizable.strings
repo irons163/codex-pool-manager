@@ -252,6 +252,12 @@
 "debug_tools.switch_launch_log" = "Switch Launch Log";
 "debug_tools.switch_empty" = "No switch-and-launch operation executed yet.";
 "debug_tools.no_data" = "No Data";
+"developer.data_mode.title" = "Developer Data Mode";
+"developer.data_mode.toggle" = "Use isolated mock dataset";
+"developer.data_mode.enabled_hint" = "Developer mode is ON. Reads and writes now use an isolated developer snapshot.";
+"developer.data_mode.disabled_hint" = "Developer mode is OFF. Reads and writes now use production data.";
+"developer.data_mode.seed" = "Seed Mock Data";
+"developer.data_mode.clear" = "Clear Current Dataset";
 "common.clear" = "Clear";
 "common.choose" = "Choose";
 

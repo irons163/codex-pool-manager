@@ -315,6 +315,12 @@
 "debug_tools.switch_launch_log" = "切換啟動日誌";
 "debug_tools.switch_empty" = "尚未執行切換與啟動操作。";
 "debug_tools.no_data" = "無資料";
+"developer.data_mode.title" = "開發資料模式";
+"developer.data_mode.toggle" = "使用獨立 mock 資料集";
+"developer.data_mode.enabled_hint" = "開發模式已開啟，讀寫會使用獨立的開發快照，不會覆蓋正式資料。";
+"developer.data_mode.disabled_hint" = "開發模式已關閉，讀寫會使用正式資料。";
+"developer.data_mode.seed" = "建立 Mock 測試資料";
+"developer.data_mode.clear" = "清除目前資料集";
 "common.clear" = "清除";
 "common.choose" = "選擇";
 "alert.low_usage.message.account_format" = "%@ 剩餘 %d%%，已低於 %d%% 門檻。";

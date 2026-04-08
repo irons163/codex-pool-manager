@@ -307,6 +307,12 @@
 "debug_tools.switch_launch_log" = "切换启动日志";
 "debug_tools.switch_empty" = "尚未执行切换并启动操作。";
 "debug_tools.no_data" = "无数据";
+"developer.data_mode.title" = "开发数据模式";
+"developer.data_mode.toggle" = "使用独立 mock 数据集";
+"developer.data_mode.enabled_hint" = "开发模式已开启，读写会使用独立的开发快照，不会覆盖正式数据。";
+"developer.data_mode.disabled_hint" = "开发模式已关闭，读写会使用正式数据。";
+"developer.data_mode.seed" = "建立 Mock 测试数据";
+"developer.data_mode.clear" = "清除当前数据集";
 "common.clear" = "清除";
 "common.choose" = "选择";
 "alert.low_usage.message.account_format" = "%@ 剩余 %d%%，已低于 %d%% 阈值。";
