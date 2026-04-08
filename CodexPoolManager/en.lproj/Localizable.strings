@@ -173,6 +173,8 @@
 "workspace.authentication.subtitle" = "Manage sign-in flows and import local Codex accounts.";
 "workspace.runtime.title" = "Runtime Strategy";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.schedule.title" = "Schedule";
+"workspace.schedule.subtitle" = "Visualize reset coverage and uncovered windows across all accounts.";
 "workspace.settings.title" = "Settings";
 "workspace.settings.subtitle" = "Manage launch behavior, sync cadence, and language.";
 "workspace.capacity.title" = "Capacity";
@@ -202,6 +204,32 @@
 
 "developer.diagnostics.title" = "Developer Diagnostics";
 "developer.diagnostics.subtitle" = "Use this workspace only for development troubleshooting and payload inspection.";
+
+"schedule.horizon.title" = "Range";
+"schedule.horizon.24h" = "24h";
+"schedule.horizon.72h" = "72h";
+"schedule.horizon.7d" = "7d";
+"schedule.empty_accounts.title" = "No Accounts";
+"schedule.empty_accounts.message" = "Add at least one account to render reset coverage.";
+"schedule.empty_resets.title" = "No Reset Time Data";
+"schedule.empty_resets.message" = "Run sync once to collect weekly and 5-hour reset timestamps.";
+"schedule.summary.coverage_hours" = "Covered Hours";
+"schedule.summary.overlap_hours" = "Overlap Hours";
+"schedule.summary.total_resets" = "Reset Events";
+"schedule.summary.next_reset" = "Next Reset";
+"schedule.summary.not_available" = "--";
+"schedule.legend.covered" = "Covered (1 reset)";
+"schedule.legend.overlap" = "Overlap (2+ resets)";
+"schedule.legend.uncovered" = "Uncovered";
+"schedule.gap.title" = "Coverage Gap";
+"schedule.gap.none" = "No uncovered hours in the selected range.";
+"schedule.gap.first_format" = "First uncovered window: %@ - %@";
+"schedule.gap.more_format" = "Plus %d more uncovered windows.";
+"schedule.events.title" = "Upcoming Reset Events";
+"schedule.events.weekly" = "Weekly";
+"schedule.events.five_hour" = "5h";
+"schedule.events.more_format" = "+%d more events";
+"schedule.row.range_format" = "%@ · %@ - %@";
 
 "overview.reset_all" = "Reset All Usage";
 "overview.reset_all_confirm" = "Confirm Reset All Usage";

@@ -90,6 +90,7 @@ struct PoolDashboardView: View {
     private enum Workspace: String, CaseIterable, Identifiable {
         case authentication
         case runtime
+        case schedule
         case settings
         case safety
         case developer
@@ -100,6 +101,7 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: L10n.text("workspace.authentication.title")
             case .runtime: L10n.text("workspace.runtime.title")
+            case .schedule: L10n.text("workspace.schedule.title")
             case .settings: L10n.text("workspace.settings.title")
             case .safety: L10n.text("workspace.safety.title")
             case .developer: L10n.text("workspace.developer.title")
@@ -110,6 +112,7 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: L10n.text("workspace.authentication.subtitle")
             case .runtime: L10n.text("workspace.runtime.subtitle")
+            case .schedule: L10n.text("workspace.schedule.subtitle")
             case .settings: L10n.text("workspace.settings.subtitle")
             case .safety: L10n.text("workspace.safety.subtitle")
             case .developer: L10n.text("workspace.developer.subtitle")
@@ -120,6 +123,7 @@ struct PoolDashboardView: View {
             switch self {
             case .authentication: "person.badge.key"
             case .runtime: "dial.medium"
+            case .schedule: "calendar.badge.clock"
             case .settings: "gearshape"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
             case .developer: "wrench.and.screwdriver"
@@ -484,7 +488,7 @@ struct PoolDashboardView: View {
 
     private var hasWorkspaceContextPanel: Bool {
         switch selectedWorkspace {
-        case .runtime, .settings, .safety:
+        case .runtime, .schedule, .settings, .safety:
             return false
         default:
             return true
@@ -498,6 +502,8 @@ struct PoolDashboardView: View {
             oauthLoginPanel
         case .runtime:
             strategySettingsPanel
+        case .schedule:
+            schedulePanel
         case .settings:
             workspaceSettingsPanel
         case .safety:
@@ -514,6 +520,8 @@ struct PoolDashboardView: View {
             localOAuthAccountsPanel
         case .runtime:
             activeAccountPanel
+        case .schedule:
+            EmptyView()
         case .settings:
             EmptyView()
         case .safety:
@@ -681,6 +689,10 @@ struct PoolDashboardView: View {
             appearanceOverrideBinding: $appAppearanceOverride,
             languageOptions: L10n.languageOptions
         )
+    }
+
+    private var schedulePanel: some View {
+        ScheduleWorkspacePanelView(accounts: state.accounts)
     }
 
     private var activeAccountPanel: some View {
@@ -1421,6 +1433,484 @@ struct PoolDashboardView: View {
     private func notificationDateText(_ date: Date?) -> String {
         guard let date else { return "--" }
         return date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+    }
+}
+
+private struct ScheduleWorkspacePanelView: View {
+    private enum Horizon: Int, CaseIterable, Identifiable {
+        case next24Hours = 24
+        case next72Hours = 72
+        case next7Days = 168
+
+        var id: Int { rawValue }
+
+        var title: String {
+            switch self {
+            case .next24Hours:
+                return L10n.text("schedule.horizon.24h")
+            case .next72Hours:
+                return L10n.text("schedule.horizon.72h")
+            case .next7Days:
+                return L10n.text("schedule.horizon.7d")
+            }
+        }
+    }
+
+    private enum ResetKind {
+        case weekly
+        case fiveHour
+
+        var title: String {
+            switch self {
+            case .weekly:
+                return L10n.text("schedule.events.weekly")
+            case .fiveHour:
+                return L10n.text("schedule.events.five_hour")
+            }
+        }
+
+        var badgeTone: Color {
+            switch self {
+            case .weekly:
+                return PoolDashboardTheme.warning.opacity(0.20)
+            case .fiveHour:
+                return PoolDashboardTheme.glowA.opacity(0.25)
+            }
+        }
+    }
+
+    private struct ResetEvent: Identifiable {
+        let id = UUID()
+        let accountID: UUID
+        let accountName: String
+        let date: Date
+        let kind: ResetKind
+    }
+
+    private struct CoverageSlot: Identifiable {
+        let start: Date
+        let end: Date
+        let events: [ResetEvent]
+
+        var id: Date { start }
+        var eventCount: Int { events.count }
+    }
+
+    private struct CoverageRow: Identifiable {
+        let slots: [CoverageSlot]
+        var id: Date { slots.first?.start ?? .distantPast }
+    }
+
+    private struct GapRange: Identifiable {
+        let start: Date
+        let end: Date
+
+        var id: Date { start }
+    }
+
+    private struct Timeline {
+        let events: [ResetEvent]
+        let slots: [CoverageSlot]
+        let rows: [CoverageRow]
+        let gaps: [GapRange]
+
+        var coveredHours: Int {
+            slots.filter { $0.eventCount > 0 }.count
+        }
+
+        var overlapHours: Int {
+            slots.filter { $0.eventCount > 1 }.count
+        }
+
+        var coveragePercent: Int {
+            guard !slots.isEmpty else { return 0 }
+            return Int((Double(coveredHours) / Double(slots.count) * 100).rounded())
+        }
+    }
+
+    @AppStorage("pool_dashboard.schedule.horizon_hours")
+    private var persistedHorizonHours = Horizon.next72Hours.rawValue
+
+    let accounts: [AgentAccount]
+
+    private var selectedHorizon: Horizon {
+        Horizon(rawValue: persistedHorizonHours) ?? .next72Hours
+    }
+
+    private var horizonBinding: Binding<Horizon> {
+        Binding(
+            get: { selectedHorizon },
+            set: { persistedHorizonHours = $0.rawValue }
+        )
+    }
+
+    private var timeline: Timeline {
+        let start = Calendar.autoupdatingCurrent.dateInterval(of: .hour, for: .now)?.start ?? .now
+        let end = start.addingTimeInterval(TimeInterval(selectedHorizon.rawValue) * 3_600)
+        let events = buildEvents(from: start, to: end)
+        let slots = buildSlots(from: start, hours: selectedHorizon.rawValue, events: events)
+        let rows = stride(from: 0, to: slots.count, by: 24).map { index in
+            CoverageRow(slots: Array(slots[index..<min(index + 24, slots.count)]))
+        }
+        let gaps = buildGapRanges(from: slots)
+        return Timeline(events: events, slots: slots, rows: rows, gaps: gaps)
+    }
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 12) {
+                headerRow
+
+                if accounts.isEmpty {
+                    PanelStatusCalloutView(
+                        message: L10n.text("schedule.empty_accounts.message"),
+                        title: L10n.text("schedule.empty_accounts.title"),
+                        tone: .info
+                    )
+                } else if timeline.events.isEmpty {
+                    PanelStatusCalloutView(
+                        message: L10n.text("schedule.empty_resets.message"),
+                        title: L10n.text("schedule.empty_resets.title"),
+                        tone: .warning
+                    )
+                } else {
+                    summaryCards
+                    coverageChart
+                    coverageLegend
+                    coverageGapSummary
+                    upcomingEvents
+                }
+            }
+        }
+        .sectionCardStyle()
+        .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var headerRow: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(L10n.text("workspace.schedule.title"))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                Text(L10n.text("schedule.horizon.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                Picker("", selection: horizonBinding) {
+                    ForEach(Horizon.allCases) { horizon in
+                        Text(horizon.title).tag(horizon)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 230)
+            }
+        }
+    }
+
+    private var summaryCards: some View {
+        HStack(alignment: .top, spacing: 8) {
+            summaryCard(
+                title: L10n.text("schedule.summary.coverage_hours"),
+                value: "\(timeline.coveredHours)/\(timeline.slots.count) (\(timeline.coveragePercent)%)"
+            )
+            summaryCard(
+                title: L10n.text("schedule.summary.overlap_hours"),
+                value: "\(timeline.overlapHours)"
+            )
+            summaryCard(
+                title: L10n.text("schedule.summary.total_resets"),
+                value: "\(timeline.events.count)"
+            )
+            summaryCard(
+                title: L10n.text("schedule.summary.next_reset"),
+                value: timeline.events.first.map { localizedMonthDayHourMinuteText($0.date) } ?? L10n.text("schedule.summary.not_available")
+            )
+        }
+    }
+
+    private func summaryCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dashboardInfoCard()
+    }
+
+    private var coverageChart: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(timeline.rows) { row in
+                HStack(alignment: .center, spacing: 8) {
+                    Text(coverageRowLabel(for: row))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                        .frame(width: 140, alignment: .leading)
+
+                    HStack(spacing: 2) {
+                        ForEach(row.slots) { slot in
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(fillColor(for: slot))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                        .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.45), lineWidth: 0.6)
+                                )
+                                .frame(maxWidth: .infinity, minHeight: 14, maxHeight: 14)
+                        }
+                    }
+                }
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var coverageLegend: some View {
+        HStack(spacing: 10) {
+            legendItem(color: fillColor(forEventCount: 1), title: L10n.text("schedule.legend.covered"))
+            legendItem(color: fillColor(forEventCount: 2), title: L10n.text("schedule.legend.overlap"))
+            legendItem(color: fillColor(forEventCount: 0), title: L10n.text("schedule.legend.uncovered"))
+        }
+    }
+
+    private func legendItem(color: Color, title: String) -> some View {
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(color)
+                .frame(width: 12, height: 12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.5), lineWidth: 0.6)
+                )
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+        }
+    }
+
+    private var coverageGapSummary: some View {
+        Group {
+            if let firstGap = timeline.gaps.first {
+                PanelStatusCalloutView(
+                    message: gapSummaryText(firstGap: firstGap, extraGapCount: timeline.gaps.count - 1),
+                    title: L10n.text("schedule.gap.title"),
+                    tone: .warning
+                )
+            } else {
+                PanelStatusCalloutView(
+                    message: L10n.text("schedule.gap.none"),
+                    title: L10n.text("schedule.gap.title"),
+                    tone: .success
+                )
+            }
+        }
+    }
+
+    private func gapSummaryText(firstGap: GapRange, extraGapCount: Int) -> String {
+        let base = L10n.text(
+            "schedule.gap.first_format",
+            localizedMonthDayHourMinuteText(firstGap.start),
+            localizedMonthDayHourMinuteText(firstGap.end)
+        )
+        guard extraGapCount > 0 else { return base }
+        return base + " " + L10n.text("schedule.gap.more_format", extraGapCount)
+    }
+
+    private var upcomingEvents: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("schedule.events.title"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            ForEach(Array(timeline.events.prefix(12).enumerated()), id: \.offset) { _, event in
+                HStack(spacing: 8) {
+                    Text(localizedMonthDayHourMinuteText(event.date))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .monospacedDigit()
+                        .frame(width: 128, alignment: .leading)
+
+                    Text(event.accountName)
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
+
+                    Text(event.kind.title)
+                        .statusBadge(tone: event.kind.badgeTone)
+                }
+            }
+
+            if timeline.events.count > 12 {
+                Text(L10n.text("schedule.events.more_format", timeline.events.count - 12))
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private func coverageRowLabel(for row: CoverageRow) -> String {
+        guard let first = row.slots.first, let last = row.slots.last else {
+            return L10n.text("schedule.summary.not_available")
+        }
+        let dayText = first.start.formatted(.dateTime.locale(L10n.locale()).month().day())
+        let startHour = first.start.formatted(.dateTime.locale(L10n.locale()).hour())
+        let endHour = last.end.formatted(.dateTime.locale(L10n.locale()).hour())
+        return L10n.text("schedule.row.range_format", dayText, startHour, endHour)
+    }
+
+    private func fillColor(for slot: CoverageSlot) -> Color {
+        fillColor(forEventCount: slot.eventCount)
+    }
+
+    private func fillColor(forEventCount eventCount: Int) -> Color {
+        switch eventCount {
+        case let count where count >= 2:
+            return PoolDashboardTheme.warning.opacity(PoolDashboardTheme.isLightPalette ? 0.40 : 0.65)
+        case 1:
+            return PoolDashboardTheme.glowA.opacity(PoolDashboardTheme.isLightPalette ? 0.42 : 0.62)
+        default:
+            return PoolDashboardTheme.panelInnerStroke.opacity(PoolDashboardTheme.isLightPalette ? 0.65 : 0.95)
+        }
+    }
+
+    private func buildEvents(from start: Date, to end: Date) -> [ResetEvent] {
+        let range = start...end
+        var events: [ResetEvent] = []
+
+        for account in accounts {
+            let normalizedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let accountName = normalizedName.isEmpty ? L10n.text("account.unknown") : normalizedName
+
+            if let weeklyReset = account.usageWindowResetAt {
+                for occurrence in repeatingOccurrences(
+                    reference: weeklyReset,
+                    interval: 7 * 24 * 3_600,
+                    within: range
+                ) {
+                    events.append(
+                        ResetEvent(
+                            accountID: account.id,
+                            accountName: accountName,
+                            date: occurrence,
+                            kind: .weekly
+                        )
+                    )
+                }
+            }
+
+            if account.isPaid, let fiveHourReset = account.primaryUsageResetAt {
+                for occurrence in repeatingOccurrences(
+                    reference: fiveHourReset,
+                    interval: 5 * 3_600,
+                    within: range
+                ) {
+                    events.append(
+                        ResetEvent(
+                            accountID: account.id,
+                            accountName: accountName,
+                            date: occurrence,
+                            kind: .fiveHour
+                        )
+                    )
+                }
+            }
+        }
+
+        return events.sorted { lhs, rhs in
+            if lhs.date == rhs.date {
+                return lhs.accountID.uuidString < rhs.accountID.uuidString
+            }
+            return lhs.date < rhs.date
+        }
+    }
+
+    private func repeatingOccurrences(
+        reference: Date,
+        interval: TimeInterval,
+        within range: ClosedRange<Date>,
+        maxCount: Int = 720
+    ) -> [Date] {
+        guard interval > 0 else { return [] }
+
+        let delta = range.lowerBound.timeIntervalSince(reference)
+        let stepCount = Int(ceil(delta / interval))
+        var current = reference.addingTimeInterval(Double(stepCount) * interval)
+        while current < range.lowerBound {
+            current = current.addingTimeInterval(interval)
+        }
+
+        var occurrences: [Date] = []
+        while current <= range.upperBound, occurrences.count < maxCount {
+            occurrences.append(current)
+            current = current.addingTimeInterval(interval)
+        }
+
+        return occurrences
+    }
+
+    private func buildSlots(from start: Date, hours: Int, events: [ResetEvent]) -> [CoverageSlot] {
+        let hourInterval: TimeInterval = 3_600
+        var slots: [CoverageSlot] = []
+        var eventIndex = 0
+
+        for hour in 0..<hours {
+            let slotStart = start.addingTimeInterval(Double(hour) * hourInterval)
+            let slotEnd = slotStart.addingTimeInterval(hourInterval)
+
+            while eventIndex < events.count, events[eventIndex].date < slotStart {
+                eventIndex += 1
+            }
+
+            var index = eventIndex
+            var slotEvents: [ResetEvent] = []
+            while index < events.count, events[index].date < slotEnd {
+                slotEvents.append(events[index])
+                index += 1
+            }
+
+            eventIndex = index
+            slots.append(CoverageSlot(start: slotStart, end: slotEnd, events: slotEvents))
+        }
+
+        return slots
+    }
+
+    private func buildGapRanges(from slots: [CoverageSlot]) -> [GapRange] {
+        var gaps: [GapRange] = []
+        var activeGapStart: Date?
+
+        for slot in slots {
+            if slot.eventCount == 0 {
+                if activeGapStart == nil {
+                    activeGapStart = slot.start
+                }
+            } else if let gapStart = activeGapStart {
+                gaps.append(GapRange(start: gapStart, end: slot.start))
+                activeGapStart = nil
+            }
+        }
+
+        if let gapStart = activeGapStart, let finalSlot = slots.last {
+            gaps.append(GapRange(start: gapStart, end: finalSlot.end))
+        }
+
+        return gaps
+    }
+
+    private func localizedMonthDayHourMinuteText(_ date: Date) -> String {
+        date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
 }
 
