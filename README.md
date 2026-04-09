@@ -48,6 +48,10 @@ All screenshots below use mock or non-sensitive test data.
 
 ![Widget Empty State](docs/images/widget-empty-state.png)
 
+### OpenAI Reset Alert (Mock Data)
+
+![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+
 ## Key Features
 
 ### 1) Account pool management
@@ -95,6 +99,13 @@ All screenshots below use mock or non-sensitive test data.
 - Dark mode + light mode.
 - Language switching via app settings.
 - Locale-aware time formatting for app/widget texts.
+
+### 8) OpenAI reset monitoring
+
+- Dedicated `OpenAI Reset Alert` workspace for paid-account reset tracking.
+- Monitors weekly reset and 5-hour reset targets together.
+- Flags early reset signals when resets move earlier than expected (within configurable tolerance).
+- Optional desktop notifications and event history for auditability.
 
 ## How Intelligent Switching Works
 
@@ -199,6 +210,13 @@ The UI is organized into workspaces for clearer operational boundaries.
 - intelligent switch threshold
 - low-usage alert threshold
 - smart recommendation panel
+
+### OpenAI Reset Alert
+
+- paid-account reset target tracking
+- early-reset tolerance configuration
+- early-reset signal detection summary and records
+- optional desktop alerting + event list management
 
 ### Settings
 
