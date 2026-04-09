@@ -238,6 +238,7 @@
 "special_reset.enable_monitor" = "Enable watch";
 "special_reset.enable_notification" = "Desktop notifications";
 "special_reset.grace_minutes_format" = "Early-reset tolerance: %d min";
+"special_reset.badge" = "Alert";
 "special_reset.summary.paid_accounts" = "Paid Accounts";
 "special_reset.summary.last_checked" = "Last Checked";
 "special_reset.summary.detected" = "Detected";

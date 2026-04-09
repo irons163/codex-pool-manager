@@ -536,12 +536,17 @@ struct PoolDashboardView: View {
     }
 
     private var visibleWorkspaces: [Workspace] {
-        Workspace.allCases.filter { workspace in
+        var workspaces = Workspace.allCases.filter { workspace in
             if workspace == .developer {
                 return isDeveloperBuild
             }
             return true
         }
+        if let resetAlertIndex = workspaces.firstIndex(of: .openAIResetAlert) {
+            let resetAlertWorkspace = workspaces.remove(at: resetAlertIndex)
+            workspaces.append(resetAlertWorkspace)
+        }
+        return workspaces
     }
 
     private var workspaceContent: some View {
@@ -678,7 +683,10 @@ struct PoolDashboardView: View {
     }
 
     private func workspaceButton(for workspace: Workspace) -> some View {
-        Button {
+        let isSelected = selectedWorkspace == workspace
+        let isResetAlert = workspace == .openAIResetAlert
+
+        return Button {
             selectedWorkspace = workspace
             if isWorkspaceSectionCollapsed {
                 withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
@@ -701,17 +709,50 @@ struct PoolDashboardView: View {
                 }
 
                 Spacer(minLength: 0)
+
+                if isResetAlert {
+                    Text(L10n.text("special_reset.badge"))
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(red: 1.0, green: 0.48, blue: 0.24), Color(red: 0.95, green: 0.22, blue: 0.16)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
             .background(
                 RoundedRectangle(cornerRadius: PoolDashboardTheme.workspaceSidebarItemCornerRadius, style: .continuous)
-                    .fill(selectedWorkspace == workspace ? PoolDashboardTheme.panelStrongFill : Color.clear)
+                    .fill(
+                        isResetAlert
+                        ? AnyShapeStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.0, green: 0.56, blue: 0.28).opacity(isSelected ? 0.30 : 0.15),
+                                    Color(red: 0.94, green: 0.24, blue: 0.18).opacity(isSelected ? 0.24 : 0.12)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        : AnyShapeStyle(isSelected ? PoolDashboardTheme.panelStrongFill : Color.clear)
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: PoolDashboardTheme.workspaceSidebarItemCornerRadius, style: .continuous)
                             .stroke(
-                                selectedWorkspace == workspace ? PoolDashboardTheme.glowA.opacity(0.5) : PoolDashboardTheme.panelInnerStroke,
+                                isResetAlert
+                                ? Color(red: 1.0, green: 0.56, blue: 0.28).opacity(isSelected ? 0.95 : 0.55)
+                                : (isSelected ? PoolDashboardTheme.glowA.opacity(0.5) : PoolDashboardTheme.panelInnerStroke),
                                 lineWidth: 1
                             )
                     )
@@ -721,7 +762,11 @@ struct PoolDashboardView: View {
             )
         }
         .buttonStyle(.plain)
-        .foregroundStyle(selectedWorkspace == workspace ? PoolDashboardTheme.textPrimary : PoolDashboardTheme.textSecondary)
+        .foregroundStyle(
+            isResetAlert
+            ? (isSelected ? PoolDashboardTheme.textPrimary : Color(red: 1.0, green: 0.72, blue: 0.56))
+            : (isSelected ? PoolDashboardTheme.textPrimary : PoolDashboardTheme.textSecondary)
+        )
     }
 
     private var syncToolbarPanel: some View {

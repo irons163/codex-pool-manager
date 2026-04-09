@@ -233,6 +233,7 @@
 "special_reset.enable_monitor" = "启用监控";
 "special_reset.enable_notification" = "桌面通知";
 "special_reset.grace_minutes_format" = "提前重置容差：%d 分钟";
+"special_reset.badge" = "提醒";
 "special_reset.summary.paid_accounts" = "付费账号";
 "special_reset.summary.last_checked" = "最后检查";
 "special_reset.summary.detected" = "检测事件";

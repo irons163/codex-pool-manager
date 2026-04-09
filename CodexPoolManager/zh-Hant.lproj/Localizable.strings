@@ -239,6 +239,7 @@
 "special_reset.enable_monitor" = "啟用監控";
 "special_reset.enable_notification" = "桌面通知";
 "special_reset.grace_minutes_format" = "提前重置容差：%d 分鐘";
+"special_reset.badge" = "提醒";
 "special_reset.summary.paid_accounts" = "付費帳號";
 "special_reset.summary.last_checked" = "最後檢查";
 "special_reset.summary.detected" = "偵測事件";
