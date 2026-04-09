@@ -4,14 +4,25 @@ Application macOS pour gérer plusieurs comptes Codex, basculer rapidement le co
 
 Langues : [English](README.md) · [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md)
 
+## Capture d'écran
+
+(Capture avec données mock de test)
+
+![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+
 ## Fonctionnalités
 
 - Gestion d'un pool multi-comptes
 - Changement rapide du compte actif
 - Tableau de bord d'usage (y compris fenêtres des comptes payants)
+- Espace OpenAI Reset Alert (surveillance des signaux de reset anticipé pour les comptes payants)
 - Import local de comptes OAuth
 - Sauvegarde/restauration des données locales du pool
 - Interface multilingue
+
+## Espaces de travail
+
+- OpenAI Reset Alert : suit les resets hebdomadaires et 5h des comptes payants et alerte en cas de reset plus tôt que prévu.
 
 ## Structure du projet
 

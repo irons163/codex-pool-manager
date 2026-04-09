@@ -4,14 +4,25 @@
 
 语言： [English](README.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
 
+## 截图
+
+（以下为 mock 测试数据）
+
+![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+
 ## 功能
 
 - 多账号池管理
 - 一键切换当前启用账号
 - 用量仪表板（含付费账号窗口）
+- OpenAI Reset Alert 工作区（监测付费账号提前重置信号）
 - 本地 OAuth 账号导入
 - 本地池数据备份与恢复
 - 多语言界面
+
+## 工作区
+
+- OpenAI Reset Alert：追踪付费账号周重置与 5 小时重置，若早于预期发生则提醒。
 
 ## 项目结构
 

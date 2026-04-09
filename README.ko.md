@@ -4,14 +4,25 @@
 
 언어: [English](README.md) · [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md) · [日本語](README.ja.md) · [Français](README.fr.md) · [Español](README.es.md)
 
+## 스크린샷
+
+(아래 이미지는 mock 테스트 데이터입니다)
+
+![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+
 ## 기능
 
 - 멀티 계정 풀 관리
 - 원클릭 활성 계정 전환
 - 사용량 대시보드(유료 계정 윈도우 포함)
+- OpenAI Reset Alert 워크스페이스(유료 계정의 조기 리셋 신호 감시)
 - 로컬 OAuth 계정 가져오기
 - 로컬 풀 데이터 백업/복원
 - 다국어 UI
+
+## 워크스페이스
+
+- OpenAI Reset Alert: 유료 계정의 주간 리셋과 5시간 리셋을 추적하고, 예상보다 이른 리셋을 알립니다.
 
 ## 프로젝트 구조
 

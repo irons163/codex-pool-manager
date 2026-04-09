@@ -4,14 +4,25 @@
 
 語言： [English](README.md) · [简体中文](README.zh-Hans.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
 
+## 截圖
+
+（以下為 mock 測試資料）
+
+![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+
 ## 功能
 
 - 多帳號池管理
 - 一鍵切換目前啟用帳號
 - 用量儀表板（含付費帳號視窗）
+- OpenAI Reset Alert 工作區（監測付費帳號提前重置訊號）
 - 本機 OAuth 帳號匯入
 - 本機池資料備份與還原
 - 多語系介面
+
+## 工作區
+
+- OpenAI Reset Alert：追蹤付費帳號週重置與 5 小時重置，若早於預期發生則提醒。
 
 ## 專案結構
 
