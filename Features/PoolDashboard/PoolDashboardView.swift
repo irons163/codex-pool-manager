@@ -17,6 +17,7 @@ struct PoolDashboardView: View {
     private static let developerTokenKey = "account_pool_tokens_developer"
     private static let developerMockModeKey = "pool_dashboard.developer.mock_mode"
     private static let specialResetWatchStateKey = "pool_dashboard.special_reset_watch_state"
+    private static let specialResetGraceMinutesMigrationKey = "pool_dashboard.special_reset_watch_grace_minutes_migrated_v1"
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
@@ -95,7 +96,8 @@ struct PoolDashboardView: View {
     @AppStorage(Self.specialResetWatchStateKey) private var specialResetWatchStateRaw = ""
     @AppStorage("pool_dashboard.special_reset_watch_enabled") private var specialResetWatchEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_notify_enabled") private var specialResetWatchNotifyEnabled = true
-    @AppStorage("pool_dashboard.special_reset_watch_grace_minutes") private var specialResetWatchGraceMinutes = 30
+    @AppStorage("pool_dashboard.special_reset_watch_grace_minutes") private var specialResetWatchGraceMinutes = 1
+    @AppStorage(Self.specialResetGraceMinutesMigrationKey) private var didMigrateSpecialResetGraceMinutes = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
@@ -901,7 +903,7 @@ struct PoolDashboardView: View {
                         .disabled(!specialResetWatchEnabled)
                 }
 
-                Stepper(value: $specialResetWatchGraceMinutes, in: 0...240, step: 5) {
+                Stepper(value: $specialResetWatchGraceMinutes, in: 0...240, step: 1) {
                     Text(L10n.text("special_reset.grace_minutes_format", specialResetWatchGraceMinutes))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
@@ -1109,6 +1111,7 @@ struct PoolDashboardView: View {
         migrateDefaultOAuthClientIDIfNeeded()
         migrateLanguagePreferenceIfNeeded()
         migrateAppearancePreferenceIfNeeded()
+        migrateSpecialResetGraceMinutesIfNeeded()
         loadSpecialResetWatchStateFromStorage()
         DesktopNotifier.requestAuthorizationIfNeeded()
 
@@ -1182,6 +1185,15 @@ struct PoolDashboardView: View {
 
     private func migrateLanguagePreferenceIfNeeded() {
         appLanguageOverride = L10n.normalizedLanguageOverrideCode(appLanguageOverride)
+    }
+
+    private func migrateSpecialResetGraceMinutesIfNeeded() {
+        guard !didMigrateSpecialResetGraceMinutes else { return }
+        // Previous default was 30. Migrate untouched installs to the new 1-minute default.
+        if specialResetWatchGraceMinutes == 30 {
+            specialResetWatchGraceMinutes = 1
+        }
+        didMigrateSpecialResetGraceMinutes = true
     }
 
     private func syncThemePaletteIfNeeded() {
