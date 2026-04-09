@@ -145,6 +145,9 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     }
 
     private func mapSyncError(_ error: Error) -> CodexSyncError {
+        if let syncError = error as? CodexSyncError {
+            return syncError
+        }
         if let http = error as? CodexClientHTTPError {
             if http.statusCode == 401 || http.statusCode == 403 {
                 return .unauthorized
