@@ -251,8 +251,8 @@
 "special_reset.records_title" = "Tracked Reset Targets";
 "special_reset.records_row_format" = "Weekly expected: %@ · 5-hour expected: %@";
 "special_reset.notification.title" = "Potential OpenAI-side Reset Detected";
-"special_reset.notification.body_format" = "%@ appears to have reset early.\nExpected: %@\nObserved: %@";
-"special_reset.event.message_format" = "%@\nExpected: %@\nObserved: %@\nDetected: %@";
+"special_reset.notification.body_format" = "%@ appears to have reset early in both windows.\nWeekly expected: %@\nWeekly observed: %@\n5-hour expected: %@\n5-hour observed: %@";
+"special_reset.event.message_format" = "%@\nWeekly expected: %@\nWeekly observed: %@\n5-hour expected: %@\n5-hour observed: %@\nDetected: %@";
 
 "overview.reset_all" = "Reset All Usage";
 "overview.reset_all_confirm" = "Confirm Reset All Usage";

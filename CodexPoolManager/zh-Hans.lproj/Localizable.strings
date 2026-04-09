@@ -246,8 +246,8 @@
 "special_reset.records_title" = "监控中的重置目标";
 "special_reset.records_row_format" = "周预期：%@ · 5 小时预期：%@";
 "special_reset.notification.title" = "检测到疑似 OpenAI 提前重置";
-"special_reset.notification.body_format" = "%@ 可能提前重置。\n预期：%@\n观察：%@";
-"special_reset.event.message_format" = "%@\n预期：%@\n观察：%@\n检测：%@";
+"special_reset.notification.body_format" = "%@ 可能提前重置（周与 5 小时同时变化）。\n周预期：%@\n周观察：%@\n5 小时预期：%@\n5 小时观察：%@";
+"special_reset.event.message_format" = "%@\n周预期：%@\n周观察：%@\n5 小时预期：%@\n5 小时观察：%@\n检测：%@";
 "local_import.auto_scan_empty" = "自动扫描未读到账号，可能受 macOS Sandbox 限制。请点击“选择 auth.json”授权。";
 "local_import.file_readable_but_no_token" = "文件可读，但未找到 access token";
 "local_import.read_failure_format" = "读取失败：%@";

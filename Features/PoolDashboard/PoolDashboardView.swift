@@ -60,9 +60,10 @@ struct PoolDashboardView: View {
         let detectedAt: Date
         let accountKey: String
         let accountName: String
-        let kind: SpecialResetKind
-        let previousExpectedAt: Date
-        let observedNextResetAt: Date
+        let previousWeeklyExpectedAt: Date
+        let observedWeeklyNextResetAt: Date
+        let previousFiveHourExpectedAt: Date
+        let observedFiveHourNextResetAt: Date
     }
     private struct SpecialResetWatchState: Codable {
         var records: [SpecialResetRecord] = []
@@ -72,10 +73,15 @@ struct PoolDashboardView: View {
     private struct SpecialResetDetection {
         let accountKey: String
         let accountName: String
-        let kind: SpecialResetKind
+        let previousWeeklyExpectedAt: Date
+        let observedWeeklyNextResetAt: Date
+        let previousFiveHourExpectedAt: Date
+        let observedFiveHourNextResetAt: Date
+        let detectedAt: Date
+    }
+    private struct SpecialResetTimeSignal {
         let previousExpectedAt: Date
         let observedNextResetAt: Date
-        let detectedAt: Date
     }
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
@@ -1849,35 +1855,38 @@ struct PoolDashboardView: View {
             )
             record.accountName = normalizedSpecialResetAccountName(account)
 
-            if let weeklyDetection = detectUnexpectedEarlyReset(
-                account: account,
+            let weeklySignal = detectUnexpectedEarlyResetSignal(
                 kind: .weekly,
                 expectedResetAt: record.expectedWeeklyResetAt,
                 observedResetAt: account.usageWindowResetAt,
-                previousUsageValue: record.lastSeenUsedUnits,
-                currentUsageValue: account.usedUnits,
                 now: now,
                 graceSeconds: graceSeconds
-            ) {
-                detections.append(weeklyDetection)
-            }
+            )
             record.expectedWeeklyResetAt = normalizedExpectedResetDate(
                 observedResetAt: account.usageWindowResetAt,
                 kind: .weekly,
                 now: now
             )
 
-            if let fiveHourDetection = detectUnexpectedEarlyReset(
-                account: account,
+            let fiveHourSignal = detectUnexpectedEarlyResetSignal(
                 kind: .fiveHour,
                 expectedResetAt: record.expectedFiveHourResetAt,
                 observedResetAt: account.primaryUsageResetAt,
-                previousUsageValue: record.lastSeenFiveHourUsagePercent,
-                currentUsageValue: account.primaryUsagePercent,
                 now: now,
                 graceSeconds: graceSeconds
-            ) {
-                detections.append(fiveHourDetection)
+            )
+            if let weeklySignal, let fiveHourSignal {
+                detections.append(
+                    SpecialResetDetection(
+                        accountKey: account.deduplicationKey,
+                        accountName: normalizedSpecialResetAccountName(account),
+                        previousWeeklyExpectedAt: weeklySignal.previousExpectedAt,
+                        observedWeeklyNextResetAt: weeklySignal.observedNextResetAt,
+                        previousFiveHourExpectedAt: fiveHourSignal.previousExpectedAt,
+                        observedFiveHourNextResetAt: fiveHourSignal.observedNextResetAt,
+                        detectedAt: now
+                    )
+                )
             }
             record.expectedFiveHourResetAt = normalizedExpectedResetDate(
                 observedResetAt: account.primaryUsageResetAt,
@@ -1905,9 +1914,10 @@ struct PoolDashboardView: View {
                     detectedAt: detection.detectedAt,
                     accountKey: detection.accountKey,
                     accountName: detection.accountName,
-                    kind: detection.kind,
-                    previousExpectedAt: detection.previousExpectedAt,
-                    observedNextResetAt: detection.observedNextResetAt
+                    previousWeeklyExpectedAt: detection.previousWeeklyExpectedAt,
+                    observedWeeklyNextResetAt: detection.observedWeeklyNextResetAt,
+                    previousFiveHourExpectedAt: detection.previousFiveHourExpectedAt,
+                    observedFiveHourNextResetAt: detection.observedFiveHourNextResetAt
                 )
             }
             specialResetWatchState.events = Array((newEvents + specialResetWatchState.events).prefix(40))
@@ -1945,16 +1955,13 @@ struct PoolDashboardView: View {
         return observedResetAt
     }
 
-    private func detectUnexpectedEarlyReset(
-        account: AgentAccount,
+    private func detectUnexpectedEarlyResetSignal(
         kind: SpecialResetKind,
         expectedResetAt: Date?,
         observedResetAt: Date?,
-        previousUsageValue: Int?,
-        currentUsageValue: Int?,
         now: Date,
         graceSeconds: TimeInterval
-    ) -> SpecialResetDetection? {
+    ) -> SpecialResetTimeSignal? {
         guard let expectedResetAt,
               let observedNextResetAt = normalizedExpectedResetDate(
                 observedResetAt: observedResetAt,
@@ -1968,25 +1975,14 @@ struct PoolDashboardView: View {
         let isNotDueYet = now.addingTimeInterval(graceSeconds) < expectedResetAt
         let shiftSeconds = abs(observedNextResetAt.timeIntervalSince(expectedResetAt))
         let isSignificantShift = shiftSeconds > max(600, graceSeconds / 2)
-        let usageDropped = usageValueDropped(previousUsageValue: previousUsageValue, currentUsageValue: currentUsageValue)
-        let hasStrongTimeSignal = expectedResetAt.timeIntervalSince(now) > max(900, graceSeconds)
-        guard isNotDueYet, isSignificantShift, (usageDropped || hasStrongTimeSignal) else {
+        guard isNotDueYet, isSignificantShift else {
             return nil
         }
 
-        return SpecialResetDetection(
-            accountKey: account.deduplicationKey,
-            accountName: normalizedSpecialResetAccountName(account),
-            kind: kind,
+        return SpecialResetTimeSignal(
             previousExpectedAt: expectedResetAt,
-            observedNextResetAt: observedNextResetAt,
-            detectedAt: now
+            observedNextResetAt: observedNextResetAt
         )
-    }
-
-    private func usageValueDropped(previousUsageValue: Int?, currentUsageValue: Int?) -> Bool {
-        guard let previousUsageValue, let currentUsageValue else { return false }
-        return currentUsageValue + 3 < previousUsageValue
     }
 
     private func normalizedSpecialResetAccountName(_ account: AgentAccount) -> String {
@@ -1998,12 +1994,14 @@ struct PoolDashboardView: View {
         for detection in detections {
             let body = L10n.text(
                 "special_reset.notification.body_format",
-                "\(detection.accountName) · \(detection.kind.title)",
-                specialResetDateText(detection.previousExpectedAt),
-                specialResetDateText(detection.observedNextResetAt)
+                detection.accountName,
+                specialResetDateText(detection.previousWeeklyExpectedAt),
+                specialResetDateText(detection.observedWeeklyNextResetAt),
+                specialResetDateText(detection.previousFiveHourExpectedAt),
+                specialResetDateText(detection.observedFiveHourNextResetAt)
             )
             DesktopNotifier.post(
-                key: "special-reset-\(detection.accountKey)-\(detection.kind.rawValue)-\(Int(detection.previousExpectedAt.timeIntervalSince1970))",
+                key: "special-reset-\(detection.accountKey)-\(Int(detection.previousWeeklyExpectedAt.timeIntervalSince1970))-\(Int(detection.previousFiveHourExpectedAt.timeIntervalSince1970))",
                 title: L10n.text("special_reset.notification.title"),
                 body: body,
                 minInterval: 30
@@ -2014,9 +2012,11 @@ struct PoolDashboardView: View {
     private func specialResetEventMessage(for event: SpecialResetEvent) -> String {
         L10n.text(
             "special_reset.event.message_format",
-            "\(event.accountName) · \(event.kind.title)",
-            specialResetDateText(event.previousExpectedAt),
-            specialResetDateText(event.observedNextResetAt),
+            event.accountName,
+            specialResetDateText(event.previousWeeklyExpectedAt),
+            specialResetDateText(event.observedWeeklyNextResetAt),
+            specialResetDateText(event.previousFiveHourExpectedAt),
+            specialResetDateText(event.observedFiveHourNextResetAt),
             specialResetDateText(event.detectedAt)
         )
     }
