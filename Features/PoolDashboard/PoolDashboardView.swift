@@ -860,7 +860,7 @@ struct PoolDashboardView: View {
                 HStack(spacing: 8) {
                     specialResetSummaryCard(
                         title: L10n.text("special_reset.summary.paid_accounts"),
-                        value: "\(state.accounts.filter(\.isPaid).count)"
+                        value: "\(uniquePaidAccountCount())"
                     )
                     specialResetSummaryCard(
                         title: L10n.text("special_reset.summary.last_checked"),
@@ -1010,6 +1010,10 @@ struct PoolDashboardView: View {
                 handleClearActivities()
             }
         )
+    }
+
+    private func uniquePaidAccountCount() -> Int {
+        Set(state.accounts.filter(\.isPaid).map(\.deduplicationKey)).count
     }
 
     private var backupRestorePanel: some View {
