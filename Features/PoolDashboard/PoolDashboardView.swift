@@ -1732,7 +1732,9 @@ struct PoolDashboardView: View {
             specialResetWatchState = SpecialResetWatchState()
             return
         }
-        specialResetWatchState = decoded
+        var normalizedState = decoded
+        normalizedState.records = deduplicatedSpecialResetRecords(decoded.records)
+        specialResetWatchState = normalizedState
     }
 
     private func persistSpecialResetWatchState() {
@@ -1746,7 +1748,7 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func resetSpecialResetWatchBaseline(now: Date = .now) {
-        specialResetWatchState.records = state.accounts
+        let baselineRecords = state.accounts
             .filter(\.isPaid)
             .map { account in
                 SpecialResetRecord(
@@ -1767,7 +1769,7 @@ struct PoolDashboardView: View {
                     lastSeenAt: now
                 )
             }
-            .sorted(by: { $0.accountName.localizedCaseInsensitiveCompare($1.accountName) == .orderedAscending })
+        specialResetWatchState.records = deduplicatedSpecialResetRecords(baselineRecords)
         specialResetWatchState.events = []
         specialResetWatchState.lastEvaluatedAt = now
         persistSpecialResetWatchState()
@@ -1787,7 +1789,7 @@ struct PoolDashboardView: View {
         guard !paidAccounts.isEmpty else { return }
 
         let graceSeconds = TimeInterval(max(0, specialResetWatchGraceMinutes) * 60)
-        var recordsByKey = Dictionary(uniqueKeysWithValues: specialResetWatchState.records.map { ($0.accountKey, $0) })
+        var recordsByKey = specialResetRecordsByKey(from: specialResetWatchState.records)
         var detections: [SpecialResetDetection] = []
 
         for account in paidAccounts {
@@ -1866,6 +1868,18 @@ struct PoolDashboardView: View {
         }
 
         persistSpecialResetWatchState()
+    }
+
+    private func specialResetRecordsByKey(from records: [SpecialResetRecord]) -> [String: SpecialResetRecord] {
+        records.reduce(into: [String: SpecialResetRecord]()) { partial, record in
+            partial[record.accountKey] = record
+        }
+    }
+
+    private func deduplicatedSpecialResetRecords(_ records: [SpecialResetRecord]) -> [SpecialResetRecord] {
+        specialResetRecordsByKey(from: records)
+            .values
+            .sorted(by: { $0.accountName.localizedCaseInsensitiveCompare($1.accountName) == .orderedAscending })
     }
 
     private func normalizedExpectedResetDate(
