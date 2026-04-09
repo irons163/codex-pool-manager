@@ -7,6 +7,7 @@ import AppKit
 struct PoolDashboardView: View {
     private enum SyncPolicy {
         static let timeoutNanoseconds: UInt64 = 45_000_000_000
+        static let stuckRecoveryNanoseconds: UInt64 = 70_000_000_000
     }
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
@@ -43,6 +44,7 @@ struct PoolDashboardView: View {
     @State private var isSidebarCollapsed = false
     @State private var themeRenderToken = 0
     @State private var suppressNextSnapshotDrivenSwitch = false
+    @State private var usageSyncRunID: UUID?
     @State private var pendingManualOAuthContext: PendingManualOAuthContext?
     @State private var manualOAuthCallbackURL = ""
     @State private var oauthSignInTask: Task<Void, Never>?
@@ -1151,6 +1153,15 @@ struct PoolDashboardView: View {
     @MainActor
     private func syncCodexUsage() async {
         guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
+        let runID = UUID()
+        usageSyncRunID = runID
+        scheduleUsageSyncStuckRecovery(for: runID)
+        defer {
+            if usageSyncRunID == runID {
+                usageSyncRunID = nil
+                asyncStateCoordinator.endUsageSync(viewState: &viewState)
+            }
+        }
 
         let previousMode = state.mode
         let previousActiveAccountID = state.activeAccountID
@@ -1160,8 +1171,8 @@ struct PoolDashboardView: View {
             from: state,
             viewState: viewState
         )
+        guard usageSyncRunID == runID else { return }
         applyUsageSyncOutput(output)
-        asyncStateCoordinator.endUsageSync(viewState: &viewState)
         if let syncError = viewState.syncError, !syncError.isEmpty {
             DesktopNotifier.post(
                 key: "usage-sync-error",
@@ -1182,6 +1193,26 @@ struct PoolDashboardView: View {
             previousMode: previousMode,
             previousActiveAccountID: previousActiveAccountID
         )
+    }
+
+    @MainActor
+    private func scheduleUsageSyncStuckRecovery(for runID: UUID) {
+        Task {
+            try? await Task.sleep(nanoseconds: SyncPolicy.stuckRecoveryNanoseconds)
+            forceEndUsageSyncIfStuck(runID: runID)
+        }
+    }
+
+    @MainActor
+    private func forceEndUsageSyncIfStuck(runID: UUID) {
+        guard usageSyncRunID == runID, viewState.isSyncingUsage else { return }
+        viewState.syncError = L10n.text(
+            "sync.failure.with_description_format",
+            L10n.text("sync.failure.prefix"),
+            L10n.text("usage.sync.error.timeout")
+        )
+        usageSyncRunID = nil
+        asyncStateCoordinator.endUsageSync(viewState: &viewState)
     }
 
     @MainActor
@@ -1582,9 +1613,15 @@ private struct ScheduleWorkspacePanelView: View {
         let start: Date
         let end: Date
         let events: [ResetEvent]
+        let trackedAccountCount: Int
+        let resettingAccountIDs: Set<UUID>
 
         var id: Date { start }
-        var eventCount: Int { events.count }
+        var resettingAccountCount: Int { resettingAccountIDs.count }
+        var availableAccountCount: Int {
+            max(0, trackedAccountCount - resettingAccountCount)
+        }
+        var hasCoverage: Bool { availableAccountCount > 0 }
     }
 
     private struct CoverageRow: Identifiable {
@@ -1606,11 +1643,15 @@ private struct ScheduleWorkspacePanelView: View {
         let gaps: [GapRange]
 
         var coveredHours: Int {
-            slots.filter { $0.eventCount > 0 }.count
+            slots.filter(\.hasCoverage).count
+        }
+
+        var noCoverageHours: Int {
+            slots.filter { !$0.hasCoverage }.count
         }
 
         var overlapHours: Int {
-            slots.filter { $0.eventCount > 1 }.count
+            slots.filter { $0.resettingAccountCount > 1 }.count
         }
 
         var coveragePercent: Int {
@@ -1639,7 +1680,13 @@ private struct ScheduleWorkspacePanelView: View {
         let start = Calendar.autoupdatingCurrent.dateInterval(of: .hour, for: .now)?.start ?? .now
         let end = start.addingTimeInterval(TimeInterval(selectedHorizon.rawValue) * 3_600)
         let events = buildEvents(from: start, to: end)
-        let slots = buildSlots(from: start, hours: selectedHorizon.rawValue, events: events)
+        let trackedAccountIDs = Set(events.map(\.accountID))
+        let slots = buildSlots(
+            from: start,
+            hours: selectedHorizon.rawValue,
+            events: events,
+            trackedAccountCount: trackedAccountIDs.count
+        )
         let rows = stride(from: 0, to: slots.count, by: 24).map { index in
             CoverageRow(slots: Array(slots[index..<min(index + 24, slots.count)]))
         }
@@ -1709,12 +1756,12 @@ private struct ScheduleWorkspacePanelView: View {
                 value: "\(timeline.coveredHours)/\(timeline.slots.count) (\(timeline.coveragePercent)%)"
             )
             summaryCard(
-                title: L10n.text("schedule.summary.overlap_hours"),
-                value: "\(timeline.overlapHours)"
+                title: L10n.text("schedule.summary.no_coverage_hours"),
+                value: "\(timeline.noCoverageHours)"
             )
             summaryCard(
-                title: L10n.text("schedule.summary.total_resets"),
-                value: "\(timeline.events.count)"
+                title: L10n.text("schedule.summary.overlap_hours"),
+                value: "\(timeline.overlapHours)"
             )
             summaryCard(
                 title: L10n.text("schedule.summary.next_reset"),
@@ -1766,9 +1813,9 @@ private struct ScheduleWorkspacePanelView: View {
 
     private var coverageLegend: some View {
         HStack(spacing: 10) {
-            legendItem(color: fillColor(forEventCount: 1), title: L10n.text("schedule.legend.covered"))
-            legendItem(color: fillColor(forEventCount: 2), title: L10n.text("schedule.legend.overlap"))
-            legendItem(color: fillColor(forEventCount: 0), title: L10n.text("schedule.legend.uncovered"))
+            legendItem(color: fullCoverageColor, title: L10n.text("schedule.legend.covered"))
+            legendItem(color: partialCoverageColor, title: L10n.text("schedule.legend.overlap"))
+            legendItem(color: noCoverageColor, title: L10n.text("schedule.legend.uncovered"))
         }
     }
 
@@ -1862,18 +1909,25 @@ private struct ScheduleWorkspacePanelView: View {
     }
 
     private func fillColor(for slot: CoverageSlot) -> Color {
-        fillColor(forEventCount: slot.eventCount)
+        if slot.availableAccountCount == 0 {
+            return noCoverageColor
+        }
+        if slot.resettingAccountCount > 0 {
+            return partialCoverageColor
+        }
+        return fullCoverageColor
     }
 
-    private func fillColor(forEventCount eventCount: Int) -> Color {
-        switch eventCount {
-        case let count where count >= 2:
-            return PoolDashboardTheme.warning.opacity(PoolDashboardTheme.isLightPalette ? 0.40 : 0.65)
-        case 1:
-            return PoolDashboardTheme.glowA.opacity(PoolDashboardTheme.isLightPalette ? 0.42 : 0.62)
-        default:
-            return PoolDashboardTheme.panelInnerStroke.opacity(PoolDashboardTheme.isLightPalette ? 0.65 : 0.95)
-        }
+    private var fullCoverageColor: Color {
+        PoolDashboardTheme.glowA.opacity(PoolDashboardTheme.isLightPalette ? 0.42 : 0.62)
+    }
+
+    private var partialCoverageColor: Color {
+        PoolDashboardTheme.warning.opacity(PoolDashboardTheme.isLightPalette ? 0.40 : 0.65)
+    }
+
+    private var noCoverageColor: Color {
+        PoolDashboardTheme.danger.opacity(PoolDashboardTheme.isLightPalette ? 0.50 : 0.75)
     }
 
     private func buildEvents(from start: Date, to end: Date) -> [ResetEvent] {
@@ -1951,7 +2005,12 @@ private struct ScheduleWorkspacePanelView: View {
         return occurrences
     }
 
-    private func buildSlots(from start: Date, hours: Int, events: [ResetEvent]) -> [CoverageSlot] {
+    private func buildSlots(
+        from start: Date,
+        hours: Int,
+        events: [ResetEvent],
+        trackedAccountCount: Int
+    ) -> [CoverageSlot] {
         let hourInterval: TimeInterval = 3_600
         var slots: [CoverageSlot] = []
         var eventIndex = 0
@@ -1972,7 +2031,15 @@ private struct ScheduleWorkspacePanelView: View {
             }
 
             eventIndex = index
-            slots.append(CoverageSlot(start: slotStart, end: slotEnd, events: slotEvents))
+            slots.append(
+                CoverageSlot(
+                    start: slotStart,
+                    end: slotEnd,
+                    events: slotEvents,
+                    trackedAccountCount: trackedAccountCount,
+                    resettingAccountIDs: Set(slotEvents.map(\.accountID))
+                )
+            )
         }
 
         return slots
@@ -1983,7 +2050,7 @@ private struct ScheduleWorkspacePanelView: View {
         var activeGapStart: Date?
 
         for slot in slots {
-            if slot.eventCount == 0 {
+            if !slot.hasCoverage {
                 if activeGapStart == nil {
                     activeGapStart = slot.start
                 }
