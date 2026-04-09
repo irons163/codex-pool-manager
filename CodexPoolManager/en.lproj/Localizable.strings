@@ -231,6 +231,25 @@
 "schedule.events.five_hour" = "5h";
 "schedule.events.more_format" = "+%d more events";
 "schedule.row.range_format" = "%@ · %@ - %@";
+"special_reset.title" = "Special Reset Watch";
+"special_reset.subtitle" = "Track paid-account reset windows and alert when a reset appears to happen before expected time.";
+"special_reset.enable_monitor" = "Enable watch";
+"special_reset.enable_notification" = "Desktop notifications";
+"special_reset.grace_minutes_format" = "Early-reset tolerance: %d min";
+"special_reset.summary.paid_accounts" = "Paid Accounts";
+"special_reset.summary.last_checked" = "Last Checked";
+"special_reset.summary.detected" = "Detected";
+"special_reset.detected_title" = "Early Reset Signals";
+"special_reset.empty" = "No early-reset signals detected.";
+"special_reset.reset_baseline" = "Reset Baseline";
+"special_reset.clear_events" = "Clear Events";
+"special_reset.kind.weekly" = "Weekly";
+"special_reset.kind.five_hour" = "5-hour";
+"special_reset.records_title" = "Tracked Reset Targets";
+"special_reset.records_row_format" = "Weekly expected: %@ · 5-hour expected: %@";
+"special_reset.notification.title" = "Potential OpenAI-side Reset Detected";
+"special_reset.notification.body_format" = "%@ appears to have reset early.\nExpected: %@\nObserved: %@";
+"special_reset.event.message_format" = "%@\nExpected: %@\nObserved: %@\nDetected: %@";
 
 "overview.reset_all" = "Reset All Usage";
 "overview.reset_all_confirm" = "Confirm Reset All Usage";

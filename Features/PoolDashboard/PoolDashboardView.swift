@@ -16,10 +16,66 @@ struct PoolDashboardView: View {
     private static let developerSnapshotKey = "account_pool_snapshot_developer"
     private static let developerTokenKey = "account_pool_tokens_developer"
     private static let developerMockModeKey = "pool_dashboard.developer.mock_mode"
+    private static let specialResetWatchStateKey = "pool_dashboard.special_reset_watch_state"
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
         let authorizationURL: URL
+    }
+    private enum SpecialResetKind: String, Codable {
+        case weekly
+        case fiveHour
+
+        var interval: TimeInterval {
+            switch self {
+            case .weekly:
+                return 7 * 24 * 3_600
+            case .fiveHour:
+                return 5 * 3_600
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .weekly:
+                return L10n.text("special_reset.kind.weekly")
+            case .fiveHour:
+                return L10n.text("special_reset.kind.five_hour")
+            }
+        }
+    }
+    private struct SpecialResetRecord: Identifiable, Codable {
+        let accountKey: String
+        var accountName: String
+        var expectedWeeklyResetAt: Date? = nil
+        var expectedFiveHourResetAt: Date? = nil
+        var lastSeenUsedUnits: Int? = nil
+        var lastSeenFiveHourUsagePercent: Int? = nil
+        var lastSeenAt: Date? = nil
+
+        var id: String { accountKey }
+    }
+    private struct SpecialResetEvent: Identifiable, Codable {
+        let id: UUID
+        let detectedAt: Date
+        let accountKey: String
+        let accountName: String
+        let kind: SpecialResetKind
+        let previousExpectedAt: Date
+        let observedNextResetAt: Date
+    }
+    private struct SpecialResetWatchState: Codable {
+        var records: [SpecialResetRecord] = []
+        var events: [SpecialResetEvent] = []
+        var lastEvaluatedAt: Date?
+    }
+    private struct SpecialResetDetection {
+        let accountKey: String
+        let accountName: String
+        let kind: SpecialResetKind
+        let previousExpectedAt: Date
+        let observedNextResetAt: Date
+        let detectedAt: Date
     }
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
@@ -30,6 +86,10 @@ struct PoolDashboardView: View {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue
     @AppStorage(Self.developerMockModeKey) private var developerMockModeEnabled = false
+    @AppStorage(Self.specialResetWatchStateKey) private var specialResetWatchStateRaw = ""
+    @AppStorage("pool_dashboard.special_reset_watch_enabled") private var specialResetWatchEnabled = true
+    @AppStorage("pool_dashboard.special_reset_watch_notify_enabled") private var specialResetWatchNotifyEnabled = true
+    @AppStorage("pool_dashboard.special_reset_watch_grace_minutes") private var specialResetWatchGraceMinutes = 30
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
@@ -48,6 +108,7 @@ struct PoolDashboardView: View {
     @State private var pendingManualOAuthContext: PendingManualOAuthContext?
     @State private var manualOAuthCallbackURL = ""
     @State private var oauthSignInTask: Task<Void, Never>?
+    @State private var specialResetWatchState = SpecialResetWatchState()
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -227,6 +288,11 @@ struct PoolDashboardView: View {
         .onChange(of: developerMockModeEnabled) { _, _ in
             guard isDeveloperBuild else { return }
             reloadStateForCurrentDataMode()
+        }
+        .onChange(of: specialResetWatchEnabled) { _, isEnabled in
+            if isEnabled, specialResetWatchState.records.isEmpty {
+                resetSpecialResetWatchBaseline()
+            }
         }
         .onChange(of: state.groups) { _, groups in
             if groups.isEmpty {
@@ -521,7 +587,7 @@ struct PoolDashboardView: View {
         case .runtime:
             strategySettingsPanel
         case .schedule:
-            schedulePanel
+            scheduleWorkspacePanels
         case .settings:
             workspaceSettingsPanel
         case .safety:
@@ -743,6 +809,129 @@ struct PoolDashboardView: View {
         ScheduleWorkspacePanelView(accounts: state.accounts)
     }
 
+    private var scheduleWorkspacePanels: some View {
+        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+            schedulePanel
+            specialResetWatchPanel
+        }
+    }
+
+    private var specialResetWatchPanel: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(L10n.text("special_reset.title"))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+
+                    Spacer(minLength: 0)
+
+                    Button(L10n.text("special_reset.reset_baseline")) {
+                        resetSpecialResetWatchBaseline()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(L10n.text("special_reset.clear_events")) {
+                        clearSpecialResetWatchEvents()
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Text(L10n.text("special_reset.subtitle"))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                HStack(spacing: 12) {
+                    Toggle(L10n.text("special_reset.enable_monitor"), isOn: $specialResetWatchEnabled)
+                        .toggleStyle(.switch)
+                    Toggle(L10n.text("special_reset.enable_notification"), isOn: $specialResetWatchNotifyEnabled)
+                        .toggleStyle(.switch)
+                        .disabled(!specialResetWatchEnabled)
+                }
+
+                Stepper(value: $specialResetWatchGraceMinutes, in: 0...240, step: 5) {
+                    Text(L10n.text("special_reset.grace_minutes_format", specialResetWatchGraceMinutes))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                }
+                .disabled(!specialResetWatchEnabled)
+
+                HStack(spacing: 8) {
+                    specialResetSummaryCard(
+                        title: L10n.text("special_reset.summary.paid_accounts"),
+                        value: "\(state.accounts.filter(\.isPaid).count)"
+                    )
+                    specialResetSummaryCard(
+                        title: L10n.text("special_reset.summary.last_checked"),
+                        value: specialResetWatchState.lastEvaluatedAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available")
+                    )
+                    specialResetSummaryCard(
+                        title: L10n.text("special_reset.summary.detected"),
+                        value: "\(specialResetWatchState.events.count)"
+                    )
+                }
+
+                if let latest = specialResetWatchState.events.first {
+                    PanelStatusCalloutView(
+                        message: specialResetEventMessage(for: latest),
+                        title: L10n.text("special_reset.detected_title"),
+                        tone: .warning
+                    )
+                } else {
+                    PanelStatusCalloutView(
+                        message: L10n.text("special_reset.empty"),
+                        title: L10n.text("special_reset.detected_title"),
+                        tone: .success
+                    )
+                }
+
+                if !specialResetWatchState.records.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("special_reset.records_title"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                        ForEach(Array(specialResetWatchState.records.prefix(8))) { record in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(record.accountName)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+                                Text(
+                                    L10n.text(
+                                        "special_reset.records_row_format",
+                                        record.expectedWeeklyResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available"),
+                                        record.expectedFiveHourResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available")
+                                    )
+                                )
+                                .font(.caption2)
+                                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .dashboardInfoCard()
+                }
+            }
+        }
+        .sectionCardStyle()
+    }
+
+    private func specialResetSummaryCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dashboardInfoCard()
+    }
+
     private var activeAccountPanel: some View {
         ActiveAccountPanelView(
             activeAccount: state.activeAccount,
@@ -864,6 +1053,7 @@ struct PoolDashboardView: View {
         migrateDefaultOAuthClientIDIfNeeded()
         migrateLanguagePreferenceIfNeeded()
         migrateAppearancePreferenceIfNeeded()
+        loadSpecialResetWatchStateFromStorage()
         DesktopNotifier.requestAuthorizationIfNeeded()
 
         let output = lifecycleFlowCoordinator.onAppear(
@@ -874,6 +1064,7 @@ struct PoolDashboardView: View {
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
         applyLifecycleOnAppearOutput(output)
+        evaluateSpecialResetWatchAfterSync(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
     }
 
@@ -1173,6 +1364,9 @@ struct PoolDashboardView: View {
         )
         guard usageSyncRunID == runID else { return }
         applyUsageSyncOutput(output)
+        if viewState.syncError?.isEmpty ?? true {
+            evaluateSpecialResetWatchAfterSync(now: .now)
+        }
         if let syncError = viewState.syncError, !syncError.isEmpty {
             DesktopNotifier.post(
                 key: "usage-sync-error",
@@ -1525,6 +1719,246 @@ struct PoolDashboardView: View {
             )
         }
         applySwitchLaunchOutput(output)
+    }
+
+    // MARK: - Special Reset Watch
+
+    private func loadSpecialResetWatchStateFromStorage() {
+        guard !specialResetWatchStateRaw.isEmpty,
+              let data = specialResetWatchStateRaw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(SpecialResetWatchState.self, from: data)
+        else {
+            specialResetWatchState = SpecialResetWatchState()
+            return
+        }
+        specialResetWatchState = decoded
+    }
+
+    private func persistSpecialResetWatchState() {
+        guard let data = try? JSONEncoder().encode(specialResetWatchState),
+              let text = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+        specialResetWatchStateRaw = text
+    }
+
+    @MainActor
+    private func resetSpecialResetWatchBaseline(now: Date = .now) {
+        specialResetWatchState.records = state.accounts
+            .filter(\.isPaid)
+            .map { account in
+                SpecialResetRecord(
+                    accountKey: account.deduplicationKey,
+                    accountName: normalizedSpecialResetAccountName(account),
+                    expectedWeeklyResetAt: normalizedExpectedResetDate(
+                        observedResetAt: account.usageWindowResetAt,
+                        kind: .weekly,
+                        now: now
+                    ),
+                    expectedFiveHourResetAt: normalizedExpectedResetDate(
+                        observedResetAt: account.primaryUsageResetAt,
+                        kind: .fiveHour,
+                        now: now
+                    ),
+                    lastSeenUsedUnits: account.usedUnits,
+                    lastSeenFiveHourUsagePercent: account.primaryUsagePercent,
+                    lastSeenAt: now
+                )
+            }
+            .sorted(by: { $0.accountName.localizedCaseInsensitiveCompare($1.accountName) == .orderedAscending })
+        specialResetWatchState.events = []
+        specialResetWatchState.lastEvaluatedAt = now
+        persistSpecialResetWatchState()
+    }
+
+    @MainActor
+    private func clearSpecialResetWatchEvents() {
+        specialResetWatchState.events = []
+        persistSpecialResetWatchState()
+    }
+
+    @MainActor
+    private func evaluateSpecialResetWatchAfterSync(now: Date) {
+        guard specialResetWatchEnabled else { return }
+
+        let paidAccounts = state.accounts.filter(\.isPaid)
+        guard !paidAccounts.isEmpty else { return }
+
+        let graceSeconds = TimeInterval(max(0, specialResetWatchGraceMinutes) * 60)
+        var recordsByKey = Dictionary(uniqueKeysWithValues: specialResetWatchState.records.map { ($0.accountKey, $0) })
+        var detections: [SpecialResetDetection] = []
+
+        for account in paidAccounts {
+            let accountKey = account.deduplicationKey
+            var record = recordsByKey[accountKey] ?? SpecialResetRecord(
+                accountKey: accountKey,
+                accountName: normalizedSpecialResetAccountName(account)
+            )
+            record.accountName = normalizedSpecialResetAccountName(account)
+
+            if let weeklyDetection = detectUnexpectedEarlyReset(
+                account: account,
+                kind: .weekly,
+                expectedResetAt: record.expectedWeeklyResetAt,
+                observedResetAt: account.usageWindowResetAt,
+                previousUsageValue: record.lastSeenUsedUnits,
+                currentUsageValue: account.usedUnits,
+                now: now,
+                graceSeconds: graceSeconds
+            ) {
+                detections.append(weeklyDetection)
+            }
+            record.expectedWeeklyResetAt = normalizedExpectedResetDate(
+                observedResetAt: account.usageWindowResetAt,
+                kind: .weekly,
+                now: now
+            )
+
+            if let fiveHourDetection = detectUnexpectedEarlyReset(
+                account: account,
+                kind: .fiveHour,
+                expectedResetAt: record.expectedFiveHourResetAt,
+                observedResetAt: account.primaryUsageResetAt,
+                previousUsageValue: record.lastSeenFiveHourUsagePercent,
+                currentUsageValue: account.primaryUsagePercent,
+                now: now,
+                graceSeconds: graceSeconds
+            ) {
+                detections.append(fiveHourDetection)
+            }
+            record.expectedFiveHourResetAt = normalizedExpectedResetDate(
+                observedResetAt: account.primaryUsageResetAt,
+                kind: .fiveHour,
+                now: now
+            )
+
+            record.lastSeenUsedUnits = account.usedUnits
+            record.lastSeenFiveHourUsagePercent = account.primaryUsagePercent
+            record.lastSeenAt = now
+            recordsByKey[accountKey] = record
+        }
+
+        let activeAccountKeys = Set(paidAccounts.map(\.deduplicationKey))
+        specialResetWatchState.records = recordsByKey
+            .filter { activeAccountKeys.contains($0.key) }
+            .map(\.value)
+            .sorted(by: { $0.accountName.localizedCaseInsensitiveCompare($1.accountName) == .orderedAscending })
+        specialResetWatchState.lastEvaluatedAt = now
+
+        if !detections.isEmpty {
+            let newEvents = detections.map { detection in
+                SpecialResetEvent(
+                    id: UUID(),
+                    detectedAt: detection.detectedAt,
+                    accountKey: detection.accountKey,
+                    accountName: detection.accountName,
+                    kind: detection.kind,
+                    previousExpectedAt: detection.previousExpectedAt,
+                    observedNextResetAt: detection.observedNextResetAt
+                )
+            }
+            specialResetWatchState.events = Array((newEvents + specialResetWatchState.events).prefix(40))
+            if specialResetWatchNotifyEnabled {
+                postSpecialResetDetections(detections)
+            }
+        }
+
+        persistSpecialResetWatchState()
+    }
+
+    private func normalizedExpectedResetDate(
+        observedResetAt: Date?,
+        kind: SpecialResetKind,
+        now: Date
+    ) -> Date? {
+        guard var observedResetAt else { return nil }
+        var guardSteps = 0
+        while observedResetAt <= now, guardSteps < 240 {
+            observedResetAt = observedResetAt.addingTimeInterval(kind.interval)
+            guardSteps += 1
+        }
+        return observedResetAt
+    }
+
+    private func detectUnexpectedEarlyReset(
+        account: AgentAccount,
+        kind: SpecialResetKind,
+        expectedResetAt: Date?,
+        observedResetAt: Date?,
+        previousUsageValue: Int?,
+        currentUsageValue: Int?,
+        now: Date,
+        graceSeconds: TimeInterval
+    ) -> SpecialResetDetection? {
+        guard let expectedResetAt,
+              let observedNextResetAt = normalizedExpectedResetDate(
+                observedResetAt: observedResetAt,
+                kind: kind,
+                now: now
+              )
+        else {
+            return nil
+        }
+
+        let isNotDueYet = now.addingTimeInterval(graceSeconds) < expectedResetAt
+        let shiftSeconds = abs(observedNextResetAt.timeIntervalSince(expectedResetAt))
+        let isSignificantShift = shiftSeconds > max(600, graceSeconds / 2)
+        let usageDropped = usageValueDropped(previousUsageValue: previousUsageValue, currentUsageValue: currentUsageValue)
+        let hasStrongTimeSignal = expectedResetAt.timeIntervalSince(now) > max(900, graceSeconds)
+        guard isNotDueYet, isSignificantShift, (usageDropped || hasStrongTimeSignal) else {
+            return nil
+        }
+
+        return SpecialResetDetection(
+            accountKey: account.deduplicationKey,
+            accountName: normalizedSpecialResetAccountName(account),
+            kind: kind,
+            previousExpectedAt: expectedResetAt,
+            observedNextResetAt: observedNextResetAt,
+            detectedAt: now
+        )
+    }
+
+    private func usageValueDropped(previousUsageValue: Int?, currentUsageValue: Int?) -> Bool {
+        guard let previousUsageValue, let currentUsageValue else { return false }
+        return currentUsageValue + 3 < previousUsageValue
+    }
+
+    private func normalizedSpecialResetAccountName(_ account: AgentAccount) -> String {
+        let trimmed = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? L10n.text("account.unknown") : trimmed
+    }
+
+    private func postSpecialResetDetections(_ detections: [SpecialResetDetection]) {
+        for detection in detections {
+            let body = L10n.text(
+                "special_reset.notification.body_format",
+                "\(detection.accountName) · \(detection.kind.title)",
+                specialResetDateText(detection.previousExpectedAt),
+                specialResetDateText(detection.observedNextResetAt)
+            )
+            DesktopNotifier.post(
+                key: "special-reset-\(detection.accountKey)-\(detection.kind.rawValue)-\(Int(detection.previousExpectedAt.timeIntervalSince1970))",
+                title: L10n.text("special_reset.notification.title"),
+                body: body,
+                minInterval: 30
+            )
+        }
+    }
+
+    private func specialResetEventMessage(for event: SpecialResetEvent) -> String {
+        L10n.text(
+            "special_reset.event.message_format",
+            "\(event.accountName) · \(event.kind.title)",
+            specialResetDateText(event.previousExpectedAt),
+            specialResetDateText(event.observedNextResetAt),
+            specialResetDateText(event.detectedAt)
+        )
+    }
+
+    private func specialResetDateText(_ date: Date) -> String {
+        date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
 
     private func notificationUsageSummary(for account: AgentAccount?) -> String {
