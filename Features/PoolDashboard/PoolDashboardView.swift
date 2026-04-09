@@ -162,7 +162,7 @@ struct PoolDashboardView: View {
         case authentication
         case runtime
         case schedule
-        case openAIResetAlarm
+        case openAIResetAlert
         case settings
         case safety
         case developer
@@ -174,7 +174,7 @@ struct PoolDashboardView: View {
             case .authentication: L10n.text("workspace.authentication.title")
             case .runtime: L10n.text("workspace.runtime.title")
             case .schedule: L10n.text("workspace.schedule.title")
-            case .openAIResetAlarm: L10n.text("workspace.openai_reset_alarm.title")
+            case .openAIResetAlert: L10n.text("workspace.openai_reset_alert.title")
             case .settings: L10n.text("workspace.settings.title")
             case .safety: L10n.text("workspace.safety.title")
             case .developer: L10n.text("workspace.developer.title")
@@ -186,7 +186,7 @@ struct PoolDashboardView: View {
             case .authentication: L10n.text("workspace.authentication.subtitle")
             case .runtime: L10n.text("workspace.runtime.subtitle")
             case .schedule: L10n.text("workspace.schedule.subtitle")
-            case .openAIResetAlarm: L10n.text("workspace.openai_reset_alarm.subtitle")
+            case .openAIResetAlert: L10n.text("workspace.openai_reset_alert.subtitle")
             case .settings: L10n.text("workspace.settings.subtitle")
             case .safety: L10n.text("workspace.safety.subtitle")
             case .developer: L10n.text("workspace.developer.subtitle")
@@ -198,7 +198,7 @@ struct PoolDashboardView: View {
             case .authentication: "person.badge.key"
             case .runtime: "dial.medium"
             case .schedule: "calendar.badge.clock"
-            case .openAIResetAlarm: "bell.badge.waveform"
+            case .openAIResetAlert: "bell.badge.waveform"
             case .settings: "gearshape"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
             case .developer: "wrench.and.screwdriver"
@@ -576,7 +576,7 @@ struct PoolDashboardView: View {
 
     private var hasWorkspaceContextPanel: Bool {
         switch selectedWorkspace {
-        case .runtime, .schedule, .openAIResetAlarm, .settings, .safety:
+        case .runtime, .schedule, .openAIResetAlert, .settings, .safety:
             return false
         default:
             return true
@@ -592,7 +592,7 @@ struct PoolDashboardView: View {
             strategySettingsPanel
         case .schedule:
             schedulePanel
-        case .openAIResetAlarm:
+        case .openAIResetAlert:
             specialResetWatchPanel
         case .settings:
             workspaceSettingsPanel
@@ -612,7 +612,7 @@ struct PoolDashboardView: View {
             activeAccountPanel
         case .schedule:
             EmptyView()
-        case .openAIResetAlarm:
+        case .openAIResetAlert:
             EmptyView()
         case .settings:
             EmptyView()

@@ -177,8 +177,8 @@
 "workspace.runtime.subtitle" = "設定切換策略並監控目前執行帳號。";
 "workspace.schedule.title" = "時間表";
 "workspace.schedule.subtitle" = "以圖表檢視所有帳號的重置覆蓋與空窗。";
-"workspace.openai_reset_alarm.title" = "OpenAI Reset Alarm";
-"workspace.openai_reset_alarm.subtitle" = "追蹤付費帳號重置目標，若重置早於預期會主動提醒。";
+"workspace.openai_reset_alert.title" = "OpenAI Reset Alert";
+"workspace.openai_reset_alert.subtitle" = "追蹤付費帳號重置目標，若重置早於預期會主動提醒。";
 "workspace.settings.title" = "設定";
 "workspace.settings.subtitle" = "管理啟動行為、同步頻率與語言。";
 "workspace.capacity.title" = "容量";
@@ -234,7 +234,7 @@
 "schedule.events.five_hour" = "5 小時";
 "schedule.events.more_format" = "另有 %d 個事件";
 "schedule.row.range_format" = "%@ · %@ - %@";
-"special_reset.title" = "OpenAI Reset Alarm";
+"special_reset.title" = "OpenAI Reset Alert";
 "special_reset.subtitle" = "追蹤付費帳號的重置窗口，若在預期時間前就重置，會發出提醒。";
 "special_reset.enable_monitor" = "啟用監控";
 "special_reset.enable_notification" = "桌面通知";

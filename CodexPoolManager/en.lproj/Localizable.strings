@@ -175,8 +175,8 @@
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
 "workspace.schedule.title" = "Schedule";
 "workspace.schedule.subtitle" = "Visualize reset coverage and uncovered windows across all accounts.";
-"workspace.openai_reset_alarm.title" = "OpenAI Reset Alarm";
-"workspace.openai_reset_alarm.subtitle" = "Track paid-account reset targets and alert when reset appears earlier than expected.";
+"workspace.openai_reset_alert.title" = "OpenAI Reset Alert";
+"workspace.openai_reset_alert.subtitle" = "Track paid-account reset targets and alert when reset appears earlier than expected.";
 "workspace.settings.title" = "Settings";
 "workspace.settings.subtitle" = "Manage launch behavior, sync cadence, and language.";
 "workspace.capacity.title" = "Capacity";
@@ -233,7 +233,7 @@
 "schedule.events.five_hour" = "5h";
 "schedule.events.more_format" = "+%d more events";
 "schedule.row.range_format" = "%@ · %@ - %@";
-"special_reset.title" = "OpenAI Reset Alarm";
+"special_reset.title" = "OpenAI Reset Alert";
 "special_reset.subtitle" = "Track paid-account reset windows and alert when a reset appears to happen before expected time.";
 "special_reset.enable_monitor" = "Enable watch";
 "special_reset.enable_notification" = "Desktop notifications";
