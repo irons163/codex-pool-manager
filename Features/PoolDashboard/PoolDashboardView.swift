@@ -80,10 +80,6 @@ struct PoolDashboardView: View {
         let observedFiveHourNextResetAt: Date
         let detectedAt: Date
     }
-    private struct SpecialResetTimeSignal {
-        let previousExpectedAt: Date
-        let observedNextResetAt: Date
-    }
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
     @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
@@ -1867,41 +1863,38 @@ struct PoolDashboardView: View {
             )
             record.accountName = normalizedSpecialResetAccountName(account)
 
-            let weeklySignal = detectUnexpectedEarlyResetSignal(
-                kind: .weekly,
-                expectedResetAt: record.expectedWeeklyResetAt,
-                observedResetAt: account.usageWindowResetAt,
-                now: now,
-                graceSeconds: graceSeconds
-            )
+            let weeklyExpectedAt = record.expectedWeeklyResetAt
+            let observedWeeklyResetAt = account.usageWindowResetAt
             record.expectedWeeklyResetAt = normalizedExpectedResetDate(
-                observedResetAt: account.usageWindowResetAt,
+                observedResetAt: observedWeeklyResetAt,
                 kind: .weekly,
                 now: now
             )
 
-            let fiveHourSignal = detectUnexpectedEarlyResetSignal(
-                kind: .fiveHour,
-                expectedResetAt: record.expectedFiveHourResetAt,
-                observedResetAt: account.primaryUsageResetAt,
+            let fiveHourExpectedAt = record.expectedFiveHourResetAt
+            let observedFiveHourResetAt = account.primaryUsageResetAt
+            if let combinedSignal = SpecialResetAlertEvaluator.detectCombinedEarlyReset(
+                weeklyExpectedResetAt: weeklyExpectedAt,
+                observedWeeklyResetAt: observedWeeklyResetAt,
+                fiveHourExpectedResetAt: fiveHourExpectedAt,
+                observedFiveHourResetAt: observedFiveHourResetAt,
                 now: now,
                 graceSeconds: graceSeconds
-            )
-            if let weeklySignal, let fiveHourSignal {
+            ) {
                 detections.append(
                     SpecialResetDetection(
                         accountKey: account.deduplicationKey,
                         accountName: normalizedSpecialResetAccountName(account),
-                        previousWeeklyExpectedAt: weeklySignal.previousExpectedAt,
-                        observedWeeklyNextResetAt: weeklySignal.observedNextResetAt,
-                        previousFiveHourExpectedAt: fiveHourSignal.previousExpectedAt,
-                        observedFiveHourNextResetAt: fiveHourSignal.observedNextResetAt,
+                        previousWeeklyExpectedAt: combinedSignal.weekly.previousExpectedAt,
+                        observedWeeklyNextResetAt: combinedSignal.weekly.observedNextResetAt,
+                        previousFiveHourExpectedAt: combinedSignal.fiveHour.previousExpectedAt,
+                        observedFiveHourNextResetAt: combinedSignal.fiveHour.observedNextResetAt,
                         detectedAt: now
                     )
                 )
             }
             record.expectedFiveHourResetAt = normalizedExpectedResetDate(
-                observedResetAt: account.primaryUsageResetAt,
+                observedResetAt: observedFiveHourResetAt,
                 kind: .fiveHour,
                 now: now
             )
@@ -1958,42 +1951,10 @@ struct PoolDashboardView: View {
         kind: SpecialResetKind,
         now: Date
     ) -> Date? {
-        guard var observedResetAt else { return nil }
-        var guardSteps = 0
-        while observedResetAt <= now, guardSteps < 240 {
-            observedResetAt = observedResetAt.addingTimeInterval(kind.interval)
-            guardSteps += 1
-        }
-        return observedResetAt
-    }
-
-    private func detectUnexpectedEarlyResetSignal(
-        kind: SpecialResetKind,
-        expectedResetAt: Date?,
-        observedResetAt: Date?,
-        now: Date,
-        graceSeconds: TimeInterval
-    ) -> SpecialResetTimeSignal? {
-        guard let expectedResetAt,
-              let observedNextResetAt = normalizedExpectedResetDate(
-                observedResetAt: observedResetAt,
-                kind: kind,
-                now: now
-              )
-        else {
-            return nil
-        }
-
-        let isNotDueYet = now.addingTimeInterval(graceSeconds) < expectedResetAt
-        let shiftSeconds = abs(observedNextResetAt.timeIntervalSince(expectedResetAt))
-        let isSignificantShift = shiftSeconds > max(600, graceSeconds / 2)
-        guard isNotDueYet, isSignificantShift else {
-            return nil
-        }
-
-        return SpecialResetTimeSignal(
-            previousExpectedAt: expectedResetAt,
-            observedNextResetAt: observedNextResetAt
+        SpecialResetAlertEvaluator.normalizedExpectedResetDate(
+            observedResetAt: observedResetAt,
+            interval: kind.interval,
+            now: now
         )
     }
 
@@ -2065,6 +2026,84 @@ struct PoolDashboardView: View {
     private func notificationDateText(_ date: Date?) -> String {
         guard let date else { return "--" }
         return date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+    }
+}
+
+enum SpecialResetAlertEvaluator {
+    struct TimeSignal: Equatable {
+        let previousExpectedAt: Date
+        let observedNextResetAt: Date
+    }
+
+    static func normalizedExpectedResetDate(
+        observedResetAt: Date?,
+        interval: TimeInterval,
+        now: Date
+    ) -> Date? {
+        guard var observedResetAt else { return nil }
+        var guardSteps = 0
+        while observedResetAt <= now, guardSteps < 240 {
+            observedResetAt = observedResetAt.addingTimeInterval(interval)
+            guardSteps += 1
+        }
+        return observedResetAt
+    }
+
+    static func detectEarlyResetSignal(
+        expectedResetAt: Date?,
+        observedResetAt: Date?,
+        interval: TimeInterval,
+        now: Date,
+        graceSeconds: TimeInterval
+    ) -> TimeSignal? {
+        guard let expectedResetAt,
+              let observedNextResetAt = normalizedExpectedResetDate(
+                observedResetAt: observedResetAt,
+                interval: interval,
+                now: now
+              )
+        else {
+            return nil
+        }
+
+        let isNotDueYet = now.addingTimeInterval(graceSeconds) < expectedResetAt
+        let shiftSeconds = abs(observedNextResetAt.timeIntervalSince(expectedResetAt))
+        let isSignificantShift = shiftSeconds > max(600, graceSeconds / 2)
+        guard isNotDueYet, isSignificantShift else {
+            return nil
+        }
+
+        return TimeSignal(
+            previousExpectedAt: expectedResetAt,
+            observedNextResetAt: observedNextResetAt
+        )
+    }
+
+    static func detectCombinedEarlyReset(
+        weeklyExpectedResetAt: Date?,
+        observedWeeklyResetAt: Date?,
+        fiveHourExpectedResetAt: Date?,
+        observedFiveHourResetAt: Date?,
+        now: Date,
+        graceSeconds: TimeInterval
+    ) -> (weekly: TimeSignal, fiveHour: TimeSignal)? {
+        guard let weeklySignal = detectEarlyResetSignal(
+            expectedResetAt: weeklyExpectedResetAt,
+            observedResetAt: observedWeeklyResetAt,
+            interval: 7 * 24 * 3_600,
+            now: now,
+            graceSeconds: graceSeconds
+        ),
+        let fiveHourSignal = detectEarlyResetSignal(
+            expectedResetAt: fiveHourExpectedResetAt,
+            observedResetAt: observedFiveHourResetAt,
+            interval: 5 * 3_600,
+            now: now,
+            graceSeconds: graceSeconds
+        ) else {
+            return nil
+        }
+        return (weekly: weeklySignal, fiveHour: fiveHourSignal)
     }
 }
 
