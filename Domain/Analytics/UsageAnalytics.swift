@@ -236,6 +236,7 @@ enum UsageAnalyticsEngine {
         for state: UsageAnalyticsState,
         now: Date,
         days: Int,
+        accountKey: String? = nil,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [UsageAnalyticsDailyTotal] {
         guard days > 0 else { return [] }
@@ -248,7 +249,11 @@ enum UsageAnalyticsEngine {
             else { continue }
 
             let total = state.records
-                .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
+                .filter {
+                    $0.timestamp >= dayStart
+                    && $0.timestamp < dayEnd
+                    && (accountKey == nil || $0.accountKey == accountKey)
+                }
                 .reduce(0) { $0 + max(0, $1.weeklyDeltaPercent) }
 
             totals.append(UsageAnalyticsDailyTotal(date: dayStart, totalWeeklyPercent: total))
@@ -261,6 +266,7 @@ enum UsageAnalyticsEngine {
         for state: UsageAnalyticsState,
         now: Date,
         weeks: Int,
+        accountKey: String? = nil,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [UsageAnalyticsWeeklyTotal] {
         guard weeks > 0 else { return [] }
@@ -278,7 +284,11 @@ enum UsageAnalyticsEngine {
             }
 
             let total = state.records
-                .filter { $0.timestamp >= weekStart && $0.timestamp < weekEnd }
+                .filter {
+                    $0.timestamp >= weekStart
+                    && $0.timestamp < weekEnd
+                    && (accountKey == nil || $0.accountKey == accountKey)
+                }
                 .reduce(0) { $0 + max(0, $1.weeklyDeltaPercent) }
 
             totals.append(

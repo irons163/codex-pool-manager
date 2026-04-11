@@ -232,6 +232,8 @@
 "usage_analytics.chart.granularity" = "Granularity";
 "usage_analytics.chart.daily" = "Daily";
 "usage_analytics.chart.weekly" = "Weekly";
+"usage_analytics.chart.account" = "Account";
+"usage_analytics.chart.all_accounts" = "All Accounts";
 "usage_analytics.insight.peak_hour" = "Peak Hour";
 "usage_analytics.insight.peak_day" = "Peak Day";
 "usage_analytics.insight.top_account" = "Top Account";

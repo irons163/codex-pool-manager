@@ -2703,6 +2703,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     let analyticsState: UsageAnalyticsState
     let accounts: [AgentAccount]
     @State private var chartGranularity: ChartGranularity = .daily
+    @State private var selectedAccountKey: String? = nil
 
     private var summary: UsageAnalyticsSummary {
         UsageAnalyticsEngine.summary(for: analyticsState, now: Date())
@@ -2712,7 +2713,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         UsageAnalyticsEngine.dailyTotals(
             for: analyticsState,
             now: Date(),
-            days: 7
+            days: 7,
+            accountKey: selectedAccountKey
         )
     }
 
@@ -2720,8 +2722,29 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         UsageAnalyticsEngine.weeklyTotals(
             for: analyticsState,
             now: Date(),
-            weeks: 8
+            weeks: 8,
+            accountKey: selectedAccountKey
         )
+    }
+
+    private var accountNameByKey: [String: String] {
+        var mapping: [String: String] = [:]
+        for account in accounts {
+            let key = account.deduplicationKey
+            if mapping[key] == nil {
+                mapping[key] = account.name
+            }
+        }
+        return mapping
+    }
+
+    private var selectableAccountKeys: [String] {
+        let keys = Set(analyticsState.records.map(\.accountKey))
+        return keys.sorted { lhs, rhs in
+            let leftName = accountNameByKey[lhs] ?? lhs
+            let rightName = accountNameByKey[rhs] ?? rhs
+            return leftName.localizedCaseInsensitiveCompare(rightName) == .orderedAscending
+        }
     }
 
     private var chartEntries: [ChartEntry] {
@@ -2794,6 +2817,12 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             }
         }
         .sectionCardStyle()
+        .onChange(of: selectableAccountKeys) { _, keys in
+            guard let selectedAccountKey else { return }
+            if !keys.contains(selectedAccountKey) {
+                self.selectedAccountKey = nil
+            }
+        }
     }
 
     private var lastUpdatedText: String {
@@ -2824,6 +2853,18 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 .labelsHidden()
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 180)
+
+                Picker(L10n.text("usage_analytics.chart.account"), selection: $selectedAccountKey) {
+                    Text(L10n.text("usage_analytics.chart.all_accounts"))
+                        .tag(Optional<String>.none)
+                    ForEach(selectableAccountKeys, id: \.self) { key in
+                        Text(accountNameByKey[key] ?? key)
+                            .tag(Optional(key))
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(maxWidth: 220)
             }
 
             GeometryReader { geometry in

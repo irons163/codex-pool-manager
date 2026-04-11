@@ -241,6 +241,8 @@
 "usage_analytics.chart.granularity" = "显示粒度";
 "usage_analytics.chart.daily" = "日";
 "usage_analytics.chart.weekly" = "周";
+"usage_analytics.chart.account" = "账号";
+"usage_analytics.chart.all_accounts" = "全部账号";
 "usage_analytics.insight.peak_hour" = "高峰时段";
 "usage_analytics.insight.peak_day" = "高峰日";
 "usage_analytics.insight.top_account" = "用量最高账号";

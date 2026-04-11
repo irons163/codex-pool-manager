@@ -191,6 +191,8 @@
 "usage_analytics.chart.granularity" = "단위";
 "usage_analytics.chart.daily" = "일";
 "usage_analytics.chart.weekly" = "주";
+"usage_analytics.chart.account" = "계정";
+"usage_analytics.chart.all_accounts" = "모든 계정";
 "usage_analytics.insight.peak_hour" = "피크 시간";
 "usage_analytics.insight.peak_day" = "피크 요일";
 "usage_analytics.insight.top_account" = "최다 사용 계정";

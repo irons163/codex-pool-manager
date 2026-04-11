@@ -191,6 +191,8 @@
 "usage_analytics.chart.granularity" = "粒度";
 "usage_analytics.chart.daily" = "日";
 "usage_analytics.chart.weekly" = "週";
+"usage_analytics.chart.account" = "アカウント";
+"usage_analytics.chart.all_accounts" = "全アカウント";
 "usage_analytics.insight.peak_hour" = "ピーク時間";
 "usage_analytics.insight.peak_day" = "ピーク日";
 "usage_analytics.insight.top_account" = "最多アカウント";

@@ -191,6 +191,8 @@
 "usage_analytics.chart.granularity" = "Granularité";
 "usage_analytics.chart.daily" = "Jour";
 "usage_analytics.chart.weekly" = "Semaine";
+"usage_analytics.chart.account" = "Compte";
+"usage_analytics.chart.all_accounts" = "Tous les comptes";
 "usage_analytics.insight.peak_hour" = "Heure de pointe";
 "usage_analytics.insight.peak_day" = "Jour de pointe";
 "usage_analytics.insight.top_account" = "Compte principal";

@@ -260,6 +260,33 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsDailyTotalsCanFilterByAccountKey() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_700_086_400)
+        let day0 = calendar.startOfDay(for: now)
+        let day1 = calendar.date(byAdding: .day, value: -1, to: day0)!
+
+        let records = [
+            UsageAnalyticsRecord(timestamp: day0.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 10, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: day0.addingTimeInterval(7200), accountKey: "b", weeklyDeltaPercent: 20, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: day1.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 5, fiveHourDeltaPercent: 0)
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let totals = UsageAnalyticsEngine.dailyTotals(
+            for: state,
+            now: now,
+            days: 2,
+            accountKey: "a",
+            calendar: calendar
+        )
+
+        #expect(totals.count == 2)
+        #expect(totals[0].totalWeeklyPercent == 5)
+        #expect(totals[1].totalWeeklyPercent == 10)
+    }
+
+    @Test
     func usageAnalyticsSummaryDetectsHabits() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
@@ -308,6 +335,33 @@ struct CodexPoolManagerTests {
             for: state,
             now: now,
             weeks: 2,
+            calendar: calendar
+        )
+
+        #expect(totals.count == 2)
+        #expect(totals[0].totalWeeklyPercent == 7)
+        #expect(totals[1].totalWeeklyPercent == 12)
+    }
+
+    @Test
+    func usageAnalyticsWeeklyTotalsCanFilterByAccountKey() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let currentWeek = calendar.dateInterval(of: .weekOfYear, for: now)!.start
+        let previousWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeek)!
+
+        let records = [
+            UsageAnalyticsRecord(timestamp: currentWeek.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 12, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: currentWeek.addingTimeInterval(7200), accountKey: "b", weeklyDeltaPercent: 6, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: previousWeek.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 7, fiveHourDeltaPercent: 0)
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+        let totals = UsageAnalyticsEngine.weeklyTotals(
+            for: state,
+            now: now,
+            weeks: 2,
+            accountKey: "a",
             calendar: calendar
         )
 
