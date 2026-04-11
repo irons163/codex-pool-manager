@@ -175,6 +175,8 @@
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
 "workspace.schedule.title" = "Schedule";
 "workspace.schedule.subtitle" = "Visualize reset coverage and uncovered windows across all accounts.";
+"workspace.usage_analytics.title" = "Usage Analytics";
+"workspace.usage_analytics.subtitle" = "Analyze daily and weekly usage patterns across the pool.";
 "workspace.openai_reset_alert.title" = "OpenAI Reset Alert";
 "workspace.openai_reset_alert.subtitle" = "Track paid-account reset targets and alert when reset appears earlier than expected.";
 "workspace.settings.title" = "Settings";
@@ -218,6 +220,23 @@
 "schedule.summary.coverage_hours" = "Covered Hours";
 "schedule.summary.no_coverage_hours" = "No-Coverage Hours";
 "schedule.summary.overlap_hours" = "Reset Collision Hours";
+
+"usage_analytics.title" = "Usage Analytics";
+"usage_analytics.subtitle" = "Summarize usage deltas captured after each sync so trends are easier to spot.";
+"usage_analytics.summary.today_weekly" = "Today (Weekly)";
+"usage_analytics.summary.weekly" = "Last 7 Days (Weekly)";
+"usage_analytics.summary.today_five_hour" = "Today (5-hour)";
+"usage_analytics.summary.week_five_hour" = "Last 7 Days (5-hour)";
+"usage_analytics.percent_format" = "%d%%";
+"usage_analytics.chart.title" = "7-Day Usage";
+"usage_analytics.insight.peak_hour" = "Peak Hour";
+"usage_analytics.insight.peak_day" = "Peak Day";
+"usage_analytics.insight.top_account" = "Top Account";
+"usage_analytics.not_available" = "Not available";
+"usage_analytics.top_account_format" = "%@ · %d%%";
+"usage_analytics.empty_title" = "No Usage History";
+"usage_analytics.empty" = "Run sync at least once to begin capturing usage trends.";
+"usage_analytics.never_synced" = "Never synced";
 "schedule.summary.total_resets" = "Reset Events";
 "schedule.summary.next_reset" = "Next Reset";
 "schedule.summary.not_available" = "--";

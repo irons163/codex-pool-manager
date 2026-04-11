@@ -164,6 +164,8 @@
 "workspace.authentication.subtitle" = "Gestiona los flujos de inicio de sesión e importa cuentas locales de Codex.";
 "workspace.runtime.title" = "Estrategia de runtime";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.usage_analytics.title" = "Analítica de uso";
+"workspace.usage_analytics.subtitle" = "Analiza tendencias diarias y semanales.";
 "workspace.settings.title" = "Configuración";
 "workspace.settings.subtitle" = "Gestiona lanzamiento, frecuencia de sincronización e idioma.";
 "workspace.capacity.title" = "Capacidad";
@@ -177,6 +179,23 @@
 "alert.low_usage.title" = "Alerta de bajo uso";
 "alert.dismiss" = "Cerrar";
 "common.none" = "Ninguno";
+
+"usage_analytics.title" = "Analítica de uso";
+"usage_analytics.subtitle" = "Resume los cambios tras cada sincronización para ver tendencias.";
+"usage_analytics.summary.today_weekly" = "Hoy (semanal)";
+"usage_analytics.summary.weekly" = "Últimos 7 días (semanal)";
+"usage_analytics.summary.today_five_hour" = "Hoy (5 horas)";
+"usage_analytics.summary.week_five_hour" = "Últimos 7 días (5 horas)";
+"usage_analytics.percent_format" = "%d%%";
+"usage_analytics.chart.title" = "Uso de 7 días";
+"usage_analytics.insight.peak_hour" = "Hora pico";
+"usage_analytics.insight.peak_day" = "Día pico";
+"usage_analytics.insight.top_account" = "Cuenta principal";
+"usage_analytics.not_available" = "No disponible";
+"usage_analytics.top_account_format" = "%@ · %d%%";
+"usage_analytics.empty_title" = "Sin historial";
+"usage_analytics.empty" = "Sincroniza al menos una vez para empezar a recopilar.";
+"usage_analytics.never_synced" = "Nunca sincronizado";
 
 "capacity.signals.title" = "Señales del pool";
 "capacity.active_account_format" = "Cuenta activa: %@";

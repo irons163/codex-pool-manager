@@ -164,6 +164,8 @@
 "workspace.authentication.subtitle" = "サインインフローを管理し、ローカルの Codex アカウントを取り込みます。";
 "workspace.runtime.title" = "ランタイム戦略";
 "workspace.runtime.subtitle" = "Configure switching policy and monitor active execution account.";
+"workspace.usage_analytics.title" = "使用量分析";
+"workspace.usage_analytics.subtitle" = "日次・週次の使用傾向を分析します。";
 "workspace.settings.title" = "設定";
 "workspace.settings.subtitle" = "起動動作、同期間隔、言語を管理します。";
 "workspace.capacity.title" = "容量";
@@ -177,6 +179,23 @@
 "alert.low_usage.title" = "低使用量警告";
 "alert.dismiss" = "閉じる";
 "common.none" = "なし";
+
+"usage_analytics.title" = "使用量分析";
+"usage_analytics.subtitle" = "同期後の使用量変化を集計して傾向を把握します。";
+"usage_analytics.summary.today_weekly" = "今日（週間）";
+"usage_analytics.summary.weekly" = "直近7日（週間）";
+"usage_analytics.summary.today_five_hour" = "今日（5時間）";
+"usage_analytics.summary.week_five_hour" = "直近7日（5時間）";
+"usage_analytics.percent_format" = "%d%%";
+"usage_analytics.chart.title" = "7日間の使用量";
+"usage_analytics.insight.peak_hour" = "ピーク時間";
+"usage_analytics.insight.peak_day" = "ピーク日";
+"usage_analytics.insight.top_account" = "最多アカウント";
+"usage_analytics.not_available" = "データなし";
+"usage_analytics.top_account_format" = "%@ · %d%%";
+"usage_analytics.empty_title" = "履歴なし";
+"usage_analytics.empty" = "一度同期すると傾向の収集を開始します。";
+"usage_analytics.never_synced" = "未同期";
 
 "capacity.signals.title" = "プール信号";
 "capacity.active_account_format" = "アクティブアカウント: %@";

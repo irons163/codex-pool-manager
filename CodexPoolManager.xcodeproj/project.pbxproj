@@ -32,6 +32,7 @@
 		4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */; };
 		4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */; };
 		4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E892F738FCF001AC4CB /* AgentPool.swift */; };
+		FD059C94938F8AB893C5A6D9 /* UsageAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */; };
 		4AB61E992F738FCF001AC4CB /* CodexAuthFileSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */; };
 		4AB61E9A2F738FCF001AC4CB /* CodexUsageSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */; };
 		4AB61E9B2F738FCF001AC4CB /* PoolDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */; };
@@ -141,6 +142,7 @@
 		4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolStore.swift; sourceTree = "<group>"; };
 		4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTokenVault.swift; sourceTree = "<group>"; };
 		4AB61E892F738FCF001AC4CB /* AgentPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPool.swift; sourceTree = "<group>"; };
+		AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAnalytics.swift; sourceTree = "<group>"; };
 		4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthFileSwitcher.swift; sourceTree = "<group>"; };
 		4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageSyncService.swift; sourceTree = "<group>"; };
 		4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardView.swift; sourceTree = "<group>"; };
@@ -262,9 +264,18 @@
 		4AB61EA82F739CB1001AC4CB /* Domain */ = {
 			isa = PBXGroup;
 			children = (
+				FCE881F34D1DF70160302C55 /* Analytics */,
 				4AB61EA92F739CB1001AC4CB /* Pool */,
 			);
 			path = Domain;
+			sourceTree = "<group>";
+		};
+		FCE881F34D1DF70160302C55 /* Analytics */ = {
+			isa = PBXGroup;
+			children = (
+				AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */,
+			);
+			path = Analytics;
 			sourceTree = "<group>";
 		};
 		4AB61EA92F739CB1001AC4CB /* Pool */ = {
@@ -650,6 +661,7 @@
 				4A5ECC922F744B9000194C45 /* PoolDashboardLocalImportFlowCoordinator.swift in Sources */,
 				4AB61EC02F73A0BB001AC4CB /* DebugToolsPanelView.swift in Sources */,
 				4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */,
+				FD059C94938F8AB893C5A6D9 /* UsageAnalytics.swift in Sources */,
 				4AB61EFF2F73F920001AC4CB /* PoolDashboardRuntimeCoordinator.swift in Sources */,
 				4AB61EFD2F73F852001AC4CB /* PoolDashboardStrategyBindingAdapter.swift in Sources */,
 				4A3753492F74433F008F6AF6 /* PoolDashboardAlertPresenter.swift in Sources */,

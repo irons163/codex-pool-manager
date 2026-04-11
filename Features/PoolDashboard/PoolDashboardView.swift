@@ -17,6 +17,7 @@ struct PoolDashboardView: View {
     private static let developerTokenKey = "account_pool_tokens_developer"
     private static let developerMockModeKey = "pool_dashboard.developer.mock_mode"
     private static let specialResetWatchStateKey = "pool_dashboard.special_reset_watch_state"
+    private static let usageAnalyticsStateKey = "pool_dashboard.usage_analytics_state"
     private static let specialResetGraceMinutesMigrationKey = "pool_dashboard.special_reset_watch_grace_minutes_migrated_v1"
     private struct PendingManualOAuthContext {
         let expectedState: String
@@ -90,6 +91,7 @@ struct PoolDashboardView: View {
     @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue
     @AppStorage(Self.developerMockModeKey) private var developerMockModeEnabled = false
     @AppStorage(Self.specialResetWatchStateKey) private var specialResetWatchStateRaw = ""
+    @AppStorage(Self.usageAnalyticsStateKey) private var usageAnalyticsStateRaw = ""
     @AppStorage("pool_dashboard.special_reset_watch_enabled") private var specialResetWatchEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_notify_enabled") private var specialResetWatchNotifyEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_grace_minutes") private var specialResetWatchGraceMinutes = 1
@@ -113,6 +115,7 @@ struct PoolDashboardView: View {
     @State private var manualOAuthCallbackURL = ""
     @State private var oauthSignInTask: Task<Void, Never>?
     @State private var specialResetWatchState = SpecialResetWatchState()
+    @State private var usageAnalyticsState = UsageAnalyticsState()
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -166,6 +169,7 @@ struct PoolDashboardView: View {
         case authentication
         case runtime
         case schedule
+        case usageAnalytics
         case openAIResetAlert
         case settings
         case safety
@@ -178,6 +182,7 @@ struct PoolDashboardView: View {
             case .authentication: L10n.text("workspace.authentication.title")
             case .runtime: L10n.text("workspace.runtime.title")
             case .schedule: L10n.text("workspace.schedule.title")
+            case .usageAnalytics: L10n.text("workspace.usage_analytics.title")
             case .openAIResetAlert: L10n.text("workspace.openai_reset_alert.title")
             case .settings: L10n.text("workspace.settings.title")
             case .safety: L10n.text("workspace.safety.title")
@@ -190,6 +195,7 @@ struct PoolDashboardView: View {
             case .authentication: L10n.text("workspace.authentication.subtitle")
             case .runtime: L10n.text("workspace.runtime.subtitle")
             case .schedule: L10n.text("workspace.schedule.subtitle")
+            case .usageAnalytics: L10n.text("workspace.usage_analytics.subtitle")
             case .openAIResetAlert: L10n.text("workspace.openai_reset_alert.subtitle")
             case .settings: L10n.text("workspace.settings.subtitle")
             case .safety: L10n.text("workspace.safety.subtitle")
@@ -202,6 +208,7 @@ struct PoolDashboardView: View {
             case .authentication: "person.badge.key"
             case .runtime: "dial.medium"
             case .schedule: "calendar.badge.clock"
+            case .usageAnalytics: "chart.bar.xaxis"
             case .openAIResetAlert: "bell.badge.waveform"
             case .settings: "gearshape"
             case .safety: "shield.lefthalf.filled.badge.checkmark"
@@ -585,7 +592,7 @@ struct PoolDashboardView: View {
 
     private var hasWorkspaceContextPanel: Bool {
         switch selectedWorkspace {
-        case .runtime, .schedule, .openAIResetAlert, .settings, .safety:
+        case .runtime, .schedule, .usageAnalytics, .openAIResetAlert, .settings, .safety:
             return false
         default:
             return true
@@ -601,6 +608,8 @@ struct PoolDashboardView: View {
             strategySettingsPanel
         case .schedule:
             schedulePanel
+        case .usageAnalytics:
+            usageAnalyticsPanel
         case .openAIResetAlert:
             specialResetWatchPanel
         case .settings:
@@ -620,6 +629,8 @@ struct PoolDashboardView: View {
         case .runtime:
             activeAccountPanel
         case .schedule:
+            EmptyView()
+        case .usageAnalytics:
             EmptyView()
         case .openAIResetAlert:
             EmptyView()
@@ -866,6 +877,13 @@ struct PoolDashboardView: View {
         ScheduleWorkspacePanelView(accounts: state.accounts)
     }
 
+    private var usageAnalyticsPanel: some View {
+        UsageAnalyticsWorkspacePanelView(
+            analyticsState: usageAnalyticsState,
+            accounts: state.accounts
+        )
+    }
+
     private var specialResetWatchPanel: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
@@ -1109,6 +1127,7 @@ struct PoolDashboardView: View {
         migrateAppearancePreferenceIfNeeded()
         migrateSpecialResetGraceMinutesIfNeeded()
         loadSpecialResetWatchStateFromStorage()
+        loadUsageAnalyticsStateFromStorage()
         DesktopNotifier.requestAuthorizationIfNeeded()
 
         let output = lifecycleFlowCoordinator.onAppear(
@@ -1120,6 +1139,7 @@ struct PoolDashboardView: View {
         )
         applyLifecycleOnAppearOutput(output)
         evaluateSpecialResetWatchAfterSync(now: .now)
+        seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
     }
 
@@ -1143,6 +1163,7 @@ struct PoolDashboardView: View {
         lowUsageAlertPolicy = LowUsageAlertPolicy()
         viewState.showLowUsageAlert = false
         viewState.lowUsageAlertMessage = nil
+        seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
     }
 
@@ -1430,6 +1451,7 @@ struct PoolDashboardView: View {
         applyUsageSyncOutput(output)
         if viewState.syncError?.isEmpty ?? true {
             evaluateSpecialResetWatchAfterSync(now: .now)
+            updateUsageAnalyticsAfterSync(now: .now)
         }
         if let syncError = viewState.syncError, !syncError.isEmpty {
             DesktopNotifier.post(
@@ -1992,6 +2014,49 @@ struct PoolDashboardView: View {
             specialResetDateText(event.observedFiveHourNextResetAt),
             specialResetDateText(event.detectedAt)
         )
+    }
+
+    // MARK: - Usage Analytics
+
+    private func loadUsageAnalyticsStateFromStorage() {
+        guard !usageAnalyticsStateRaw.isEmpty,
+              let data = usageAnalyticsStateRaw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(UsageAnalyticsState.self, from: data)
+        else {
+            usageAnalyticsState = UsageAnalyticsState()
+            return
+        }
+        usageAnalyticsState = decoded
+    }
+
+    private func persistUsageAnalyticsState() {
+        guard let data = try? JSONEncoder().encode(usageAnalyticsState),
+              let text = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+        usageAnalyticsStateRaw = text
+    }
+
+    @MainActor
+    private func seedUsageAnalyticsIfNeeded(now: Date = .now) {
+        guard usageAnalyticsState.snapshots.isEmpty else { return }
+        usageAnalyticsState = UsageAnalyticsEngine.seed(
+            state: usageAnalyticsState,
+            accounts: state.accounts,
+            now: now
+        )
+        persistUsageAnalyticsState()
+    }
+
+    @MainActor
+    private func updateUsageAnalyticsAfterSync(now: Date) {
+        usageAnalyticsState = UsageAnalyticsEngine.update(
+            state: usageAnalyticsState,
+            accounts: state.accounts,
+            now: now
+        )
+        persistUsageAnalyticsState()
     }
 
     private func specialResetDateText(_ date: Date) -> String {
@@ -2618,6 +2683,174 @@ private struct ScheduleWorkspacePanelView: View {
 
     private func localizedMonthDayHourMinuteText(_ date: Date) -> String {
         date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+    }
+}
+
+private struct UsageAnalyticsWorkspacePanelView: View {
+    let analyticsState: UsageAnalyticsState
+    let accounts: [AgentAccount]
+
+    private var summary: UsageAnalyticsSummary {
+        UsageAnalyticsEngine.summary(for: analyticsState, now: Date())
+    }
+
+    private var dailyTotals: [UsageAnalyticsDailyTotal] {
+        UsageAnalyticsEngine.dailyTotals(
+            for: analyticsState,
+            now: Date(),
+            days: 7
+        )
+    }
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(L10n.text("usage_analytics.title"))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+
+                    Spacer(minLength: 0)
+
+                    Text(lastUpdatedText)
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
+
+                Text(L10n.text("usage_analytics.subtitle"))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                HStack(spacing: 8) {
+                    summaryCard(
+                        title: L10n.text("usage_analytics.summary.today_weekly"),
+                        value: L10n.text("usage_analytics.percent_format", summary.todayWeeklyPercent)
+                    )
+                    summaryCard(
+                        title: L10n.text("usage_analytics.summary.weekly"),
+                        value: L10n.text("usage_analytics.percent_format", summary.weekWeeklyPercent)
+                    )
+                    summaryCard(
+                        title: L10n.text("usage_analytics.summary.today_five_hour"),
+                        value: L10n.text("usage_analytics.percent_format", summary.todayFiveHourPercent)
+                    )
+                    summaryCard(
+                        title: L10n.text("usage_analytics.summary.week_five_hour"),
+                        value: L10n.text("usage_analytics.percent_format", summary.weekFiveHourPercent)
+                    )
+                }
+
+                if analyticsState.records.isEmpty {
+                    PanelStatusCalloutView(
+                        message: L10n.text("usage_analytics.empty"),
+                        title: L10n.text("usage_analytics.empty_title"),
+                        tone: .warning
+                    )
+                } else {
+                    chartView
+                    insightsView
+                }
+            }
+        }
+        .sectionCardStyle()
+    }
+
+    private var lastUpdatedText: String {
+        guard let lastUpdatedAt = analyticsState.lastUpdatedAt else {
+            return L10n.text("usage_analytics.never_synced")
+        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = L10n.locale()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: lastUpdatedAt, relativeTo: Date())
+    }
+
+    private var chartView: some View {
+        let maxValue = max(dailyTotals.map(\.totalWeeklyPercent).max() ?? 0, 1)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("usage_analytics.chart.title"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach(dailyTotals) { daily in
+                    VStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(PoolDashboardTheme.glowA.opacity(0.75))
+                            .frame(height: max(10, CGFloat(daily.totalWeeklyPercent) / CGFloat(maxValue) * 90))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.45), lineWidth: 0.6)
+                            )
+
+                        Text(daily.date.formatted(.dateTime.locale(L10n.locale()).weekday(.abbreviated)))
+                            .font(.caption2)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var insightsView: some View {
+        HStack(spacing: 8) {
+            summaryCard(
+                title: L10n.text("usage_analytics.insight.peak_hour"),
+                value: peakHourText(summary.peakHour)
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.insight.peak_day"),
+                value: peakWeekdayText(summary.peakWeekday)
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.insight.top_account"),
+                value: topAccountText(key: summary.topAccountKey, weeklyPercent: summary.topAccountWeeklyPercent)
+            )
+        }
+    }
+
+    private func summaryCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dashboardInfoCard()
+    }
+
+    private func peakHourText(_ hour: Int?) -> String {
+        guard let hour else { return L10n.text("usage_analytics.not_available") }
+        let calendar = Calendar.autoupdatingCurrent
+        if let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) {
+            return date.formatted(.dateTime.locale(L10n.locale()).hour(.defaultDigits(amPM: .abbreviated)))
+        }
+        return L10n.text("usage_analytics.not_available")
+    }
+
+    private func peakWeekdayText(_ weekday: Int?) -> String {
+        guard let weekday else { return L10n.text("usage_analytics.not_available") }
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        let symbols = formatter.weekdaySymbols ?? []
+        guard weekday >= 1, weekday <= symbols.count else {
+            return L10n.text("usage_analytics.not_available")
+        }
+        return symbols[weekday - 1]
+    }
+
+    private func topAccountText(key: String?, weeklyPercent: Int) -> String {
+        guard let key else { return L10n.text("usage_analytics.not_available") }
+        let name = accounts.first(where: { $0.deduplicationKey == key })?.name ?? key
+        return L10n.text("usage_analytics.top_account_format", name, weeklyPercent)
     }
 }
 

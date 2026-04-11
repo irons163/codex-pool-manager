@@ -198,6 +198,142 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsCapturesDeltasAfterSync() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let baseAccount = AgentAccount(
+            id: accountID,
+            name: "Paid",
+            usedUnits: 10,
+            quota: 100,
+            primaryUsagePercent: 5,
+            isPaid: true
+        )
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [baseAccount],
+            now: now
+        )
+
+        let updatedAccount = AgentAccount(
+            id: accountID,
+            name: "Paid",
+            usedUnits: 25,
+            quota: 100,
+            primaryUsagePercent: 18,
+            isPaid: true
+        )
+
+        let updatedState = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [updatedAccount],
+            now: now.addingTimeInterval(300)
+        )
+
+        #expect(updatedState.records.count == 1)
+        let record = updatedState.records[0]
+        #expect(record.weeklyDeltaPercent == 15)
+        #expect(record.fiveHourDeltaPercent == 13)
+    }
+
+    @Test
+    func usageAnalyticsAggregatesDailyTotals() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_700_086_400) // 2023-11-14 UTC
+        let day0 = calendar.startOfDay(for: now)
+        let day1 = calendar.date(byAdding: .day, value: -1, to: day0)!
+        let day2 = calendar.date(byAdding: .day, value: -2, to: day0)!
+
+        let records = [
+            UsageAnalyticsRecord(timestamp: day0.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 12, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: day1.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 8, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: day2.addingTimeInterval(3600), accountKey: "a", weeklyDeltaPercent: 5, fiveHourDeltaPercent: 0)
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let totals = UsageAnalyticsEngine.dailyTotals(for: state, now: now, days: 3, calendar: calendar)
+
+        #expect(totals.count == 3)
+        #expect(totals[0].totalWeeklyPercent == 5)
+        #expect(totals[1].totalWeeklyPercent == 8)
+        #expect(totals[2].totalWeeklyPercent == 12)
+    }
+
+    @Test
+    func usageAnalyticsSummaryDetectsHabits() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let peakHourDate = calendar.date(bySettingHour: 21, minute: 0, second: 0, of: now)!
+        let peakDayDate = calendar.date(byAdding: .day, value: -1, to: now)!
+
+        let records = [
+            UsageAnalyticsRecord(timestamp: peakHourDate, accountKey: "a", weeklyDeltaPercent: 20, fiveHourDeltaPercent: 0),
+            UsageAnalyticsRecord(timestamp: peakDayDate, accountKey: "b", weeklyDeltaPercent: 10, fiveHourDeltaPercent: 0)
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let summary = UsageAnalyticsEngine.summary(for: state, now: now, calendar: calendar)
+
+        #expect(summary.peakHour == 21)
+        #expect(summary.topAccountKey == "a")
+        #expect(summary.topAccountWeeklyPercent == 20)
+        #expect(summary.weekWeeklyPercent == 30)
+    }
+
+    @Test
+    func usageAnalyticsUpdateHandlesDuplicateAccountKeysWithoutCrash() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let duplicateKey = "account:user-duplicate"
+        let state = UsageAnalyticsState(
+            records: [],
+            snapshots: [
+                UsageAnalyticsAccountSnapshot(
+                    accountKey: duplicateKey,
+                    lastWeeklyPercent: 10,
+                    lastFiveHourPercent: 10,
+                    lastSeenAt: now.addingTimeInterval(-100)
+                ),
+                UsageAnalyticsAccountSnapshot(
+                    accountKey: duplicateKey,
+                    lastWeeklyPercent: 20,
+                    lastFiveHourPercent: 20,
+                    lastSeenAt: now.addingTimeInterval(-50)
+                )
+            ],
+            lastUpdatedAt: now.addingTimeInterval(-50)
+        )
+
+        let first = AgentAccount(
+            id: UUID(),
+            name: "A",
+            usedUnits: 30,
+            quota: 100,
+            chatGPTAccountID: "user-duplicate",
+            primaryUsagePercent: 25,
+            isPaid: true
+        )
+        let second = AgentAccount(
+            id: UUID(),
+            name: "B",
+            usedUnits: 30,
+            quota: 100,
+            chatGPTAccountID: "user-duplicate",
+            primaryUsagePercent: 25,
+            isPaid: true
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: state,
+            accounts: [first, second],
+            now: now
+        )
+
+        #expect(updated.snapshots.count == 1)
+        #expect(updated.snapshots[0].accountKey == duplicateKey)
+    }
+
+    @Test
     func removeActiveAccountFallsBackToRemainingAccount() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
