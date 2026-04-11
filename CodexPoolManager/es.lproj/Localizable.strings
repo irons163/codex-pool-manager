@@ -188,6 +188,9 @@
 "usage_analytics.summary.week_five_hour" = "Últimos 7 días (5 horas)";
 "usage_analytics.percent_format" = "%d%%";
 "usage_analytics.chart.title" = "Uso de 7 días";
+"usage_analytics.chart.granularity" = "Granularidad";
+"usage_analytics.chart.daily" = "Día";
+"usage_analytics.chart.weekly" = "Semana";
 "usage_analytics.insight.peak_hour" = "Hora pico";
 "usage_analytics.insight.peak_day" = "Día pico";
 "usage_analytics.insight.top_account" = "Cuenta principal";

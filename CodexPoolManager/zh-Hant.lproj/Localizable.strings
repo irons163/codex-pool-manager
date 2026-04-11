@@ -244,6 +244,9 @@
 "usage_analytics.summary.week_five_hour" = "近 7 天（5 小時）";
 "usage_analytics.percent_format" = "%d%%";
 "usage_analytics.chart.title" = "7 天用量";
+"usage_analytics.chart.granularity" = "顯示粒度";
+"usage_analytics.chart.daily" = "日";
+"usage_analytics.chart.weekly" = "週";
 "usage_analytics.insight.peak_hour" = "尖峰時段";
 "usage_analytics.insight.peak_day" = "尖峰日";
 "usage_analytics.insight.top_account" = "最高用量帳號";

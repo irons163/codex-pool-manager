@@ -2687,8 +2687,22 @@ private struct ScheduleWorkspacePanelView: View {
 }
 
 private struct UsageAnalyticsWorkspacePanelView: View {
+    private enum ChartGranularity: String, CaseIterable, Identifiable {
+        case daily
+        case weekly
+
+        var id: String { rawValue }
+    }
+
+    private struct ChartEntry: Identifiable {
+        let id = UUID()
+        let label: String
+        let value: Int
+    }
+
     let analyticsState: UsageAnalyticsState
     let accounts: [AgentAccount]
+    @State private var chartGranularity: ChartGranularity = .daily
 
     private var summary: UsageAnalyticsSummary {
         UsageAnalyticsEngine.summary(for: analyticsState, now: Date())
@@ -2700,6 +2714,33 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             now: Date(),
             days: 7
         )
+    }
+
+    private var weeklyTotals: [UsageAnalyticsWeeklyTotal] {
+        UsageAnalyticsEngine.weeklyTotals(
+            for: analyticsState,
+            now: Date(),
+            weeks: 8
+        )
+    }
+
+    private var chartEntries: [ChartEntry] {
+        switch chartGranularity {
+        case .daily:
+            return dailyTotals.map { daily in
+                ChartEntry(
+                    label: daily.date.formatted(.dateTime.locale(L10n.locale()).weekday(.abbreviated)),
+                    value: daily.totalWeeklyPercent
+                )
+            }
+        case .weekly:
+            return weeklyTotals.map { weekly in
+                ChartEntry(
+                    label: weeklyLabel(weekly.weekStartDate),
+                    value: weekly.totalWeeklyPercent
+                )
+            }
+        }
     }
 
     var body: some View {
@@ -2766,33 +2807,164 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private var chartView: some View {
-        let maxValue = max(dailyTotals.map(\.totalWeeklyPercent).max() ?? 0, 1)
-
         return VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.text("usage_analytics.chart.title"))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(PoolDashboardTheme.textPrimary)
+            HStack(alignment: .center, spacing: 8) {
+                Text(L10n.text("usage_analytics.chart.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Picker(L10n.text("usage_analytics.chart.granularity"), selection: $chartGranularity) {
+                    Text(L10n.text("usage_analytics.chart.daily"))
+                        .tag(ChartGranularity.daily)
+                    Text(L10n.text("usage_analytics.chart.weekly"))
+                        .tag(ChartGranularity.weekly)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 180)
+            }
+
+            GeometryReader { geometry in
+                let points = chartPoints(for: chartEntries, in: geometry.size)
+
+                ZStack {
+                    // horizontal guides for easier trend reading
+                    Path { path in
+                        let guideValues: [CGFloat] = [0, 0.5, 1]
+                        for value in guideValues {
+                            let y = chartY(forNormalizedValue: value, in: geometry.size)
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                        }
+                    }
+                    .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.25), style: StrokeStyle(lineWidth: 0.8, dash: [3, 4]))
+
+                    if points.count > 1 {
+                        curveAreaPath(points: points, in: geometry.size)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        PoolDashboardTheme.glowA.opacity(0.28),
+                                        PoolDashboardTheme.glowA.opacity(0.03)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    }
+
+                    if points.count > 1 {
+                        smoothCurvePath(points: points)
+                            .stroke(
+                                PoolDashboardTheme.glowA,
+                                style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round)
+                            )
+                    }
+
+                    ForEach(Array(points.enumerated()), id: \.offset) { _, point in
+                        Circle()
+                            .fill(PoolDashboardTheme.glowA)
+                            .frame(width: 7, height: 7)
+                            .position(point)
+                    }
+                }
+            }
+            .frame(height: 120)
 
             HStack(alignment: .bottom, spacing: 8) {
-                ForEach(dailyTotals) { daily in
-                    VStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(PoolDashboardTheme.glowA.opacity(0.75))
-                            .frame(height: max(10, CGFloat(daily.totalWeeklyPercent) / CGFloat(maxValue) * 90))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.45), lineWidth: 0.6)
-                            )
-
-                        Text(daily.date.formatted(.dateTime.locale(L10n.locale()).weekday(.abbreviated)))
+                ForEach(chartEntries) { entry in
+                    VStack(spacing: 4) {
+                        Text(entry.label)
                             .font(.caption2)
                             .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                        Text(L10n.text("usage_analytics.percent_format", entry.value))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
         }
         .dashboardInfoCard()
+    }
+
+    private func chartPoints(for entries: [ChartEntry], in size: CGSize) -> [CGPoint] {
+        guard !entries.isEmpty else { return [] }
+
+        let topPadding: CGFloat = 8
+        let bottomPadding: CGFloat = 12
+        let maxValue = max(entries.map(\.value).max() ?? 0, 1)
+        let stepX = entries.count > 1 ? size.width / CGFloat(entries.count - 1) : 0
+        let availableHeight = max(1, size.height - topPadding - bottomPadding)
+
+        return entries.enumerated().map { index, entry in
+            let ratio = CGFloat(max(0, entry.value)) / CGFloat(maxValue)
+            let x = CGFloat(index) * stepX
+            let y = topPadding + (1 - ratio) * availableHeight
+            return CGPoint(x: x, y: y)
+        }
+    }
+
+    private func weeklyLabel(_ weekStart: Date) -> String {
+        weekStart.formatted(.dateTime.locale(L10n.locale()).month().day())
+    }
+
+    private func chartY(forNormalizedValue normalized: CGFloat, in size: CGSize) -> CGFloat {
+        let topPadding: CGFloat = 8
+        let bottomPadding: CGFloat = 12
+        let clamped = min(max(normalized, 0), 1)
+        let availableHeight = max(1, size.height - topPadding - bottomPadding)
+        return topPadding + (1 - clamped) * availableHeight
+    }
+
+    private func smoothCurvePath(points: [CGPoint]) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+
+        path.move(to: first)
+        if points.count == 2, let second = points.last {
+            path.addLine(to: second)
+            return path
+        }
+
+        for index in 1..<points.count {
+            let previous = points[index - 1]
+            let current = points[index]
+            let midpoint = CGPoint(x: (previous.x + current.x) / 2, y: (previous.y + current.y) / 2)
+
+            if index == 1 {
+                path.addQuadCurve(to: midpoint, control: previous)
+            } else {
+                let beforePrevious = points[index - 2]
+                let control = CGPoint(
+                    x: previous.x,
+                    y: previous.y + (current.y - beforePrevious.y) / 6
+                )
+                path.addQuadCurve(to: midpoint, control: control)
+            }
+
+            if index == points.count - 1 {
+                path.addQuadCurve(to: current, control: current)
+            }
+        }
+
+        return path
+    }
+
+    private func curveAreaPath(points: [CGPoint], in size: CGSize) -> Path {
+        var path = smoothCurvePath(points: points)
+        guard let first = points.first, let last = points.last else {
+            return path
+        }
+
+        let baseY = size.height - 4
+        path.addLine(to: CGPoint(x: last.x, y: baseY))
+        path.addLine(to: CGPoint(x: first.x, y: baseY))
+        path.closeSubpath()
+        return path
     }
 
     private var insightsView: some View {

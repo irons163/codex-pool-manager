@@ -62,6 +62,18 @@ struct UsageAnalyticsDailyTotal: Identifiable, Equatable {
     }
 }
 
+struct UsageAnalyticsWeeklyTotal: Identifiable, Equatable {
+    let id: UUID
+    let weekStartDate: Date
+    let totalWeeklyPercent: Int
+
+    init(weekStartDate: Date, totalWeeklyPercent: Int) {
+        self.id = UUID()
+        self.weekStartDate = weekStartDate
+        self.totalWeeklyPercent = totalWeeklyPercent
+    }
+}
+
 struct UsageAnalyticsSummary: Equatable {
     let todayWeeklyPercent: Int
     let weekWeeklyPercent: Int
@@ -240,6 +252,41 @@ enum UsageAnalyticsEngine {
                 .reduce(0) { $0 + max(0, $1.weeklyDeltaPercent) }
 
             totals.append(UsageAnalyticsDailyTotal(date: dayStart, totalWeeklyPercent: total))
+        }
+
+        return totals
+    }
+
+    static func weeklyTotals(
+        for state: UsageAnalyticsState,
+        now: Date,
+        weeks: Int,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [UsageAnalyticsWeeklyTotal] {
+        guard weeks > 0 else { return [] }
+        guard let currentWeek = calendar.dateInterval(of: .weekOfYear, for: now) else { return [] }
+        var totals: [UsageAnalyticsWeeklyTotal] = []
+
+        for weekOffset in stride(from: weeks - 1, through: 0, by: -1) {
+            guard let weekStart = calendar.date(
+                byAdding: .weekOfYear,
+                value: -weekOffset,
+                to: currentWeek.start
+            ),
+            let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
+                continue
+            }
+
+            let total = state.records
+                .filter { $0.timestamp >= weekStart && $0.timestamp < weekEnd }
+                .reduce(0) { $0 + max(0, $1.weeklyDeltaPercent) }
+
+            totals.append(
+                UsageAnalyticsWeeklyTotal(
+                    weekStartDate: weekStart,
+                    totalWeeklyPercent: total
+                )
+            )
         }
 
         return totals

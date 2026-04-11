@@ -282,6 +282,130 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsWeeklyTotalsAggregatesByWeek() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let currentWeek = calendar.dateInterval(of: .weekOfYear, for: now)!.start
+        let previousWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeek)!
+
+        let records = [
+            UsageAnalyticsRecord(
+                timestamp: currentWeek.addingTimeInterval(3600),
+                accountKey: "a",
+                weeklyDeltaPercent: 12,
+                fiveHourDeltaPercent: 0
+            ),
+            UsageAnalyticsRecord(
+                timestamp: previousWeek.addingTimeInterval(3600),
+                accountKey: "a",
+                weeklyDeltaPercent: 7,
+                fiveHourDeltaPercent: 0
+            )
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+        let totals = UsageAnalyticsEngine.weeklyTotals(
+            for: state,
+            now: now,
+            weeks: 2,
+            calendar: calendar
+        )
+
+        #expect(totals.count == 2)
+        #expect(totals[0].totalWeeklyPercent == 7)
+        #expect(totals[1].totalWeeklyPercent == 12)
+    }
+
+    @Test
+    func usageAnalyticsWeeklyTotalsReturnsEmptyWhenWeeksIsZero() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let state = UsageAnalyticsState(records: [], snapshots: [], lastUpdatedAt: now)
+
+        let totals = UsageAnalyticsEngine.weeklyTotals(
+            for: state,
+            now: now,
+            weeks: 0
+        )
+
+        #expect(totals.isEmpty)
+    }
+
+    @Test
+    func usageAnalyticsSeedDeduplicatesSameAccountKey() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let first = AgentAccount(
+            id: UUID(),
+            name: "A",
+            usedUnits: 20,
+            quota: 100,
+            chatGPTAccountID: "user-shared",
+            primaryUsagePercent: 10,
+            isPaid: true
+        )
+        let second = AgentAccount(
+            id: UUID(),
+            name: "B",
+            usedUnits: 40,
+            quota: 100,
+            chatGPTAccountID: "user-shared",
+            primaryUsagePercent: 30,
+            isPaid: true
+        )
+
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [first, second],
+            now: now
+        )
+
+        #expect(seeded.snapshots.count == 1)
+        #expect(seeded.snapshots[0].accountKey == "account:user-shared")
+    }
+
+    @Test
+    func usageAnalyticsUpdateTrimsRecordsOutsideRetentionWindow() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let veryOld = calendar.date(
+            byAdding: .day,
+            value: -(UsageAnalyticsEngine.retentionDays + 1),
+            to: now
+        )!
+
+        let state = UsageAnalyticsState(
+            records: [
+                UsageAnalyticsRecord(
+                    timestamp: veryOld,
+                    accountKey: "old",
+                    weeklyDeltaPercent: 10,
+                    fiveHourDeltaPercent: 0
+                )
+            ],
+            snapshots: [],
+            lastUpdatedAt: veryOld
+        )
+
+        let account = AgentAccount(
+            id: UUID(),
+            name: "A",
+            usedUnits: 10,
+            quota: 100,
+            chatGPTAccountID: "user-a",
+            primaryUsagePercent: 5,
+            isPaid: true
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: state,
+            accounts: [account],
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(updated.records.isEmpty)
+    }
+
+    @Test
     func usageAnalyticsUpdateHandlesDuplicateAccountKeysWithoutCrash() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let duplicateKey = "account:user-duplicate"
