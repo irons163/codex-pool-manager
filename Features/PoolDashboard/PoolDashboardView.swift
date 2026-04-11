@@ -3,6 +3,9 @@ import UserNotifications
 #if canImport(AppKit)
 import AppKit
 #endif
+#if canImport(UniformTypeIdentifiers)
+import UniformTypeIdentifiers
+#endif
 
 struct PoolDashboardView: View {
     private enum SyncPolicy {
@@ -2044,6 +2047,7 @@ struct PoolDashboardView: View {
         usageAnalyticsState = UsageAnalyticsEngine.seed(
             state: usageAnalyticsState,
             accounts: state.accounts,
+            activeAccountKey: state.activeAccount?.deduplicationKey,
             now: now
         )
         persistUsageAnalyticsState()
@@ -2054,6 +2058,7 @@ struct PoolDashboardView: View {
         usageAnalyticsState = UsageAnalyticsEngine.update(
             state: usageAnalyticsState,
             accounts: state.accounts,
+            activeAccountKey: state.activeAccount?.deduplicationKey,
             now: now
         )
         persistUsageAnalyticsState()
@@ -2704,6 +2709,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     let accounts: [AgentAccount]
     @State private var chartGranularity: ChartGranularity = .daily
     @State private var selectedAccountKey: String? = nil
+    @State private var exportStatus: (message: String, tone: PanelStatusCalloutView.Tone)? = nil
 
     private var summary: UsageAnalyticsSummary {
         UsageAnalyticsEngine.summary(for: analyticsState, now: Date())
@@ -2724,6 +2730,57 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             now: Date(),
             weeks: 8,
             accountKey: selectedAccountKey
+        )
+    }
+
+    private var etasByAccountKey: [String: UsageAnalyticsETA] {
+        UsageAnalyticsEngine.etas(
+            accounts: accounts,
+            state: analyticsState,
+            now: Date()
+        )
+    }
+
+    private var sortedETAs: [UsageAnalyticsETA] {
+        etasByAccountKey
+            .values
+            .sorted { lhs, rhs in
+                if lhs.remainingPercent != rhs.remainingPercent {
+                    return lhs.remainingPercent > rhs.remainingPercent
+                }
+                return lhs.accountKey.localizedCaseInsensitiveCompare(rhs.accountKey) == .orderedAscending
+            }
+    }
+
+    private var thresholdEvents: [UsageAnalyticsThresholdEvent] {
+        UsageAnalyticsEngine.thresholdTimeline(
+            for: analyticsState,
+            accountKey: selectedAccountKey,
+            limit: 8
+        )
+    }
+
+    private var switchEffectiveness: UsageAnalyticsSwitchEffectiveness {
+        UsageAnalyticsEngine.switchEffectiveness(for: analyticsState)
+    }
+
+    private var coverageSummary: UsageAnalyticsCoverageSummary {
+        UsageAnalyticsEngine.projectedCoverage(accounts: accounts, now: Date())
+    }
+
+    private var anomalyEvents: [UsageAnalyticsAnomaly] {
+        UsageAnalyticsEngine.anomalies(
+            state: analyticsState,
+            accounts: accounts,
+            now: Date()
+        )
+    }
+
+    private var recommendation: UsageAnalyticsRecommendation {
+        UsageAnalyticsEngine.recommendation(
+            accounts: accounts,
+            activeAccountKey: analyticsState.lastActiveAccountKey,
+            etasByAccountKey: etasByAccountKey
         )
     }
 
@@ -2813,6 +2870,11 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 } else {
                     chartView
                     insightsView
+                    operationsView
+                    coverageAndSwitchView
+                    recommendationView
+                    thresholdAndAnomalyView
+                    etaView
                 }
             }
         }
@@ -3025,6 +3087,170 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         }
     }
 
+    private var operationsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(L10n.text("usage_analytics.section.export"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Button(L10n.text("usage_analytics.export.copy_json")) {
+                    copyJSONReportToClipboard()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L10n.text("usage_analytics.export.csv")) {
+                    exportCSVReport()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L10n.text("usage_analytics.export.json")) {
+                    exportJSONReport()
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let exportStatus {
+                PanelStatusCalloutView(
+                    message: exportStatus.message,
+                    tone: exportStatus.tone
+                )
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var coverageAndSwitchView: some View {
+        HStack(spacing: 8) {
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.coverage"),
+                value: ratioText(coverageSummary.coveredRatio)
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.uncovered_slots"),
+                value: "\(coverageSummary.uncoveredSlots)/\(coverageSummary.totalSlots)"
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.switch_gain"),
+                value: String(format: "%.1f%%", switchEffectiveness.averageRemainingGain)
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.switch_improved"),
+                value: ratioText(switchEffectiveness.improvedRate)
+            )
+        }
+    }
+
+    private var recommendationView: some View {
+        let targetName = recommendation.targetAccountKey.flatMap { accountNameByKey[$0] ?? $0 }
+        let titleKey = targetName == nil ? "usage_analytics.recommendation.none" : "usage_analytics.recommendation.title"
+        let message = targetName.map { "\($0) · \(recommendation.reason)" } ?? recommendation.reason
+        return PanelStatusCalloutView(
+            message: message,
+            title: L10n.text(titleKey),
+            tone: recommendation.targetAccountKey == nil ? .info : .success
+        )
+    }
+
+    private var thresholdAndAnomalyView: some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.text("usage_analytics.section.thresholds"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                if thresholdEvents.isEmpty {
+                    Text(L10n.text("usage_analytics.empty_thresholds"))
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                } else {
+                    ForEach(thresholdEvents) { event in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(thresholdEventHeadline(event))
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            Text(thresholdEventDetail(event))
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dashboardInfoCard()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.text("usage_analytics.section.anomalies"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                if anomalyEvents.isEmpty {
+                    Text(L10n.text("usage_analytics.empty_anomalies"))
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                } else {
+                    ForEach(anomalyEvents.prefix(6)) { event in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.title)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(anomalyColor(for: event.severity))
+                            Text(event.detail)
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dashboardInfoCard()
+        }
+    }
+
+    private var etaView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("usage_analytics.section.eta"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            if sortedETAs.isEmpty {
+                Text(L10n.text("usage_analytics.empty_eta"))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            } else {
+                ForEach(displayedETAs, id: \.accountKey) { eta in
+                    HStack(alignment: .center, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(accountNameByKey[eta.accountKey] ?? eta.accountKey)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                                .lineLimit(1)
+                            Text(etaSubtitle(eta))
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        Text(etaValueText(eta))
+                            .font(.footnote.weight(.bold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var displayedETAs: [UsageAnalyticsETA] {
+        if let selectedAccountKey {
+            return sortedETAs.filter { $0.accountKey == selectedAccountKey }
+        }
+        return Array(sortedETAs.prefix(6))
+    }
+
     private func summaryCard(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
@@ -3064,6 +3290,138 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         guard let key else { return L10n.text("usage_analytics.not_available") }
         let name = accounts.first(where: { $0.deduplicationKey == key })?.name ?? key
         return L10n.text("usage_analytics.top_account_format", name, weeklyPercent)
+    }
+
+    private func thresholdEventHeadline(_ event: UsageAnalyticsThresholdEvent) -> String {
+        let kind = event.kind == .weekly
+            ? L10n.text("usage_analytics.threshold.weekly")
+            : L10n.text("usage_analytics.threshold.five_hour")
+        let account = accountNameByKey[event.accountKey] ?? event.accountKey
+        return L10n.text("usage_analytics.threshold.headline", account, kind, event.thresholdPercent)
+    }
+
+    private func thresholdEventDetail(_ event: UsageAnalyticsThresholdEvent) -> String {
+        let previous = L10n.text("usage_analytics.percent_format", event.previousRemainingPercent)
+        let current = L10n.text("usage_analytics.percent_format", event.currentRemainingPercent)
+        let time = event.timestamp.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+        return L10n.text("usage_analytics.threshold.detail", previous, current, time)
+    }
+
+    private func anomalyColor(for severity: UsageAnalyticsAnomaly.Severity) -> Color {
+        switch severity {
+        case .critical:
+            return PoolDashboardTheme.danger
+        case .warning:
+            return PoolDashboardTheme.warning
+        case .info:
+            return PoolDashboardTheme.textSecondary
+        }
+    }
+
+    private func etaSubtitle(_ eta: UsageAnalyticsETA) -> String {
+        let remaining = L10n.text("usage_analytics.percent_format", eta.remainingPercent)
+        return L10n.text(
+            "usage_analytics.eta.subtitle",
+            remaining,
+            String(format: "%.1f", eta.burnPerHour)
+        )
+    }
+
+    private func etaValueText(_ eta: UsageAnalyticsETA) -> String {
+        guard let hours = eta.etaHours else {
+            return L10n.text("usage_analytics.not_available")
+        }
+        if hours < 1 {
+            return L10n.text("usage_analytics.eta.less_than_hour")
+        }
+        return L10n.text("usage_analytics.eta.hours", Int(hours.rounded()))
+    }
+
+    private func ratioText(_ ratio: Double) -> String {
+        "\(Int((ratio * 100).rounded()))%"
+    }
+
+    private func copyJSONReportToClipboard() {
+        let report = UsageAnalyticsEngine.jsonReport(
+            state: analyticsState,
+            accounts: accounts,
+            activeAccountKey: analyticsState.lastActiveAccountKey,
+            now: Date()
+        )
+        #if canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
+        exportStatus = (L10n.text("usage_analytics.export.success.copy_json"), .success)
+        #else
+        exportStatus = (L10n.text("usage_analytics.export.failure.copy_json"), .danger)
+        #endif
+    }
+
+    private func exportCSVReport() {
+        let content = UsageAnalyticsEngine.csvReport(state: analyticsState, accounts: accounts)
+        let success = saveReport(
+            content: content,
+            filename: "usage-analytics-\(timestampForFilename())",
+            fileExtension: "csv"
+        )
+        exportStatus = (
+            success ? L10n.text("usage_analytics.export.success.csv") : L10n.text("usage_analytics.export.failure.csv"),
+            success ? .success : .danger
+        )
+    }
+
+    private func exportJSONReport() {
+        let content = UsageAnalyticsEngine.jsonReport(
+            state: analyticsState,
+            accounts: accounts,
+            activeAccountKey: analyticsState.lastActiveAccountKey,
+            now: Date()
+        )
+        let success = saveReport(
+            content: content,
+            filename: "usage-analytics-\(timestampForFilename())",
+            fileExtension: "json"
+        )
+        exportStatus = (
+            success ? L10n.text("usage_analytics.export.success.json") : L10n.text("usage_analytics.export.failure.json"),
+            success ? .success : .danger
+        )
+    }
+
+    private func saveReport(content: String, filename: String, fileExtension: String) -> Bool {
+        #if canImport(AppKit)
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "\(filename).\(fileExtension)"
+        if #available(macOS 12.0, *) {
+            if let contentType = UTType(filenameExtension: fileExtension) {
+                panel.allowedContentTypes = [contentType]
+            }
+        } else {
+            panel.allowedFileTypes = [fileExtension]
+        }
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return false
+        }
+
+        do {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+            return true
+        } catch {
+            return false
+        }
+        #else
+        return false
+        #endif
+    }
+
+    private func timestampForFilename() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter.string(from: Date())
     }
 }
 

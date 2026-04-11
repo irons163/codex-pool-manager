@@ -95,7 +95,7 @@ struct CodexPoolManagerTests {
                 AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
             ],
             mode: .intelligent,
-            minSwitchInterval: 300,
+            minSwitchInterval: 0,
             lowUsageThresholdRatio: 0.15,
             minUsageRatioDeltaToSwitch: 0.15
         )
@@ -509,6 +509,201 @@ struct CodexPoolManagerTests {
 
         #expect(updated.snapshots.count == 1)
         #expect(updated.snapshots[0].accountKey == duplicateKey)
+    }
+
+    @Test
+    func usageAnalyticsEmitsThresholdEventsWhenRemainingCrossesLevels() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000D4")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let seededAccount = AgentAccount(
+            id: accountID,
+            name: "Threshold",
+            usedUnits: 20,
+            quota: 100,
+            chatGPTAccountID: "user-threshold",
+            usageWindowResetAt: now.addingTimeInterval(7 * 24 * 3600),
+            primaryUsagePercent: 20,
+            primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+            isPaid: true
+        )
+        let seeded = UsageAnalyticsEngine.seed(state: UsageAnalyticsState(), accounts: [seededAccount], now: now)
+
+        let updatedAccount = AgentAccount(
+            id: accountID,
+            name: "Threshold",
+            usedUnits: 55,
+            quota: 100,
+            chatGPTAccountID: "user-threshold",
+            usageWindowResetAt: now.addingTimeInterval(7 * 24 * 3600),
+            primaryUsagePercent: 55,
+            primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+            isPaid: true
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [updatedAccount],
+            now: now.addingTimeInterval(120)
+        )
+
+        #expect(updated.thresholdEvents.count == 2)
+        #expect(updated.thresholdEvents.contains { $0.kind == .weekly && $0.thresholdPercent == 50 })
+        #expect(updated.thresholdEvents.contains { $0.kind == .fiveHour && $0.thresholdPercent == 50 })
+    }
+
+    @Test
+    func usageAnalyticsSwitchEffectivenessUsesMeasurableEvents() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let state = UsageAnalyticsState(
+            records: [],
+            snapshots: [],
+            thresholdEvents: [],
+            switchEvents: [
+                UsageAnalyticsSwitchEvent(
+                    timestamp: now.addingTimeInterval(-120),
+                    fromAccountKey: "a",
+                    toAccountKey: "b",
+                    fromRemainingPercent: 20,
+                    toRemainingPercent: 80,
+                    trigger: "sync"
+                ),
+                UsageAnalyticsSwitchEvent(
+                    timestamp: now.addingTimeInterval(-60),
+                    fromAccountKey: "b",
+                    toAccountKey: "c",
+                    fromRemainingPercent: 70,
+                    toRemainingPercent: 30,
+                    trigger: "sync"
+                ),
+                UsageAnalyticsSwitchEvent(
+                    timestamp: now.addingTimeInterval(-30),
+                    fromAccountKey: "c",
+                    toAccountKey: "a",
+                    fromRemainingPercent: nil,
+                    toRemainingPercent: 40,
+                    trigger: "sync"
+                )
+            ],
+            lastUpdatedAt: now
+        )
+
+        let summary = UsageAnalyticsEngine.switchEffectiveness(for: state)
+        #expect(summary.switchCount == 3)
+        #expect(summary.averageRemainingGain == 10)
+        #expect(summary.improvedRate == 0.5)
+    }
+
+    @Test
+    func usageAnalyticsProjectedCoverageReportsUncoveredWhenAllAccountsResetTogether() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let sameResetAt = now.addingTimeInterval(10 * 60)
+        let accounts = [
+            AgentAccount(
+                id: UUID(),
+                name: "A",
+                usedUnits: 10,
+                quota: 100,
+                usageWindowResetAt: sameResetAt
+            ),
+            AgentAccount(
+                id: UUID(),
+                name: "B",
+                usedUnits: 20,
+                quota: 100,
+                usageWindowResetAt: sameResetAt
+            )
+        ]
+
+        let coverage = UsageAnalyticsEngine.projectedCoverage(
+            accounts: accounts,
+            now: now,
+            horizonHours: 1,
+            slotMinutes: 30
+        )
+
+        #expect(coverage.uncoveredSlots >= 1)
+        #expect(coverage.collisionRatio > 0)
+    }
+
+    @Test
+    func usageAnalyticsRecommendationPrefersHigherRemainingCandidate() {
+        let accountA = AgentAccount(
+            id: UUID(),
+            name: "A",
+            usedUnits: 80,
+            quota: 100,
+            chatGPTAccountID: "user-a",
+            isPaid: false
+        )
+        let accountB = AgentAccount(
+            id: UUID(),
+            name: "B",
+            usedUnits: 10,
+            quota: 100,
+            chatGPTAccountID: "user-b",
+            isPaid: false
+        )
+
+        let recommendation = UsageAnalyticsEngine.recommendation(
+            accounts: [accountA, accountB],
+            activeAccountKey: accountA.deduplicationKey,
+            etasByAccountKey: [:]
+        )
+
+        #expect(recommendation.targetAccountKey == accountB.deduplicationKey)
+        #expect(!recommendation.reason.isEmpty)
+    }
+
+    @Test
+    func usageAnalyticsJsonExportIncludesComputedSections() throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let record = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-3600),
+            accountKey: "account:user-a",
+            weeklyDeltaPercent: 12,
+            fiveHourDeltaPercent: 4,
+            weeklyAbsolutePercent: 40,
+            fiveHourAbsolutePercent: 20,
+            weeklyRemainingPercent: 60,
+            fiveHourRemainingPercent: 80,
+            weeklyResetAt: now.addingTimeInterval(7 * 24 * 3600),
+            fiveHourResetAt: now.addingTimeInterval(5 * 3600),
+            activeAccountKeyAtSync: "account:user-a"
+        )
+        let state = UsageAnalyticsState(
+            records: [record],
+            snapshots: [],
+            thresholdEvents: [],
+            switchEvents: [],
+            lastActiveAccountKey: "account:user-a",
+            lastUpdatedAt: now
+        )
+        let accounts = [
+            AgentAccount(
+                id: UUID(),
+                name: "A",
+                usedUnits: 40,
+                quota: 100,
+                chatGPTAccountID: "user-a",
+                primaryUsagePercent: 20,
+                isPaid: true
+            )
+        ]
+
+        let json = UsageAnalyticsEngine.jsonReport(
+            state: state,
+            accounts: accounts,
+            activeAccountKey: "account:user-a",
+            now: now
+        )
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let payload = try decoder.decode(UsageAnalyticsExportPayload.self, from: Data(json.utf8))
+
+        #expect(payload.records.count == 1)
+        #expect(payload.summary.weekWeeklyPercent == 12)
+        #expect(payload.coverage.totalSlots > 0)
     }
 
     @Test
@@ -1609,12 +1804,11 @@ struct CodexPoolManagerTests {
 
         let client = MockCodexUsageClient(responseByToken: [:], shouldThrow: true)
         let sync = CodexUsageSyncService(client: client)
-        do {
-            try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
-            Issue.record("Expected sync to throw")
-        } catch {
-            #expect(state.accounts[0].usedUnits == 10)
-        }
+        try? await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].usedUnits == 10)
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.network.localizedDescription)
     }
 
     @Test
@@ -1796,15 +1990,10 @@ struct CodexPoolManagerTests {
             shouldThrowError: CodexClientHTTPError(statusCode: 401)
         )
         let sync = CodexUsageSyncService(client: client)
+        try? await sync.sync(state: &state)
 
-        do {
-            try await sync.sync(state: &state)
-            Issue.record("Expected unauthorized error")
-        } catch let error as CodexSyncError {
-            #expect(error == .unauthorized)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
-        }
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.unauthorized.localizedDescription)
     }
 
     @Test
@@ -1823,15 +2012,10 @@ struct CodexPoolManagerTests {
             shouldThrowError: CodexClientHTTPError(statusCode: 429)
         )
         let sync = CodexUsageSyncService(client: client)
+        try? await sync.sync(state: &state)
 
-        do {
-            try await sync.sync(state: &state)
-            Issue.record("Expected rate limit error")
-        } catch let error as CodexSyncError {
-            #expect(error == .rateLimited)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
-        }
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.rateLimited.localizedDescription)
     }
 
     @Test
@@ -2544,8 +2728,8 @@ extension CodexPoolManagerTests {
         )
 
         #expect(presenter.isPercentUsageAccount(account))
-        #expect(presenter.usageSourceLabel(for: account) == "用量來源：response.rate_limit.primary_window.used_percent")
-        #expect(presenter.remainingLabel(for: account) == "剩餘 89%")
+        #expect(presenter.usageSourceLabel(for: account) == L10n.text("usage.source.percent"))
+        #expect(presenter.remainingLabel(for: account) == L10n.text("usage.remaining_percent_format", 89))
     }
 
     @Test
@@ -2561,9 +2745,9 @@ extension CodexPoolManagerTests {
         )
 
         #expect(!presenter.isPercentUsageAccount(account))
-        #expect(presenter.usageSourceLabel(for: account) == "用量來源：手動/本地設定")
+        #expect(presenter.usageSourceLabel(for: account) == L10n.text("usage.source.manual"))
         #expect(presenter.usageWindowDetailLabel(for: account) == nil)
-        #expect(presenter.remainingLabel(for: account) == "剩餘 988")
+        #expect(presenter.remainingLabel(for: account) == L10n.text("usage.remaining_units_format", 988))
     }
 
     @Test
@@ -2582,8 +2766,8 @@ extension CodexPoolManagerTests {
 
         let label = presenter.usageWindowDetailLabel(for: account)
 
-        #expect(label?.contains("視窗：primary_window") == true)
-        #expect(label?.contains("重置：") == true)
+        #expect(label?.contains("primary_window") == true)
+        #expect(label?.contains(" · ") == true)
     }
 
     @Test
@@ -3094,9 +3278,10 @@ extension CodexPoolManagerTests {
             authorizeAuthFile: { nil }
         )
 
-        #expect(output.viewModel.errorMessage == "此帳號沒有可用 token，無法切換")
+        #expect(output.viewModel.errorMessage == nil)
+        #expect(output.viewState.switchLaunchError == L10n.text("switch.error.missing_token"))
         #expect(output.sessionAuthorizedAuthFileURL == nil)
-        #expect(output.viewState.lastSwitchLaunchLog.contains("失敗：沒有 token"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("switch.log.missing_token")))
     }
 
     @Test
@@ -3250,7 +3435,8 @@ extension CodexPoolManagerTests {
         )
 
         #expect(viewState.lastSwitchLaunchLog == "line-1")
-        #expect(viewModel.errorMessage == "switch-failed")
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewState.switchLaunchError == "switch-failed")
         #expect(authorizedURL == expectedURL)
     }
 
