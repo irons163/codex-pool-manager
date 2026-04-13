@@ -2692,6 +2692,13 @@ private struct ScheduleWorkspacePanelView: View {
 }
 
 private struct UsageAnalyticsWorkspacePanelView: View {
+    private enum AnalysisBasis: String, CaseIterable, Identifiable {
+        case usage
+        case remaining
+
+        var id: String { rawValue }
+    }
+
     private enum ChartGranularity: String, CaseIterable, Identifiable {
         case daily
         case weekly
@@ -2707,6 +2714,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     let analyticsState: UsageAnalyticsState
     let accounts: [AgentAccount]
+    @State private var analysisBasis: AnalysisBasis = .usage
     @State private var chartGranularity: ChartGranularity = .daily
     @State private var selectedAccountKey: String? = nil
     @State private var exportStatus: (message: String, tone: PanelStatusCalloutView.Tone)? = nil
@@ -2807,20 +2815,80 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     private var chartEntries: [ChartEntry] {
         switch chartGranularity {
         case .daily:
-            return dailyTotals.map { daily in
+            let values: [UsageAnalyticsDailyTotal] = analysisBasis == .usage
+                ? dailyTotals
+                : dailyRemainingTotals
+            return values.map { daily in
                 ChartEntry(
                     label: daily.date.formatted(.dateTime.locale(L10n.locale()).weekday(.abbreviated)),
                     value: daily.totalWeeklyPercent
                 )
             }
         case .weekly:
-            return weeklyTotals.map { weekly in
+            let values: [UsageAnalyticsWeeklyTotal] = analysisBasis == .usage
+                ? weeklyTotals
+                : weeklyRemainingTotals
+            return values.map { weekly in
                 ChartEntry(
                     label: weeklyLabel(weekly.weekStartDate),
                     value: weekly.totalWeeklyPercent
                 )
             }
         }
+    }
+
+    private var deduplicatedAccountsByKey: [String: AgentAccount] {
+        var mapping: [String: AgentAccount] = [:]
+        for account in accounts {
+            if mapping[account.deduplicationKey] == nil {
+                mapping[account.deduplicationKey] = account
+            }
+        }
+        return mapping
+    }
+
+    private var averageWeeklyRemainingPercent: Int {
+        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        guard !deduplicated.isEmpty else { return 0 }
+        let sum = deduplicated.reduce(0) { partial, account in
+            partial + max(0, min(100, Int((account.remainingRatio * 100).rounded())))
+        }
+        return Int((Double(sum) / Double(deduplicated.count)).rounded())
+    }
+
+    private var lowestWeeklyRemainingPercent: Int {
+        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        guard !deduplicated.isEmpty else { return 0 }
+        return deduplicated
+            .map { max(0, min(100, Int(($0.remainingRatio * 100).rounded()))) }
+            .min() ?? 0
+    }
+
+    private var averageFiveHourRemainingPercent: Int {
+        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        let values = deduplicated.compactMap { account -> Int? in
+            guard let absolute = account.primaryUsagePercent else { return nil }
+            return max(0, 100 - min(max(absolute, 0), 100))
+        }
+        guard !values.isEmpty else { return 0 }
+        return Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
+    }
+
+    private var lowestFiveHourRemainingPercent: Int {
+        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        let values = deduplicated.compactMap { account -> Int? in
+            guard let absolute = account.primaryUsagePercent else { return nil }
+            return max(0, 100 - min(max(absolute, 0), 100))
+        }
+        return values.min() ?? 0
+    }
+
+    private var dailyRemainingTotals: [UsageAnalyticsDailyTotal] {
+        dailyRemainingSeries(days: 7)
+    }
+
+    private var weeklyRemainingTotals: [UsageAnalyticsWeeklyTotal] {
+        weeklyRemainingSeries(weeks: 8)
     }
 
     var body: some View {
@@ -2843,22 +2911,54 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
                 HStack(spacing: 8) {
-                    summaryCard(
-                        title: L10n.text("usage_analytics.summary.today_weekly"),
-                        value: L10n.text("usage_analytics.percent_format", summary.todayWeeklyPercent)
-                    )
-                    summaryCard(
-                        title: L10n.text("usage_analytics.summary.weekly"),
-                        value: L10n.text("usage_analytics.percent_format", summary.weekWeeklyPercent)
-                    )
-                    summaryCard(
-                        title: L10n.text("usage_analytics.summary.today_five_hour"),
-                        value: L10n.text("usage_analytics.percent_format", summary.todayFiveHourPercent)
-                    )
-                    summaryCard(
-                        title: L10n.text("usage_analytics.summary.week_five_hour"),
-                        value: L10n.text("usage_analytics.percent_format", summary.weekFiveHourPercent)
-                    )
+                    Text(L10n.text("usage_analytics.basis.label"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                    Picker(L10n.text("usage_analytics.basis.label"), selection: $analysisBasis) {
+                        Text(L10n.text("usage_analytics.basis.usage")).tag(AnalysisBasis.usage)
+                        Text(L10n.text("usage_analytics.basis.remaining")).tag(AnalysisBasis.remaining)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 260)
+                }
+
+                HStack(spacing: 8) {
+                    if analysisBasis == .usage {
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.today_weekly"),
+                            value: L10n.text("usage_analytics.percent_format", summary.todayWeeklyPercent)
+                        )
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.weekly"),
+                            value: L10n.text("usage_analytics.percent_format", summary.weekWeeklyPercent)
+                        )
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.today_five_hour"),
+                            value: L10n.text("usage_analytics.percent_format", summary.todayFiveHourPercent)
+                        )
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.week_five_hour"),
+                            value: L10n.text("usage_analytics.percent_format", summary.weekFiveHourPercent)
+                        )
+                    } else {
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.avg_weekly_remaining"),
+                            value: L10n.text("usage_analytics.percent_format", averageWeeklyRemainingPercent)
+                        )
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.lowest_weekly_remaining"),
+                            value: L10n.text("usage_analytics.percent_format", lowestWeeklyRemainingPercent)
+                        )
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.avg_five_hour_remaining"),
+                            value: L10n.text("usage_analytics.percent_format", averageFiveHourRemainingPercent)
+                        )
+                        summaryCard(
+                            title: L10n.text("usage_analytics.summary.lowest_five_hour_remaining"),
+                            value: L10n.text("usage_analytics.percent_format", lowestFiveHourRemainingPercent)
+                        )
+                    }
                 }
 
                 if analyticsState.records.isEmpty {
@@ -2900,7 +3000,11 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     private var chartView: some View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 8) {
-                Text(L10n.text("usage_analytics.chart.title"))
+                Text(
+                    analysisBasis == .usage
+                    ? L10n.text("usage_analytics.chart.title")
+                    : L10n.text("usage_analytics.chart.remaining_title")
+                )
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
 
@@ -3072,18 +3176,33 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     private var insightsView: some View {
         HStack(spacing: 8) {
-            summaryCard(
-                title: L10n.text("usage_analytics.insight.peak_hour"),
-                value: peakHourText(summary.peakHour)
-            )
-            summaryCard(
-                title: L10n.text("usage_analytics.insight.peak_day"),
-                value: peakWeekdayText(summary.peakWeekday)
-            )
-            summaryCard(
-                title: L10n.text("usage_analytics.insight.top_account"),
-                value: topAccountText(key: summary.topAccountKey, weeklyPercent: summary.topAccountWeeklyPercent)
-            )
+            if analysisBasis == .usage {
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.peak_hour"),
+                    value: peakHourText(summary.peakHour)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.peak_day"),
+                    value: peakWeekdayText(summary.peakWeekday)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.top_account"),
+                    value: topAccountText(key: summary.topAccountKey, weeklyPercent: summary.topAccountWeeklyPercent)
+                )
+            } else {
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.lowest_remaining_account"),
+                    value: lowestRemainingAccountText
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.best_remaining_account"),
+                    value: bestRemainingAccountText
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.tracked_accounts"),
+                    value: "\(deduplicatedAccountsByKey.count)"
+                )
+            }
         }
     }
 
@@ -3339,6 +3458,133 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     private func ratioText(_ ratio: Double) -> String {
         "\(Int((ratio * 100).rounded()))%"
+    }
+
+    private var bestRemainingAccountText: String {
+        let pairs = deduplicatedAccountsByKey.map { key, account in
+            (key: key, name: account.name, remaining: max(0, min(100, Int((account.remainingRatio * 100).rounded()))))
+        }
+        guard let best = pairs.max(by: { lhs, rhs in lhs.remaining < rhs.remaining }) else {
+            return L10n.text("usage_analytics.not_available")
+        }
+        return "\(best.name) · \(best.remaining)%"
+    }
+
+    private var lowestRemainingAccountText: String {
+        let pairs = deduplicatedAccountsByKey.map { key, account in
+            (key: key, name: account.name, remaining: max(0, min(100, Int((account.remainingRatio * 100).rounded()))))
+        }
+        guard let lowest = pairs.min(by: { lhs, rhs in lhs.remaining < rhs.remaining }) else {
+            return L10n.text("usage_analytics.not_available")
+        }
+        return "\(lowest.name) · \(lowest.remaining)%"
+    }
+
+    private func dailyRemainingSeries(days: Int) -> [UsageAnalyticsDailyTotal] {
+        guard days > 0 else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        let todayStart = calendar.startOfDay(for: Date())
+        var totals: [UsageAnalyticsDailyTotal] = []
+
+        for dayOffset in stride(from: days - 1, through: 0, by: -1) {
+            guard let dayStart = calendar.date(byAdding: .day, value: -dayOffset, to: todayStart),
+                  let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+                continue
+            }
+
+            let records = analyticsState.records.filter {
+                $0.timestamp >= dayStart
+                && $0.timestamp < dayEnd
+                && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+            }
+
+            let value: Int
+            if records.isEmpty {
+                value = remainingFallbackValue(accountKey: selectedAccountKey)
+            } else if let selectedAccountKey {
+                let latest = records
+                    .filter { $0.accountKey == selectedAccountKey }
+                    .max(by: { $0.timestamp < $1.timestamp })
+                value = latest?.weeklyRemainingPercent ?? remainingFallbackValue(accountKey: selectedAccountKey)
+            } else {
+                let latestByKey = Dictionary(grouping: records, by: \.accountKey).compactMapValues { bucket in
+                    bucket.max(by: { $0.timestamp < $1.timestamp })?.weeklyRemainingPercent
+                }
+                if latestByKey.isEmpty {
+                    value = remainingFallbackValue(accountKey: nil)
+                } else {
+                    let average = Double(latestByKey.values.reduce(0, +)) / Double(latestByKey.count)
+                    value = Int(average.rounded())
+                }
+            }
+
+            totals.append(UsageAnalyticsDailyTotal(date: dayStart, totalWeeklyPercent: max(0, min(100, value))))
+        }
+
+        return totals
+    }
+
+    private func weeklyRemainingSeries(weeks: Int) -> [UsageAnalyticsWeeklyTotal] {
+        guard weeks > 0 else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        guard let currentWeek = calendar.dateInterval(of: .weekOfYear, for: Date()) else { return [] }
+        var totals: [UsageAnalyticsWeeklyTotal] = []
+
+        for weekOffset in stride(from: weeks - 1, through: 0, by: -1) {
+            guard let weekStart = calendar.date(byAdding: .weekOfYear, value: -weekOffset, to: currentWeek.start),
+                  let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
+                continue
+            }
+
+            let records = analyticsState.records.filter {
+                $0.timestamp >= weekStart
+                && $0.timestamp < weekEnd
+                && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+            }
+
+            let value: Int
+            if records.isEmpty {
+                value = remainingFallbackValue(accountKey: selectedAccountKey)
+            } else if let selectedAccountKey {
+                let latest = records
+                    .filter { $0.accountKey == selectedAccountKey }
+                    .max(by: { $0.timestamp < $1.timestamp })
+                value = latest?.weeklyRemainingPercent ?? remainingFallbackValue(accountKey: selectedAccountKey)
+            } else {
+                let latestByKey = Dictionary(grouping: records, by: \.accountKey).compactMapValues { bucket in
+                    bucket.max(by: { $0.timestamp < $1.timestamp })?.weeklyRemainingPercent
+                }
+                if latestByKey.isEmpty {
+                    value = remainingFallbackValue(accountKey: nil)
+                } else {
+                    let average = Double(latestByKey.values.reduce(0, +)) / Double(latestByKey.count)
+                    value = Int(average.rounded())
+                }
+            }
+
+            totals.append(
+                UsageAnalyticsWeeklyTotal(
+                    weekStartDate: weekStart,
+                    totalWeeklyPercent: max(0, min(100, value))
+                )
+            )
+        }
+
+        return totals
+    }
+
+    private func remainingFallbackValue(accountKey: String?) -> Int {
+        if let accountKey {
+            if let snapshot = analyticsState.snapshots.first(where: { $0.accountKey == accountKey }) {
+                return max(0, min(100, 100 - snapshot.lastWeeklyPercent))
+            }
+            if let account = deduplicatedAccountsByKey[accountKey] {
+                return max(0, min(100, Int((account.remainingRatio * 100).rounded())))
+            }
+            return 0
+        }
+
+        return averageWeeklyRemainingPercent
     }
 
     private func copyJSONReportToClipboard() {

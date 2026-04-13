@@ -242,13 +242,24 @@
 "usage_analytics.summary.weekly" = "近 7 天（週用量）";
 "usage_analytics.summary.today_five_hour" = "今日（5 小時）";
 "usage_analytics.summary.week_five_hour" = "近 7 天（5 小時）";
+
+"usage_analytics.summary.avg_weekly_remaining" = "平均週剩餘";
+"usage_analytics.summary.lowest_weekly_remaining" = "最低週剩餘";
+"usage_analytics.summary.avg_five_hour_remaining" = "平均 5 小時剩餘";
+"usage_analytics.summary.lowest_five_hour_remaining" = "最低 5 小時剩餘";
 "usage_analytics.percent_format" = "%d%%";
 "usage_analytics.chart.title" = "7 天用量";
+
+"usage_analytics.chart.remaining_title" = "剩餘量趨勢";
 "usage_analytics.chart.granularity" = "顯示粒度";
 "usage_analytics.chart.daily" = "日";
 "usage_analytics.chart.weekly" = "週";
 "usage_analytics.chart.account" = "帳號";
 "usage_analytics.chart.all_accounts" = "全部帳號";
+
+"usage_analytics.basis.label" = "分析基準";
+"usage_analytics.basis.usage" = "使用量";
+"usage_analytics.basis.remaining" = "剩餘量";
 "usage_analytics.section.export" = "匯出";
 "usage_analytics.section.thresholds" = "門檻時間軸";
 "usage_analytics.section.anomalies" = "異常偵測";
@@ -281,6 +292,10 @@
 "usage_analytics.insight.peak_hour" = "尖峰時段";
 "usage_analytics.insight.peak_day" = "尖峰日";
 "usage_analytics.insight.top_account" = "最高用量帳號";
+
+"usage_analytics.insight.lowest_remaining_account" = "剩餘最低帳號";
+"usage_analytics.insight.best_remaining_account" = "剩餘最佳帳號";
+"usage_analytics.insight.tracked_accounts" = "追蹤帳號數";
 "usage_analytics.not_available" = "無資料";
 "usage_analytics.top_account_format" = "%@ · %d%%";
 "usage_analytics.empty_title" = "尚無用量紀錄";
