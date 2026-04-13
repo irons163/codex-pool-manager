@@ -100,7 +100,15 @@ All screenshots below use mock or non-sensitive test data.
 - Language switching via app settings.
 - Locale-aware time formatting for app/widget texts.
 
-### 8) OpenAI reset monitoring
+### 8) Usage analytics and schedule planning
+
+- Dedicated `Schedule` workspace for reset timeline planning across accounts.
+- Daily/weekly usage analytics to identify consumption patterns.
+- Coverage view to highlight potential uncovered windows between account resets.
+- Per-account trend lines, threshold events, and anomaly summaries.
+- Export analytics as JSON/CSV for reporting or external analysis.
+
+### 9) OpenAI reset monitoring
 
 - Dedicated `OpenAI Reset Alert` workspace for paid-account reset tracking.
 - Monitors weekly reset and 5-hour reset targets together.
@@ -210,6 +218,14 @@ The UI is organized into workspaces for clearer operational boundaries.
 - intelligent switch threshold
 - low-usage alert threshold
 - smart recommendation panel
+
+### Schedule
+
+- reset timeline overview across managed accounts
+- daily/weekly usage analytics summaries
+- coverage gap hints for planning account usage
+- per-account trend lines and threshold/anomaly events
+- analytics export (`Copy JSON`, `Export CSV`, `Export JSON`)
 
 ### OpenAI Reset Alert
 

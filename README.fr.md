@@ -100,7 +100,15 @@ Toutes les captures ci-dessous utilisent des données mock ou non sensibles.
 - Changement de langue dans les settings.
 - Formatage des dates selon la locale (app/widget).
 
-### 8) Monitoring OpenAI reset
+### 8) Analytique d'usage et planification Schedule
+
+- Workspace `Schedule` dédié à la planification des resets sur plusieurs comptes.
+- Analyse quotidienne/hebdomadaire de l'usage pour comprendre les habitudes.
+- Vue de couverture pour repérer les créneaux non couverts entre resets.
+- Courbes par compte, événements de seuil et résumés d'anomalies.
+- Export des données analytiques en JSON/CSV.
+
+### 9) Monitoring OpenAI reset
 
 - Espace dédié `OpenAI Reset Alert` pour les comptes payants.
 - Surveillance conjointe des resets hebdo et 5h.
@@ -205,6 +213,14 @@ Si le callback navigateur ne peut pas être finalisé in-app :
 - seuil intelligent de switch
 - seuil low-usage alert
 - panneau de recommandation
+
+### Schedule
+
+- vue timeline des resets sur les comptes gérés
+- synthèse d'usage quotidien/hebdomadaire
+- détection des gaps de couverture pour planifier l'utilisation
+- courbes par compte + événements de seuil/anomalies
+- export analytique (`Copy JSON`, `Export CSV`, `Export JSON`)
 
 ### OpenAI Reset Alert
 

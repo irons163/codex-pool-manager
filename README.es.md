@@ -100,7 +100,15 @@ Todas las capturas usan datos mock o no sensibles.
 - Cambio de idioma desde settings.
 - Formato de tiempo según locale en app/widget.
 
-### 8) Monitoreo de reset de OpenAI
+### 8) Analítica de uso y planificación en Schedule
+
+- Workspace `Schedule` para planificar resets entre múltiples cuentas.
+- Análisis diario/semanal de uso para entender hábitos de consumo.
+- Vista de cobertura para detectar ventanas sin cobertura entre resets.
+- Líneas de tendencia por cuenta, eventos de umbral y resumen de anomalías.
+- Exportación de analítica en JSON/CSV.
+
+### 9) Monitoreo de reset de OpenAI
 
 - Workspace dedicado `OpenAI Reset Alert` para cuentas de pago.
 - Monitorea juntos reset semanal y reset de 5 horas.
@@ -203,6 +211,14 @@ Si el callback del navegador no puede completarse dentro de la app:
 - umbral de cambio inteligente
 - umbral de low-usage alert
 - panel de recomendación
+
+### Schedule
+
+- vista timeline de resets para cuentas gestionadas
+- resumen analítico diario/semanal de uso
+- detección de gaps de cobertura para planificar mejor
+- líneas por cuenta y eventos de umbral/anomalías
+- exportación de analítica (`Copy JSON`, `Export CSV`, `Export JSON`)
 
 ### OpenAI Reset Alert
 
