@@ -4388,4 +4388,30 @@ extension CodexPoolManagerTests {
         #expect(result == nil)
     }
 
+    @Test
+    func specialResetNotificationPolicyAllowsOnlyOneNotificationPerDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+
+        let lastNotifiedAt = Date(timeIntervalSince1970: 1_760_000_000)
+        let sameDay = lastNotifiedAt.addingTimeInterval(6 * 3_600)
+        let nextDay = lastNotifiedAt.addingTimeInterval(25 * 3_600)
+
+        #expect(!SpecialResetNotificationPolicy.shouldNotify(
+            lastNotifiedAt: lastNotifiedAt,
+            now: sameDay,
+            calendar: calendar
+        ))
+        #expect(SpecialResetNotificationPolicy.shouldNotify(
+            lastNotifiedAt: lastNotifiedAt,
+            now: nextDay,
+            calendar: calendar
+        ))
+        #expect(SpecialResetNotificationPolicy.shouldNotify(
+            lastNotifiedAt: nil,
+            now: sameDay,
+            calendar: calendar
+        ))
+    }
+
 }

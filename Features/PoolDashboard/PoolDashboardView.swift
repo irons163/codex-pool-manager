@@ -74,6 +74,7 @@ struct PoolDashboardView: View {
         var records: [SpecialResetRecord] = []
         var events: [SpecialResetEvent] = []
         var lastEvaluatedAt: Date?
+        var lastNotificationAt: Date?
     }
     private struct SpecialResetDetection {
         let accountKey: String
@@ -1955,8 +1956,13 @@ struct PoolDashboardView: View {
                 )
             }
             specialResetWatchState.events = Array((newEvents + specialResetWatchState.events).prefix(40))
-            if specialResetWatchNotifyEnabled {
+            if specialResetWatchNotifyEnabled,
+               SpecialResetNotificationPolicy.shouldNotify(
+                   lastNotifiedAt: specialResetWatchState.lastNotificationAt,
+                   now: now
+               ) {
                 postSpecialResetDetections(detections)
+                specialResetWatchState.lastNotificationAt = now
             }
         }
 
@@ -1993,22 +1999,21 @@ struct PoolDashboardView: View {
     }
 
     private func postSpecialResetDetections(_ detections: [SpecialResetDetection]) {
-        for detection in detections {
-            let body = L10n.text(
-                "special_reset.notification.body_format",
-                detection.accountName,
-                specialResetDateText(detection.previousWeeklyExpectedAt),
-                specialResetDateText(detection.observedWeeklyNextResetAt),
-                specialResetDateText(detection.previousFiveHourExpectedAt),
-                specialResetDateText(detection.observedFiveHourNextResetAt)
-            )
-            DesktopNotifier.post(
-                key: "special-reset-\(detection.accountKey)-\(Int(detection.previousWeeklyExpectedAt.timeIntervalSince1970))-\(Int(detection.previousFiveHourExpectedAt.timeIntervalSince1970))",
-                title: L10n.text("special_reset.notification.title"),
-                body: body,
-                minInterval: 30
-            )
-        }
+        guard let detection = detections.first else { return }
+        let body = L10n.text(
+            "special_reset.notification.body_format",
+            detection.accountName,
+            specialResetDateText(detection.previousWeeklyExpectedAt),
+            specialResetDateText(detection.observedWeeklyNextResetAt),
+            specialResetDateText(detection.previousFiveHourExpectedAt),
+            specialResetDateText(detection.observedFiveHourNextResetAt)
+        )
+        DesktopNotifier.post(
+            key: "special-reset-daily",
+            title: L10n.text("special_reset.notification.title"),
+            body: body,
+            minInterval: 30
+        )
     }
 
     private func specialResetEventMessage(for event: SpecialResetEvent) -> String {
@@ -2114,6 +2119,17 @@ struct PoolDashboardView: View {
     private func notificationDateText(_ date: Date?) -> String {
         guard let date else { return "--" }
         return date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+    }
+}
+
+enum SpecialResetNotificationPolicy {
+    static func shouldNotify(
+        lastNotifiedAt: Date?,
+        now: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        guard let lastNotifiedAt else { return true }
+        return !calendar.isDate(lastNotifiedAt, inSameDayAs: now)
     }
 }
 
