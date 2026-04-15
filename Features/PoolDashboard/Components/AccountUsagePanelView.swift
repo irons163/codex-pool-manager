@@ -1,6 +1,20 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
+    private enum DeleteConfirmationTarget: Identifiable {
+        case group(name: String)
+        case account(id: UUID, name: String)
+
+        var id: String {
+            switch self {
+            case let .group(name):
+                return "group:\(name)"
+            case let .account(id, _):
+                return "account:\(id.uuidString)"
+            }
+        }
+    }
+
     private enum SortMode: String, CaseIterable, Identifiable {
         case joinedAt
         case name
@@ -59,8 +73,7 @@ struct AccountUsagePanelView: View {
     @State private var newGroupName = ""
     @State private var renameGroupName = ""
     @State private var isGroupRenameEditorVisible = false
-    @State private var isDeleteGroupConfirmationVisible = false
-    @State private var pendingDeleteGroupName = ""
+    @State private var deleteConfirmationTarget: DeleteConfirmationTarget?
     @State private var draftAccountNames: [UUID: String] = [:]
     @FocusState private var focusedAccountNameID: UUID?
     @FocusState private var isRenameGroupNameFocused: Bool
@@ -178,17 +191,14 @@ struct AccountUsagePanelView: View {
         .onChange(of: selectedGroupName) { _, value in
             renameGroupName = value
         }
-        .alert(L10n.text("group.delete_confirm_title"), isPresented: $isDeleteGroupConfirmationVisible) {
-            Button(L10n.text("account.edit.cancel"), role: .cancel) {}
-            Button(L10n.text("delete.button"), role: .destructive) {
-                confirmDeleteGroup()
-            }
-        } message: {
-            Text(
-                L10n.text(
-                    "group.delete_confirm_message_format",
-                    pendingDeleteGroupName
-                )
+        .alert(item: $deleteConfirmationTarget) { target in
+            Alert(
+                title: Text(title(for: target)),
+                message: Text(message(for: target)),
+                primaryButton: .destructive(Text(L10n.text("delete.button"))) {
+                    confirmDelete(target)
+                },
+                secondaryButton: .cancel(Text(L10n.text("account.edit.cancel")))
             )
         }
     }
@@ -722,18 +732,39 @@ struct AccountUsagePanelView: View {
 
     private func requestDeleteSelectedGroup() {
         guard canDeleteSelectedGroup else { return }
-        pendingDeleteGroupName = selectedGroupName
-        isDeleteGroupConfirmationVisible = true
+        deleteConfirmationTarget = .group(name: selectedGroupName)
     }
 
-    private func confirmDeleteGroup() {
-        let targetGroup = pendingDeleteGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !targetGroup.isEmpty else { return }
-        onDeleteGroup(targetGroup)
-        pendingDeleteGroupName = ""
-        withAnimation(.easeInOut(duration: 0.2)) {
-            isGroupRenameEditorVisible = false
-            isRenameGroupNameFocused = false
+    private func title(for target: DeleteConfirmationTarget) -> String {
+        switch target {
+        case .group:
+            return L10n.text("group.delete_confirm_title")
+        case .account:
+            return L10n.text("account.delete_confirm_title")
+        }
+    }
+
+    private func message(for target: DeleteConfirmationTarget) -> String {
+        switch target {
+        case let .group(name):
+            return L10n.text("group.delete_confirm_message_format", name)
+        case let .account(_, name):
+            return L10n.text("account.delete_confirm_message_format", name)
+        }
+    }
+
+    private func confirmDelete(_ target: DeleteConfirmationTarget) {
+        switch target {
+        case let .group(name):
+            let targetGroup = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !targetGroup.isEmpty else { return }
+            onDeleteGroup(targetGroup)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isGroupRenameEditorVisible = false
+                isRenameGroupNameFocused = false
+            }
+        case let .account(id, _):
+            onRemoveAccount(id)
         }
     }
 
@@ -854,7 +885,7 @@ struct AccountUsagePanelView: View {
             .minimumScaleFactor(0.85)
 
             Button(L10n.text("delete.button"), role: .destructive) {
-                onRemoveAccount(account.id)
+                deleteConfirmationTarget = .account(id: account.id, name: account.name)
             }
             .buttonStyle(DashboardWarningButtonStyle())
             .lineLimit(1)

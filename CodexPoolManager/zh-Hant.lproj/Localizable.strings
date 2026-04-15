@@ -33,6 +33,8 @@
 "group.delete" = "刪除群組";
 "group.delete_confirm_title" = "刪除群組";
 "group.delete_confirm_message_format" = "要刪除「%@」嗎？此群組內的帳號會一併刪除。";
+"account.delete_confirm_title" = "刪除帳號";
+"account.delete_confirm_message_format" = "要刪除「%@」嗎？";
 "group.move_to_current" = "移動到群組";
 "group.add_existing" = "加入現有帳號";
 

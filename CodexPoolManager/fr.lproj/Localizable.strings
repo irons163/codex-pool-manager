@@ -33,6 +33,8 @@
 "group.delete" = "Supprimer le groupe";
 "group.delete_confirm_title" = "Supprimer le groupe";
 "group.delete_confirm_message_format" = "Supprimer \"%@\" ? Les comptes de ce groupe seront également supprimés.";
+"account.delete_confirm_title" = "Supprimer le compte";
+"account.delete_confirm_message_format" = "Supprimer \"%@\" ?";
 "group.move_to_current" = "Déplacer vers le groupe";
 "group.add_existing" = "Ajouter un compte existant";
 

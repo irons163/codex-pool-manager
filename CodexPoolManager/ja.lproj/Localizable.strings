@@ -33,6 +33,8 @@
 "group.delete" = "グループ削除";
 "group.delete_confirm_title" = "グループを削除";
 "group.delete_confirm_message_format" = "「%@」を削除しますか？このグループのアカウントも削除されます。";
+"account.delete_confirm_title" = "アカウントを削除";
+"account.delete_confirm_message_format" = "「%@」を削除しますか？";
 "group.move_to_current" = "グループへ移動";
 "group.add_existing" = "既存アカウントを追加";
 
