@@ -32,6 +32,10 @@ Codex Pool Manager は、Codex/OpenAI OAuth アカウントのプールを 1 つ
 
 以下は mock または非機密のテストデータです。
 
+### App Icon（現行版）
+
+![App Icon](docs/images/app-icon.png)
+
 ### メインダッシュボード（Dark / Mock）
 
 ![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)

@@ -32,6 +32,10 @@ Idiomas: [English](README.md) · [繁體中文](README.zh-Hant.md) · [简体中
 
 Todas las capturas usan datos mock o no sensibles.
 
+### App Icon (versión actual)
+
+![App Icon](docs/images/app-icon.png)
+
 ### Dashboard principal (Dark, Mock)
 
 ![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)

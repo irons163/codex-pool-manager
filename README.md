@@ -32,6 +32,10 @@ Languages: [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md
 
 All screenshots below use mock or non-sensitive test data.
 
+### App Icon (Current)
+
+![App Icon](docs/images/app-icon.png)
+
 ### Main Dashboard (Dark, Mock Data)
 
 ![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)

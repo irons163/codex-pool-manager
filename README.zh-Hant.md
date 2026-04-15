@@ -32,6 +32,10 @@ Codex Pool Manager 是一款 macOS 工具，讓你在同一個控制面板中管
 
 以下截圖皆使用 mock 或非敏感測試資料。
 
+### App Icon（目前版本）
+
+![App Icon](docs/images/app-icon.png)
+
 ### 主儀表板（深色，Mock 資料）
 
 ![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)
