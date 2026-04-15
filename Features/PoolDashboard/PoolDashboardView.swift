@@ -1898,11 +1898,15 @@ struct PoolDashboardView: View {
 
             let fiveHourExpectedAt = record.expectedFiveHourResetAt
             let observedFiveHourResetAt = account.primaryUsageResetAt
+            let weeklyUsagePercent = specialResetWeeklyUsagePercent(for: account)
+            let fiveHourUsagePercent = specialResetFiveHourUsagePercent(for: account)
             if let combinedSignal = SpecialResetAlertEvaluator.detectCombinedEarlyReset(
                 weeklyExpectedResetAt: weeklyExpectedAt,
                 observedWeeklyResetAt: observedWeeklyResetAt,
                 fiveHourExpectedResetAt: fiveHourExpectedAt,
                 observedFiveHourResetAt: observedFiveHourResetAt,
+                weeklyUsagePercent: weeklyUsagePercent,
+                fiveHourUsagePercent: fiveHourUsagePercent,
                 now: now,
                 graceSeconds: graceSeconds
             ) {
@@ -2068,6 +2072,20 @@ struct PoolDashboardView: View {
         date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
 
+    private func specialResetWeeklyUsagePercent(for account: AgentAccount) -> Int? {
+        if let weeklyPercent = account.secondaryUsagePercent {
+            return max(0, min(100, weeklyPercent))
+        }
+        guard account.quota > 0 else { return nil }
+        let ratio = Double(account.usedUnits) / Double(account.quota)
+        return max(0, min(100, Int((ratio * 100).rounded())))
+    }
+
+    private func specialResetFiveHourUsagePercent(for account: AgentAccount) -> Int? {
+        guard let fiveHourPercent = account.primaryUsagePercent else { return nil }
+        return max(0, min(100, fiveHourPercent))
+    }
+
     private func notificationUsageSummary(for account: AgentAccount?) -> String {
         guard let account else {
             return "目前沒有啟用帳號。"
@@ -2154,9 +2172,17 @@ enum SpecialResetAlertEvaluator {
         observedWeeklyResetAt: Date?,
         fiveHourExpectedResetAt: Date?,
         observedFiveHourResetAt: Date?,
+        weeklyUsagePercent: Int?,
+        fiveHourUsagePercent: Int?,
         now: Date,
         graceSeconds: TimeInterval
     ) -> (weekly: TimeSignal, fiveHour: TimeSignal)? {
+        guard isFullyReset(
+            weeklyUsagePercent: weeklyUsagePercent,
+            fiveHourUsagePercent: fiveHourUsagePercent
+        ) else {
+            return nil
+        }
         guard let weeklySignal = detectEarlyResetSignal(
             expectedResetAt: weeklyExpectedResetAt,
             observedResetAt: observedWeeklyResetAt,
@@ -2174,6 +2200,11 @@ enum SpecialResetAlertEvaluator {
             return nil
         }
         return (weekly: weeklySignal, fiveHour: fiveHourSignal)
+    }
+
+    private static func isFullyReset(weeklyUsagePercent: Int?, fiveHourUsagePercent: Int?) -> Bool {
+        guard let weeklyUsagePercent, let fiveHourUsagePercent else { return false }
+        return weeklyUsagePercent == 0 && fiveHourUsagePercent == 0
     }
 }
 
