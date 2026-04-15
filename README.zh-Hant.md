@@ -1,5 +1,7 @@
 # Codex Pool Manager
 
+<p><img src="docs/images/app-icon.png" alt="Codex Pool Manager Icon" width="96" /></p>
+
 Codex Pool Manager 是一款 macOS 工具，讓你在同一個控制面板中管理一組 Codex/OpenAI OAuth 帳號。
 
 它可以幫你：
@@ -31,10 +33,6 @@ Codex Pool Manager 是一款 macOS 工具，讓你在同一個控制面板中管
 ## 截圖
 
 以下截圖皆使用 mock 或非敏感測試資料。
-
-### App Icon（目前版本）
-
-![App Icon](docs/images/app-icon.png)
 
 ### 主儀表板（深色，Mock 資料）
 
