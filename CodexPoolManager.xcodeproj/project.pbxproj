@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0AA1BB2CC3DD4EE5FF667788 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */; };
+		0AA1BB2DC3DD4EE5FF667788 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */; };
 		4969AB27C103A272942164A3 /* CodexPoolWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */; };
 		4A3753432F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */; };
 		4A3753452F743C30008F6AF6 /* PoolDashboardViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */; };
@@ -117,6 +119,7 @@
 
 /* Begin PBXFileReference section */
 		0DD2922FE9D177DB7B5607A3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
 		185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardActionCoordinator.swift; sourceTree = "<group>"; };
 		4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardViewState.swift; sourceTree = "<group>"; };
@@ -394,6 +397,7 @@
 		4AFBA5792F72203A008D97C1 = {
 			isa = PBXGroup;
 			children = (
+				0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */,
 				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
 				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
 				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
@@ -611,6 +615,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AA1BB2DC3DD4EE5FF667788 /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -618,6 +623,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AA1BB2CC3DD4EE5FF667788 /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -773,6 +779,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Widget Host";
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon.icns;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -968,6 +975,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon.icns;
 				INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -1004,6 +1012,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon.icns;
 				INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -1112,6 +1121,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Widget Host";
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon.icns;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
