@@ -105,6 +105,8 @@ fi
 
 echo "==> Creating DMG"
 cp -R "$APP_PATH" "$STAGING_DIR/"
+# Add the standard Applications symlink so users can drag-install from the DMG.
+ln -s /Applications "$STAGING_DIR/Applications"
 hdiutil create \
   -volname "$APP_NAME" \
   -srcfolder "$STAGING_DIR" \
