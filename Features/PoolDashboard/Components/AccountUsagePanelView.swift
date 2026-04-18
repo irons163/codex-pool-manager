@@ -78,9 +78,14 @@ struct AccountUsagePanelView: View {
     @State private var isGroupRenameEditorVisible = false
     @State private var deleteConfirmationTarget: DeleteConfirmationTarget?
     @State private var draftAccountNames: [UUID: String] = [:]
+    @State private var gridContainerWidth: CGFloat = 0
     @FocusState private var focusedAccountNameID: UUID?
     @FocusState private var isRenameGroupNameFocused: Bool
     @FocusState private var isNewGroupNameFocused: Bool
+
+    private let accountGridSpacing: CGFloat = 10
+    private let minimalCardMinWidth: CGFloat = 190
+    private let minimalCardMaxWidth: CGFloat = 300
 
     @Binding var newAccountName: String
     @Binding var newAccountQuota: Int
@@ -167,13 +172,25 @@ struct AccountUsagePanelView: View {
                 }
 
                 ScrollView {
-                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
+                    LazyVGrid(columns: gridColumns(for: gridContainerWidth), alignment: .leading, spacing: accountGridSpacing) {
                         ForEach(sortedAccounts) { account in
                             accountCard(account)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(minHeight: PoolDashboardTheme.usageListMinHeight)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear {
+                                gridContainerWidth = proxy.size.width
+                            }
+                            .onChange(of: proxy.size.width) { _, newWidth in
+                                gridContainerWidth = newWidth
+                            }
+                    }
+                }
             }
         }
         .sectionCardStyle()
@@ -478,19 +495,29 @@ struct AccountUsagePanelView: View {
         }
     }
 
-    private var gridColumns: [GridItem] {
+    private func gridColumns(for availableWidth: CGFloat) -> [GridItem] {
         if layoutMode == .minimal {
-            return [
-                GridItem(.adaptive(minimum: 300, maximum: 360), spacing: 10)
-            ]
+            guard availableWidth > 0 else {
+                return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing)]
+            }
+
+            let columns = max(1, Int((availableWidth + accountGridSpacing) / (minimalCardMinWidth + accountGridSpacing)))
+            let totalSpacing = accountGridSpacing * CGFloat(max(0, columns - 1))
+            let computedWidth = (availableWidth - totalSpacing) / CGFloat(columns)
+            let itemWidth = min(minimalCardMaxWidth, max(minimalCardMinWidth, computedWidth))
+
+            return Array(
+                repeating: GridItem(.fixed(itemWidth), spacing: accountGridSpacing, alignment: .topLeading),
+                count: columns
+            )
         }
 
         guard let fixedColumns = layoutMode.fixedColumns else {
-            return [GridItem(.adaptive(minimum: 300, maximum: 360), spacing: 10)]
+            return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing)]
         }
 
         return Array(
-            repeating: GridItem(.flexible(minimum: 220), spacing: 10),
+            repeating: GridItem(.flexible(minimum: 220), spacing: accountGridSpacing),
             count: fixedColumns
         )
     }
@@ -556,6 +583,7 @@ struct AccountUsagePanelView: View {
                 fullAccountCardContent(account)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .dashboardListRowCard()
@@ -635,13 +663,14 @@ struct AccountUsagePanelView: View {
 
     @ViewBuilder
     private func minimalAccountCardContent(_ account: AgentAccount) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(account.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+        VStack(alignment: .center, spacing: 8) {
+            Text(account.name)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .center)
 
+            HStack(spacing: 6) {
                 if isCurrentEquivalentAccount(account) {
                     Text(L10n.text("account.current_badge"))
                         .font(.caption2.weight(.semibold))
@@ -653,11 +682,7 @@ struct AccountUsagePanelView: View {
                                 .fill(PoolDashboardTheme.glowA.opacity(0.28))
                         )
                 }
-            }
 
-            Spacer(minLength: 0)
-
-            HStack(spacing: 6) {
                 if isPaidAccount(account) {
                     Text(L10n.text("account.paid_badge"))
                         .font(.caption2.weight(.semibold))
@@ -672,24 +697,26 @@ struct AccountUsagePanelView: View {
 
                 compactAccountActionButtons(account)
             }
-        }
+            .frame(maxWidth: .infinity, alignment: .center)
 
-        HStack(alignment: .top, spacing: 10) {
-            circularUsageIndicator(
-                title: L10n.text("usage.weekly_short"),
-                usedPercent: weeklyUsagePercent(for: account),
-                color: usageProgressColor(account),
-                resetText: shortResetDateText(account.usageWindowResetAt)
-            )
-
-            if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+            HStack(alignment: .top, spacing: 10) {
                 circularUsageIndicator(
-                    title: L10n.text("usage.five_hour_short"),
-                    usedPercent: max(0, min(100, fiveHourPercent)),
-                    color: usageColor(forPercent: fiveHourPercent),
-                    resetText: shortResetDateText(account.primaryUsageResetAt)
+                    title: L10n.text("usage.weekly_short"),
+                    usedPercent: weeklyUsagePercent(for: account),
+                    color: usageProgressColor(account),
+                    resetText: shortResetDateText(account.usageWindowResetAt)
                 )
+
+                if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+                    circularUsageIndicator(
+                        title: L10n.text("usage.five_hour_short"),
+                        usedPercent: max(0, min(100, fiveHourPercent)),
+                        color: usageColor(forPercent: fiveHourPercent),
+                        resetText: shortResetDateText(account.primaryUsageResetAt)
+                    )
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
 
         if account.isUsageSyncExcluded {
@@ -732,7 +759,7 @@ struct AccountUsagePanelView: View {
         let clampedUsedPercent = max(0, min(100, usedPercent))
         let remainingPercent = max(0, min(100, 100 - clampedUsedPercent))
 
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .center, spacing: 4) {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
@@ -762,10 +789,13 @@ struct AccountUsagePanelView: View {
             .frame(width: 64, height: 64)
 
             Text(resetText)
-                .font(.caption2)
+                .font(.system(size: 9, weight: .regular))
                 .foregroundStyle(PoolDashboardTheme.textMuted)
                 .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func shortResetDateText(_ date: Date?) -> String {
