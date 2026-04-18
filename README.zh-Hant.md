@@ -19,16 +19,17 @@ Codex Pool Manager 是一款 macOS 工具，讓你在同一個控制面板中管
 2. [主要功能](#主要功能)
 3. [智慧切換運作方式](#智慧切換運作方式)
 4. [Widget + 選單列](#widget--選單列)
-5. [驗證與帳號匯入](#驗證與帳號匯入)
-6. [工作區](#工作區)
-7. [安裝](#安裝)
-8. [從原始碼建置](#從原始碼建置)
-9. [Release DMG 流程](#release-dmg-流程)
-10. [專案結構](#專案結構)
-11. [測試](#測試)
-12. [疑難排解](#疑難排解)
-13. [安全與隱私說明](#安全與隱私說明)
-14. [貢獻](#貢獻)
+5. [App 內更新檢查](#app-內更新檢查)
+6. [驗證與帳號匯入](#驗證與帳號匯入)
+7. [工作區](#工作區)
+8. [安裝](#安裝)
+9. [從原始碼建置](#從原始碼建置)
+10. [Release DMG 流程](#release-dmg-流程)
+11. [專案結構](#專案結構)
+12. [測試](#測試)
+13. [疑難排解](#疑難排解)
+14. [安全與隱私說明](#安全與隱私說明)
+15. [貢獻](#貢獻)
 
 ## 截圖
 
@@ -62,6 +63,7 @@ Codex Pool Manager 是一款 macOS 工具，讓你在同一個控制面板中管
 - 群組管理（`新增`、`重新命名`、`刪除`）。
 - 刪除群組時會一併刪除該群組帳號。
 - 提供排序與版面配置，便於管理大型帳號池。
+- `極簡` 版面採自適應卡片寬度，會依視窗寬度自動調整每列卡片數。
 - 池統計（`Accounts`、`Available`、`Pool Usage`）具備去重邏輯，避免重複身分被重複計算。
 
 ### 2) 多種切換模式
@@ -116,6 +118,7 @@ Codex Pool Manager 是一款 macOS 工具，讓你在同一個控制面板中管
 - 同時監測週重置與 5 小時重置目標。
 - 當重置時間早於預期（在容差範圍內）時標記為提前重置訊號。
 - 支援桌面通知與事件歷史紀錄。
+- 提供每日通知上限，降低 API 短暫異常時的誤報噪音。
 
 ## 智慧切換運作方式
 
@@ -182,6 +185,13 @@ Focus 模式不進行智慧自動切換。
 - 展開內容顯示目前帳號、重置時間與更新年齡。
 - 週期性刷新（約每 15 秒）並支援手動刷新。
 
+## App 內更新檢查
+
+- 讀取 GitHub 最新 Release 並與目前版本比較。
+- 支援版本字串正規化（例如 `v1.8.0` 與 `1.8.0`）。
+- 會依裝置架構優先挑選安裝檔（`Apple Silicon` / `Intel`）。
+- 更新對話框提供 `Install now`、`Manual download`、`Skip this version`。
+
 ## 驗證與帳號匯入
 
 ### 本機帳號掃描路徑
@@ -220,6 +230,7 @@ Focus 模式不進行智慧自動切換。
 - 模式選擇（`Intelligent`、`Manual`、`Focus`）
 - 智慧切換門檻
 - 低剩餘提醒門檻
+- `切換並啟動` 的目標 App 選擇
 - 智慧建議面板
 
 ### Schedule
@@ -340,6 +351,26 @@ xcodebuild \
   -scheme CodexPoolManager \
   -destination 'platform=macOS' \
   test
+```
+
+Release 組態建置：
+
+```bash
+xcodebuild \
+  -scheme CodexPoolManager \
+  -destination 'platform=macOS' \
+  -configuration Release \
+  build
+```
+
+多語字串基本檢查：
+
+```bash
+for f in CodexPoolManager/en.lproj/Localizable.strings \
+         CodexPoolManager/zh-Hans.lproj/Localizable.strings \
+         CodexPoolManager/zh-Hant.lproj/Localizable.strings; do
+  plutil -lint "$f"
+done
 ```
 
 ## 疑難排解

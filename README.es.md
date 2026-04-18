@@ -19,16 +19,17 @@ Idiomas: [English](README.md) · [繁體中文](README.zh-Hant.md) · [简体中
 2. [Funciones clave](#funciones-clave)
 3. [Cómo funciona el cambio inteligente](#cómo-funciona-el-cambio-inteligente)
 4. [Widget + barra de menú](#widget--barra-de-menú)
-5. [Autenticación e importación de cuentas](#autenticación-e-importación-de-cuentas)
-6. [Espacios de trabajo](#espacios-de-trabajo)
-7. [Instalación](#instalación)
-8. [Compilar desde código fuente](#compilar-desde-código-fuente)
-9. [Pipeline de Release DMG](#pipeline-de-release-dmg)
-10. [Estructura del proyecto](#estructura-del-proyecto)
-11. [Pruebas](#pruebas)
-12. [Solución de problemas](#solución-de-problemas)
-13. [Notas de seguridad y privacidad](#notas-de-seguridad-y-privacidad)
-14. [Contribuir](#contribuir)
+5. [Comprobación de actualizaciones integrada](#comprobación-de-actualizaciones-integrada)
+6. [Autenticación e importación de cuentas](#autenticación-e-importación-de-cuentas)
+7. [Espacios de trabajo](#espacios-de-trabajo)
+8. [Instalación](#instalación)
+9. [Compilar desde código fuente](#compilar-desde-código-fuente)
+10. [Pipeline de Release DMG](#pipeline-de-release-dmg)
+11. [Estructura del proyecto](#estructura-del-proyecto)
+12. [Pruebas](#pruebas)
+13. [Solución de problemas](#solución-de-problemas)
+14. [Notas de seguridad y privacidad](#notas-de-seguridad-y-privacidad)
+15. [Contribuir](#contribuir)
 
 ## Capturas
 
@@ -62,6 +63,7 @@ Todas las capturas usan datos mock o no sensibles.
 - Gestionar grupos (`Add`, `Rename`, `Delete`).
 - Al borrar un grupo, se eliminan también sus cuentas.
 - Orden y layouts para pools grandes.
+- El layout `Minimal` usa ancho de tarjeta adaptable y ajusta automáticamente cuántas columnas caben según el ancho de la ventana.
 - Estadísticas (`Accounts`, `Available`, `Pool Usage`) con deduplicación para evitar doble conteo.
 
 ### 2) Múltiples modos de cambio
@@ -116,6 +118,7 @@ Todas las capturas usan datos mock o no sensibles.
 - Monitorea juntos reset semanal y reset de 5 horas.
 - Detecta reset anticipado (con tolerancia configurable).
 - Notificaciones desktop e historial de eventos.
+- Límite diario de notificaciones para reducir ruido por falsos positivos en periodos de inestabilidad de API.
 
 ## Cómo funciona el cambio inteligente
 
@@ -178,6 +181,13 @@ Hay dos umbrales independientes:
 - Menú con detalles de cuenta activa, resets y edad de actualización.
 - Refresh periódico (~15s) y refresh manual.
 
+## Comprobación de actualizaciones integrada
+
+- Consulta la última Release de GitHub y la compara con la versión actual.
+- Normaliza formatos de versión (por ejemplo `v1.8.0` y `1.8.0`).
+- Selecciona preferentemente el instalador según arquitectura (`Apple Silicon` / `Intel`) cuando exista.
+- El diálogo de actualización ofrece `Install now`, `Manual download` y `Skip this version`.
+
 ## Autenticación e importación de cuentas
 
 ### Rutas de descubrimiento local
@@ -212,6 +222,7 @@ Si el callback del navegador no puede completarse dentro de la app:
 - selector de modo (`Intelligent`, `Manual`, `Focus`)
 - umbral de cambio inteligente
 - umbral de low-usage alert
+- selección de app objetivo para `Switch and launch`
 - panel de recomendación
 
 ### Schedule
@@ -330,6 +341,26 @@ xcodebuild \
   -scheme CodexPoolManager \
   -destination 'platform=macOS' \
   test
+```
+
+Build en configuración Release:
+
+```bash
+xcodebuild \
+  -scheme CodexPoolManager \
+  -destination 'platform=macOS' \
+  -configuration Release \
+  build
+```
+
+Comprobación básica de archivos de localización:
+
+```bash
+for f in CodexPoolManager/en.lproj/Localizable.strings \
+         CodexPoolManager/zh-Hans.lproj/Localizable.strings \
+         CodexPoolManager/zh-Hant.lproj/Localizable.strings; do
+  plutil -lint "$f"
+done
 ```
 
 ## Solución de problemas

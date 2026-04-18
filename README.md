@@ -19,16 +19,17 @@ Languages: [繁體中文](README.zh-Hant.md) · [简体中文](README.zh-Hans.md
 2. [Key Features](#key-features)
 3. [How Intelligent Switching Works](#how-intelligent-switching-works)
 4. [Widget + Menu Bar](#widget--menu-bar)
-5. [Authentication and Account Import](#authentication-and-account-import)
-6. [Workspaces](#workspaces)
-7. [Install](#install)
-8. [Build From Source](#build-from-source)
-9. [Release DMG Pipeline](#release-dmg-pipeline)
-10. [Project Structure](#project-structure)
-11. [Testing](#testing)
-12. [Troubleshooting](#troubleshooting)
-13. [Security and Privacy Notes](#security-and-privacy-notes)
-14. [Contributing](#contributing)
+5. [In-app Update Checks](#in-app-update-checks)
+6. [Authentication and Account Import](#authentication-and-account-import)
+7. [Workspaces](#workspaces)
+8. [Install](#install)
+9. [Build From Source](#build-from-source)
+10. [Release DMG Pipeline](#release-dmg-pipeline)
+11. [Project Structure](#project-structure)
+12. [Testing](#testing)
+13. [Troubleshooting](#troubleshooting)
+14. [Security and Privacy Notes](#security-and-privacy-notes)
+15. [Contributing](#contributing)
 
 ## Screenshots
 
@@ -62,6 +63,7 @@ All screenshots below use mock or non-sensitive test data.
 - Group accounts and manage groups (`Add`, `Rename`, `Delete`).
 - Group deletion removes all accounts in that group.
 - Sort and layout controls for large pools.
+- `Minimal` layout uses adaptive card sizing so column count responds to window width.
 - Dedup-aware pool statistics (`Accounts`, `Available`, `Pool Usage`) to avoid counting duplicated identities multiple times.
 
 ### 2) Multiple switch modes
@@ -116,6 +118,7 @@ All screenshots below use mock or non-sensitive test data.
 - Monitors weekly reset and 5-hour reset targets together.
 - Flags early reset signals when resets move earlier than expected (within configurable tolerance).
 - Optional desktop notifications and event history for auditability.
+- Daily notification cap to reduce noisy false positives during unstable API periods.
 
 ## How Intelligent Switching Works
 
@@ -181,6 +184,13 @@ These are intentionally independent.
 - Menu content shows active account details, reset times, and update age.
 - Refreshes periodically (every ~15s) and supports manual refresh.
 
+## In-app Update Checks
+
+- Checks GitHub latest release metadata and compares against current app version.
+- Supports normalized version parsing (for example `v1.8.0` and `1.8.0`).
+- Auto-selects preferred installer by architecture (`Apple Silicon` / `Intel`) when available.
+- Provides `Install now`, `Manual download`, and `Skip this version` actions in update dialog.
+
 ## Authentication and Account Import
 
 ### Local account discovery paths
@@ -219,6 +229,7 @@ The UI is organized into workspaces for clearer operational boundaries.
 - mode selector (`Intelligent`, `Manual`, `Focus`)
 - intelligent switch threshold
 - low-usage alert threshold
+- launch target selection for `Switch and launch`
 - smart recommendation panel
 
 ### Schedule
@@ -339,6 +350,26 @@ xcodebuild \
   -scheme CodexPoolManager \
   -destination 'platform=macOS' \
   test
+```
+
+Build release configuration:
+
+```bash
+xcodebuild \
+  -scheme CodexPoolManager \
+  -destination 'platform=macOS' \
+  -configuration Release \
+  build
+```
+
+Localization sanity checks:
+
+```bash
+for f in CodexPoolManager/en.lproj/Localizable.strings \
+         CodexPoolManager/zh-Hans.lproj/Localizable.strings \
+         CodexPoolManager/zh-Hant.lproj/Localizable.strings; do
+  plutil -lint "$f"
+done
 ```
 
 ## Troubleshooting
