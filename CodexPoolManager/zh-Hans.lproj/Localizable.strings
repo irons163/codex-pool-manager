@@ -136,6 +136,24 @@
 "strategy.appearance.system" = "跟随系统";
 "strategy.appearance.dark" = "深色";
 "strategy.appearance.light" = "浅色";
+"update.auto_check" = "自动检查更新";
+"update.check_now" = "立即检查";
+"update.checking" = "正在检查更新...";
+"update.not_available" = "--";
+"update.status.up_to_date_format" = "当前已是最新版本（%@）。";
+"update.status.new_version_format" = "检测到新版本 %@。";
+"update.status.failure_format" = "更新检查失败：%@";
+"update.status.skipped_format" = "已跳过版本 %@。";
+"update.status.opened_manual" = "已打开 Release 页面。";
+"update.status.opened_install" = "已打开安装包下载。";
+"update.prompt.title_format" = "发现新版本 %@";
+"update.prompt.subtitle_format" = "当前版本 %@。你可以立即安装，或稍后处理。";
+"update.prompt.published_format" = "发布时间：%@";
+"update.prompt.skip" = "跳过此版本";
+"update.prompt.manual" = "手动下载";
+"update.prompt.install_now" = "立即安装";
+"update.prompt.release_format" = "Release %@";
+"update.prompt.matrix_title" = "构建版本包含：";
 
 "overview.title" = "池概览";
 "overview.subtitle" = "监控整体容量，并在维护窗口重置用量。";
@@ -313,7 +331,7 @@
 "special_reset.kind.weekly" = "周";
 "special_reset.kind.five_hour" = "5 小时";
 "special_reset.records_title" = "监控中的重置目标";
-"special_reset.records_row_format" = "周预期：%@ · 5 小时预期：%@";
+"special_reset.records_row_format" = "周重置：%@ · 5 小时重置：%@";
 "special_reset.notification.title" = "检测到疑似 OpenAI 提前重置";
 "special_reset.notification.body_format" = "%@ 可能提前重置（周与 5 小时同时变化）。\n周预期：%@\n周观察：%@\n5 小时预期：%@\n5 小时观察：%@";
 "special_reset.event.message_format" = "%@\n周预期：%@\n周观察：%@\n5 小时预期：%@\n5 小时观察：%@\n检测：%@";

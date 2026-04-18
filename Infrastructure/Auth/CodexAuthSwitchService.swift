@@ -26,13 +26,172 @@ enum CodexAuthSwitchError: LocalizedError {
     }
 }
 
+enum CodexLaunchTarget: String, CaseIterable, Identifiable, Codable {
+    case auto
+    case chatgpt
+    case codex
+    case vscode
+    case vscodeInsiders
+    case cursor
+    case windsurf
+    case antigravity
+    case terminal
+    case iterm2
+    case xcode
+    case androidStudio
+    case intellijIDEA
+    case pycharm
+    case webstorm
+    case zed
+    case finder
+
+    var id: String { rawValue }
+
+    static let defaultPickerTarget: CodexLaunchTarget = .codex
+
+    static var supportedTargets: [CodexLaunchTarget] {
+        [.codex, .chatgpt, .terminal, .iterm2]
+    }
+
+    static var advancedTargets: [CodexLaunchTarget] {
+        [.vscode, .vscodeInsiders, .cursor, .windsurf, .antigravity, .zed]
+    }
+
+    static var pickerTargets: [CodexLaunchTarget] {
+        supportedTargets + advancedTargets
+    }
+
+    static func normalizedRawValue(_ rawValue: String) -> String {
+        guard let value = CodexLaunchTarget(rawValue: rawValue),
+              pickerTargets.contains(value)
+        else {
+            return defaultPickerTarget.rawValue
+        }
+        if value == .auto {
+            return defaultPickerTarget.rawValue
+        }
+        return value.rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .auto: return L10n.text("strategy.launch_target.auto")
+        case .chatgpt: return "ChatGPT"
+        case .codex: return "Codex"
+        case .vscode: return "VS Code"
+        case .vscodeInsiders: return "VS Code Insiders"
+        case .cursor: return "Cursor"
+        case .windsurf: return "Windsurf"
+        case .antigravity: return "Antigravity"
+        case .terminal: return "Terminal"
+        case .iterm2: return "iTerm2"
+        case .xcode: return "Xcode"
+        case .androidStudio: return "Android Studio"
+        case .intellijIDEA: return "IntelliJ IDEA"
+        case .pycharm: return "PyCharm"
+        case .webstorm: return "WebStorm"
+        case .zed: return "Zed"
+        case .finder: return "Finder"
+        }
+    }
+
+    var bundleIdentifiers: [String] {
+        switch self {
+        case .auto:
+            return []
+        case .chatgpt:
+            return ["com.openai.chatgpt"]
+        case .codex:
+            return ["com.openai.codex"]
+        case .vscode:
+            return ["com.microsoft.VSCode"]
+        case .vscodeInsiders:
+            return ["com.microsoft.VSCodeInsiders"]
+        case .cursor:
+            return ["com.todesktop.230313mzl4w4u92"]
+        case .windsurf:
+            return ["com.exafunction.windsurf"]
+        case .antigravity:
+            return []
+        case .terminal:
+            return ["com.apple.Terminal"]
+        case .iterm2:
+            return ["com.googlecode.iterm2"]
+        case .xcode:
+            return ["com.apple.dt.Xcode"]
+        case .androidStudio:
+            return ["com.google.android.studio"]
+        case .intellijIDEA:
+            return ["com.jetbrains.intellij", "com.jetbrains.intellij.ce"]
+        case .pycharm:
+            return ["com.jetbrains.pycharm", "com.jetbrains.pycharm.ce"]
+        case .webstorm:
+            return ["com.jetbrains.WebStorm"]
+        case .zed:
+            return ["dev.zed.Zed"]
+        case .finder:
+            return ["com.apple.finder"]
+        }
+    }
+
+    var appURLs: [URL] {
+        switch self {
+        case .auto:
+            return []
+        case .chatgpt:
+            return [URL(fileURLWithPath: "/Applications/ChatGPT.app")]
+        case .codex:
+            return [URL(fileURLWithPath: "/Applications/Codex.app")]
+        case .vscode:
+            return [URL(fileURLWithPath: "/Applications/Visual Studio Code.app")]
+        case .vscodeInsiders:
+            return [URL(fileURLWithPath: "/Applications/Visual Studio Code - Insiders.app")]
+        case .cursor:
+            return [URL(fileURLWithPath: "/Applications/Cursor.app")]
+        case .windsurf:
+            return [URL(fileURLWithPath: "/Applications/Windsurf.app")]
+        case .antigravity:
+            return [URL(fileURLWithPath: "/Applications/Antigravity.app")]
+        case .terminal:
+            return [
+                URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
+                URL(fileURLWithPath: "/Applications/Utilities/Terminal.app"),
+                URL(fileURLWithPath: "/Applications/Terminal.app")
+            ]
+        case .iterm2:
+            return [URL(fileURLWithPath: "/Applications/iTerm.app")]
+        case .xcode:
+            return [URL(fileURLWithPath: "/Applications/Xcode.app")]
+        case .androidStudio:
+            return [URL(fileURLWithPath: "/Applications/Android Studio.app")]
+        case .intellijIDEA:
+            return [URL(fileURLWithPath: "/Applications/IntelliJ IDEA.app")]
+        case .pycharm:
+            return [URL(fileURLWithPath: "/Applications/PyCharm.app")]
+        case .webstorm:
+            return [URL(fileURLWithPath: "/Applications/WebStorm.app")]
+        case .zed:
+            return [URL(fileURLWithPath: "/Applications/Zed.app")]
+        case .finder:
+            return [URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app")]
+        }
+    }
+}
+
 struct CodexAuthSwitchService {
     var logger: @Sendable (String) -> Void = { _ in }
 
-    private let knownBundleIdentifiers = ["com.openai.chatgpt", "com.openai.codex"]
-    private let knownAppURLs = [
-        URL(fileURLWithPath: "/Applications/ChatGPT.app"),
-        URL(fileURLWithPath: "/Applications/Codex.app")
+    private let autoLaunchOrder: [CodexLaunchTarget] = [
+        .chatgpt,
+        .codex,
+        .terminal,
+        .iterm2,
+        .vscode,
+        .vscodeInsiders,
+        .cursor,
+        .windsurf,
+        .antigravity,
+        .zed
     ]
     private let appCloseTimeoutNanoseconds: UInt64 = 8_000_000_000
     private let appExitPollIntervalNanoseconds: UInt64 = 200_000_000
@@ -69,7 +228,8 @@ struct CodexAuthSwitchService {
     func performSwitchAndLaunch(
         authFileURL: URL,
         account: AgentAccount,
-        chatGPTAccountID: String
+        chatGPTAccountID: String,
+        launchTarget: CodexLaunchTarget = .auto
     ) async throws {
         logger(String(format: L10n.text("switch.service.log.using_auth_file_format"), authFileURL.path))
         let hasSecurityScope = authFileURL.startAccessingSecurityScopedResource()
@@ -86,7 +246,7 @@ struct CodexAuthSwitchService {
         )
 
         do {
-            let launchedImmediately = try await relaunchCodexApp()
+            let launchedImmediately = try await relaunchCodexApp(launchTarget: launchTarget)
             if launchedImmediately {
                 logger(L10n.text("switch.service.log.launch_completed"))
             } else {
@@ -113,17 +273,17 @@ struct CodexAuthSwitchService {
         logger(L10n.text("switch.service.log.auth_file_rewritten"))
     }
 
-    private func relaunchCodexApp() async throws -> Bool {
+    private func relaunchCodexApp(launchTarget: CodexLaunchTarget) async throws -> Bool {
 #if canImport(AppKit)
-        for bundleIdentifier in knownBundleIdentifiers {
+        for bundleIdentifier in closeBundleIdentifiers(for: launchTarget) {
             let closed = await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
             if !closed {
-                scheduleDeferredLaunchMonitor(for: bundleIdentifier)
+                scheduleDeferredLaunchMonitor(for: bundleIdentifier, launchTarget: launchTarget)
                 return false
             }
         }
 
-        if try await launchCodexAppWithRetry() {
+        if try await launchCodexAppWithRetry(launchTarget: launchTarget) {
             return true
         }
         throw CodexAuthSwitchError.appNotFound
@@ -193,18 +353,24 @@ struct CodexAuthSwitchService {
 #endif
     }
 
-    private func launchCodexAppWithRetry(maxAttempts: Int = 6) async throws -> Bool {
+    private func launchCodexAppWithRetry(
+        launchTarget: CodexLaunchTarget,
+        maxAttempts: Int = 6
+    ) async throws -> Bool {
+        let launchBundleIDs = launchBundleIdentifiers(for: launchTarget)
+        let launchAppPaths = launchAppURLs(for: launchTarget)
+
         for attempt in 1...maxAttempts {
             logger(String(format: L10n.text("switch.service.log.launch_attempt_format"), attempt))
 
-            for bundleIdentifier in knownBundleIdentifiers {
+            for bundleIdentifier in launchBundleIDs {
                 if try await launchApp(bundleIdentifier: bundleIdentifier) {
                     logger(String(format: L10n.text("switch.service.log.launch_success_bundle_format"), bundleIdentifier))
                     return true
                 }
             }
 
-            for appURL in knownAppURLs {
+            for appURL in launchAppPaths {
                 if try await launchApp(at: appURL) {
                     logger(String(format: L10n.text("switch.service.log.launch_success_path_format"), appURL.path))
                     return true
@@ -215,6 +381,42 @@ struct CodexAuthSwitchService {
         }
         logger(L10n.text("switch.service.log.launch_failed_after_retries"))
         return false
+    }
+
+    private func closeBundleIdentifiers(for launchTarget: CodexLaunchTarget) -> [String] {
+        if launchTarget == .auto {
+            return orderedUniqueValues(of: [CodexLaunchTarget.chatgpt, CodexLaunchTarget.codex].flatMap(\.bundleIdentifiers))
+        }
+        let explicitBundleIDs = launchTarget.bundleIdentifiers
+        let inferredBundleIDs = launchTarget.appURLs.compactMap { url in
+            Bundle(url: url)?.bundleIdentifier
+        }
+        return orderedUniqueValues(of: explicitBundleIDs + inferredBundleIDs)
+    }
+
+    private func launchBundleIdentifiers(for launchTarget: CodexLaunchTarget) -> [String] {
+        if launchTarget == .auto {
+            return orderedUniqueValues(of: autoLaunchOrder.flatMap(\.bundleIdentifiers))
+        }
+        return orderedUniqueValues(of: launchTarget.bundleIdentifiers)
+    }
+
+    private func launchAppURLs(for launchTarget: CodexLaunchTarget) -> [URL] {
+        if launchTarget == .auto {
+            return orderedUniqueValues(of: autoLaunchOrder.flatMap(\.appURLs))
+        }
+        return orderedUniqueValues(of: launchTarget.appURLs)
+    }
+
+    private func orderedUniqueValues<T: Hashable>(of values: [T]) -> [T] {
+        var seen = Set<T>()
+        var result: [T] = []
+        result.reserveCapacity(values.count)
+        for value in values where !seen.contains(value) {
+            seen.insert(value)
+            result.append(value)
+        }
+        return result
     }
 
     private func waitUntilAppExits(bundleIdentifier: String, timeoutNanoseconds: UInt64) async -> Bool {
@@ -233,7 +435,10 @@ struct CodexAuthSwitchService {
 #endif
     }
 
-    private func scheduleDeferredLaunchMonitor(for bundleIdentifier: String) {
+    private func scheduleDeferredLaunchMonitor(
+        for bundleIdentifier: String,
+        launchTarget: CodexLaunchTarget
+    ) {
 #if canImport(AppKit)
         let pollInterval = appExitPollIntervalNanoseconds
         let timeout = deferredLaunchMonitorTimeoutNanoseconds
@@ -247,7 +452,7 @@ struct CodexAuthSwitchService {
                     logger("Detected \(bundleIdentifier) closed. Relaunching now.")
                     let service = CodexAuthSwitchService(logger: logger)
                     do {
-                        if try await service.launchCodexAppWithRetry() {
+                        if try await service.launchCodexAppWithRetry(launchTarget: launchTarget) {
                             logger("Deferred relaunch completed.")
                         } else {
                             logger("Deferred relaunch failed after retries.")

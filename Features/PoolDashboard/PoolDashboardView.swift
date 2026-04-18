@@ -19,9 +19,13 @@ struct PoolDashboardView: View {
     private static let developerSnapshotKey = "account_pool_snapshot_developer"
     private static let developerTokenKey = "account_pool_tokens_developer"
     private static let developerMockModeKey = "pool_dashboard.developer.mock_mode"
+    private static let switchLaunchTargetKey = "pool_dashboard.switch_launch_target"
     private static let specialResetWatchStateKey = "pool_dashboard.special_reset_watch_state"
     private static let usageAnalyticsStateKey = "pool_dashboard.usage_analytics_state"
     private static let specialResetGraceMinutesMigrationKey = "pool_dashboard.special_reset_watch_grace_minutes_migrated_v1"
+    private static let appUpdateAutoCheckEnabledKey = "pool_dashboard.app_update.auto_check_enabled"
+    private static let appUpdateSkippedVersionKey = "pool_dashboard.app_update.skipped_version"
+    private static let appUpdateLastCheckedAtKey = "pool_dashboard.app_update.last_checked_at"
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
@@ -54,6 +58,7 @@ struct PoolDashboardView: View {
         var accountName: String
         var expectedWeeklyResetAt: Date? = nil
         var expectedFiveHourResetAt: Date? = nil
+        var lastSeenWeeklyUsagePercent: Int? = nil
         var lastSeenUsedUnits: Int? = nil
         var lastSeenFiveHourUsagePercent: Int? = nil
         var lastSeenAt: Date? = nil
@@ -85,6 +90,13 @@ struct PoolDashboardView: View {
         let observedFiveHourNextResetAt: Date
         let detectedAt: Date
     }
+    private struct AppUpdatePrompt: Identifiable, Equatable {
+        let currentVersion: String
+        let latestVersion: String
+        let release: AppUpdateRelease
+
+        var id: String { latestVersion }
+    }
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
     @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
@@ -94,12 +106,16 @@ struct PoolDashboardView: View {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue
     @AppStorage(Self.developerMockModeKey) private var developerMockModeEnabled = false
+    @AppStorage(Self.switchLaunchTargetKey) private var switchLaunchTargetRaw = CodexLaunchTarget.defaultPickerTarget.rawValue
     @AppStorage(Self.specialResetWatchStateKey) private var specialResetWatchStateRaw = ""
     @AppStorage(Self.usageAnalyticsStateKey) private var usageAnalyticsStateRaw = ""
     @AppStorage("pool_dashboard.special_reset_watch_enabled") private var specialResetWatchEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_notify_enabled") private var specialResetWatchNotifyEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_grace_minutes") private var specialResetWatchGraceMinutes = 1
     @AppStorage(Self.specialResetGraceMinutesMigrationKey) private var didMigrateSpecialResetGraceMinutes = false
+    @AppStorage(Self.appUpdateAutoCheckEnabledKey) private var appUpdateAutoCheckEnabled = true
+    @AppStorage(Self.appUpdateSkippedVersionKey) private var appUpdateSkippedVersion = ""
+    @AppStorage(Self.appUpdateLastCheckedAtKey) private var appUpdateLastCheckedAt = 0.0
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
@@ -120,6 +136,10 @@ struct PoolDashboardView: View {
     @State private var oauthSignInTask: Task<Void, Never>?
     @State private var specialResetWatchState = SpecialResetWatchState()
     @State private var usageAnalyticsState = UsageAnalyticsState()
+    @State private var appUpdatePrompt: AppUpdatePrompt?
+    @State private var isCheckingForAppUpdate = false
+    @State private var appUpdateStatusMessage: String?
+    @State private var didRunInitialAppUpdateCheck = false
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -133,6 +153,7 @@ struct PoolDashboardView: View {
     private let alertPresenter = PoolDashboardAlertPresenter()
     private let viewMutationCoordinator = PoolDashboardViewMutationCoordinator()
     private let asyncStateCoordinator = PoolDashboardAsyncStateCoordinator()
+    private let appUpdateService = AppUpdateService()
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -145,6 +166,12 @@ struct PoolDashboardView: View {
 
     private var autoSyncTaskID: String {
         "\(state.autoSyncEnabled)-\(Int(state.autoSyncIntervalSeconds))"
+    }
+
+    private var selectedLaunchTarget: CodexLaunchTarget {
+        CodexLaunchTarget(
+            rawValue: CodexLaunchTarget.normalizedRawValue(switchLaunchTargetRaw)
+        ) ?? .auto
     }
 
     private static var defaultAccounts: [AgentAccount] {
@@ -271,6 +298,11 @@ struct PoolDashboardView: View {
 
             dashboardContent
                 .id(themeRenderToken)
+
+            if let appUpdatePrompt {
+                appUpdateOverlay(prompt: appUpdatePrompt)
+                    .zIndex(10)
+            }
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
@@ -869,11 +901,18 @@ struct PoolDashboardView: View {
     private var workspaceSettingsPanel: some View {
         WorkspaceSettingsPanelView(
             switchWithoutLaunchingBinding: strategyBindings.switchWithoutLaunching,
+            launchTargetBinding: $switchLaunchTargetRaw,
             autoSyncEnabledBinding: strategyBindings.autoSyncEnabled,
             autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds,
             languageOverrideBinding: $appLanguageOverride,
             appearanceOverrideBinding: $appAppearanceOverride,
-            languageOptions: L10n.languageOptions
+            languageOptions: L10n.languageOptions,
+            appUpdateAutoCheckEnabledBinding: $appUpdateAutoCheckEnabled,
+            isCheckingForUpdates: isCheckingForAppUpdate,
+            appUpdateStatusMessage: appUpdateStatusMessage,
+            onCheckForUpdates: {
+                Task { await checkForAppUpdates(force: true) }
+            }
         )
     }
 
@@ -964,6 +1003,7 @@ struct PoolDashboardView: View {
                             .foregroundStyle(PoolDashboardTheme.textPrimary)
 
                         ForEach(Array(specialResetWatchState.records.prefix(8))) { record in
+                            let displayedDates = specialResetDisplayedResetDates(for: record)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(record.accountName)
                                     .font(.caption.weight(.semibold))
@@ -971,8 +1011,8 @@ struct PoolDashboardView: View {
                                 Text(
                                     L10n.text(
                                         "special_reset.records_row_format",
-                                        record.expectedWeeklyResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available"),
-                                        record.expectedFiveHourResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available")
+                                        displayedDates.weekly,
+                                        displayedDates.fiveHour
                                     )
                                 )
                                 .font(.caption2)
@@ -1145,6 +1185,13 @@ struct PoolDashboardView: View {
         evaluateSpecialResetWatchAfterSync(now: .now)
         seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
+
+        if !didRunInitialAppUpdateCheck {
+            didRunInitialAppUpdateCheck = true
+            Task {
+                await checkForAppUpdates(force: false)
+            }
+        }
     }
 
     // MARK: - Developer Data Mode
@@ -1729,6 +1776,7 @@ struct PoolDashboardView: View {
         let output = await switchLaunchFlowCoordinator.switchAndLaunch(
             using: account,
             switchWithoutLaunching: state.switchWithoutLaunching,
+            launchTarget: selectedLaunchTarget,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService,
             viewModel: localOAuthImportViewModel,
@@ -1783,6 +1831,7 @@ struct PoolDashboardView: View {
         let output = await switchLaunchFlowCoordinator.switchAndLaunch(
             using: account,
             switchWithoutLaunching: state.switchWithoutLaunching,
+            launchTarget: selectedLaunchTarget,
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService,
             viewModel: localOAuthImportViewModel,
@@ -1853,6 +1902,7 @@ struct PoolDashboardView: View {
                         kind: .fiveHour,
                         now: now
                     ),
+                    lastSeenWeeklyUsagePercent: specialResetWeeklyUsagePercent(for: account),
                     lastSeenUsedUnits: account.usedUnits,
                     lastSeenFiveHourUsagePercent: account.primaryUsagePercent,
                     lastSeenAt: now
@@ -1906,6 +1956,8 @@ struct PoolDashboardView: View {
                 observedWeeklyResetAt: observedWeeklyResetAt,
                 fiveHourExpectedResetAt: fiveHourExpectedAt,
                 observedFiveHourResetAt: observedFiveHourResetAt,
+                previousWeeklyUsagePercent: record.lastSeenWeeklyUsagePercent,
+                previousFiveHourUsagePercent: record.lastSeenFiveHourUsagePercent,
                 weeklyUsagePercent: weeklyUsagePercent,
                 fiveHourUsagePercent: fiveHourUsagePercent,
                 now: now,
@@ -1929,8 +1981,9 @@ struct PoolDashboardView: View {
                 now: now
             )
 
+            record.lastSeenWeeklyUsagePercent = weeklyUsagePercent
             record.lastSeenUsedUnits = account.usedUnits
-            record.lastSeenFiveHourUsagePercent = account.primaryUsagePercent
+            record.lastSeenFiveHourUsagePercent = fiveHourUsagePercent
             record.lastSeenAt = now
             recordsByKey[accountKey] = record
         }
@@ -1998,6 +2051,22 @@ struct PoolDashboardView: View {
         return trimmed.isEmpty ? L10n.text("account.unknown") : trimmed
     }
 
+    private func specialResetDisplayedResetDates(
+        for record: SpecialResetRecord
+    ) -> (weekly: String, fiveHour: String) {
+        if let account = state.accounts.first(where: { $0.isPaid && $0.deduplicationKey == record.accountKey }) {
+            return (
+                account.usageWindowResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available"),
+                account.primaryUsageResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available")
+            )
+        }
+
+        return (
+            record.expectedWeeklyResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available"),
+            record.expectedFiveHourResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available")
+        )
+    }
+
     private func postSpecialResetDetections(_ detections: [SpecialResetDetection]) {
         guard let detection = detections.first else { return }
         let body = L10n.text(
@@ -2026,6 +2095,208 @@ struct PoolDashboardView: View {
             specialResetDateText(event.observedFiveHourNextResetAt),
             specialResetDateText(event.detectedAt)
         )
+    }
+
+    // MARK: - App Update
+
+    @MainActor
+    private func checkForAppUpdates(force: Bool) async {
+        guard !isCheckingForAppUpdate else { return }
+        if !force && !appUpdateAutoCheckEnabled { return }
+        if !force && !shouldRunAutomaticUpdateCheck(now: .now) { return }
+
+        isCheckingForAppUpdate = true
+        if force {
+            appUpdateStatusMessage = L10n.text("update.checking")
+        }
+
+        defer {
+            isCheckingForAppUpdate = false
+        }
+
+        appUpdateLastCheckedAt = Date().timeIntervalSince1970
+
+        do {
+            let release = try await appUpdateService.fetchLatestRelease()
+            let currentVersion = appVersionText()
+            let latestVersion = release.normalizedVersion
+            guard AppUpdateVersioning.isRemoteNewer(
+                current: currentVersion,
+                remote: latestVersion
+            ) else {
+                if force {
+                    appUpdateStatusMessage = L10n.text("update.status.up_to_date_format", currentVersion)
+                }
+                return
+            }
+
+            if !force, appUpdateSkippedVersion == latestVersion {
+                return
+            }
+
+            appUpdatePrompt = AppUpdatePrompt(
+                currentVersion: currentVersion,
+                latestVersion: latestVersion,
+                release: release
+            )
+            appUpdateStatusMessage = L10n.text("update.status.new_version_format", latestVersion)
+        } catch {
+            if force {
+                appUpdateStatusMessage = L10n.text("update.status.failure_format", error.localizedDescription)
+            }
+        }
+    }
+
+    private func shouldRunAutomaticUpdateCheck(now: Date) -> Bool {
+        guard appUpdateLastCheckedAt > 0 else { return true }
+        let elapsed = now.timeIntervalSince1970 - appUpdateLastCheckedAt
+        return elapsed >= 6 * 3_600
+    }
+
+    private func appVersionText() -> String {
+        let shortVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "0"
+        return AppUpdateVersioning.normalizedVersion(from: shortVersion)
+    }
+
+    private func appUpdatePublishedText(_ date: Date?) -> String {
+        guard let date else { return L10n.text("update.not_available") }
+        return date.formatted(
+            .dateTime
+                .locale(L10n.locale())
+                .year()
+                .month()
+                .day()
+                .hour()
+                .minute()
+        )
+    }
+
+    private func dismissAppUpdatePrompt() {
+        appUpdatePrompt = nil
+    }
+
+    private func skipAppUpdateVersion(_ prompt: AppUpdatePrompt) {
+        appUpdateSkippedVersion = prompt.latestVersion
+        appUpdateStatusMessage = L10n.text("update.status.skipped_format", prompt.latestVersion)
+        dismissAppUpdatePrompt()
+    }
+
+    private func openManualAppUpdateDownload(_ prompt: AppUpdatePrompt) {
+        openExternalURL(prompt.release.htmlURL)
+        appUpdateStatusMessage = L10n.text("update.status.opened_manual")
+    }
+
+    private func installAppUpdateNow(_ prompt: AppUpdatePrompt) {
+        let url = prompt.release.preferredInstallerURL(for: AppUpdateArchitecture.current) ?? prompt.release.htmlURL
+        openExternalURL(url)
+        appUpdateStatusMessage = L10n.text("update.status.opened_install")
+    }
+
+    private func openExternalURL(_ url: URL) {
+        #if canImport(AppKit)
+        NSWorkspace.shared.open(url)
+        #endif
+    }
+
+    @ViewBuilder
+    private func appUpdateOverlay(prompt: AppUpdatePrompt) -> some View {
+        ZStack {
+            Color.black.opacity(PoolDashboardTheme.isLightPalette ? 0.2 : 0.45)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismissAppUpdatePrompt()
+                }
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.text("update.prompt.title_format", prompt.latestVersion))
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        Text(L10n.text("update.prompt.subtitle_format", prompt.currentVersion))
+                            .font(.subheadline)
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        dismissAppUpdatePrompt()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(PoolDashboardTheme.panelMutedFill)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Text(
+                    L10n.text("update.prompt.published_format", appUpdatePublishedText(prompt.release.publishedAt))
+                )
+                .font(.caption)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                HStack(spacing: 8) {
+                    Button(L10n.text("update.prompt.skip")) {
+                        skipAppUpdateVersion(prompt)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(L10n.text("update.prompt.manual")) {
+                        openManualAppUpdateDownload(prompt)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(L10n.text("update.prompt.install_now")) {
+                        installAppUpdateNow(prompt)
+                    }
+                    .buttonStyle(DashboardWarningButtonStyle())
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.text("update.prompt.release_format", prompt.release.displayTitle))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                    if prompt.release.buildMatrixLines.isEmpty {
+                        Text(L10n.text("update.not_available"))
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
+                    } else {
+                        Text(L10n.text("update.prompt.matrix_title"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        ForEach(prompt.release.buildMatrixLines, id: \.self) { line in
+                            Text("• \(line)")
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 640, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.isLightPalette ? 0.97 : 0.95))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(PoolDashboardTheme.glowA.opacity(0.35), lineWidth: 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 16)
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity)
     }
 
     // MARK: - Usage Analytics
@@ -2122,6 +2393,208 @@ struct PoolDashboardView: View {
     }
 }
 
+enum AppUpdateError: LocalizedError, Equatable {
+    case invalidResponse
+    case decodingFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            return "Invalid update response."
+        case .decodingFailed:
+            return "Failed to decode update metadata."
+        }
+    }
+}
+
+enum AppUpdateArchitecture: Equatable {
+    case appleSilicon
+    case intel
+    case unknown
+
+    static var current: AppUpdateArchitecture {
+        #if arch(arm64)
+        .appleSilicon
+        #elseif arch(x86_64)
+        .intel
+        #else
+        .unknown
+        #endif
+    }
+}
+
+struct AppUpdateAsset: Equatable {
+    let name: String
+    let downloadURL: URL
+}
+
+struct AppUpdateRelease: Equatable {
+    let tagName: String
+    let name: String
+    let htmlURL: URL
+    let publishedAt: Date?
+    let assets: [AppUpdateAsset]
+
+    var normalizedVersion: String {
+        AppUpdateVersioning.normalizedVersion(from: tagName)
+    }
+
+    var displayTitle: String {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? tagName : trimmedName
+    }
+
+    var buildMatrixLines: [String] {
+        let dmgAssets = assets.filter { $0.name.lowercased().hasSuffix(".dmg") }
+        if dmgAssets.isEmpty { return [] }
+        return dmgAssets.map { asset in
+            let lowercased = asset.name.lowercased()
+            if lowercased.contains("apple-silicon") || lowercased.contains("arm64") || lowercased.contains("aarch64") {
+                return "macOS Apple Silicon (arm64)"
+            }
+            if lowercased.contains("intel") || lowercased.contains("x86_64") {
+                return "macOS Intel (x86_64)"
+            }
+            return asset.name
+        }
+    }
+
+    func preferredInstallerURL(for architecture: AppUpdateArchitecture) -> URL? {
+        let dmgAssets = assets.filter { $0.name.lowercased().hasSuffix(".dmg") }
+        guard !dmgAssets.isEmpty else { return nil }
+
+        switch architecture {
+        case .appleSilicon:
+            if let preferred = dmgAssets.first(where: {
+                let lowercased = $0.name.lowercased()
+                return lowercased.contains("apple-silicon") || lowercased.contains("arm64") || lowercased.contains("aarch64")
+            }) {
+                return preferred.downloadURL
+            }
+        case .intel:
+            if let preferred = dmgAssets.first(where: {
+                let lowercased = $0.name.lowercased()
+                return lowercased.contains("intel") || lowercased.contains("x86_64")
+            }) {
+                return preferred.downloadURL
+            }
+        case .unknown:
+            break
+        }
+
+        return dmgAssets.first?.downloadURL
+    }
+}
+
+enum AppUpdateVersioning {
+    static func normalizedVersion(from rawValue: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "0" }
+        if trimmed.hasPrefix("v") || trimmed.hasPrefix("V") {
+            return String(trimmed.dropFirst())
+        }
+        return trimmed
+    }
+
+    static func isRemoteNewer(current: String, remote: String) -> Bool {
+        compare(current: current, remote: remote) == .orderedAscending
+    }
+
+    static func compare(current: String, remote: String) -> ComparisonResult {
+        let currentParts = numericParts(from: normalizedVersion(from: current))
+        let remoteParts = numericParts(from: normalizedVersion(from: remote))
+        let count = max(currentParts.count, remoteParts.count)
+
+        for index in 0..<count {
+            let currentValue = index < currentParts.count ? currentParts[index] : 0
+            let remoteValue = index < remoteParts.count ? remoteParts[index] : 0
+            if currentValue < remoteValue { return .orderedAscending }
+            if currentValue > remoteValue { return .orderedDescending }
+        }
+        return .orderedSame
+    }
+
+    private static func numericParts(from version: String) -> [Int] {
+        version
+            .split(whereSeparator: { !$0.isNumber })
+            .compactMap { Int($0) }
+    }
+}
+
+struct AppUpdateService {
+    var endpoint = URL(string: "https://api.github.com/repos/irons163/codex-pool-manager/releases/latest")!
+    var session: URLSession = .shared
+
+    func fetchLatestRelease() async throws -> AppUpdateRelease {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "GET"
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("CodexPoolManager/1.0", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw AppUpdateError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        do {
+            let payload = try decoder.decode(AppUpdateReleasePayload.self, from: data)
+            return payload.release
+        } catch {
+            throw AppUpdateError.decodingFailed
+        }
+    }
+}
+
+private struct AppUpdateReleasePayload: Decodable {
+    struct AssetPayload: Decodable {
+        let name: String
+        let browserDownloadURL: URL
+
+        enum CodingKeys: String, CodingKey {
+            case name
+            case browserDownloadURL = "browser_download_url"
+        }
+    }
+
+    let tagName: String
+    let name: String
+    let htmlURL: URL
+    let publishedAtRaw: String?
+    let assets: [AssetPayload]
+
+    enum CodingKeys: String, CodingKey {
+        case tagName = "tag_name"
+        case name
+        case htmlURL = "html_url"
+        case publishedAtRaw = "published_at"
+        case assets
+    }
+
+    var release: AppUpdateRelease {
+        AppUpdateRelease(
+            tagName: tagName,
+            name: name,
+            htmlURL: htmlURL,
+            publishedAt: parseDate(from: publishedAtRaw),
+            assets: assets.map {
+                AppUpdateAsset(name: $0.name, downloadURL: $0.browserDownloadURL)
+            }
+        )
+    }
+
+    private func parseDate(from rawValue: String?) -> Date? {
+        guard let rawValue, !rawValue.isEmpty else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: rawValue) {
+            return date
+        }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: rawValue)
+    }
+}
+
 enum SpecialResetNotificationPolicy {
     static func shouldNotify(
         lastNotifiedAt: Date?,
@@ -2160,6 +2633,9 @@ enum SpecialResetAlertEvaluator {
         now: Date,
         graceSeconds: TimeInterval
     ) -> TimeSignal? {
+        let minimumLeadSeconds: TimeInterval = max(300, graceSeconds)
+        let minimumForwardShiftSeconds: TimeInterval = max(1_200, graceSeconds * 2)
+
         guard let expectedResetAt,
               let observedNextResetAt = normalizedExpectedResetDate(
                 observedResetAt: observedResetAt,
@@ -2170,10 +2646,10 @@ enum SpecialResetAlertEvaluator {
             return nil
         }
 
-        let isNotDueYet = now.addingTimeInterval(graceSeconds) < expectedResetAt
-        let shiftSeconds = abs(observedNextResetAt.timeIntervalSince(expectedResetAt))
-        let isSignificantShift = shiftSeconds > max(600, graceSeconds / 2)
-        guard isNotDueYet, isSignificantShift else {
+        let isNotDueYet = expectedResetAt.timeIntervalSince(now) > minimumLeadSeconds
+        let forwardShiftSeconds = observedNextResetAt.timeIntervalSince(expectedResetAt)
+        let isSignificantForwardShift = forwardShiftSeconds >= minimumForwardShiftSeconds
+        guard isNotDueYet, isSignificantForwardShift else {
             return nil
         }
 
@@ -2188,12 +2664,16 @@ enum SpecialResetAlertEvaluator {
         observedWeeklyResetAt: Date?,
         fiveHourExpectedResetAt: Date?,
         observedFiveHourResetAt: Date?,
+        previousWeeklyUsagePercent: Int?,
+        previousFiveHourUsagePercent: Int?,
         weeklyUsagePercent: Int?,
         fiveHourUsagePercent: Int?,
         now: Date,
         graceSeconds: TimeInterval
     ) -> (weekly: TimeSignal, fiveHour: TimeSignal)? {
         guard isFullyReset(
+            previousWeeklyUsagePercent: previousWeeklyUsagePercent,
+            previousFiveHourUsagePercent: previousFiveHourUsagePercent,
             weeklyUsagePercent: weeklyUsagePercent,
             fiveHourUsagePercent: fiveHourUsagePercent
         ) else {
@@ -2218,9 +2698,20 @@ enum SpecialResetAlertEvaluator {
         return (weekly: weeklySignal, fiveHour: fiveHourSignal)
     }
 
-    private static func isFullyReset(weeklyUsagePercent: Int?, fiveHourUsagePercent: Int?) -> Bool {
+    private static func isFullyReset(
+        previousWeeklyUsagePercent: Int?,
+        previousFiveHourUsagePercent: Int?,
+        weeklyUsagePercent: Int?,
+        fiveHourUsagePercent: Int?
+    ) -> Bool {
         guard let weeklyUsagePercent, let fiveHourUsagePercent else { return false }
-        return weeklyUsagePercent == 0 && fiveHourUsagePercent == 0
+        guard weeklyUsagePercent == 0 && fiveHourUsagePercent == 0 else { return false }
+
+        // Require at least one usage window to transition from non-zero to zero.
+        // This avoids false positives when an account has been idle at 0% for a long time.
+        let weeklyTransitioned = (previousWeeklyUsagePercent ?? 0) > 0
+        let fiveHourTransitioned = (previousFiveHourUsagePercent ?? 0) > 0
+        return weeklyTransitioned || fiveHourTransitioned
     }
 }
 

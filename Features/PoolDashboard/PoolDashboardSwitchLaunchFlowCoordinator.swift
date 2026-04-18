@@ -15,6 +15,7 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
     func switchAndLaunch(
         using account: AgentAccount,
         switchWithoutLaunching: Bool = false,
+        launchTarget: CodexLaunchTarget = .auto,
         currentAuthorizedAuthFileURL: URL?,
         authFileAccessService: CodexAuthFileAccessService,
         viewModel: LocalOAuthImportViewModel,
@@ -28,6 +29,7 @@ struct PoolDashboardSwitchLaunchFlowCoordinator {
         let switchOutput = await switchLaunchCoordinator.switchAndLaunch(
             account: account,
             switchWithoutLaunching: switchWithoutLaunching,
+            launchTarget: launchTarget,
             currentAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
             authFileAccessService: authFileAccessService,
             authorizeAuthFile: authorizeAuthFile

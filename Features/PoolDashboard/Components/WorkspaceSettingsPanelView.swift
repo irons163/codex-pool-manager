@@ -2,11 +2,16 @@ import SwiftUI
 
 struct WorkspaceSettingsPanelView: View {
     let switchWithoutLaunchingBinding: Binding<Bool>
+    let launchTargetBinding: Binding<String>
     let autoSyncEnabledBinding: Binding<Bool>
     let autoSyncIntervalSecondsBinding: Binding<Double>
     let languageOverrideBinding: Binding<String>
     let appearanceOverrideBinding: Binding<String>
     let languageOptions: [L10n.LanguageOption]
+    let appUpdateAutoCheckEnabledBinding: Binding<Bool>
+    let isCheckingForUpdates: Bool
+    let appUpdateStatusMessage: String?
+    let onCheckForUpdates: () -> Void
 
     private var switchAndLaunchBinding: Binding<Bool> {
         Binding(
@@ -19,6 +24,13 @@ struct WorkspaceSettingsPanelView: View {
         Binding(
             get: { L10n.normalizedLanguageOverrideCode(languageOverrideBinding.wrappedValue) },
             set: { languageOverrideBinding.wrappedValue = L10n.normalizedLanguageOverrideCode($0) }
+        )
+    }
+
+    private var normalizedLaunchTargetBinding: Binding<String> {
+        Binding(
+            get: { CodexLaunchTarget.normalizedRawValue(launchTargetBinding.wrappedValue) },
+            set: { launchTargetBinding.wrappedValue = CodexLaunchTarget.normalizedRawValue($0) }
         )
     }
 
@@ -37,6 +49,20 @@ struct WorkspaceSettingsPanelView: View {
                     .tint(PoolDashboardTheme.glowA)
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Text(L10n.text("strategy.launch_target"))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    Picker(L10n.text("strategy.launch_target"), selection: normalizedLaunchTargetBinding) {
+                        ForEach(CodexLaunchTarget.pickerTargets) { target in
+                            Text(target.title).tag(target.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(PoolDashboardTheme.glowA)
+                }
+                .dashboardInfoCard()
 
                 VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
                     Toggle(L10n.text("strategy.auto_sync_enabled"), isOn: autoSyncEnabledBinding)
@@ -83,6 +109,34 @@ struct WorkspaceSettingsPanelView: View {
                     }
                     .pickerStyle(.menu)
                     .tint(PoolDashboardTheme.glowA)
+                }
+                .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Toggle(L10n.text("update.auto_check"), isOn: appUpdateAutoCheckEnabledBinding)
+                        .toggleStyle(.switch)
+                        .tint(PoolDashboardTheme.glowA)
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    HStack(spacing: 8) {
+                        Button(L10n.text("update.check_now")) {
+                            onCheckForUpdates()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(PoolDashboardTheme.glowA)
+                        .disabled(isCheckingForUpdates)
+
+                        if isCheckingForUpdates {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+
+                    if let appUpdateStatusMessage, !appUpdateStatusMessage.isEmpty {
+                        Text(appUpdateStatusMessage)
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
+                    }
                 }
                 .dashboardInfoCard()
             }

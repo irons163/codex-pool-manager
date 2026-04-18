@@ -33,6 +33,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
     func switchAndLaunch(
         account: AgentAccount,
         switchWithoutLaunching: Bool = false,
+        launchTarget: CodexLaunchTarget = .auto,
         currentAuthorizedAuthFileURL: URL?,
         authFileAccessService: CodexAuthFileAccessService,
         authorizeAuthFile: () -> URL?
@@ -94,6 +95,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
                     account: account,
                     chatGPTAccountID: chatGPTAccountID,
                     switchWithoutLaunching: switchWithoutLaunching,
+                    launchTarget: launchTarget,
                     logger: append
                 )
                 return output(
@@ -165,6 +167,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
         account: AgentAccount,
         chatGPTAccountID: String,
         switchWithoutLaunching: Bool,
+        launchTarget: CodexLaunchTarget,
         logger: @Sendable @escaping (String) -> Void
     ) async throws {
         let service = CodexAuthSwitchService(logger: logger)
@@ -180,7 +183,8 @@ struct PoolDashboardSwitchLaunchCoordinator {
         try await service.performSwitchAndLaunch(
             authFileURL: authFileURL,
             account: account,
-            chatGPTAccountID: chatGPTAccountID
+            chatGPTAccountID: chatGPTAccountID,
+            launchTarget: launchTarget
         )
     }
 }

@@ -135,6 +135,11 @@
 "strategy.switch_allowed.title" = "允許切換";
 "strategy.switch_allowed.message" = "已滿足智慧切換條件。";
 "strategy.switch_without_launch" = "切換並啟動";
+"strategy.launch_target" = "啟動目標 App";
+"strategy.launch_target.auto" = "自動（Codex / ChatGPT）";
+"strategy.launch_target.section.supported" = "明確支援";
+"strategy.launch_target.section.advanced" = "進階（視本機整合）";
+"strategy.launch_target.hint" = "僅列出與 Codex auth.json 流程相關的 App。";
 "strategy.auto_sync_enabled" = "自動同步 Codex 用量";
 "strategy.auto_sync_interval_seconds_format" = "自動同步間隔：%d 秒";
 "strategy.language" = "語言";
@@ -142,6 +147,24 @@
 "strategy.appearance.system" = "跟隨系統";
 "strategy.appearance.dark" = "深色";
 "strategy.appearance.light" = "淺色";
+"update.auto_check" = "自動檢查更新";
+"update.check_now" = "立即檢查";
+"update.checking" = "檢查更新中...";
+"update.not_available" = "--";
+"update.status.up_to_date_format" = "目前已是最新版本（%@）。";
+"update.status.new_version_format" = "偵測到新版本 %@。";
+"update.status.failure_format" = "更新檢查失敗：%@";
+"update.status.skipped_format" = "已略過版本 %@。";
+"update.status.opened_manual" = "已開啟 Release 頁面。";
+"update.status.opened_install" = "已開啟安裝檔下載。";
+"update.prompt.title_format" = "發現新版本 %@";
+"update.prompt.subtitle_format" = "目前版本 %@。你可以立即安裝，或稍後處理。";
+"update.prompt.published_format" = "發布時間：%@";
+"update.prompt.skip" = "略過此版本";
+"update.prompt.manual" = "手動下載";
+"update.prompt.install_now" = "立即安裝";
+"update.prompt.release_format" = "Release %@";
+"update.prompt.matrix_title" = "建置版本包含：";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";
@@ -319,7 +342,7 @@
 "special_reset.kind.weekly" = "週";
 "special_reset.kind.five_hour" = "5 小時";
 "special_reset.records_title" = "監控中的重置目標";
-"special_reset.records_row_format" = "週預期：%@ · 5 小時預期：%@";
+"special_reset.records_row_format" = "週重置：%@ · 5 小時重置：%@";
 "special_reset.notification.title" = "偵測到疑似 OpenAI 提前重置";
 "special_reset.notification.body_format" = "%@ 可能提前重置（週與 5 小時同時變化）。\n週預期：%@\n週觀察：%@\n5 小時預期：%@\n5 小時觀察：%@";
 "special_reset.event.message_format" = "%@\n週預期：%@\n週觀察：%@\n5 小時預期：%@\n5 小時觀察：%@\n偵測：%@";

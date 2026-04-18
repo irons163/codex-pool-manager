@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0AA1BB2CC3DD4EE5FF667788 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */; };
-		0AA1BB2DC3DD4EE5FF667788 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */; };
+		0AA1BB2CC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */; };
+		0AA1BB2DC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */; };
 		4969AB27C103A272942164A3 /* CodexPoolWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */; };
 		4A3753432F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */; };
 		4A3753452F743C30008F6AF6 /* PoolDashboardViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */; };
@@ -34,7 +34,6 @@
 		4AB61E952F738FCF001AC4CB /* AccountPoolStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */; };
 		4AB61E962F738FCF001AC4CB /* AccountTokenVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */; };
 		4AB61E972F738FCF001AC4CB /* AgentPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E892F738FCF001AC4CB /* AgentPool.swift */; };
-		FD059C94938F8AB893C5A6D9 /* UsageAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */; };
 		4AB61E992F738FCF001AC4CB /* CodexAuthFileSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */; };
 		4AB61E9A2F738FCF001AC4CB /* CodexUsageSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */; };
 		4AB61E9B2F738FCF001AC4CB /* PoolDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */; };
@@ -77,6 +76,7 @@
 		B798BA5381E4AA476C41401E /* CodexPoolWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EBB76EE172878B904303AE89 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6959EA954386004CC3A082DE /* ContentView.swift */; };
 		EF3F9DE51616D44028DC04A3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */; };
+		FD059C94938F8AB893C5A6D9 /* UsageAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,8 +118,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
 		0DD2922FE9D177DB7B5607A3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
 		185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardActionCoordinator.swift; sourceTree = "<group>"; };
 		4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardViewState.swift; sourceTree = "<group>"; };
@@ -145,7 +145,6 @@
 		4AB61E872F738FCF001AC4CB /* AccountPoolStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPoolStore.swift; sourceTree = "<group>"; };
 		4AB61E882F738FCF001AC4CB /* AccountTokenVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTokenVault.swift; sourceTree = "<group>"; };
 		4AB61E892F738FCF001AC4CB /* AgentPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPool.swift; sourceTree = "<group>"; };
-		AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAnalytics.swift; sourceTree = "<group>"; };
 		4AB61E8C2F738FCF001AC4CB /* CodexAuthFileSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthFileSwitcher.swift; sourceTree = "<group>"; };
 		4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageSyncService.swift; sourceTree = "<group>"; };
 		4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardView.swift; sourceTree = "<group>"; };
@@ -189,6 +188,7 @@
 		5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CodexPoolWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6959EA954386004CC3A082DE /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8A27F9F823256B600C0700FF /* CodexPoolWidgetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolWidgetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAnalytics.swift; sourceTree = "<group>"; };
 		C0E7D1DCE1610D31CB59E5EA /* CodexPoolWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CodexPoolWidget.entitlements; sourceTree = "<group>"; };
 		C7AE6F1F4BA7DCD1EB6CDE16 /* CodexPoolWidgetHost.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CodexPoolWidgetHost.entitlements; sourceTree = "<group>"; };
 		CCA89599DF68730D5F45600B /* CodexPoolWidgetHostApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CodexPoolWidgetHostApp.swift; sourceTree = "<group>"; };
@@ -271,14 +271,6 @@
 				4AB61EA92F739CB1001AC4CB /* Pool */,
 			);
 			path = Domain;
-			sourceTree = "<group>";
-		};
-		FCE881F34D1DF70160302C55 /* Analytics */ = {
-			isa = PBXGroup;
-			children = (
-				AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */,
-			);
-			path = Analytics;
 			sourceTree = "<group>";
 		};
 		4AB61EA92F739CB1001AC4CB /* Pool */ = {
@@ -397,7 +389,7 @@
 		4AFBA5792F72203A008D97C1 = {
 			isa = PBXGroup;
 			children = (
-				0AA1BB2BC3DD4EE5FF667788 /* AppIcon.icns */,
+				0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */,
 				4AFBA5842F72203A008D97C1 /* CodexPoolManager */,
 				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
 				4AFBA59E2F72203C008D97C1 /* CodexPoolManagerUITests */,
@@ -448,6 +440,14 @@
 				185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */,
 			);
 			name = "OS X";
+			sourceTree = "<group>";
+		};
+		FCE881F34D1DF70160302C55 /* Analytics */ = {
+			isa = PBXGroup;
+			children = (
+				AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */,
+			);
+			path = Analytics;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -615,7 +615,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0AA1BB2DC3DD4EE5FF667788 /* AppIcon.icns in Resources */,
+				0AA1BB2DC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -623,7 +623,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0AA1BB2CC3DD4EE5FF667788 /* AppIcon.icns in Resources */,
+				0AA1BB2CC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

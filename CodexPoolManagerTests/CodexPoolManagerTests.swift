@@ -4312,6 +4312,8 @@ extension CodexPoolManagerTests {
             observedWeeklyResetAt: observedWeekly,
             fiveHourExpectedResetAt: fiveHourExpected,
             observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 35,
+            previousFiveHourUsagePercent: 22,
             weeklyUsagePercent: 0,
             fiveHourUsagePercent: 0,
             now: now,
@@ -4335,6 +4337,8 @@ extension CodexPoolManagerTests {
             observedWeeklyResetAt: observedWeekly,
             fiveHourExpectedResetAt: fiveHourExpected,
             observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 35,
+            previousFiveHourUsagePercent: 22,
             weeklyUsagePercent: 0,
             fiveHourUsagePercent: 0,
             now: now,
@@ -4357,6 +4361,8 @@ extension CodexPoolManagerTests {
             observedWeeklyResetAt: observedWeekly,
             fiveHourExpectedResetAt: fiveHourExpected,
             observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 35,
+            previousFiveHourUsagePercent: 22,
             weeklyUsagePercent: 0,
             fiveHourUsagePercent: 0,
             now: now,
@@ -4379,6 +4385,8 @@ extension CodexPoolManagerTests {
             observedWeeklyResetAt: observedWeekly,
             fiveHourExpectedResetAt: fiveHourExpected,
             observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 35,
+            previousFiveHourUsagePercent: 22,
             weeklyUsagePercent: 0,
             fiveHourUsagePercent: 7,
             now: now,
@@ -4412,6 +4420,54 @@ extension CodexPoolManagerTests {
             now: sameDay,
             calendar: calendar
         ))
+    }
+
+    @Test
+    func specialResetAlertDoesNotTriggerWhenUsageWasAlreadyZeroBeforeSync() {
+        let now = Date(timeIntervalSince1970: 1_760_000_000)
+        let weeklyExpected = now.addingTimeInterval(6 * 3_600)
+        let fiveHourExpected = now.addingTimeInterval(2 * 3_600)
+        let observedWeekly = now.addingTimeInterval(36 * 3_600)
+        let observedFiveHour = now.addingTimeInterval(8 * 3_600)
+
+        let result = SpecialResetAlertEvaluator.detectCombinedEarlyReset(
+            weeklyExpectedResetAt: weeklyExpected,
+            observedWeeklyResetAt: observedWeekly,
+            fiveHourExpectedResetAt: fiveHourExpected,
+            observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 0,
+            previousFiveHourUsagePercent: 0,
+            weeklyUsagePercent: 0,
+            fiveHourUsagePercent: 0,
+            now: now,
+            graceSeconds: 60
+        )
+
+        #expect(result == nil)
+    }
+
+    @Test
+    func specialResetAlertDoesNotTriggerWhenObservedResetMovesEarlier() {
+        let now = Date(timeIntervalSince1970: 1_760_000_000)
+        let weeklyExpected = now.addingTimeInterval(10 * 3_600)
+        let fiveHourExpected = now.addingTimeInterval(3 * 3_600)
+        let observedWeekly = now.addingTimeInterval(8 * 3_600)
+        let observedFiveHour = now.addingTimeInterval(2 * 3_600)
+
+        let result = SpecialResetAlertEvaluator.detectCombinedEarlyReset(
+            weeklyExpectedResetAt: weeklyExpected,
+            observedWeeklyResetAt: observedWeekly,
+            fiveHourExpectedResetAt: fiveHourExpected,
+            observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 28,
+            previousFiveHourUsagePercent: 14,
+            weeklyUsagePercent: 0,
+            fiveHourUsagePercent: 0,
+            now: now,
+            graceSeconds: 60
+        )
+
+        #expect(result == nil)
     }
 
 }

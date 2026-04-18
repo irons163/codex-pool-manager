@@ -135,6 +135,11 @@
 "strategy.switch_allowed.title" = "Switch Allowed";
 "strategy.switch_allowed.message" = "Smart switch conditions are satisfied.";
 "strategy.switch_without_launch" = "Switch and launch";
+"strategy.launch_target" = "Launch target app";
+"strategy.launch_target.auto" = "Auto (Codex / ChatGPT)";
+"strategy.launch_target.section.supported" = "Supported";
+"strategy.launch_target.section.advanced" = "Advanced";
+"strategy.launch_target.hint" = "Only apps relevant to Codex auth.json flow are listed.";
 "strategy.auto_sync_enabled" = "Auto-sync Codex usage";
 "strategy.auto_sync_interval_seconds_format" = "Auto-sync interval: %d sec";
 "strategy.language" = "Language";
@@ -142,6 +147,24 @@
 "strategy.appearance.system" = "Follow System";
 "strategy.appearance.dark" = "Dark";
 "strategy.appearance.light" = "Light";
+"update.auto_check" = "Check updates automatically";
+"update.check_now" = "Check now";
+"update.checking" = "Checking for updates...";
+"update.not_available" = "--";
+"update.status.up_to_date_format" = "You are up to date (%@).";
+"update.status.new_version_format" = "New version %@ is available.";
+"update.status.failure_format" = "Update check failed: %@";
+"update.status.skipped_format" = "Skipped version %@.";
+"update.status.opened_manual" = "Release page opened.";
+"update.status.opened_install" = "Installer download opened.";
+"update.prompt.title_format" = "New version %@ found";
+"update.prompt.subtitle_format" = "Current version %@. You can install now or handle it later.";
+"update.prompt.published_format" = "Published at %@";
+"update.prompt.skip" = "Skip this version";
+"update.prompt.manual" = "Manual download";
+"update.prompt.install_now" = "Install now";
+"update.prompt.release_format" = "Release %@";
+"update.prompt.matrix_title" = "Build matrix includes:";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
@@ -315,7 +338,7 @@
 "special_reset.kind.weekly" = "Weekly";
 "special_reset.kind.five_hour" = "5-hour";
 "special_reset.records_title" = "Tracked Reset Targets";
-"special_reset.records_row_format" = "Weekly expected: %@ · 5-hour expected: %@";
+"special_reset.records_row_format" = "Weekly reset: %@ · 5-hour reset: %@";
 "special_reset.notification.title" = "Potential OpenAI-side Reset Detected";
 "special_reset.notification.body_format" = "%@ appears to have reset early in both windows.\nWeekly expected: %@\nWeekly observed: %@\n5-hour expected: %@\n5-hour observed: %@";
 "special_reset.event.message_format" = "%@\nWeekly expected: %@\nWeekly observed: %@\n5-hour expected: %@\n5-hour observed: %@\nDetected: %@";
