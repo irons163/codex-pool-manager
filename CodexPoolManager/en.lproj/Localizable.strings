@@ -24,6 +24,7 @@
 "layout.double" = "Double";
 "layout.triple" = "Triple";
 "layout.quad" = "Quad";
+"layout.minimal" = "Minimal";
 "group.title" = "Group";
 "group.all" = "All";
 "group.placeholder" = "Group name";
@@ -48,6 +49,9 @@
 "switch.warning.launch_failed_but_switched" = "Account switch succeeded, but app launch is delayed. The app will relaunch automatically after it closes.";
 "usage.used_percent_format" = "Used %d%%";
 "usage.remaining_percent_format" = "Remaining %d%%";
+"usage.weekly_short" = "Weekly";
+"usage.five_hour_short" = "5h";
+"usage.left_short" = "left";
 "usage.used_units_format" = "Used %d";
 "usage.quota_units_format" = "Quota %d";
 "account.name.placeholder" = "Account name";

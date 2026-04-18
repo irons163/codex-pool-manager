@@ -24,6 +24,7 @@
 "layout.double" = "雙排";
 "layout.triple" = "三排";
 "layout.quad" = "四排";
+"layout.minimal" = "極簡";
 "group.title" = "群組";
 "group.all" = "全部";
 "group.placeholder" = "群組名稱";
@@ -48,6 +49,9 @@
 "switch.warning.launch_failed_but_switched" = "帳號已切換成功，但啟動延遲。應用程式關閉後會自動重新啟動。";
 "usage.used_percent_format" = "已用 %d%%";
 "usage.remaining_percent_format" = "剩餘 %d%%";
+"usage.weekly_short" = "週";
+"usage.five_hour_short" = "5小時";
+"usage.left_short" = "剩餘";
 "usage.used_units_format" = "已用 %d";
 "usage.quota_units_format" = "配額 %d";
 "account.name.placeholder" = "帳號名稱";
