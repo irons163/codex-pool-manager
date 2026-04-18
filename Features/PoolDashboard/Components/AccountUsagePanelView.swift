@@ -38,6 +38,7 @@ struct AccountUsagePanelView: View {
         case double
         case triple
         case quad
+        case minimal
 
         var id: String {
             rawValue
@@ -49,15 +50,17 @@ struct AccountUsagePanelView: View {
             case .double: L10n.text("layout.double")
             case .triple: L10n.text("layout.triple")
             case .quad: L10n.text("layout.quad")
+            case .minimal: L10n.text("layout.minimal")
             }
         }
 
-        var columns: Int {
+        var fixedColumns: Int? {
             switch self {
-            case .single: 1
-            case .double: 2
-            case .triple: 3
-            case .quad: 4
+            case .single: return 1
+            case .double: return 2
+            case .triple: return 3
+            case .quad: return 4
+            case .minimal: return nil
             }
         }
     }
@@ -476,7 +479,20 @@ struct AccountUsagePanelView: View {
     }
 
     private var gridColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(minimum: 220), spacing: 10), count: layoutMode.columns)
+        if layoutMode == .minimal {
+            return [
+                GridItem(.adaptive(minimum: 300, maximum: 360), spacing: 10)
+            ]
+        }
+
+        guard let fixedColumns = layoutMode.fixedColumns else {
+            return [GridItem(.adaptive(minimum: 300, maximum: 360), spacing: 10)]
+        }
+
+        return Array(
+            repeating: GridItem(.flexible(minimum: 220), spacing: 10),
+            count: fixedColumns
+        )
     }
 
     private var sortedAccounts: [AgentAccount] {
@@ -533,65 +549,11 @@ struct AccountUsagePanelView: View {
 
     private func accountCard(_ account: AgentAccount) -> some View {
         let isCurrentAccount = isCurrentEquivalentAccount(account)
-        let paidAccount = isPaidAccount(account)
-
         return VStack(alignment: .leading, spacing: 8) {
-            if layoutMode == .single {
-                accountNameRow(account)
-                accountActionAndWarningRow(account)
+            if layoutMode == .minimal {
+                minimalAccountCardContent(account)
             } else {
-                accountNameRow(account)
-                accountActionAndWarningRow(account)
-            }
-
-            if paidAccount {
-                if let fiveHourPercent = account.primaryUsagePercent {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top, spacing: 12) {
-                            paidWeeklyUsageSection(for: account)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                        VStack(alignment: .leading, spacing: 10) {
-                            paidWeeklyUsageSection(for: account)
-                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                        }
-                    }
-                } else {
-                    paidWeeklyUsageSection(for: account)
-                }
-            } else {
-                if isPercentUsageAccount(account) {
-                    HStack {
-                        Text(L10n.text("usage.used_percent_format", account.usedUnits))
-                            .font(.subheadline)
-                        Spacer()
-                        Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
-                            .font(.subheadline)
-                    }
-                } else {
-                    HStack {
-                        Stepper(
-                            L10n.text("usage.used_units_format", account.usedUnits),
-                            value: accountUsedBinding(account.id),
-                            in: 0...account.quota,
-                            step: 50
-                        )
-                        Stepper(
-                            L10n.text("usage.quota_units_format", account.quota),
-                            value: accountQuotaBinding(account.id),
-                            in: 100...20_000,
-                            step: 100
-                        )
-                    }
-                }
-
-                ProgressView(value: account.usageRatio)
-                    .tint(usageProgressColor(account))
-                Text(resetRecordText(for: account))
-                    .font(.footnote)
-                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                fullAccountCardContent(account)
             }
         }
         .padding(.horizontal, 12)
@@ -612,6 +574,202 @@ struct AccountUsagePanelView: View {
             color: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? PoolDashboardTheme.glowA.opacity(0.35) : .clear,
             radius: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? 12 : 0
         )
+    }
+
+    @ViewBuilder
+    private func fullAccountCardContent(_ account: AgentAccount) -> some View {
+        let paidAccount = isPaidAccount(account)
+        accountNameRow(account)
+        accountActionAndWarningRow(account)
+
+        if paidAccount {
+            if let fiveHourPercent = account.primaryUsagePercent {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 12) {
+                        paidWeeklyUsageSection(for: account)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        paidWeeklyUsageSection(for: account)
+                        paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                    }
+                }
+            } else {
+                paidWeeklyUsageSection(for: account)
+            }
+        } else {
+            if isPercentUsageAccount(account) {
+                HStack {
+                    Text(L10n.text("usage.used_percent_format", account.usedUnits))
+                        .font(.subheadline)
+                    Spacer()
+                    Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
+                        .font(.subheadline)
+                }
+            } else {
+                HStack {
+                    Stepper(
+                        L10n.text("usage.used_units_format", account.usedUnits),
+                        value: accountUsedBinding(account.id),
+                        in: 0...account.quota,
+                        step: 50
+                    )
+                    Stepper(
+                        L10n.text("usage.quota_units_format", account.quota),
+                        value: accountQuotaBinding(account.id),
+                        in: 100...20_000,
+                        step: 100
+                    )
+                }
+            }
+
+            ProgressView(value: account.usageRatio)
+                .tint(usageProgressColor(account))
+            Text(resetRecordText(for: account))
+                .font(.footnote)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+        }
+    }
+
+    @ViewBuilder
+    private func minimalAccountCardContent(_ account: AgentAccount) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(account.name)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                if isCurrentEquivalentAccount(account) {
+                    Text(L10n.text("account.current_badge"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(PoolDashboardTheme.glowA.opacity(0.28))
+                        )
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 6) {
+                if isPaidAccount(account) {
+                    Text(L10n.text("account.paid_badge"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.orange.opacity(0.28))
+                        )
+                }
+
+                compactAccountActionButtons(account)
+            }
+        }
+
+        HStack(alignment: .top, spacing: 10) {
+            circularUsageIndicator(
+                title: L10n.text("usage.weekly_short"),
+                usedPercent: weeklyUsagePercent(for: account),
+                color: usageProgressColor(account),
+                resetText: shortResetDateText(account.usageWindowResetAt)
+            )
+
+            if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+                circularUsageIndicator(
+                    title: L10n.text("usage.five_hour_short"),
+                    usedPercent: max(0, min(100, fiveHourPercent)),
+                    color: usageColor(forPercent: fiveHourPercent),
+                    resetText: shortResetDateText(account.primaryUsageResetAt)
+                )
+            }
+        }
+
+        if account.isUsageSyncExcluded {
+            syncExcludedWarning(account)
+        }
+    }
+
+    private func compactAccountActionButtons(_ account: AgentAccount) -> some View {
+        HStack(spacing: 6) {
+            Button(L10n.text("switch.launch.button")) {
+                Task {
+                    await onSwitchAndLaunch(account)
+                }
+            }
+            .controlSize(.small)
+            .buttonStyle(.borderedProminent)
+            .tint(PoolDashboardTheme.glowA)
+
+            Button(L10n.text("delete.button"), role: .destructive) {
+                deleteConfirmationTarget = .account(id: account.id, name: account.name)
+            }
+            .controlSize(.small)
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private func weeklyUsagePercent(for account: AgentAccount) -> Int {
+        if isPercentUsageAccount(account) {
+            return max(0, min(100, account.usedUnits))
+        }
+        return max(0, min(100, Int((account.usageRatio * 100).rounded())))
+    }
+
+    private func circularUsageIndicator(
+        title: String,
+        usedPercent: Int,
+        color: Color,
+        resetText: String
+    ) -> some View {
+        let clampedUsedPercent = max(0, min(100, usedPercent))
+        let remainingPercent = max(0, min(100, 100 - clampedUsedPercent))
+
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+            ZStack {
+                Circle()
+                    .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 6)
+
+                Circle()
+                    .trim(from: 0, to: Double(clampedUsedPercent) / 100)
+                    .stroke(
+                        color,
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+
+                VStack(spacing: 0) {
+                    Text("\(remainingPercent)%")
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    Text(L10n.text("usage.left_short"))
+                        .font(.caption2)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
+            }
+            .frame(width: 64, height: 64)
+
+            Text(resetText)
+                .font(.caption2)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .lineLimit(2)
+        }
+    }
+
+    private func shortResetDateText(_ date: Date?) -> String {
+        date.map(localizedMonthDayHourMinuteText) ?? "--"
     }
 
     private func accountNameRow(_ account: AgentAccount) -> some View {
