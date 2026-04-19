@@ -137,6 +137,7 @@ struct PoolDashboardView: View {
     @State private var oauthSignInTask: Task<Void, Never>?
     @State private var specialResetWatchState = SpecialResetWatchState()
     @State private var usageAnalyticsState = UsageAnalyticsState()
+    @State private var appUpdateAvailablePrompt: AppUpdatePrompt?
     @State private var appUpdatePrompt: AppUpdatePrompt?
     @State private var isCheckingForAppUpdate = false
     @State private var appUpdateStatusMessage: String?
@@ -575,6 +576,10 @@ struct PoolDashboardView: View {
             }
 
             Spacer(minLength: 0)
+
+            if let appUpdateAvailablePrompt {
+                sidebarUpdateButton(prompt: appUpdateAvailablePrompt)
+            }
         }
         .frame(width: PoolDashboardTheme.workspaceSidebarWidth, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -819,6 +824,30 @@ struct PoolDashboardView: View {
             ? (isSelected ? PoolDashboardTheme.textPrimary : Color(red: 1.0, green: 0.72, blue: 0.56))
             : (isSelected ? PoolDashboardTheme.textPrimary : PoolDashboardTheme.textSecondary)
         )
+    }
+
+    private func sidebarUpdateButton(prompt: AppUpdatePrompt) -> some View {
+        Button {
+            appUpdatePrompt = prompt
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.down.app.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.text("update.prompt.install_now"))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    Text(prompt.latestVersion)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+        }
+        .buttonStyle(DashboardWarningButtonStyle())
     }
 
     private var syncToolbarPanel: some View {
@@ -2131,6 +2160,7 @@ struct PoolDashboardView: View {
                 current: currentVersion,
                 remote: latestVersion
             ) else {
+                appUpdateAvailablePrompt = nil
                 if force {
                     appUpdateStatusMessage = L10n.text("update.status.up_to_date_format", currentVersion)
                 }
@@ -2138,14 +2168,17 @@ struct PoolDashboardView: View {
             }
 
             if !force, appUpdateSkippedVersion == latestVersion {
+                appUpdateAvailablePrompt = nil
                 return
             }
 
-            appUpdatePrompt = AppUpdatePrompt(
+            let prompt = AppUpdatePrompt(
                 currentVersion: currentVersion,
                 latestVersion: latestVersion,
                 release: release
             )
+            appUpdateAvailablePrompt = prompt
+            appUpdatePrompt = prompt
             appUpdateStatusMessage = L10n.text("update.status.new_version_format", latestVersion)
         } catch {
             if force {
@@ -2185,6 +2218,7 @@ struct PoolDashboardView: View {
     private func skipAppUpdateVersion(_ prompt: AppUpdatePrompt) {
         appUpdateSkippedVersion = prompt.latestVersion
         appUpdateStatusMessage = L10n.text("update.status.skipped_format", prompt.latestVersion)
+        appUpdateAvailablePrompt = nil
         dismissAppUpdatePrompt()
     }
 
