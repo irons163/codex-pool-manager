@@ -109,11 +109,13 @@
 "local_oauth.scan_button" = "ローカルアカウントをスキャン";
 "local_oauth.choose_button" = "auth.json を選択";
 "local_oauth.scan_failed" = "スキャン失敗";
+"local_oauth.import_result" = "インポート結果";
 "local_oauth.session_count_format" = "%d 件のアカウントが見つかりました";
 "local_oauth.account_id_format" = "アカウント名: %@";
 "local_oauth.missing_id.title" = "アカウント ID 不足";
 "local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
 "local_oauth.import_button" = "インポート";
+"local_oauth.importing_button" = "インポート中...";
 "local_oauth.sync_unavailable" = "使用量同期は利用不可";
 
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
@@ -254,6 +256,8 @@
 "local_import.bookmark_save_failure_format" = "認可ブックマークの保存に失敗しました: %@";
 "local_import.bookmark_invalid" = "認可が無効になりました。auth.json を再選択してください。";
 "local_import.usage_fetch_failed_format" = "このアカウントのライブ使用量を取得できないため、インポートをスキップしました: %@";
+"local_import.success_added_format" = "インポート完了: アカウント %@ を追加しました。";
+"local_import.success_updated_format" = "インポート完了: アカウント %@ を更新しました。";
 "auth.invalid_configuration" = "少なくとも Client ID を入力してください（他の項目にはデフォルト値があります）。";
 "auth.file_panel.message_select_auth_json" = "~/.codex/auth.json を選択してください";
 "auth.file_access.missing_auth_file" = "auth.json が見つかりません。先に auth.json を選択してアクセスを許可してください。";

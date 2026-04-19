@@ -118,11 +118,13 @@
 "local_oauth.scan_button" = "掃描本機帳號";
 "local_oauth.choose_button" = "選擇 auth.json";
 "local_oauth.scan_failed" = "掃描失敗";
+"local_oauth.import_result" = "匯入結果";
 "local_oauth.session_count_format" = "找到 %d 個帳號";
 "local_oauth.account_id_format" = "帳號名稱：%@";
 "local_oauth.missing_id.title" = "缺少帳號 ID";
 "local_oauth.missing_id.message" = "此帳號沒有 ChatGPT account id，因此無法進行用量同步。";
 "local_oauth.import_button" = "匯入";
+"local_oauth.importing_button" = "匯入中...";
 "local_oauth.sync_unavailable" = "無法同步用量";
 
 "strategy.subtitle" = "控制執行時如何選擇與輪替帳號。";
@@ -356,6 +358,8 @@
 "local_import.bookmark_save_failure_format" = "儲存授權失敗：%@";
 "local_import.bookmark_invalid" = "授權已失效，請重新選擇 auth.json";
 "local_import.usage_fetch_failed_format" = "無法取得此帳號的即時用量，未匯入：%@";
+"local_import.success_added_format" = "匯入完成：已新增帳號 %@。";
+"local_import.success_updated_format" = "匯入完成：已更新帳號 %@。";
 "auth.invalid_configuration" = "請至少填入 Client ID（其餘欄位有預設值）";
 "auth.file_panel.message_select_auth_json" = "請選擇 ~/.codex/auth.json";
 "auth.file_access.missing_auth_file" = "找不到 auth.json，請先按「選擇 auth.json」授權";

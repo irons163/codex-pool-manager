@@ -3385,6 +3385,7 @@ extension CodexPoolManagerTests {
         nextState.addAccount(name: "Imported", quota: 100)
         var nextViewModel = viewModel
         nextViewModel.errorMessage = nil
+        nextViewModel.successMessage = "匯入完成：已新增帳號 Imported。"
         let output = PoolDashboardLocalImportCoordinator.Output(
             state: nextState,
             viewModel: nextViewModel,
@@ -3401,6 +3402,7 @@ extension CodexPoolManagerTests {
 
         #expect(state.accounts.count == 1)
         #expect(viewState.syncError == nil)
+        #expect(viewModel.successMessage == "匯入完成：已新增帳號 Imported。")
     }
 
     @Test

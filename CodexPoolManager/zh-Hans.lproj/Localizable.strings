@@ -118,11 +118,13 @@
 "local_oauth.scan_button" = "扫描本地账号";
 "local_oauth.choose_button" = "选择 auth.json";
 "local_oauth.scan_failed" = "扫描失败";
+"local_oauth.import_result" = "导入结果";
 "local_oauth.session_count_format" = "找到 %d 个账号";
 "local_oauth.account_id_format" = "账号名称：%@";
 "local_oauth.missing_id.title" = "缺少账号 ID";
 "local_oauth.missing_id.message" = "该账号缺少 ChatGPT account id，因此无法同步用量。";
 "local_oauth.import_button" = "导入";
+"local_oauth.importing_button" = "导入中...";
 "local_oauth.sync_unavailable" = "无法同步用量";
 
 "strategy.subtitle" = "控制运行时如何选择并轮换账号。";
@@ -356,6 +358,8 @@
 "local_import.bookmark_save_failure_format" = "保存授权失败：%@";
 "local_import.bookmark_invalid" = "授权已失效，请重新选择 auth.json";
 "local_import.usage_fetch_failed_format" = "无法获取该账号实时用量，未导入：%@";
+"local_import.success_added_format" = "导入完成：已新增账号 %@。";
+"local_import.success_updated_format" = "导入完成：已更新账号 %@。";
 "auth.invalid_configuration" = "请至少填写 Client ID（其余字段有默认值）";
 "auth.file_panel.message_select_auth_json" = "请选择 ~/.codex/auth.json";
 "auth.file_access.missing_auth_file" = "找不到 auth.json，请先按“选择 auth.json”授权";

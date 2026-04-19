@@ -6,10 +6,12 @@ struct LocalOAuthImportViewModelTests {
     @Test
     func automaticScanEmptyShowsSandboxHint() {
         var viewModel = LocalOAuthImportViewModel()
+        viewModel.successMessage = "old-success"
 
         viewModel.applyAutomaticScanResult([])
 
         #expect(viewModel.accounts.isEmpty)
+        #expect(viewModel.successMessage == nil)
         #expect(viewModel.errorMessage == "自動掃描沒有讀到帳號，可能是 macOS Sandbox 限制。請按「選擇 auth.json」授權。")
     }
 
@@ -54,6 +56,7 @@ struct LocalOAuthImportViewModelTests {
     func prepareImportNewAccountReturnsImportDecision() {
         var viewModel = LocalOAuthImportViewModel()
         viewModel.errorMessage = "old"
+        viewModel.successMessage = "old-success"
         let account = sampleAccount(email: "new@example.com", token: "sk-new-token")
 
         let decision = viewModel.prepareImport(account, existingAccessTokens: [])
@@ -66,11 +69,13 @@ struct LocalOAuthImportViewModelTests {
             )
         )
         #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.successMessage == nil)
     }
 
     @Test
     func prepareImportMissingAccountIDReturnsMissingDecision() {
         var viewModel = LocalOAuthImportViewModel()
+        viewModel.successMessage = "old-success"
         let account = LocalCodexOAuthAccount(
             id: UUID().uuidString,
             displayName: "Codex User",
@@ -83,6 +88,7 @@ struct LocalOAuthImportViewModelTests {
         let decision = viewModel.prepareImport(account, existingAccessTokens: [])
 
         #expect(decision == .missingAccountID)
+        #expect(viewModel.successMessage == nil)
         #expect(viewModel.errorMessage == "auth.json 缺少 ChatGPT Account ID，無法查詢用量")
     }
 

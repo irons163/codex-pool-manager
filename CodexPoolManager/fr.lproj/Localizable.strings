@@ -109,11 +109,13 @@
 "local_oauth.scan_button" = "Scanner les comptes locaux";
 "local_oauth.choose_button" = "Choisir auth.json";
 "local_oauth.scan_failed" = "Échec du scan";
+"local_oauth.import_result" = "Résultat de l'import";
 "local_oauth.session_count_format" = "Comptes trouvés : %d";
 "local_oauth.account_id_format" = "Nom du compte : %@";
 "local_oauth.missing_id.title" = "ID du compte manquant";
 "local_oauth.missing_id.message" = "This account has no ChatGPT account id, so usage sync is unavailable.";
 "local_oauth.import_button" = "Importer";
+"local_oauth.importing_button" = "Import en cours...";
 "local_oauth.sync_unavailable" = "Sync d'usage indisponible";
 
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
@@ -254,6 +256,8 @@
 "local_import.bookmark_save_failure_format" = "Impossible d'enregistrer le signet d'autorisation : %@";
 "local_import.bookmark_invalid" = "L'autorisation n'est plus valide. Veuillez choisir auth.json à nouveau.";
 "local_import.usage_fetch_failed_format" = "Impossible de récupérer l'usage en direct pour ce compte, importation ignorée : %@";
+"local_import.success_added_format" = "Import terminé : compte %@ ajouté.";
+"local_import.success_updated_format" = "Import terminé : compte %@ mis à jour.";
 "auth.invalid_configuration" = "Veuillez renseigner au minimum le Client ID (les autres champs ont des valeurs par défaut).";
 "auth.file_panel.message_select_auth_json" = "Veuillez choisir ~/.codex/auth.json";
 "auth.file_access.missing_auth_file" = "auth.json introuvable. Veuillez d'abord choisir auth.json pour autoriser l'accès.";

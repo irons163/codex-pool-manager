@@ -3,6 +3,8 @@ import SwiftUI
 struct LocalOAuthAccountsPanelView: View {
     let accounts: [LocalCodexOAuthAccount]
     let errorMessage: String?
+    let successMessage: String?
+    let importingAccountID: String?
     let onScan: () -> Void
     let onChooseAuthFile: () -> Void
     let onImport: (LocalCodexOAuthAccount) async -> Void
@@ -76,6 +78,14 @@ struct LocalOAuthAccountsPanelView: View {
             )
             .frame(maxWidth: 460, alignment: .leading)
             .layoutPriority(1)
+        } else if let successMessage {
+            PanelStatusCalloutView(
+                message: successMessage,
+                title: L10n.text("local_oauth.import_result"),
+                tone: .success
+            )
+            .frame(maxWidth: 460, alignment: .leading)
+            .layoutPriority(1)
         } else {
             Text(L10n.text("local_oauth.session_count_format", accounts.count))
                 .lineLimit(1)
@@ -86,7 +96,9 @@ struct LocalOAuthAccountsPanelView: View {
         }
     }
 
+    @ViewBuilder
     private func accountRow(_ account: LocalCodexOAuthAccount) -> some View {
+        let isImportingAccount = isImporting(account)
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(account.displayName)
@@ -122,11 +134,11 @@ struct LocalOAuthAccountsPanelView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 6) {
-                Button(L10n.text("local_oauth.import_button")) {
+                Button(isImportingAccount ? L10n.text("local_oauth.importing_button") : L10n.text("local_oauth.import_button")) {
                     Task { await onImport(account) }
                 }
                 .buttonStyle(DashboardPrimaryButtonStyle())
-                .disabled(account.chatGPTAccountID == nil)
+                .disabled(account.chatGPTAccountID == nil || importingAccountID != nil)
 
                 if account.chatGPTAccountID == nil {
                     Text(L10n.text("local_oauth.sync_unavailable"))
@@ -138,6 +150,10 @@ struct LocalOAuthAccountsPanelView: View {
         .padding(.vertical, PoolDashboardTheme.listRowVerticalInset * 3)
         .padding(.horizontal, 10)
         .dashboardInfoCard()
+    }
+
+    private func isImporting(_ account: LocalCodexOAuthAccount) -> Bool {
+        importingAccountID == account.id
     }
 
     private func resolvedAccountName(for account: LocalCodexOAuthAccount) -> String {

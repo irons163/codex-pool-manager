@@ -123,6 +123,7 @@ struct PoolDashboardView: View {
     @State private var viewState = PoolDashboardViewState()
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
     @State private var localOAuthImportViewModel = LocalOAuthImportViewModel()
+    @State private var importingLocalOAuthAccountID: String?
     @State private var sessionAuthorizedAuthFileURL: URL?
     @State private var selectedWorkspace: Workspace = .authentication
     @State private var selectedGroupName: String = AgentAccount.defaultGroupName
@@ -869,6 +870,8 @@ struct PoolDashboardView: View {
         LocalOAuthAccountsPanelView(
             accounts: localOAuthImportViewModel.accounts,
             errorMessage: localOAuthImportViewModel.errorMessage,
+            successMessage: localOAuthImportViewModel.successMessage,
+            importingAccountID: importingLocalOAuthAccountID,
             onScan: {
                 refreshLocalOAuthAccounts()
             },
@@ -1812,6 +1815,10 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func importLocalOAuthAccount(_ localAccount: LocalCodexOAuthAccount) async {
+        guard importingLocalOAuthAccountID == nil else { return }
+        importingLocalOAuthAccountID = localAccount.id
+        defer { importingLocalOAuthAccountID = nil }
+
         let output = await localImportFlowCoordinator.importLocalOAuthAccount(
             localAccount,
             from: state,

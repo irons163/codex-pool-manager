@@ -29,6 +29,7 @@ struct PoolDashboardLocalImportCoordinator {
         }
 
         do {
+            let previousAccountCount = nextState.accounts.count
             let context = try await authFlowCoordinator.fetchLocalImportContext(
                 decision: decision,
                 usageClient: OpenAICodexUsageClient(
@@ -41,9 +42,15 @@ struct PoolDashboardLocalImportCoordinator {
             )
             authFlowCoordinator.applyLocalImport(state: &nextState, context: context)
             nextViewModel.errorMessage = nil
+            if nextState.accounts.count > previousAccountCount {
+                nextViewModel.successMessage = L10n.text("local_import.success_added_format", context.name)
+            } else {
+                nextViewModel.successMessage = L10n.text("local_import.success_updated_format", context.name)
+            }
             return Output(state: nextState, viewModel: nextViewModel, didImport: true)
         } catch {
             let syncErrorMessage = authFlowCoordinator.localizedSyncError(error)
+            nextViewModel.successMessage = nil
             nextViewModel.errorMessage = L10n.text("local_import.usage_fetch_failed_format", syncErrorMessage)
             return Output(state: nextState, viewModel: nextViewModel, didImport: false)
         }
