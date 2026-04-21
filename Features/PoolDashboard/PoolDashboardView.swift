@@ -2227,10 +2227,14 @@ struct PoolDashboardView: View {
         appUpdateStatusMessage = L10n.text("update.status.opened_manual")
     }
 
-    private func installAppUpdateNow(_ prompt: AppUpdatePrompt) {
-        let url = prompt.release.preferredInstallerURL(for: AppUpdateArchitecture.current) ?? prompt.release.htmlURL
-        openExternalURL(url)
-        appUpdateStatusMessage = L10n.text("update.status.opened_install")
+    private func downloadAppUpdateNow(_ prompt: AppUpdatePrompt) {
+        if let installerURL = prompt.release.preferredInstallerURL(for: AppUpdateArchitecture.current) {
+            openExternalURL(installerURL)
+            appUpdateStatusMessage = L10n.text("update.status.opened_install")
+        } else {
+            openExternalURL(prompt.release.htmlURL)
+            appUpdateStatusMessage = L10n.text("update.status.opened_manual")
+        }
     }
 
     private func openExternalURL(_ url: URL) {
@@ -2298,10 +2302,14 @@ struct PoolDashboardView: View {
                     .buttonStyle(.bordered)
 
                     Button(L10n.text("update.prompt.install_now")) {
-                        installAppUpdateNow(prompt)
+                        downloadAppUpdateNow(prompt)
                     }
                     .buttonStyle(DashboardWarningButtonStyle())
                 }
+
+                Text(L10n.text("update.prompt.install_note"))
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.text("update.prompt.release_format", prompt.release.displayTitle))

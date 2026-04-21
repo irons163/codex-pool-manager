@@ -162,13 +162,14 @@
 "update.status.failure_format" = "更新检查失败：%@";
 "update.status.skipped_format" = "已跳过版本 %@。";
 "update.status.opened_manual" = "已打开 Release 页面。";
-"update.status.opened_install" = "已打开安装包下载。";
+"update.status.opened_install" = "已打开安装包下载。下载完成后请打开 DMG，将 App 拖到 Applications。";
 "update.prompt.title_format" = "发现新版本 %@";
-"update.prompt.subtitle_format" = "当前版本 %@。你可以立即安装，或稍后处理。";
+"update.prompt.subtitle_format" = "当前版本 %@。你可以立即下载更新，或稍后处理。";
 "update.prompt.published_format" = "发布时间：%@";
 "update.prompt.skip" = "跳过此版本";
 "update.prompt.manual" = "手动下载";
-"update.prompt.install_now" = "立即安装";
+"update.prompt.install_now" = "下载更新";
+"update.prompt.install_note" = "macOS 更新需要手动完成：请打开下载的 DMG，将 App 拖到 Applications。";
 "update.prompt.release_format" = "Release %@";
 "update.prompt.matrix_title" = "构建版本包含：";
 
