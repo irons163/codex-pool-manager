@@ -1221,7 +1221,7 @@ struct PoolDashboardView: View {
         if !didRunInitialAppUpdateCheck {
             didRunInitialAppUpdateCheck = true
             Task {
-                await checkForAppUpdates(force: false)
+                await checkForAppUpdates(force: false, bypassCadence: true)
             }
         }
     }
@@ -2136,10 +2136,10 @@ struct PoolDashboardView: View {
     // MARK: - App Update
 
     @MainActor
-    private func checkForAppUpdates(force: Bool) async {
+    private func checkForAppUpdates(force: Bool, bypassCadence: Bool = false) async {
         guard !isCheckingForAppUpdate else { return }
         if !force && !appUpdateAutoCheckEnabled { return }
-        if !force && !shouldRunAutomaticUpdateCheck(now: .now) { return }
+        if !force && !bypassCadence && !shouldRunAutomaticUpdateCheck(now: .now) { return }
 
         isCheckingForAppUpdate = true
         if force {
