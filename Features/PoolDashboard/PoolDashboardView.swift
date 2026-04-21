@@ -2311,24 +2311,27 @@ struct PoolDashboardView: View {
                     .font(.caption)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.text("update.prompt.release_format", prompt.release.displayTitle))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textPrimary)
 
-                    if prompt.release.buildMatrixLines.isEmpty {
-                        Text(L10n.text("update.not_available"))
-                            .font(.caption)
-                            .foregroundStyle(PoolDashboardTheme.textMuted)
-                    } else {
-                        Text(L10n.text("update.prompt.matrix_title"))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(PoolDashboardTheme.textSecondary)
-                        ForEach(prompt.release.buildMatrixLines, id: \.self) { line in
-                            Text("• \(line)")
+                    Text(L10n.text("update.prompt.notes_title"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                    if let releaseNotes = prompt.release.releaseNotesText {
+                        ScrollView(.vertical, showsIndicators: true) {
+                            Text(verbatim: releaseNotes)
                                 .font(.caption)
                                 .foregroundStyle(PoolDashboardTheme.textMuted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .frame(maxHeight: 170)
+                    } else {
+                        Text(L10n.text("update.prompt.notes_unavailable"))
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
                     }
                 }
             }
@@ -2482,7 +2485,24 @@ struct AppUpdateRelease: Equatable {
     let name: String
     let htmlURL: URL
     let publishedAt: Date?
+    let body: String?
     let assets: [AppUpdateAsset]
+
+    init(
+        tagName: String,
+        name: String,
+        htmlURL: URL,
+        publishedAt: Date?,
+        body: String? = nil,
+        assets: [AppUpdateAsset]
+    ) {
+        self.tagName = tagName
+        self.name = name
+        self.htmlURL = htmlURL
+        self.publishedAt = publishedAt
+        self.body = body
+        self.assets = assets
+    }
 
     var normalizedVersion: String {
         AppUpdateVersioning.normalizedVersion(from: tagName)
@@ -2491,6 +2511,12 @@ struct AppUpdateRelease: Equatable {
     var displayTitle: String {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedName.isEmpty ? tagName : trimmedName
+    }
+
+    var releaseNotesText: String? {
+        guard let body else { return nil }
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     var buildMatrixLines: [String] {
@@ -2610,6 +2636,7 @@ private struct AppUpdateReleasePayload: Decodable {
     let name: String
     let htmlURL: URL
     let publishedAtRaw: String?
+    let body: String?
     let assets: [AssetPayload]
 
     enum CodingKeys: String, CodingKey {
@@ -2617,6 +2644,7 @@ private struct AppUpdateReleasePayload: Decodable {
         case name
         case htmlURL = "html_url"
         case publishedAtRaw = "published_at"
+        case body
         case assets
     }
 
@@ -2626,6 +2654,7 @@ private struct AppUpdateReleasePayload: Decodable {
             name: name,
             htmlURL: htmlURL,
             publishedAt: parseDate(from: publishedAtRaw),
+            body: body,
             assets: assets.map {
                 AppUpdateAsset(name: $0.name, downloadURL: $0.browserDownloadURL)
             }

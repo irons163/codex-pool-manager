@@ -172,6 +172,8 @@
 "update.prompt.install_note" = "macOS updates are manual: open the downloaded DMG and drag the app to Applications.";
 "update.prompt.release_format" = "Release %@";
 "update.prompt.matrix_title" = "Build matrix includes:";
+"update.prompt.notes_title" = "Release notes";
+"update.prompt.notes_unavailable" = "No release notes were provided for this version.";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";

@@ -172,6 +172,8 @@
 "update.prompt.install_note" = "macOS 更新需手動完成：請開啟下載的 DMG，將 App 拖曳到 Applications。";
 "update.prompt.release_format" = "Release %@";
 "update.prompt.matrix_title" = "建置版本包含：";
+"update.prompt.notes_title" = "更新說明";
+"update.prompt.notes_unavailable" = "此版本尚未提供更新說明。";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";
