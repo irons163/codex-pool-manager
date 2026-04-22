@@ -163,7 +163,8 @@
 "update.status.skipped_format" = "已略過版本 %@。";
 "update.status.opened_manual" = "已開啟 Release 頁面。";
 "update.status.opened_install" = "已開啟安裝檔下載。下載完成後請打開 DMG，將 App 拖曳到 Applications。";
-"update.status.sparkle_started" = "已開啟更新程式。";
+"update.status.sparkle_started" = "已啟動一鍵更新。";
+"update.status.direct_unavailable" = "目前無法一鍵更新，請稍後再試或改用手動下載。";
 "update.prompt.title_format" = "發現新版本 %@";
 "update.prompt.subtitle_format" = "目前版本 %@。你可以立即更新，或稍後處理。";
 "update.prompt.published_format" = "發布時間：%@";

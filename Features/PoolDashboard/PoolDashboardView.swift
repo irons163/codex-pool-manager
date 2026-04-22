@@ -947,9 +947,10 @@ struct PoolDashboardView: View {
             isCheckingForUpdates: isCheckingForAppUpdate,
             appUpdateStatusMessage: appUpdateStatusMessage,
             onCheckForUpdates: {
-                if sparkleUpdateDriver.isAvailable {
-                    sparkleUpdateDriver.checkForUpdates()
+                if sparkleUpdateDriver.startUserInitiatedUpdate() {
                     appUpdateStatusMessage = L10n.text("update.status.sparkle_started")
+                } else if sparkleUpdateDriver.isAvailable {
+                    appUpdateStatusMessage = L10n.text("update.status.direct_unavailable")
                 } else {
                     Task { await checkForAppUpdates(force: true) }
                 }
@@ -2237,21 +2238,14 @@ struct PoolDashboardView: View {
     }
 
     private func downloadAppUpdateNow(_ prompt: AppUpdatePrompt) {
-        if sparkleUpdateDriver.isAvailable {
-            sparkleUpdateDriver.checkForUpdates()
+        if sparkleUpdateDriver.startUserInitiatedUpdate() {
             appUpdateStatusMessage = L10n.text("update.status.sparkle_started")
             dismissAppUpdatePrompt()
             appUpdateAvailablePrompt = nil
             return
         }
 
-        if let installerURL = prompt.release.preferredInstallerURL(for: AppUpdateArchitecture.current) {
-            openExternalURL(installerURL)
-            appUpdateStatusMessage = L10n.text("update.status.opened_install")
-        } else {
-            openExternalURL(prompt.release.htmlURL)
-            appUpdateStatusMessage = L10n.text("update.status.opened_manual")
-        }
+        appUpdateStatusMessage = L10n.text("update.status.direct_unavailable")
     }
 
     private func openExternalURL(_ url: URL) {
@@ -2356,7 +2350,7 @@ struct PoolDashboardView: View {
             .frame(maxWidth: 640, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.isLightPalette ? 0.97 : 0.95))
+                    .fill(PoolDashboardTheme.modalSolidFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
                             .stroke(PoolDashboardTheme.glowA.opacity(0.35), lineWidth: 1)
@@ -2651,6 +2645,12 @@ final class SparkleUpdateDriver: NSObject {
 
     var isAvailable: Bool { true }
 
+    func startUserInitiatedUpdate() -> Bool {
+        guard updaterController.updater.canCheckForUpdates else { return false }
+        updaterController.checkForUpdates(nil)
+        return true
+    }
+
     func checkForUpdates() {
         updaterController.checkForUpdates(nil)
     }
@@ -2660,6 +2660,8 @@ final class SparkleUpdateDriver: NSObject {
     }
     #else
     var isAvailable: Bool { false }
+
+    func startUserInitiatedUpdate() -> Bool { false }
 
     func checkForUpdates() {}
 

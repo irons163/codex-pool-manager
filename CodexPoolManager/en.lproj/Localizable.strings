@@ -163,7 +163,8 @@
 "update.status.skipped_format" = "Skipped version %@.";
 "update.status.opened_manual" = "Release page opened.";
 "update.status.opened_install" = "Installer download opened. After it finishes, open the DMG and drag the app to Applications.";
-"update.status.sparkle_started" = "Updater opened.";
+"update.status.sparkle_started" = "In-app updater started.";
+"update.status.direct_unavailable" = "In-app update is currently unavailable. Try again later or use Manual download.";
 "update.prompt.title_format" = "New version %@ found";
 "update.prompt.subtitle_format" = "Current version %@. You can update now or handle it later.";
 "update.prompt.published_format" = "Published at %@";

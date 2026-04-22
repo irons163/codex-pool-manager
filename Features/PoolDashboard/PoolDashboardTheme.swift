@@ -84,6 +84,13 @@ enum PoolDashboardTheme {
         isLightPalette ? Color.white.opacity(0.97) : Color.white.opacity(0.11)
     }
 
+    // Opaque fill for modal dialogs to prevent background text bleeding through.
+    static var modalSolidFill: Color {
+        isLightPalette
+            ? Color(red: 0.985, green: 0.975, blue: 0.94)
+            : Color(red: 0.09, green: 0.13, blue: 0.20)
+    }
+
     static let panelTopHighlightOpacity: Double = 0.09
     static let panelBottomShadeOpacity: Double = 0.14
     static let panelSpecularOpacity: Double = 0.22
