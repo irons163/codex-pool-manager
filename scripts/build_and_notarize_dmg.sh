@@ -64,6 +64,60 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
+sign_with_developer_id() {
+  local target="$1"
+  codesign \
+    --force \
+    --timestamp \
+    --options runtime \
+    --preserve-metadata=identifier,entitlements,flags \
+    --sign "$CODE_SIGN_IDENTITY" \
+    "$target"
+}
+
+# Sparkle bundles contain nested helper binaries (Updater/Autoupdate/XPCs) that
+# must be signed with our Developer ID identity for notarization.
+SPARKLE_FRAMEWORK="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
+  echo "==> Re-signing embedded Sparkle components"
+
+  while IFS= read -r -d '' nested_binary; do
+    echo "Signing nested Sparkle binary: $nested_binary"
+    sign_with_developer_id "$nested_binary"
+  done < <(
+    find "$SPARKLE_FRAMEWORK/Versions" -type f \
+      \( -perm -111 -o -name "*.dylib" \) \
+      -print0
+  )
+
+  while IFS= read -r -d '' nested_bundle; do
+    echo "Signing nested Sparkle bundle: $nested_bundle"
+    sign_with_developer_id "$nested_bundle"
+  done < <(
+    find "$SPARKLE_FRAMEWORK/Versions" -type d \
+      \( -name "*.xpc" -o -name "*.app" \) \
+      -print0
+  )
+
+  echo "Signing Sparkle framework and main app"
+  sign_with_developer_id "$SPARKLE_FRAMEWORK"
+  sign_with_developer_id "$APP_PATH"
+
+  SPARKLE_UPDATER="$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
+  if [[ -d "$SPARKLE_UPDATER" ]]; then
+    SPARKLE_SIGNATURE_DETAILS="$(codesign -d --verbose=4 "$SPARKLE_UPDATER" 2>&1 || true)"
+    echo "$SPARKLE_SIGNATURE_DETAILS"
+    if ! grep -q "Authority=Developer ID Application" <<<"$SPARKLE_SIGNATURE_DETAILS"; then
+      echo "Sparkle Updater.app is not signed with Developer ID Application." >&2
+      exit 1
+    fi
+    if ! grep -q "Timestamp=" <<<"$SPARKLE_SIGNATURE_DETAILS"; then
+      echo "Sparkle Updater.app signature is missing secure timestamp." >&2
+      exit 1
+    fi
+  fi
+fi
+
 APP_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
 if [[ ! -f "$APP_BINARY" ]]; then
   APP_BINARY="$(find "$APP_PATH/Contents/MacOS" -maxdepth 1 -type f | head -n 1)"
