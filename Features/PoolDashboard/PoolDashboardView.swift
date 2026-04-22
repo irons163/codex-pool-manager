@@ -3378,6 +3378,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     private enum AnalysisBasis: String, CaseIterable, Identifiable {
         case usage
         case remaining
+        case wasted
 
         var id: String { rawValue }
     }
@@ -3498,9 +3499,15 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     private var chartEntries: [ChartEntry] {
         switch chartGranularity {
         case .daily:
-            let values: [UsageAnalyticsDailyTotal] = analysisBasis == .usage
-                ? dailyTotals
-                : dailyRemainingTotals
+            let values: [UsageAnalyticsDailyTotal]
+            switch analysisBasis {
+            case .usage:
+                values = dailyTotals
+            case .remaining:
+                values = dailyRemainingTotals
+            case .wasted:
+                values = dailyWastedTotals
+            }
             return values.map { daily in
                 ChartEntry(
                     label: daily.date.formatted(.dateTime.locale(L10n.locale()).weekday(.abbreviated)),
@@ -3508,9 +3515,15 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 )
             }
         case .weekly:
-            let values: [UsageAnalyticsWeeklyTotal] = analysisBasis == .usage
-                ? weeklyTotals
-                : weeklyRemainingTotals
+            let values: [UsageAnalyticsWeeklyTotal]
+            switch analysisBasis {
+            case .usage:
+                values = weeklyTotals
+            case .remaining:
+                values = weeklyRemainingTotals
+            case .wasted:
+                values = weeklyWastedTotals
+            }
             return values.map { weekly in
                 ChartEntry(
                     label: weeklyLabel(weekly.weekStartDate),
@@ -3574,6 +3587,14 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         weeklyRemainingSeries(weeks: 8)
     }
 
+    private var dailyWastedTotals: [UsageAnalyticsDailyTotal] {
+        dailyWastedSeries(days: 7)
+    }
+
+    private var weeklyWastedTotals: [UsageAnalyticsWeeklyTotal] {
+        weeklyWastedSeries(weeks: 8)
+    }
+
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
@@ -3601,13 +3622,14 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     Picker(L10n.text("usage_analytics.basis.label"), selection: $analysisBasis) {
                         Text(L10n.text("usage_analytics.basis.usage")).tag(AnalysisBasis.usage)
                         Text(L10n.text("usage_analytics.basis.remaining")).tag(AnalysisBasis.remaining)
+                        Text(L10n.text("usage_analytics.basis.wasted")).tag(AnalysisBasis.wasted)
                     }
                     .pickerStyle(.segmented)
-                    .frame(maxWidth: 260)
+                    .frame(maxWidth: 360)
                 }
 
-                HStack(spacing: 8) {
-                    if analysisBasis == .usage {
+                if analysisBasis == .usage {
+                    HStack(spacing: 8) {
                         summaryCard(
                             title: L10n.text("usage_analytics.summary.today_weekly"),
                             value: L10n.text("usage_analytics.percent_format", summary.todayWeeklyPercent)
@@ -3624,7 +3646,9 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                             title: L10n.text("usage_analytics.summary.week_five_hour"),
                             value: L10n.text("usage_analytics.percent_format", summary.weekFiveHourPercent)
                         )
-                    } else {
+                    }
+                } else if analysisBasis == .remaining {
+                    HStack(spacing: 8) {
                         summaryCard(
                             title: L10n.text("usage_analytics.summary.avg_weekly_remaining"),
                             value: L10n.text("usage_analytics.percent_format", averageWeeklyRemainingPercent)
@@ -3642,9 +3666,9 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                             value: L10n.text("usage_analytics.percent_format", lowestFiveHourRemainingPercent)
                         )
                     }
+                } else {
+                    wastedUsageSummaryView
                 }
-
-                wastedUsageSummaryView
 
                 if analyticsState.records.isEmpty {
                     PanelStatusCalloutView(
@@ -3721,9 +3745,16 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 8) {
                 Text(
-                    analysisBasis == .usage
-                    ? L10n.text("usage_analytics.chart.title")
-                    : L10n.text("usage_analytics.chart.remaining_title")
+                    {
+                        switch analysisBasis {
+                        case .usage:
+                            return L10n.text("usage_analytics.chart.title")
+                        case .remaining:
+                            return L10n.text("usage_analytics.chart.remaining_title")
+                        case .wasted:
+                            return L10n.text("usage_analytics.section.wasted")
+                        }
+                    }()
                 )
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
@@ -3896,20 +3927,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     private var insightsView: some View {
         HStack(spacing: 8) {
-            if analysisBasis == .usage {
-                summaryCard(
-                    title: L10n.text("usage_analytics.insight.peak_hour"),
-                    value: peakHourText(summary.peakHour)
-                )
-                summaryCard(
-                    title: L10n.text("usage_analytics.insight.peak_day"),
-                    value: peakWeekdayText(summary.peakWeekday)
-                )
-                summaryCard(
-                    title: L10n.text("usage_analytics.insight.top_account"),
-                    value: topAccountText(key: summary.topAccountKey, weeklyPercent: summary.topAccountWeeklyPercent)
-                )
-            } else {
+            if analysisBasis == .remaining {
                 summaryCard(
                     title: L10n.text("usage_analytics.insight.lowest_remaining_account"),
                     value: lowestRemainingAccountText
@@ -3921,6 +3939,19 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 summaryCard(
                     title: L10n.text("usage_analytics.insight.tracked_accounts"),
                     value: "\(deduplicatedAccountsByKey.count)"
+                )
+            } else {
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.peak_hour"),
+                    value: peakHourText(summary.peakHour)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.peak_day"),
+                    value: peakWeekdayText(summary.peakWeekday)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.insight.top_account"),
+                    value: topAccountText(key: summary.topAccountKey, weeklyPercent: summary.topAccountWeeklyPercent)
                 )
             }
         }
@@ -4286,6 +4317,67 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 UsageAnalyticsWeeklyTotal(
                     weekStartDate: weekStart,
                     totalWeeklyPercent: max(0, min(100, value))
+                )
+            )
+        }
+
+        return totals
+    }
+
+    private func dailyWastedSeries(days: Int) -> [UsageAnalyticsDailyTotal] {
+        guard days > 0 else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        let todayStart = calendar.startOfDay(for: Date())
+        var totals: [UsageAnalyticsDailyTotal] = []
+
+        for dayOffset in stride(from: days - 1, through: 0, by: -1) {
+            guard let dayStart = calendar.date(byAdding: .day, value: -dayOffset, to: todayStart),
+                  let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+                continue
+            }
+
+            let total = analyticsState.records
+                .filter {
+                    $0.timestamp >= dayStart
+                    && $0.timestamp < dayEnd
+                    && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+                }
+                .reduce(0) { partial, record in
+                    partial + max(0, record.weeklyWastedPercent) + max(0, record.fiveHourWastedPercent)
+                }
+
+            totals.append(UsageAnalyticsDailyTotal(date: dayStart, totalWeeklyPercent: total))
+        }
+
+        return totals
+    }
+
+    private func weeklyWastedSeries(weeks: Int) -> [UsageAnalyticsWeeklyTotal] {
+        guard weeks > 0 else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        guard let currentWeek = calendar.dateInterval(of: .weekOfYear, for: Date()) else { return [] }
+        var totals: [UsageAnalyticsWeeklyTotal] = []
+
+        for weekOffset in stride(from: weeks - 1, through: 0, by: -1) {
+            guard let weekStart = calendar.date(byAdding: .weekOfYear, value: -weekOffset, to: currentWeek.start),
+                  let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
+                continue
+            }
+
+            let total = analyticsState.records
+                .filter {
+                    $0.timestamp >= weekStart
+                    && $0.timestamp < weekEnd
+                    && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+                }
+                .reduce(0) { partial, record in
+                    partial + max(0, record.weeklyWastedPercent) + max(0, record.fiveHourWastedPercent)
+                }
+
+            totals.append(
+                UsageAnalyticsWeeklyTotal(
+                    weekStartDate: weekStart,
+                    totalWeeklyPercent: total
                 )
             )
         }

@@ -302,6 +302,7 @@
 "usage_analytics.basis.label" = "分析基準";
 "usage_analytics.basis.usage" = "使用量";
 "usage_analytics.basis.remaining" = "剩餘量";
+"usage_analytics.basis.wasted" = "浪費";
 "usage_analytics.section.export" = "匯出";
 "usage_analytics.section.thresholds" = "門檻時間軸";
 "usage_analytics.section.anomalies" = "異常偵測";

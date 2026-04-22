@@ -451,6 +451,7 @@
 "usage.weekly_short" = "주간";
 "usage_analytics.basis.label" = "분석 기준";
 "usage_analytics.basis.remaining" = "잔여량";
+"usage_analytics.basis.wasted" = "낭비";
 "usage_analytics.basis.usage" = "사용량";
 "usage_analytics.chart.remaining_title" = "잔여량 추세";
 "usage_analytics.insight.best_remaining_account" = "잔여량이 가장 높은 계정";

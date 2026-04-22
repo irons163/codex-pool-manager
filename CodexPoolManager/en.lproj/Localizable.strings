@@ -284,6 +284,7 @@
 "usage_analytics.basis.label" = "Analysis Basis";
 "usage_analytics.basis.usage" = "Usage";
 "usage_analytics.basis.remaining" = "Remaining";
+"usage_analytics.basis.wasted" = "Wasted";
 "usage_analytics.section.export" = "Export";
 "usage_analytics.section.thresholds" = "Threshold Timeline";
 "usage_analytics.section.anomalies" = "Anomalies";

@@ -451,6 +451,7 @@
 "usage.weekly_short" = "週次";
 "usage_analytics.basis.label" = "分析基準";
 "usage_analytics.basis.remaining" = "残量";
+"usage_analytics.basis.wasted" = "浪費";
 "usage_analytics.basis.usage" = "使用量";
 "usage_analytics.chart.remaining_title" = "残量トレンド";
 "usage_analytics.insight.best_remaining_account" = "残量が最も多いアカウント";

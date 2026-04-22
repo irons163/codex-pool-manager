@@ -451,6 +451,7 @@
 "usage.weekly_short" = "Semanal";
 "usage_analytics.basis.label" = "Base de análisis";
 "usage_analytics.basis.remaining" = "Restante";
+"usage_analytics.basis.wasted" = "Desperdiciado";
 "usage_analytics.basis.usage" = "Uso";
 "usage_analytics.chart.remaining_title" = "Tendencia de restante";
 "usage_analytics.insight.best_remaining_account" = "Cuenta con mayor restante";
