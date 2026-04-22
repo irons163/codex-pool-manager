@@ -371,6 +371,8 @@ enum UsageAnalyticsEngine {
     static let retentionDays: Int = 45
     static let eventRetentionDays: Int = 90
     private static let thresholdLevels: [Int] = [50, 30, 20, 10, 5, 0]
+    private static let weeklyWindowSeconds: TimeInterval = 7 * 24 * 3600
+    private static let resetDelayNoiseSeconds: TimeInterval = 60
 
     static func update(
         state: UsageAnalyticsState,
@@ -416,12 +418,19 @@ enum UsageAnalyticsEngine {
                 let weeklyDelta = deltaPercent(current: weeklyAbsolute, previous: snapshot.lastWeeklyPercent)
                 let fiveHourDelta = deltaPercent(current: fiveHourAbsolute, previous: snapshot.lastFiveHourPercent)
                 let previousWeeklyRemaining = max(0, 100 - snapshot.lastWeeklyPercent)
-                let weeklyWasted = wastedPercentOnReset(
+                let weeklyWastedFromReset = wastedPercentOnReset(
                     previousRemaining: previousWeeklyRemaining,
                     previousResetAt: snapshot.lastWeeklyResetAt,
                     currentResetAt: account.usageWindowResetAt,
                     cycleHours: 168
                 )
+                let weeklyWastedFromNoUsageDelay = wastedPercentOnNoUsageResetDelay(
+                    previousWeeklyPercent: snapshot.lastWeeklyPercent,
+                    currentWeeklyPercent: weeklyAbsolute,
+                    previousResetAt: snapshot.lastWeeklyResetAt,
+                    currentResetAt: account.usageWindowResetAt
+                )
+                let weeklyWasted = max(weeklyWastedFromReset, weeklyWastedFromNoUsageDelay)
                 let previousFiveHourRemaining = snapshot.lastFiveHourPercent.map { max(0, 100 - $0) }
                 let fiveHourWasted = wastedPercentOnReset(
                     previousRemaining: previousFiveHourRemaining,
@@ -1160,6 +1169,25 @@ enum UsageAnalyticsEngine {
         }
         let minimumResetJump = TimeInterval(cycleHours) * 3600 * 0.5
         return currentResetAt.timeIntervalSince(previousResetAt) >= minimumResetJump
+    }
+
+    private static func wastedPercentOnNoUsageResetDelay(
+        previousWeeklyPercent: Int,
+        currentWeeklyPercent: Int,
+        previousResetAt: Date?,
+        currentResetAt: Date?
+    ) -> Int {
+        // If weekly usage never started (still 0%), but reset time keeps moving later,
+        // treat the delayed window as wasted potential.
+        guard previousWeeklyPercent == 0, currentWeeklyPercent == 0 else { return 0 }
+        guard let previousResetAt, let currentResetAt, currentResetAt > previousResetAt else { return 0 }
+
+        let delaySeconds = currentResetAt.timeIntervalSince(previousResetAt)
+        guard delaySeconds >= resetDelayNoiseSeconds else { return 0 }
+
+        let normalizedDelay = min(1, delaySeconds / weeklyWindowSeconds)
+        let wastedPercent = Int((normalizedDelay * 100).rounded())
+        return max(1, min(100, wastedPercent))
     }
 
     private static func iso8601(_ date: Date) -> String {

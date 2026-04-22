@@ -408,6 +408,106 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsCountsNoUsageWeeklyResetDelayAsWaste() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let originalResetAt = now.addingTimeInterval(12 * 3600)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Idle",
+                    usedUnits: 0,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle",
+                    usageWindowResetAt: originalResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let delayedResetAt = originalResetAt.addingTimeInterval(24 * 3600)
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Idle",
+                    usedUnits: 0,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle",
+                    usageWindowResetAt: delayedResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(120)
+        )
+
+        #expect(updated.records.count == 1)
+        #expect(updated.records[0].weeklyWastedPercent >= 14)
+        #expect(updated.records[0].fiveHourWastedPercent == 0)
+
+        let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(120))
+        #expect(summary.weekWastedWeeklyPercent >= 14)
+        #expect(summary.weekWastedResetEvents == 1)
+    }
+
+    @Test
+    func usageAnalyticsCountsOneMinuteWeeklyResetDelayAsWaste() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let originalResetAt = now.addingTimeInterval(3600)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "MinuteDelay",
+                    usedUnits: 0,
+                    quota: 100,
+                    chatGPTAccountID: "user-minute-delay",
+                    usageWindowResetAt: originalResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "MinuteDelay",
+                    usedUnits: 0,
+                    quota: 100,
+                    chatGPTAccountID: "user-minute-delay",
+                    usageWindowResetAt: originalResetAt.addingTimeInterval(60),
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(120)
+        )
+
+        #expect(updated.records.count == 1)
+        #expect(updated.records[0].weeklyWastedPercent == 1)
+
+        let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(120))
+        #expect(summary.weekWastedWeeklyPercent == 1)
+        #expect(summary.weekWastedResetEvents == 1)
+    }
+
+    @Test
     func usageAnalyticsWeeklyTotalsAggregatesByWeek() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
