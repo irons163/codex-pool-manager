@@ -195,3 +195,55 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "${{ github.event.release.tag_name }}" dist/*.dmg --clobber
+
+  publish-sparkle-appcast:
+    if: github.event_name == 'release'
+    needs: build-dmg
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Sparkle appcast assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/generate_sparkle_appcast.sh
+
+          RELEASE_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+
+          RELEASE_NAME="$(jq -r '.name // ""' <<<"$RELEASE_JSON")"
+          RELEASE_NOTES="$(jq -r '.body // ""' <<<"$RELEASE_JSON")"
+          PUBLISHED_AT="$(jq -r '.published_at // ""' <<<"$RELEASE_JSON")"
+
+          ARM64_URL="$(jq -r '.assets[] | select(.name | test("apple-silicon.*\\.dmg$")) | .browser_download_url' <<<"$RELEASE_JSON" | head -n1)"
+          ARM64_SIZE="$(jq -r '.assets[] | select(.name | test("apple-silicon.*\\.dmg$")) | .size' <<<"$RELEASE_JSON" | head -n1)"
+          X86_64_URL="$(jq -r '.assets[] | select(.name | test("intel.*\\.dmg$")) | .browser_download_url' <<<"$RELEASE_JSON" | head -n1)"
+          X86_64_SIZE="$(jq -r '.assets[] | select(.name | test("intel.*\\.dmg$")) | .size' <<<"$RELEASE_JSON" | head -n1)"
+
+          if [[ -z "${ARM64_URL:-}" || -z "${X86_64_URL:-}" ]]; then
+            echo "Unable to locate both DMG assets in release ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          RELEASE_TAG="$RELEASE_TAG" \
+          RELEASE_NAME="$RELEASE_NAME" \
+          RELEASE_NOTES="$RELEASE_NOTES" \
+          PUBLISHED_AT="$PUBLISHED_AT" \
+          ARM64_URL="$ARM64_URL" \
+          ARM64_SIZE="$ARM64_SIZE" \
+          X86_64_URL="$X86_64_URL" \
+          X86_64_SIZE="$X86_64_SIZE" \
+          scripts/generate_sparkle_appcast.sh
+
+      - name: Upload Sparkle appcast to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload "${{ github.event.release.tag_name }}" dist/appcast-*.xml --clobber

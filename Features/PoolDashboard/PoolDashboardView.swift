@@ -3,6 +3,9 @@ import UserNotifications
 #if canImport(AppKit)
 import AppKit
 #endif
+#if canImport(Sparkle)
+import Sparkle
+#endif
 #if canImport(UniformTypeIdentifiers)
 import UniformTypeIdentifiers
 #endif
@@ -156,6 +159,7 @@ struct PoolDashboardView: View {
     private let viewMutationCoordinator = PoolDashboardViewMutationCoordinator()
     private let asyncStateCoordinator = PoolDashboardAsyncStateCoordinator()
     private let appUpdateService = AppUpdateService()
+    private let sparkleUpdateDriver = SparkleUpdateDriver.shared
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -943,7 +947,12 @@ struct PoolDashboardView: View {
             isCheckingForUpdates: isCheckingForAppUpdate,
             appUpdateStatusMessage: appUpdateStatusMessage,
             onCheckForUpdates: {
-                Task { await checkForAppUpdates(force: true) }
+                if sparkleUpdateDriver.isAvailable {
+                    sparkleUpdateDriver.checkForUpdates()
+                    appUpdateStatusMessage = L10n.text("update.status.sparkle_started")
+                } else {
+                    Task { await checkForAppUpdates(force: true) }
+                }
             }
         )
     }
@@ -2228,6 +2237,14 @@ struct PoolDashboardView: View {
     }
 
     private func downloadAppUpdateNow(_ prompt: AppUpdatePrompt) {
+        if sparkleUpdateDriver.isAvailable {
+            sparkleUpdateDriver.checkForUpdates()
+            appUpdateStatusMessage = L10n.text("update.status.sparkle_started")
+            dismissAppUpdatePrompt()
+            appUpdateAvailablePrompt = nil
+            return
+        }
+
         if let installerURL = prompt.release.preferredInstallerURL(for: AppUpdateArchitecture.current) {
             openExternalURL(installerURL)
             appUpdateStatusMessage = L10n.text("update.status.opened_install")
@@ -2620,6 +2637,54 @@ struct AppUpdateService {
         }
     }
 }
+
+@MainActor
+final class SparkleUpdateDriver: NSObject {
+    static let shared = SparkleUpdateDriver()
+
+    #if canImport(Sparkle)
+    private lazy var updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: self,
+        userDriverDelegate: nil
+    )
+
+    var isAvailable: Bool { true }
+
+    func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
+    }
+
+    func checkForUpdatesInBackground() {
+        updaterController.updater.checkForUpdatesInBackground()
+    }
+    #else
+    var isAvailable: Bool { false }
+
+    func checkForUpdates() {}
+
+    func checkForUpdatesInBackground() {}
+    #endif
+
+    private override init() {
+        super.init()
+    }
+}
+
+#if canImport(Sparkle)
+extension SparkleUpdateDriver: SPUUpdaterDelegate {
+    func feedURLString(for updater: SPUUpdater) -> String? {
+        switch AppUpdateArchitecture.current {
+        case .appleSilicon:
+            return "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml"
+        case .intel:
+            return "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-x86_64.xml"
+        case .unknown:
+            return "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml"
+        }
+    }
+}
+#endif
 
 private struct AppUpdateReleasePayload: Decodable {
     struct AssetPayload: Decodable {

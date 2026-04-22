@@ -163,13 +163,14 @@
 "update.status.skipped_format" = "已略過版本 %@。";
 "update.status.opened_manual" = "已開啟 Release 頁面。";
 "update.status.opened_install" = "已開啟安裝檔下載。下載完成後請打開 DMG，將 App 拖曳到 Applications。";
+"update.status.sparkle_started" = "已開啟更新程式。";
 "update.prompt.title_format" = "發現新版本 %@";
-"update.prompt.subtitle_format" = "目前版本 %@。你可以立即下載更新，或稍後處理。";
+"update.prompt.subtitle_format" = "目前版本 %@。你可以立即更新，或稍後處理。";
 "update.prompt.published_format" = "發布時間：%@";
 "update.prompt.skip" = "略過此版本";
 "update.prompt.manual" = "手動下載";
-"update.prompt.install_now" = "下載更新";
-"update.prompt.install_note" = "macOS 更新需手動完成：請開啟下載的 DMG，將 App 拖曳到 Applications。";
+"update.prompt.install_now" = "立即更新";
+"update.prompt.install_note" = "自動更新使用 Sparkle；若無法直接更新，請改用手動下載。";
 "update.prompt.release_format" = "Release %@";
 "update.prompt.matrix_title" = "建置版本包含：";
 "update.prompt.notes_title" = "更新說明";
