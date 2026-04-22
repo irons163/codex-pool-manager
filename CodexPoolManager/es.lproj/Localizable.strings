@@ -190,6 +190,12 @@
 "usage_analytics.summary.weekly" = "Últimos 7 días (semanal)";
 "usage_analytics.summary.today_five_hour" = "Hoy (5 horas)";
 "usage_analytics.summary.week_five_hour" = "Últimos 7 días (5 horas)";
+"usage_analytics.section.wasted" = "Uso desperdiciado";
+"usage_analytics.summary.wasted_events_format" = "Eventos de reinicio: %d";
+"usage_analytics.summary.wasted_today_weekly" = "Desperdiciado hoy (semanal)";
+"usage_analytics.summary.wasted_weekly" = "Desperdiciado 7 días (semanal)";
+"usage_analytics.summary.wasted_today_five_hour" = "Desperdiciado hoy (5 horas)";
+"usage_analytics.summary.wasted_week_five_hour" = "Desperdiciado 7 días (5 horas)";
 "usage_analytics.percent_format" = "%d%%";
 "usage_analytics.chart.title" = "Uso de 7 días";
 "usage_analytics.chart.granularity" = "Granularidad";

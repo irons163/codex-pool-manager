@@ -309,6 +309,105 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsSummaryCapturesWastedUsageWhenResetAdvances() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E5")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Wasted",
+                    usedUnits: 60,
+                    quota: 100,
+                    chatGPTAccountID: "user-wasted",
+                    usageWindowResetAt: now.addingTimeInterval(2 * 3600),
+                    primaryUsagePercent: 40,
+                    primaryUsageResetAt: now.addingTimeInterval(1 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Wasted",
+                    usedUnits: 10,
+                    quota: 100,
+                    chatGPTAccountID: "user-wasted",
+                    usageWindowResetAt: now.addingTimeInterval((7 * 24 + 2) * 3600),
+                    primaryUsagePercent: 5,
+                    primaryUsageResetAt: now.addingTimeInterval(6 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(3 * 3600)
+        )
+
+        #expect(updated.records.count == 1)
+        #expect(updated.records[0].weeklyWastedPercent == 40)
+        #expect(updated.records[0].fiveHourWastedPercent == 60)
+
+        let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(3 * 3600))
+        #expect(summary.todayWastedWeeklyPercent == 40)
+        #expect(summary.weekWastedWeeklyPercent == 40)
+        #expect(summary.todayWastedFiveHourPercent == 60)
+        #expect(summary.weekWastedFiveHourPercent == 60)
+        #expect(summary.weekWastedResetEvents == 2)
+    }
+
+    @Test
+    func usageAnalyticsDoesNotCountSmallResetDriftAsWaste() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Stable",
+                    usedUnits: 30,
+                    quota: 100,
+                    chatGPTAccountID: "user-stable",
+                    usageWindowResetAt: now.addingTimeInterval(24 * 3600),
+                    primaryUsagePercent: 20,
+                    primaryUsageResetAt: now.addingTimeInterval(3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Stable",
+                    usedUnits: 30,
+                    quota: 100,
+                    chatGPTAccountID: "user-stable",
+                    usageWindowResetAt: now.addingTimeInterval(25 * 3600),
+                    primaryUsagePercent: 20,
+                    primaryUsageResetAt: now.addingTimeInterval(90 * 60),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(600)
+        )
+
+        #expect(updated.records.isEmpty)
+        let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(600))
+        #expect(summary.weekWastedWeeklyPercent == 0)
+        #expect(summary.weekWastedFiveHourPercent == 0)
+        #expect(summary.weekWastedResetEvents == 0)
+    }
+
+    @Test
     func usageAnalyticsWeeklyTotalsAggregatesByWeek() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current

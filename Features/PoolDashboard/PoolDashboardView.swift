@@ -3644,6 +3644,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     }
                 }
 
+                wastedUsageSummaryView
+
                 if analyticsState.records.isEmpty {
                     PanelStatusCalloutView(
                         message: L10n.text("usage_analytics.empty"),
@@ -3666,6 +3668,41 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             guard let selectedAccountKey else { return }
             if !keys.contains(selectedAccountKey) {
                 self.selectedAccountKey = nil
+            }
+        }
+    }
+
+    private var wastedUsageSummaryView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(L10n.text("usage_analytics.section.wasted"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                Spacer(minLength: 0)
+
+                Text(L10n.text("usage_analytics.summary.wasted_events_format", summary.weekWastedResetEvents))
+                    .font(.caption2)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            }
+
+            HStack(spacing: 8) {
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.wasted_today_weekly"),
+                    value: L10n.text("usage_analytics.percent_format", summary.todayWastedWeeklyPercent)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.wasted_weekly"),
+                    value: L10n.text("usage_analytics.percent_format", summary.weekWastedWeeklyPercent)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.wasted_today_five_hour"),
+                    value: L10n.text("usage_analytics.percent_format", summary.todayWastedFiveHourPercent)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.wasted_week_five_hour"),
+                    value: L10n.text("usage_analytics.percent_format", summary.weekWastedFiveHourPercent)
+                )
             }
         }
     }

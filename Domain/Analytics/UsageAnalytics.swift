@@ -10,6 +10,8 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
     let fiveHourAbsolutePercent: Int?
     let weeklyRemainingPercent: Int
     let fiveHourRemainingPercent: Int?
+    let weeklyWastedPercent: Int
+    let fiveHourWastedPercent: Int
     let weeklyResetAt: Date?
     let fiveHourResetAt: Date?
     let activeAccountKeyAtSync: String?
@@ -24,6 +26,8 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
         fiveHourAbsolutePercent: Int? = nil,
         weeklyRemainingPercent: Int? = nil,
         fiveHourRemainingPercent: Int? = nil,
+        weeklyWastedPercent: Int = 0,
+        fiveHourWastedPercent: Int = 0,
         weeklyResetAt: Date? = nil,
         fiveHourResetAt: Date? = nil,
         activeAccountKeyAtSync: String? = nil
@@ -49,6 +53,8 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
         self.fiveHourAbsolutePercent = fiveHourAbsolutePercent
         self.weeklyRemainingPercent = resolvedWeeklyRemaining
         self.fiveHourRemainingPercent = resolvedFiveHourRemaining
+        self.weeklyWastedPercent = max(0, weeklyWastedPercent)
+        self.fiveHourWastedPercent = max(0, fiveHourWastedPercent)
         self.weeklyResetAt = weeklyResetAt
         self.fiveHourResetAt = fiveHourResetAt
         self.activeAccountKeyAtSync = activeAccountKeyAtSync
@@ -64,6 +70,8 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
         case fiveHourAbsolutePercent
         case weeklyRemainingPercent
         case fiveHourRemainingPercent
+        case weeklyWastedPercent
+        case fiveHourWastedPercent
         case weeklyResetAt
         case fiveHourResetAt
         case activeAccountKeyAtSync
@@ -93,6 +101,8 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
             fiveHourRemainingPercent = nil
         }
 
+        weeklyWastedPercent = max(0, try container.decodeIfPresent(Int.self, forKey: .weeklyWastedPercent) ?? 0)
+        fiveHourWastedPercent = max(0, try container.decodeIfPresent(Int.self, forKey: .fiveHourWastedPercent) ?? 0)
         weeklyResetAt = try container.decodeIfPresent(Date.self, forKey: .weeklyResetAt)
         fiveHourResetAt = try container.decodeIfPresent(Date.self, forKey: .fiveHourResetAt)
         activeAccountKeyAtSync = try container.decodeIfPresent(String.self, forKey: .activeAccountKeyAtSync)
@@ -282,6 +292,11 @@ struct UsageAnalyticsSummary: Codable, Equatable {
     let weekWeeklyPercent: Int
     let todayFiveHourPercent: Int
     let weekFiveHourPercent: Int
+    let todayWastedWeeklyPercent: Int
+    let weekWastedWeeklyPercent: Int
+    let todayWastedFiveHourPercent: Int
+    let weekWastedFiveHourPercent: Int
+    let weekWastedResetEvents: Int
     let peakHour: Int?
     let peakWeekday: Int?
     let topAccountKey: String?
@@ -400,8 +415,22 @@ enum UsageAnalyticsEngine {
             if let snapshot = snapshotsByKey[accountKey] {
                 let weeklyDelta = deltaPercent(current: weeklyAbsolute, previous: snapshot.lastWeeklyPercent)
                 let fiveHourDelta = deltaPercent(current: fiveHourAbsolute, previous: snapshot.lastFiveHourPercent)
+                let previousWeeklyRemaining = max(0, 100 - snapshot.lastWeeklyPercent)
+                let weeklyWasted = wastedPercentOnReset(
+                    previousRemaining: previousWeeklyRemaining,
+                    previousResetAt: snapshot.lastWeeklyResetAt,
+                    currentResetAt: account.usageWindowResetAt,
+                    cycleHours: 168
+                )
+                let previousFiveHourRemaining = snapshot.lastFiveHourPercent.map { max(0, 100 - $0) }
+                let fiveHourWasted = wastedPercentOnReset(
+                    previousRemaining: previousFiveHourRemaining,
+                    previousResetAt: snapshot.lastFiveHourResetAt,
+                    currentResetAt: account.primaryUsageResetAt,
+                    cycleHours: 5
+                )
 
-                if weeklyDelta > 0 || fiveHourDelta > 0 {
+                if weeklyDelta > 0 || fiveHourDelta > 0 || weeklyWasted > 0 || fiveHourWasted > 0 {
                     newRecords.append(
                         UsageAnalyticsRecord(
                             timestamp: now,
@@ -412,6 +441,8 @@ enum UsageAnalyticsEngine {
                             fiveHourAbsolutePercent: fiveHourAbsolute,
                             weeklyRemainingPercent: weeklyRemaining,
                             fiveHourRemainingPercent: fiveHourRemaining,
+                            weeklyWastedPercent: weeklyWasted,
+                            fiveHourWastedPercent: fiveHourWasted,
                             weeklyResetAt: account.usageWindowResetAt,
                             fiveHourResetAt: account.primaryUsageResetAt,
                             activeAccountKeyAtSync: activeAccountKey
@@ -419,7 +450,6 @@ enum UsageAnalyticsEngine {
                     )
                 }
 
-                let previousWeeklyRemaining = max(0, 100 - snapshot.lastWeeklyPercent)
                 newThresholdEvents += thresholdCrossingEvents(
                     accountKey: accountKey,
                     kind: .weekly,
@@ -430,11 +460,10 @@ enum UsageAnalyticsEngine {
 
                 if let previousFiveHourPercent = snapshot.lastFiveHourPercent,
                    let fiveHourRemaining {
-                    let previousFiveHourRemaining = max(0, 100 - previousFiveHourPercent)
                     newThresholdEvents += thresholdCrossingEvents(
                         accountKey: accountKey,
                         kind: .fiveHour,
-                        previousRemaining: previousFiveHourRemaining,
+                        previousRemaining: max(0, 100 - previousFiveHourPercent),
                         currentRemaining: fiveHourRemaining,
                         timestamp: now
                     )
@@ -529,6 +558,11 @@ enum UsageAnalyticsEngine {
                 weekWeeklyPercent: 0,
                 todayFiveHourPercent: 0,
                 weekFiveHourPercent: 0,
+                todayWastedWeeklyPercent: 0,
+                weekWastedWeeklyPercent: 0,
+                todayWastedFiveHourPercent: 0,
+                weekWastedFiveHourPercent: 0,
+                weekWastedResetEvents: 0,
                 peakHour: nil,
                 peakWeekday: nil,
                 topAccountKey: nil,
@@ -540,6 +574,11 @@ enum UsageAnalyticsEngine {
         var weekWeekly = 0
         var todayFiveHour = 0
         var weekFiveHour = 0
+        var todayWastedWeekly = 0
+        var weekWastedWeekly = 0
+        var todayWastedFiveHour = 0
+        var weekWastedFiveHour = 0
+        var weekWastedResetEvents = 0
         var hourlyTotals: [Int: Int] = [:]
         var weekdayTotals: [Int: Int] = [:]
         var accountTotals: [String: Int] = [:]
@@ -547,8 +586,18 @@ enum UsageAnalyticsEngine {
         for record in state.records where record.timestamp >= weekStart {
             let weekly = max(0, record.weeklyDeltaPercent)
             let fiveHour = max(0, record.fiveHourDeltaPercent)
+            let wastedWeekly = max(0, record.weeklyWastedPercent)
+            let wastedFiveHour = max(0, record.fiveHourWastedPercent)
             weekWeekly += weekly
             weekFiveHour += fiveHour
+            weekWastedWeekly += wastedWeekly
+            weekWastedFiveHour += wastedFiveHour
+            if wastedWeekly > 0 {
+                weekWastedResetEvents += 1
+            }
+            if wastedFiveHour > 0 {
+                weekWastedResetEvents += 1
+            }
             accountTotals[record.accountKey, default: 0] += weekly
 
             let components = calendar.dateComponents([.hour, .weekday], from: record.timestamp)
@@ -562,6 +611,8 @@ enum UsageAnalyticsEngine {
             if record.timestamp >= todayStart {
                 todayWeekly += weekly
                 todayFiveHour += fiveHour
+                todayWastedWeekly += wastedWeekly
+                todayWastedFiveHour += wastedFiveHour
             }
         }
 
@@ -574,6 +625,11 @@ enum UsageAnalyticsEngine {
             weekWeeklyPercent: weekWeekly,
             todayFiveHourPercent: todayFiveHour,
             weekFiveHourPercent: weekFiveHour,
+            todayWastedWeeklyPercent: todayWastedWeekly,
+            weekWastedWeeklyPercent: weekWastedWeekly,
+            todayWastedFiveHourPercent: todayWastedFiveHour,
+            weekWastedFiveHourPercent: weekWastedFiveHour,
+            weekWastedResetEvents: weekWastedResetEvents,
             peakHour: peakHour,
             peakWeekday: peakWeekday,
             topAccountKey: topAccount?.key,
@@ -886,7 +942,7 @@ enum UsageAnalyticsEngine {
         let accountNameByKey = Dictionary(uniqueKeysWithValues: deduplicatedAccountsByKey(accounts).map { ($0.deduplicationKey, $0.name) })
 
         var lines: [String] = [
-            "timestamp,account_key,account_name,weekly_delta_percent,five_hour_delta_percent,weekly_abs_percent,five_hour_abs_percent,weekly_remaining_percent,five_hour_remaining_percent"
+            "timestamp,account_key,account_name,weekly_delta_percent,five_hour_delta_percent,weekly_abs_percent,five_hour_abs_percent,weekly_remaining_percent,five_hour_remaining_percent,weekly_wasted_percent,five_hour_wasted_percent"
         ]
 
         for record in state.records.sorted(by: { $0.timestamp < $1.timestamp }) {
@@ -894,7 +950,7 @@ enum UsageAnalyticsEngine {
             let fiveHourAbs = record.fiveHourAbsolutePercent.map(String.init) ?? ""
             let fiveHourRemain = record.fiveHourRemainingPercent.map(String.init) ?? ""
             lines.append(
-                "\(iso8601(record.timestamp)),\(escapeCSV(record.accountKey)),\(accountName),\(record.weeklyDeltaPercent),\(record.fiveHourDeltaPercent),\(record.weeklyAbsolutePercent),\(fiveHourAbs),\(record.weeklyRemainingPercent),\(fiveHourRemain)"
+                "\(iso8601(record.timestamp)),\(escapeCSV(record.accountKey)),\(accountName),\(record.weeklyDeltaPercent),\(record.fiveHourDeltaPercent),\(record.weeklyAbsolutePercent),\(fiveHourAbs),\(record.weeklyRemainingPercent),\(fiveHourRemain),\(record.weeklyWastedPercent),\(record.fiveHourWastedPercent)"
             )
         }
 
@@ -1072,6 +1128,38 @@ enum UsageAnalyticsEngine {
         guard let current else { return 0 }
         let previousValue = previous ?? current
         return deltaPercent(current: current, previous: previousValue)
+    }
+
+    private static func wastedPercentOnReset(
+        previousRemaining: Int?,
+        previousResetAt: Date?,
+        currentResetAt: Date?,
+        cycleHours: Int
+    ) -> Int {
+        guard let previousRemaining, previousRemaining > 0 else { return 0 }
+        guard didResetAdvance(
+            previousResetAt: previousResetAt,
+            currentResetAt: currentResetAt,
+            cycleHours: cycleHours
+        ) else {
+            return 0
+        }
+        return previousRemaining
+    }
+
+    private static func didResetAdvance(
+        previousResetAt: Date?,
+        currentResetAt: Date?,
+        cycleHours: Int
+    ) -> Bool {
+        guard cycleHours > 0,
+              let previousResetAt,
+              let currentResetAt,
+              currentResetAt > previousResetAt else {
+            return false
+        }
+        let minimumResetJump = TimeInterval(cycleHours) * 3600 * 0.5
+        return currentResetAt.timeIntervalSince(previousResetAt) >= minimumResetJump
     }
 
     private static func iso8601(_ date: Date) -> String {

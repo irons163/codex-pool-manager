@@ -267,6 +267,12 @@
 "usage_analytics.summary.lowest_weekly_remaining" = "Lowest Weekly Remaining";
 "usage_analytics.summary.avg_five_hour_remaining" = "Avg 5-hour Remaining";
 "usage_analytics.summary.lowest_five_hour_remaining" = "Lowest 5-hour Remaining";
+"usage_analytics.section.wasted" = "Wasted Usage";
+"usage_analytics.summary.wasted_events_format" = "Reset events: %d";
+"usage_analytics.summary.wasted_today_weekly" = "Today Wasted (Weekly)";
+"usage_analytics.summary.wasted_weekly" = "7-Day Wasted (Weekly)";
+"usage_analytics.summary.wasted_today_five_hour" = "Today Wasted (5-hour)";
+"usage_analytics.summary.wasted_week_five_hour" = "7-Day Wasted (5-hour)";
 "usage_analytics.percent_format" = "%d%%";
 "usage_analytics.chart.title" = "7-Day Usage";
 "usage_analytics.chart.remaining_title" = "Remaining Trend";
