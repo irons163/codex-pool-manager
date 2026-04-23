@@ -3379,6 +3379,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         case usage
         case remaining
         case wasted
+        case delay
 
         var id: String { rawValue }
     }
@@ -3507,6 +3508,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 values = dailyRemainingTotals
             case .wasted:
                 values = dailyWastedTotals
+            case .delay:
+                values = dailyIdleDelayTotals
             }
             return values.map { daily in
                 ChartEntry(
@@ -3523,6 +3526,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 values = weeklyRemainingTotals
             case .wasted:
                 values = weeklyWastedTotals
+            case .delay:
+                values = weeklyIdleDelayTotals
             }
             return values.map { weekly in
                 ChartEntry(
@@ -3595,6 +3600,14 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         weeklyWastedSeries(weeks: 8)
     }
 
+    private var dailyIdleDelayTotals: [UsageAnalyticsDailyTotal] {
+        dailyIdleDelaySeries(days: 7)
+    }
+
+    private var weeklyIdleDelayTotals: [UsageAnalyticsWeeklyTotal] {
+        weeklyIdleDelaySeries(weeks: 8)
+    }
+
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
@@ -3623,9 +3636,10 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                         Text(L10n.text("usage_analytics.basis.usage")).tag(AnalysisBasis.usage)
                         Text(L10n.text("usage_analytics.basis.remaining")).tag(AnalysisBasis.remaining)
                         Text(L10n.text("usage_analytics.basis.wasted")).tag(AnalysisBasis.wasted)
+                        Text(L10n.text("usage_analytics.basis.delay")).tag(AnalysisBasis.delay)
                     }
                     .pickerStyle(.segmented)
-                    .frame(maxWidth: 360)
+                    .frame(maxWidth: 460)
                 }
 
                 if analysisBasis == .usage {
@@ -3666,6 +3680,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                             value: L10n.text("usage_analytics.percent_format", lowestFiveHourRemainingPercent)
                         )
                     }
+                } else if analysisBasis == .delay {
+                    idleDelaySummaryView
                 } else {
                     wastedUsageSummaryView
                 }
@@ -3731,6 +3747,45 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         }
     }
 
+    private var idleDelaySummaryView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(L10n.text("usage_analytics.section.idle_delay"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                Spacer(minLength: 0)
+
+                Text(L10n.text("usage_analytics.summary.delay_events_format", summary.weekIdleDelayEvents))
+                    .font(.caption2)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            }
+
+            HStack(spacing: 8) {
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.delay_today"),
+                    value: L10n.text("usage_analytics.minutes_format", summary.todayIdleDelayMinutes)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.delay_week"),
+                    value: L10n.text("usage_analytics.minutes_format", summary.weekIdleDelayMinutes)
+                )
+                summaryCard(
+                    title: L10n.text("usage_analytics.summary.delay_avg_per_event"),
+                    value: delayAveragePerEventText
+                )
+            }
+        }
+    }
+
+    private var delayAveragePerEventText: String {
+        guard summary.weekIdleDelayEvents > 0 else {
+            return L10n.text("usage_analytics.minutes_format", 0)
+        }
+        let average = Int((Double(summary.weekIdleDelayMinutes) / Double(summary.weekIdleDelayEvents)).rounded())
+        return L10n.text("usage_analytics.minutes_format", average)
+    }
+
     private var lastUpdatedText: String {
         guard let lastUpdatedAt = analyticsState.lastUpdatedAt else {
             return L10n.text("usage_analytics.never_synced")
@@ -3753,6 +3808,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                             return L10n.text("usage_analytics.chart.remaining_title")
                         case .wasted:
                             return L10n.text("usage_analytics.section.wasted")
+                        case .delay:
+                            return L10n.text("usage_analytics.section.idle_delay")
                         }
                     }()
                 )
@@ -3838,7 +3895,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                             .font(.caption2)
                             .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                        Text(L10n.text("usage_analytics.percent_format", entry.value))
+                        Text(chartValueLabel(for: entry.value))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(PoolDashboardTheme.textSecondary)
                     }
@@ -3847,6 +3904,15 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             }
         }
         .dashboardInfoCard()
+    }
+
+    private func chartValueLabel(for value: Int) -> String {
+        switch analysisBasis {
+        case .delay:
+            return L10n.text("usage_analytics.minutes_format", value)
+        case .usage, .remaining, .wasted:
+            return L10n.text("usage_analytics.percent_format", value)
+        }
     }
 
     private func chartPoints(for entries: [ChartEntry], in size: CGSize) -> [CGPoint] {
@@ -4372,6 +4438,67 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 }
                 .reduce(0) { partial, record in
                     partial + max(0, record.weeklyWastedPercent) + max(0, record.fiveHourWastedPercent)
+                }
+
+            totals.append(
+                UsageAnalyticsWeeklyTotal(
+                    weekStartDate: weekStart,
+                    totalWeeklyPercent: total
+                )
+            )
+        }
+
+        return totals
+    }
+
+    private func dailyIdleDelaySeries(days: Int) -> [UsageAnalyticsDailyTotal] {
+        guard days > 0 else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        let todayStart = calendar.startOfDay(for: Date())
+        var totals: [UsageAnalyticsDailyTotal] = []
+
+        for dayOffset in stride(from: days - 1, through: 0, by: -1) {
+            guard let dayStart = calendar.date(byAdding: .day, value: -dayOffset, to: todayStart),
+                  let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+                continue
+            }
+
+            let total = analyticsState.records
+                .filter {
+                    $0.timestamp >= dayStart
+                    && $0.timestamp < dayEnd
+                    && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+                }
+                .reduce(0) { partial, record in
+                    partial + max(0, record.weeklyIdleDelayMinutes)
+                }
+
+            totals.append(UsageAnalyticsDailyTotal(date: dayStart, totalWeeklyPercent: total))
+        }
+
+        return totals
+    }
+
+    private func weeklyIdleDelaySeries(weeks: Int) -> [UsageAnalyticsWeeklyTotal] {
+        guard weeks > 0 else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        guard let currentWeek = calendar.dateInterval(of: .weekOfYear, for: Date()) else { return [] }
+        var totals: [UsageAnalyticsWeeklyTotal] = []
+
+        for weekOffset in stride(from: weeks - 1, through: 0, by: -1) {
+            guard let weekStart = calendar.date(byAdding: .weekOfYear, value: -weekOffset, to: currentWeek.start),
+                  let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
+                continue
+            }
+
+            let total = analyticsState.records
+                .filter {
+                    $0.timestamp >= weekStart
+                    && $0.timestamp < weekEnd
+                    && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+                }
+                .reduce(0) { partial, record in
+                    partial + max(0, record.weeklyIdleDelayMinutes)
                 }
 
             totals.append(

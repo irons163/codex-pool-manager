@@ -12,6 +12,7 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
     let fiveHourRemainingPercent: Int?
     let weeklyWastedPercent: Int
     let fiveHourWastedPercent: Int
+    let weeklyIdleDelayMinutes: Int
     let weeklyResetAt: Date?
     let fiveHourResetAt: Date?
     let activeAccountKeyAtSync: String?
@@ -28,6 +29,7 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
         fiveHourRemainingPercent: Int? = nil,
         weeklyWastedPercent: Int = 0,
         fiveHourWastedPercent: Int = 0,
+        weeklyIdleDelayMinutes: Int = 0,
         weeklyResetAt: Date? = nil,
         fiveHourResetAt: Date? = nil,
         activeAccountKeyAtSync: String? = nil
@@ -55,6 +57,7 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
         self.fiveHourRemainingPercent = resolvedFiveHourRemaining
         self.weeklyWastedPercent = max(0, weeklyWastedPercent)
         self.fiveHourWastedPercent = max(0, fiveHourWastedPercent)
+        self.weeklyIdleDelayMinutes = max(0, weeklyIdleDelayMinutes)
         self.weeklyResetAt = weeklyResetAt
         self.fiveHourResetAt = fiveHourResetAt
         self.activeAccountKeyAtSync = activeAccountKeyAtSync
@@ -72,6 +75,7 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
         case fiveHourRemainingPercent
         case weeklyWastedPercent
         case fiveHourWastedPercent
+        case weeklyIdleDelayMinutes
         case weeklyResetAt
         case fiveHourResetAt
         case activeAccountKeyAtSync
@@ -103,6 +107,7 @@ struct UsageAnalyticsRecord: Identifiable, Codable, Equatable {
 
         weeklyWastedPercent = max(0, try container.decodeIfPresent(Int.self, forKey: .weeklyWastedPercent) ?? 0)
         fiveHourWastedPercent = max(0, try container.decodeIfPresent(Int.self, forKey: .fiveHourWastedPercent) ?? 0)
+        weeklyIdleDelayMinutes = max(0, try container.decodeIfPresent(Int.self, forKey: .weeklyIdleDelayMinutes) ?? 0)
         weeklyResetAt = try container.decodeIfPresent(Date.self, forKey: .weeklyResetAt)
         fiveHourResetAt = try container.decodeIfPresent(Date.self, forKey: .fiveHourResetAt)
         activeAccountKeyAtSync = try container.decodeIfPresent(String.self, forKey: .activeAccountKeyAtSync)
@@ -297,6 +302,9 @@ struct UsageAnalyticsSummary: Codable, Equatable {
     let todayWastedFiveHourPercent: Int
     let weekWastedFiveHourPercent: Int
     let weekWastedResetEvents: Int
+    let todayIdleDelayMinutes: Int
+    let weekIdleDelayMinutes: Int
+    let weekIdleDelayEvents: Int
     let peakHour: Int?
     let peakWeekday: Int?
     let topAccountKey: String?
@@ -371,8 +379,8 @@ enum UsageAnalyticsEngine {
     static let retentionDays: Int = 45
     static let eventRetentionDays: Int = 90
     private static let thresholdLevels: [Int] = [50, 30, 20, 10, 5, 0]
-    private static let weeklyWindowSeconds: TimeInterval = 7 * 24 * 3600
     private static let resetDelayNoiseSeconds: TimeInterval = 60
+    private static let idleWeeklyJitterTolerancePercent: Int = 1
 
     static func update(
         state: UsageAnalyticsState,
@@ -413,6 +421,7 @@ enum UsageAnalyticsEngine {
             let weeklyRemaining = max(0, 100 - weeklyAbsolute)
             let fiveHourAbsolute = account.primaryUsagePercent
             let fiveHourRemaining = fiveHourAbsolute.map { max(0, 100 - min(max($0, 0), 100)) }
+            var nextWeeklyResetAt = account.usageWindowResetAt
 
             if let snapshot = snapshotsByKey[accountKey] {
                 let weeklyDelta = deltaPercent(current: weeklyAbsolute, previous: snapshot.lastWeeklyPercent)
@@ -424,13 +433,13 @@ enum UsageAnalyticsEngine {
                     currentResetAt: account.usageWindowResetAt,
                     cycleHours: 168
                 )
-                let weeklyWastedFromNoUsageDelay = wastedPercentOnNoUsageResetDelay(
+                let weeklyIdleDelayMinutes = idleDelayMinutesOnNoUsageResetDelay(
                     previousWeeklyPercent: snapshot.lastWeeklyPercent,
                     currentWeeklyPercent: weeklyAbsolute,
                     previousResetAt: snapshot.lastWeeklyResetAt,
                     currentResetAt: account.usageWindowResetAt
                 )
-                let weeklyWasted = max(weeklyWastedFromReset, weeklyWastedFromNoUsageDelay)
+                let weeklyWasted = weeklyWastedFromReset
                 let previousFiveHourRemaining = snapshot.lastFiveHourPercent.map { max(0, 100 - $0) }
                 let fiveHourWasted = wastedPercentOnReset(
                     previousRemaining: previousFiveHourRemaining,
@@ -439,7 +448,7 @@ enum UsageAnalyticsEngine {
                     cycleHours: 5
                 )
 
-                if weeklyDelta > 0 || fiveHourDelta > 0 || weeklyWasted > 0 || fiveHourWasted > 0 {
+                if weeklyDelta > 0 || fiveHourDelta > 0 || weeklyWasted > 0 || fiveHourWasted > 0 || weeklyIdleDelayMinutes > 0 {
                     newRecords.append(
                         UsageAnalyticsRecord(
                             timestamp: now,
@@ -452,6 +461,7 @@ enum UsageAnalyticsEngine {
                             fiveHourRemainingPercent: fiveHourRemaining,
                             weeklyWastedPercent: weeklyWasted,
                             fiveHourWastedPercent: fiveHourWasted,
+                            weeklyIdleDelayMinutes: weeklyIdleDelayMinutes,
                             weeklyResetAt: account.usageWindowResetAt,
                             fiveHourResetAt: account.primaryUsageResetAt,
                             activeAccountKeyAtSync: activeAccountKey
@@ -477,6 +487,15 @@ enum UsageAnalyticsEngine {
                         timestamp: now
                     )
                 }
+
+                if shouldAccumulateIdleWeeklyResetDelay(
+                    previousWeeklyPercent: snapshot.lastWeeklyPercent,
+                    currentWeeklyPercent: weeklyAbsolute,
+                    previousResetAt: snapshot.lastWeeklyResetAt,
+                    currentResetAt: account.usageWindowResetAt
+                ) {
+                    nextWeeklyResetAt = snapshot.lastWeeklyResetAt
+                }
             }
 
             updatedSnapshots.append(
@@ -484,7 +503,7 @@ enum UsageAnalyticsEngine {
                     accountKey: accountKey,
                     lastWeeklyPercent: weeklyAbsolute,
                     lastFiveHourPercent: fiveHourAbsolute,
-                    lastWeeklyResetAt: account.usageWindowResetAt,
+                    lastWeeklyResetAt: nextWeeklyResetAt,
                     lastFiveHourResetAt: account.primaryUsageResetAt,
                     lastSeenAt: now
                 )
@@ -572,6 +591,9 @@ enum UsageAnalyticsEngine {
                 todayWastedFiveHourPercent: 0,
                 weekWastedFiveHourPercent: 0,
                 weekWastedResetEvents: 0,
+                todayIdleDelayMinutes: 0,
+                weekIdleDelayMinutes: 0,
+                weekIdleDelayEvents: 0,
                 peakHour: nil,
                 peakWeekday: nil,
                 topAccountKey: nil,
@@ -588,6 +610,9 @@ enum UsageAnalyticsEngine {
         var todayWastedFiveHour = 0
         var weekWastedFiveHour = 0
         var weekWastedResetEvents = 0
+        var todayIdleDelayMinutes = 0
+        var weekIdleDelayMinutes = 0
+        var weekIdleDelayEvents = 0
         var hourlyTotals: [Int: Int] = [:]
         var weekdayTotals: [Int: Int] = [:]
         var accountTotals: [String: Int] = [:]
@@ -597,15 +622,20 @@ enum UsageAnalyticsEngine {
             let fiveHour = max(0, record.fiveHourDeltaPercent)
             let wastedWeekly = max(0, record.weeklyWastedPercent)
             let wastedFiveHour = max(0, record.fiveHourWastedPercent)
+            let idleDelayMinutes = max(0, record.weeklyIdleDelayMinutes)
             weekWeekly += weekly
             weekFiveHour += fiveHour
             weekWastedWeekly += wastedWeekly
             weekWastedFiveHour += wastedFiveHour
+            weekIdleDelayMinutes += idleDelayMinutes
             if wastedWeekly > 0 {
                 weekWastedResetEvents += 1
             }
             if wastedFiveHour > 0 {
                 weekWastedResetEvents += 1
+            }
+            if idleDelayMinutes > 0 {
+                weekIdleDelayEvents += 1
             }
             accountTotals[record.accountKey, default: 0] += weekly
 
@@ -622,6 +652,7 @@ enum UsageAnalyticsEngine {
                 todayFiveHour += fiveHour
                 todayWastedWeekly += wastedWeekly
                 todayWastedFiveHour += wastedFiveHour
+                todayIdleDelayMinutes += idleDelayMinutes
             }
         }
 
@@ -639,6 +670,9 @@ enum UsageAnalyticsEngine {
             todayWastedFiveHourPercent: todayWastedFiveHour,
             weekWastedFiveHourPercent: weekWastedFiveHour,
             weekWastedResetEvents: weekWastedResetEvents,
+            todayIdleDelayMinutes: todayIdleDelayMinutes,
+            weekIdleDelayMinutes: weekIdleDelayMinutes,
+            weekIdleDelayEvents: weekIdleDelayEvents,
             peakHour: peakHour,
             peakWeekday: peakWeekday,
             topAccountKey: topAccount?.key,
@@ -951,7 +985,7 @@ enum UsageAnalyticsEngine {
         let accountNameByKey = Dictionary(uniqueKeysWithValues: deduplicatedAccountsByKey(accounts).map { ($0.deduplicationKey, $0.name) })
 
         var lines: [String] = [
-            "timestamp,account_key,account_name,weekly_delta_percent,five_hour_delta_percent,weekly_abs_percent,five_hour_abs_percent,weekly_remaining_percent,five_hour_remaining_percent,weekly_wasted_percent,five_hour_wasted_percent"
+            "timestamp,account_key,account_name,weekly_delta_percent,five_hour_delta_percent,weekly_abs_percent,five_hour_abs_percent,weekly_remaining_percent,five_hour_remaining_percent,weekly_wasted_percent,five_hour_wasted_percent,weekly_idle_delay_minutes"
         ]
 
         for record in state.records.sorted(by: { $0.timestamp < $1.timestamp }) {
@@ -959,7 +993,7 @@ enum UsageAnalyticsEngine {
             let fiveHourAbs = record.fiveHourAbsolutePercent.map(String.init) ?? ""
             let fiveHourRemain = record.fiveHourRemainingPercent.map(String.init) ?? ""
             lines.append(
-                "\(iso8601(record.timestamp)),\(escapeCSV(record.accountKey)),\(accountName),\(record.weeklyDeltaPercent),\(record.fiveHourDeltaPercent),\(record.weeklyAbsolutePercent),\(fiveHourAbs),\(record.weeklyRemainingPercent),\(fiveHourRemain),\(record.weeklyWastedPercent),\(record.fiveHourWastedPercent)"
+                "\(iso8601(record.timestamp)),\(escapeCSV(record.accountKey)),\(accountName),\(record.weeklyDeltaPercent),\(record.fiveHourDeltaPercent),\(record.weeklyAbsolutePercent),\(fiveHourAbs),\(record.weeklyRemainingPercent),\(fiveHourRemain),\(record.weeklyWastedPercent),\(record.fiveHourWastedPercent),\(record.weeklyIdleDelayMinutes)"
             )
         }
 
@@ -1171,23 +1205,36 @@ enum UsageAnalyticsEngine {
         return currentResetAt.timeIntervalSince(previousResetAt) >= minimumResetJump
     }
 
-    private static func wastedPercentOnNoUsageResetDelay(
+    private static func idleDelayMinutesOnNoUsageResetDelay(
         previousWeeklyPercent: Int,
         currentWeeklyPercent: Int,
         previousResetAt: Date?,
         currentResetAt: Date?
     ) -> Int {
-        // If weekly usage never started (still 0%), but reset time keeps moving later,
-        // treat the delayed window as wasted potential.
-        guard previousWeeklyPercent == 0, currentWeeklyPercent == 0 else { return 0 }
+        // If weekly usage is idle (no material increase, allowing tiny API jitter)
+        // while reset time keeps moving later, treat delayed window as wasted potential.
+        guard currentWeeklyPercent <= previousWeeklyPercent + idleWeeklyJitterTolerancePercent else { return 0 }
+        let remaining = max(0, 100 - currentWeeklyPercent)
+        guard remaining > 0 else { return 0 }
         guard let previousResetAt, let currentResetAt, currentResetAt > previousResetAt else { return 0 }
 
         let delaySeconds = currentResetAt.timeIntervalSince(previousResetAt)
         guard delaySeconds >= resetDelayNoiseSeconds else { return 0 }
+        return max(1, Int((delaySeconds / 60).rounded()))
+    }
 
-        let normalizedDelay = min(1, delaySeconds / weeklyWindowSeconds)
-        let wastedPercent = Int((normalizedDelay * 100).rounded())
-        return max(1, min(100, wastedPercent))
+    private static func shouldAccumulateIdleWeeklyResetDelay(
+        previousWeeklyPercent: Int,
+        currentWeeklyPercent: Int,
+        previousResetAt: Date?,
+        currentResetAt: Date?
+    ) -> Bool {
+        guard currentWeeklyPercent <= previousWeeklyPercent + idleWeeklyJitterTolerancePercent else { return false }
+        let remaining = max(0, 100 - currentWeeklyPercent)
+        guard remaining > 0 else { return false }
+        guard let previousResetAt, let currentResetAt, currentResetAt > previousResetAt else { return false }
+        let delaySeconds = currentResetAt.timeIntervalSince(previousResetAt)
+        return delaySeconds < resetDelayNoiseSeconds
     }
 
     private static func iso8601(_ date: Date) -> String {

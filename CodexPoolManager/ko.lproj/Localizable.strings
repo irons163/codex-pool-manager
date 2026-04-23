@@ -191,12 +191,18 @@
 "usage_analytics.summary.today_five_hour" = "오늘(5시간)";
 "usage_analytics.summary.week_five_hour" = "최근 7일(5시간)";
 "usage_analytics.section.wasted" = "낭비 사용량";
+"usage_analytics.section.idle_delay" = "지연 시간";
 "usage_analytics.summary.wasted_events_format" = "리셋 이벤트: %d";
+"usage_analytics.summary.delay_events_format" = "지연 이벤트: %d";
 "usage_analytics.summary.wasted_today_weekly" = "오늘 낭비(주간)";
 "usage_analytics.summary.wasted_weekly" = "최근 7일 낭비(주간)";
 "usage_analytics.summary.wasted_today_five_hour" = "오늘 낭비(5시간)";
 "usage_analytics.summary.wasted_week_five_hour" = "최근 7일 낭비(5시간)";
+"usage_analytics.summary.delay_today" = "오늘 지연";
+"usage_analytics.summary.delay_week" = "최근 7일 지연";
+"usage_analytics.summary.delay_avg_per_event" = "이벤트당 평균 지연";
 "usage_analytics.percent_format" = "%d%%";
+"usage_analytics.minutes_format" = "%d분";
 "usage_analytics.chart.title" = "7일 사용량";
 "usage_analytics.chart.granularity" = "단위";
 "usage_analytics.chart.daily" = "일";
@@ -452,6 +458,7 @@
 "usage_analytics.basis.label" = "분석 기준";
 "usage_analytics.basis.remaining" = "잔여량";
 "usage_analytics.basis.wasted" = "낭비";
+"usage_analytics.basis.delay" = "지연";
 "usage_analytics.basis.usage" = "사용량";
 "usage_analytics.chart.remaining_title" = "잔여량 추세";
 "usage_analytics.insight.best_remaining_account" = "잔여량이 가장 높은 계정";

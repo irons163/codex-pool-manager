@@ -391,7 +391,7 @@ struct CodexPoolManagerTests {
                     usedUnits: 30,
                     quota: 100,
                     chatGPTAccountID: "user-stable",
-                    usageWindowResetAt: now.addingTimeInterval(25 * 3600),
+                    usageWindowResetAt: now.addingTimeInterval(24 * 3600 + 30),
                     primaryUsagePercent: 20,
                     primaryUsageResetAt: now.addingTimeInterval(90 * 60),
                     isPaid: true
@@ -405,6 +405,222 @@ struct CodexPoolManagerTests {
         #expect(summary.weekWastedWeeklyPercent == 0)
         #expect(summary.weekWastedFiveHourPercent == 0)
         #expect(summary.weekWastedResetEvents == 0)
+    }
+
+    @Test
+    func usageAnalyticsCountsIdleWeeklyResetDelayAsWasteEvenWhenUsageIsNonZero() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E9")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let originalResetAt = now.addingTimeInterval(12 * 3600)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleNonZero",
+                    usedUnits: 16,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-non-zero",
+                    usageWindowResetAt: originalResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let delayedResetAt = originalResetAt.addingTimeInterval(24 * 3600)
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleNonZero",
+                    usedUnits: 16,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-non-zero",
+                    usageWindowResetAt: delayedResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(120)
+        )
+
+        #expect(updated.records.count == 1)
+        #expect(updated.records[0].weeklyWastedPercent == 0)
+        #expect(updated.records[0].fiveHourWastedPercent == 0)
+        #expect(updated.records[0].weeklyIdleDelayMinutes == 1440)
+
+        let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(120))
+        #expect(summary.weekWastedWeeklyPercent == 0)
+        #expect(summary.weekIdleDelayMinutes == 1440)
+        #expect(summary.weekIdleDelayEvents == 1)
+        #expect(summary.weekWastedResetEvents == 0)
+    }
+
+    @Test
+    func usageAnalyticsCountsIdleWeeklyResetDelayWithOnePercentJitterAsWaste() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000EB")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let originalResetAt = now.addingTimeInterval(12 * 3600)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleJitter",
+                    usedUnits: 15,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-jitter",
+                    usageWindowResetAt: originalResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let delayedResetAt = originalResetAt.addingTimeInterval(24 * 3600)
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleJitter",
+                    usedUnits: 16,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-jitter",
+                    usageWindowResetAt: delayedResetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(120)
+        )
+
+        #expect(updated.records.count == 1)
+        #expect(updated.records[0].weeklyWastedPercent == 0)
+        #expect(updated.records[0].weeklyIdleDelayMinutes == 1440)
+    }
+
+    @Test
+    func usageAnalyticsAccumulatesTwoSubMinuteIdleDelaysIntoWaste() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000EC")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let resetAt = now.addingTimeInterval(12 * 3600)
+
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleAccumulated",
+                    usedUnits: 20,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-accumulated",
+                    usageWindowResetAt: resetAt,
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let first = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleAccumulated",
+                    usedUnits: 20,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-accumulated",
+                    usageWindowResetAt: resetAt.addingTimeInterval(30),
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(30)
+        )
+        #expect(first.records.isEmpty)
+
+        let second = UsageAnalyticsEngine.update(
+            state: first,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "IdleAccumulated",
+                    usedUnits: 20,
+                    quota: 100,
+                    chatGPTAccountID: "user-idle-accumulated",
+                    usageWindowResetAt: resetAt.addingTimeInterval(60),
+                    primaryUsagePercent: 0,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(60)
+        )
+
+        #expect(second.records.count == 1)
+        #expect(second.records[0].weeklyWastedPercent == 0)
+        #expect(second.records[0].weeklyIdleDelayMinutes == 1)
+    }
+
+    @Test
+    func usageAnalyticsDoesNotCountIdleWeeklyResetDelayWhenWeeklyRemainingIsZero() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000EA")!
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let originalResetAt = now.addingTimeInterval(8 * 3600)
+        let seeded = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Exhausted",
+                    usedUnits: 100,
+                    quota: 100,
+                    chatGPTAccountID: "user-exhausted",
+                    usageWindowResetAt: originalResetAt,
+                    primaryUsagePercent: 100,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now
+        )
+
+        let delayedResetAt = originalResetAt.addingTimeInterval(24 * 3600)
+        let updated = UsageAnalyticsEngine.update(
+            state: seeded,
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Exhausted",
+                    usedUnits: 100,
+                    quota: 100,
+                    chatGPTAccountID: "user-exhausted",
+                    usageWindowResetAt: delayedResetAt,
+                    primaryUsagePercent: 100,
+                    primaryUsageResetAt: now.addingTimeInterval(5 * 3600),
+                    isPaid: true
+                )
+            ],
+            now: now.addingTimeInterval(120)
+        )
+
+        #expect(updated.records.isEmpty)
+        let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(120))
+        #expect(summary.weekWastedWeeklyPercent == 0)
+        #expect(summary.weekWastedResetEvents == 0)
+        #expect(summary.weekIdleDelayMinutes == 0)
     }
 
     @Test
@@ -450,12 +666,15 @@ struct CodexPoolManagerTests {
         )
 
         #expect(updated.records.count == 1)
-        #expect(updated.records[0].weeklyWastedPercent >= 14)
+        #expect(updated.records[0].weeklyWastedPercent == 0)
         #expect(updated.records[0].fiveHourWastedPercent == 0)
+        #expect(updated.records[0].weeklyIdleDelayMinutes == 1440)
 
         let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(120))
-        #expect(summary.weekWastedWeeklyPercent >= 14)
-        #expect(summary.weekWastedResetEvents == 1)
+        #expect(summary.weekWastedWeeklyPercent == 0)
+        #expect(summary.weekWastedResetEvents == 0)
+        #expect(summary.weekIdleDelayMinutes == 1440)
+        #expect(summary.weekIdleDelayEvents == 1)
     }
 
     @Test
@@ -500,11 +719,14 @@ struct CodexPoolManagerTests {
         )
 
         #expect(updated.records.count == 1)
-        #expect(updated.records[0].weeklyWastedPercent == 1)
+        #expect(updated.records[0].weeklyWastedPercent == 0)
+        #expect(updated.records[0].weeklyIdleDelayMinutes == 1)
 
         let summary = UsageAnalyticsEngine.summary(for: updated, now: now.addingTimeInterval(120))
-        #expect(summary.weekWastedWeeklyPercent == 1)
-        #expect(summary.weekWastedResetEvents == 1)
+        #expect(summary.weekWastedWeeklyPercent == 0)
+        #expect(summary.weekWastedResetEvents == 0)
+        #expect(summary.weekIdleDelayMinutes == 1)
+        #expect(summary.weekIdleDelayEvents == 1)
     }
 
     @Test

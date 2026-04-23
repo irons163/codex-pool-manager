@@ -191,12 +191,18 @@
 "usage_analytics.summary.today_five_hour" = "今日（5時間）";
 "usage_analytics.summary.week_five_hour" = "直近7日（5時間）";
 "usage_analytics.section.wasted" = "浪費使用量";
+"usage_analytics.section.idle_delay" = "遅延時間";
 "usage_analytics.summary.wasted_events_format" = "リセットイベント: %d";
+"usage_analytics.summary.delay_events_format" = "遅延イベント: %d";
 "usage_analytics.summary.wasted_today_weekly" = "今日の浪費（週間）";
 "usage_analytics.summary.wasted_weekly" = "直近7日の浪費（週間）";
 "usage_analytics.summary.wasted_today_five_hour" = "今日の浪費（5時間）";
 "usage_analytics.summary.wasted_week_five_hour" = "直近7日の浪費（5時間）";
+"usage_analytics.summary.delay_today" = "今日の遅延";
+"usage_analytics.summary.delay_week" = "直近7日の遅延";
+"usage_analytics.summary.delay_avg_per_event" = "イベントあたり平均遅延";
 "usage_analytics.percent_format" = "%d%%";
+"usage_analytics.minutes_format" = "%d分";
 "usage_analytics.chart.title" = "7日間の使用量";
 "usage_analytics.chart.granularity" = "粒度";
 "usage_analytics.chart.daily" = "日";
@@ -452,6 +458,7 @@
 "usage_analytics.basis.label" = "分析基準";
 "usage_analytics.basis.remaining" = "残量";
 "usage_analytics.basis.wasted" = "浪費";
+"usage_analytics.basis.delay" = "遅延";
 "usage_analytics.basis.usage" = "使用量";
 "usage_analytics.chart.remaining_title" = "残量トレンド";
 "usage_analytics.insight.best_remaining_account" = "残量が最も多いアカウント";
