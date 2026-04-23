@@ -3608,6 +3608,19 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         weeklyIdleDelaySeries(weeks: 8)
     }
 
+    private var analysisBasisDescriptionText: String {
+        switch analysisBasis {
+        case .usage:
+            return L10n.text("usage_analytics.basis.description.usage")
+        case .remaining:
+            return L10n.text("usage_analytics.basis.description.remaining")
+        case .wasted:
+            return L10n.text("usage_analytics.basis.description.wasted")
+        case .delay:
+            return L10n.text("usage_analytics.basis.description.delay")
+        }
+    }
+
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
@@ -3627,19 +3640,28 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                HStack(spacing: 8) {
-                    Text(L10n.text("usage_analytics.basis.label"))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                HStack(alignment: .top, spacing: 12) {
+                    HStack(spacing: 8) {
+                        Text(L10n.text("usage_analytics.basis.label"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                    Picker(L10n.text("usage_analytics.basis.label"), selection: $analysisBasis) {
-                        Text(L10n.text("usage_analytics.basis.usage")).tag(AnalysisBasis.usage)
-                        Text(L10n.text("usage_analytics.basis.remaining")).tag(AnalysisBasis.remaining)
-                        Text(L10n.text("usage_analytics.basis.wasted")).tag(AnalysisBasis.wasted)
-                        Text(L10n.text("usage_analytics.basis.delay")).tag(AnalysisBasis.delay)
+                        Picker(L10n.text("usage_analytics.basis.label"), selection: $analysisBasis) {
+                            Text(L10n.text("usage_analytics.basis.usage")).tag(AnalysisBasis.usage)
+                            Text(L10n.text("usage_analytics.basis.remaining")).tag(AnalysisBasis.remaining)
+                            Text(L10n.text("usage_analytics.basis.wasted")).tag(AnalysisBasis.wasted)
+                            Text(L10n.text("usage_analytics.basis.delay")).tag(AnalysisBasis.delay)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 460)
                     }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 460)
+
+                    Text(analysisBasisDescriptionText)
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if analysisBasis == .usage {

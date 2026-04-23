@@ -290,8 +290,12 @@
 "usage_analytics.basis.label" = "Analysis Basis";
 "usage_analytics.basis.usage" = "Usage";
 "usage_analytics.basis.remaining" = "Remaining";
-"usage_analytics.basis.wasted" = "Wasted";
-"usage_analytics.basis.delay" = "Delay";
+"usage_analytics.basis.wasted" = "Reset Waste";
+"usage_analytics.basis.delay" = "Reset Delay";
+"usage_analytics.basis.description.usage" = "Usage: tracks newly consumed quota between syncs (weekly / 5-hour).";
+"usage_analytics.basis.description.remaining" = "Remaining: compares currently available quota percentages across accounts.";
+"usage_analytics.basis.description.wasted" = "Reset Waste: counts quota that was still remaining when a reset happened.";
+"usage_analytics.basis.description.delay" = "Reset Delay: counts accumulated minutes where reset time shifted later due to inactivity.";
 "usage_analytics.section.export" = "Export";
 "usage_analytics.section.thresholds" = "Threshold Timeline";
 "usage_analytics.section.anomalies" = "Anomalies";

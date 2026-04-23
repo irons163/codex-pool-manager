@@ -457,9 +457,13 @@
 "usage.weekly_short" = "週次";
 "usage_analytics.basis.label" = "分析基準";
 "usage_analytics.basis.remaining" = "残量";
-"usage_analytics.basis.wasted" = "浪費";
-"usage_analytics.basis.delay" = "遅延";
+"usage_analytics.basis.wasted" = "リセット浪費";
+"usage_analytics.basis.delay" = "リセット遅延";
 "usage_analytics.basis.usage" = "使用量";
+"usage_analytics.basis.description.usage" = "使用量：各同期区間で新たに消費した量（週 / 5時間）を集計します。";
+"usage_analytics.basis.description.remaining" = "残量：各アカウントの現在の利用可能割合を比較します。";
+"usage_analytics.basis.description.wasted" = "リセット浪費：リセット時に残っていたまま失われた利用量割合を集計します。";
+"usage_analytics.basis.description.delay" = "リセット遅延：未使用によりリセット時刻が後ろ倒しになった累計分を集計します。";
 "usage_analytics.chart.remaining_title" = "残量トレンド";
 "usage_analytics.insight.best_remaining_account" = "残量が最も多いアカウント";
 "usage_analytics.insight.lowest_remaining_account" = "残量が最も少ないアカウント";

@@ -457,9 +457,13 @@
 "usage.weekly_short" = "Semanal";
 "usage_analytics.basis.label" = "Base de análisis";
 "usage_analytics.basis.remaining" = "Restante";
-"usage_analytics.basis.wasted" = "Desperdiciado";
-"usage_analytics.basis.delay" = "Retraso";
+"usage_analytics.basis.wasted" = "Desperdicio por reset";
+"usage_analytics.basis.delay" = "Retraso por reset";
 "usage_analytics.basis.usage" = "Uso";
+"usage_analytics.basis.description.usage" = "Uso: registra el consumo añadido entre sincronizaciones (semanal / 5 h).";
+"usage_analytics.basis.description.remaining" = "Restante: compara el porcentaje de cuota disponible entre cuentas.";
+"usage_analytics.basis.description.wasted" = "Desperdicio por reset: cuenta la cuota restante que se perdió al reiniciar.";
+"usage_analytics.basis.description.delay" = "Retraso por reset: cuenta los minutos acumulados de aplazamiento por inactividad.";
 "usage_analytics.chart.remaining_title" = "Tendencia de restante";
 "usage_analytics.insight.best_remaining_account" = "Cuenta con mayor restante";
 "usage_analytics.insight.lowest_remaining_account" = "Cuenta con menor restante";

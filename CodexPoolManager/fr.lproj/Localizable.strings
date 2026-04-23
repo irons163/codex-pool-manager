@@ -457,9 +457,13 @@
 "usage.weekly_short" = "Hebdo";
 "usage_analytics.basis.label" = "Base d’analyse";
 "usage_analytics.basis.remaining" = "Restant";
-"usage_analytics.basis.wasted" = "Gaspillé";
-"usage_analytics.basis.delay" = "Décalage";
+"usage_analytics.basis.wasted" = "Perte à la réinit";
+"usage_analytics.basis.delay" = "Retard de réinit";
 "usage_analytics.basis.usage" = "Usage";
+"usage_analytics.basis.description.usage" = "Usage : suit la consommation ajoutée entre deux synchronisations (hebdo / 5 h).";
+"usage_analytics.basis.description.remaining" = "Restant : compare les pourcentages de quota encore disponibles entre comptes.";
+"usage_analytics.basis.description.wasted" = "Perte à la réinit : calcule le quota restant perdu lors d’une réinitialisation.";
+"usage_analytics.basis.description.delay" = "Retard de réinit : calcule les minutes cumulées de décalage dues à l’inactivité.";
 "usage_analytics.chart.remaining_title" = "Tendance du restant";
 "usage_analytics.insight.best_remaining_account" = "Compte avec le plus de restant";
 "usage_analytics.insight.lowest_remaining_account" = "Compte avec le moins de restant";

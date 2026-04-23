@@ -457,9 +457,13 @@
 "usage.weekly_short" = "주간";
 "usage_analytics.basis.label" = "분석 기준";
 "usage_analytics.basis.remaining" = "잔여량";
-"usage_analytics.basis.wasted" = "낭비";
-"usage_analytics.basis.delay" = "지연";
+"usage_analytics.basis.wasted" = "리셋 낭비";
+"usage_analytics.basis.delay" = "리셋 지연";
 "usage_analytics.basis.usage" = "사용량";
+"usage_analytics.basis.description.usage" = "사용량: 동기화 사이에 새로 소모된 사용량(주 / 5시간)을 집계합니다.";
+"usage_analytics.basis.description.remaining" = "잔여량: 계정별 현재 사용 가능 비율을 비교합니다.";
+"usage_analytics.basis.description.wasted" = "리셋 낭비: 리셋 시점에 남아 있었지만 초기화된 사용량 비율을 집계합니다.";
+"usage_analytics.basis.description.delay" = "리셋 지연: 미사용으로 리셋 시간이 뒤로 밀린 누적 분을 집계합니다.";
 "usage_analytics.chart.remaining_title" = "잔여량 추세";
 "usage_analytics.insight.best_remaining_account" = "잔여량이 가장 높은 계정";
 "usage_analytics.insight.lowest_remaining_account" = "잔여량이 가장 낮은 계정";

@@ -308,8 +308,12 @@
 "usage_analytics.basis.label" = "分析基準";
 "usage_analytics.basis.usage" = "使用量";
 "usage_analytics.basis.remaining" = "剩餘量";
-"usage_analytics.basis.wasted" = "浪費";
-"usage_analytics.basis.delay" = "延後";
+"usage_analytics.basis.wasted" = "重置浪費";
+"usage_analytics.basis.delay" = "重置延後";
+"usage_analytics.basis.description.usage" = "使用量：統計每次同步期間新增的用量（週 / 5 小時）。";
+"usage_analytics.basis.description.remaining" = "剩餘量：比較各帳號目前可用比例，快速看出可切換空間。";
+"usage_analytics.basis.description.wasted" = "重置浪費：統計重置發生時尚未用完、被歸零的用量比例。";
+"usage_analytics.basis.description.delay" = "重置延後：統計因未開始使用而使重置時間往後延的累計分鐘數。";
 "usage_analytics.section.export" = "匯出";
 "usage_analytics.section.thresholds" = "門檻時間軸";
 "usage_analytics.section.anomalies" = "異常偵測";
