@@ -577,6 +577,7 @@ enum UsageAnalyticsEngine {
     static func summary(
         for state: UsageAnalyticsState,
         now: Date,
+        accountKey: String? = nil,
         calendar: Calendar = .autoupdatingCurrent
     ) -> UsageAnalyticsSummary {
         let todayStart = calendar.startOfDay(for: now)
@@ -618,6 +619,9 @@ enum UsageAnalyticsEngine {
         var accountTotals: [String: Int] = [:]
 
         for record in state.records where record.timestamp >= weekStart {
+            if let accountKey, record.accountKey != accountKey {
+                continue
+            }
             let weekly = max(0, record.weeklyDeltaPercent)
             let fiveHour = max(0, record.fiveHourDeltaPercent)
             let wastedWeekly = max(0, record.weeklyWastedPercent)

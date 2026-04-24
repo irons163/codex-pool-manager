@@ -309,6 +309,41 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsSummaryCanFilterByAccountKey() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        let records = [
+            UsageAnalyticsRecord(timestamp: now.addingTimeInterval(-3600), accountKey: "a", weeklyDeltaPercent: 20, fiveHourDeltaPercent: 8),
+            UsageAnalyticsRecord(timestamp: now.addingTimeInterval(-1800), accountKey: "b", weeklyDeltaPercent: 15, fiveHourDeltaPercent: 6)
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let summaryA = UsageAnalyticsEngine.summary(
+            for: state,
+            now: now,
+            accountKey: "a",
+            calendar: calendar
+        )
+
+        #expect(summaryA.weekWeeklyPercent == 20)
+        #expect(summaryA.weekFiveHourPercent == 8)
+        #expect(summaryA.topAccountKey == "a")
+
+        let summaryB = UsageAnalyticsEngine.summary(
+            for: state,
+            now: now,
+            accountKey: "b",
+            calendar: calendar
+        )
+
+        #expect(summaryB.weekWeeklyPercent == 15)
+        #expect(summaryB.weekFiveHourPercent == 6)
+        #expect(summaryB.topAccountKey == "b")
+    }
+
+    @Test
     func usageAnalyticsSummaryCapturesWastedUsageWhenResetAdvances() {
         let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E5")!
         let now = Date(timeIntervalSince1970: 1_700_000_000)

@@ -3405,7 +3405,11 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     @State private var exportStatus: (message: String, tone: PanelStatusCalloutView.Tone)? = nil
 
     private var summary: UsageAnalyticsSummary {
-        UsageAnalyticsEngine.summary(for: analyticsState, now: Date())
+        UsageAnalyticsEngine.summary(
+            for: analyticsState,
+            now: Date(),
+            accountKey: selectedAccountKey
+        )
     }
 
     private var dailyTotals: [UsageAnalyticsDailyTotal] {
@@ -3548,8 +3552,16 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         return mapping
     }
 
+    private var filteredDeduplicatedAccounts: [AgentAccount] {
+        if let selectedAccountKey,
+           let selected = deduplicatedAccountsByKey[selectedAccountKey] {
+            return [selected]
+        }
+        return Array(deduplicatedAccountsByKey.values)
+    }
+
     private var averageWeeklyRemainingPercent: Int {
-        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        let deduplicated = filteredDeduplicatedAccounts
         guard !deduplicated.isEmpty else { return 0 }
         let sum = deduplicated.reduce(0) { partial, account in
             partial + max(0, min(100, Int((account.remainingRatio * 100).rounded())))
@@ -3558,7 +3570,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private var lowestWeeklyRemainingPercent: Int {
-        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        let deduplicated = filteredDeduplicatedAccounts
         guard !deduplicated.isEmpty else { return 0 }
         return deduplicated
             .map { max(0, min(100, Int(($0.remainingRatio * 100).rounded()))) }
@@ -3566,7 +3578,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private var averageFiveHourRemainingPercent: Int {
-        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        let deduplicated = filteredDeduplicatedAccounts
         let values = deduplicated.compactMap { account -> Int? in
             guard let absolute = account.primaryUsagePercent else { return nil }
             return max(0, 100 - min(max(absolute, 0), 100))
@@ -3576,7 +3588,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private var lowestFiveHourRemainingPercent: Int {
-        let deduplicated = Array(deduplicatedAccountsByKey.values)
+        let deduplicated = filteredDeduplicatedAccounts
         let values = deduplicated.compactMap { account -> Int? in
             guard let absolute = account.primaryUsagePercent else { return nil }
             return max(0, 100 - min(max(absolute, 0), 100))
