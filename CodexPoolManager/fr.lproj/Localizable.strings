@@ -1,5 +1,7 @@
 "sync.syncing" = "Synchronisation...";
 "sync.sync_codex_usage" = "Synchroniser l'utilisation Codex";
+"sync.retry" = "Réessayer";
+"sync.force_retry" = "Forcer la relance";
 "sync.last_successful_sync" = "Dernière synchronisation réussie";
 "sync.error" = "Erreur de synchronisation";
 
@@ -476,3 +478,11 @@
 "workspace.openai_reset_alert.title" = "Alerte de réinitialisation OpenAI";
 "workspace.schedule.subtitle" = "Visualisez la couverture des réinitialisations et les fenêtres sans couverture sur l’ensemble des comptes.";
 "workspace.schedule.title" = "Planning";
+
+"usage_analytics.delay.clear" = "Effacer le retard";
+"usage_analytics.sort.label" = "Tri";
+"usage_analytics.sort.name" = "Nom";
+"usage_analytics.sort.weekly_usage_desc" = "Utilisation hebdo (décroissant)";
+"usage_analytics.sort.five_hour_usage_desc" = "Utilisation 5 h (décroissant)";
+"usage_analytics.sort.weekly_remaining_desc" = "Reste hebdo (décroissant)";
+"usage_analytics.sort.five_hour_remaining_desc" = "Reste 5 h (décroissant)";

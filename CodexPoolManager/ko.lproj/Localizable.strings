@@ -1,5 +1,7 @@
 "sync.syncing" = "동기화 중...";
 "sync.sync_codex_usage" = "Codex 사용량 동기화";
+"sync.retry" = "동기화 재시도";
+"sync.force_retry" = "강제 재시도";
 "sync.last_successful_sync" = "마지막 동기화 성공";
 "sync.error" = "동기화 오류";
 
@@ -476,3 +478,11 @@
 "workspace.openai_reset_alert.title" = "OpenAI 리셋 알림";
 "workspace.schedule.subtitle" = "모든 계정의 리셋 커버리지와 무커버리지 구간을 시각화합니다.";
 "workspace.schedule.title" = "일정";
+
+"usage_analytics.delay.clear" = "지연 초기화";
+"usage_analytics.sort.label" = "정렬";
+"usage_analytics.sort.name" = "이름";
+"usage_analytics.sort.weekly_usage_desc" = "주간 사용량 (높음→낮음)";
+"usage_analytics.sort.five_hour_usage_desc" = "5시간 사용량 (높음→낮음)";
+"usage_analytics.sort.weekly_remaining_desc" = "주간 잔여량 (높음→낮음)";
+"usage_analytics.sort.five_hour_remaining_desc" = "5시간 잔여량 (높음→낮음)";

@@ -861,6 +861,10 @@ struct PoolDashboardView: View {
             errorText: viewState.syncError
         ) {
             Task { await syncCodexUsage() }
+        } onRetry: {
+            Task { await retrySyncCodexUsage() }
+        } onForceRetry: {
+            Task { await forceRetrySyncCodexUsage() }
         }
     }
 
@@ -965,7 +969,8 @@ struct PoolDashboardView: View {
     private var usageAnalyticsPanel: some View {
         UsageAnalyticsWorkspacePanelView(
             analyticsState: usageAnalyticsState,
-            accounts: state.accounts
+            accounts: state.accounts,
+            onClearIdleDelay: clearUsageAnalyticsIdleDelay
         )
     }
 
@@ -1569,6 +1574,20 @@ struct PoolDashboardView: View {
     }
 
     @MainActor
+    private func retrySyncCodexUsage() async {
+        await syncCodexUsage()
+    }
+
+    @MainActor
+    private func forceRetrySyncCodexUsage() async {
+        if viewState.isSyncingUsage {
+            usageSyncRunID = nil
+            asyncStateCoordinator.endUsageSync(viewState: &viewState)
+        }
+        await syncCodexUsage()
+    }
+
+    @MainActor
     private func scheduleUsageSyncStuckRecovery(for runID: UUID) {
         Task {
             try? await Task.sleep(nanoseconds: SyncPolicy.stuckRecoveryNanoseconds)
@@ -1653,6 +1672,9 @@ struct PoolDashboardView: View {
         applyOAuthSignInOutput(output)
         if output.shouldRefreshLocalOAuthAccounts {
             refreshLocalOAuthAccounts()
+            Task { @MainActor in
+                await syncCodexUsage()
+            }
         }
     }
 
@@ -1722,6 +1744,9 @@ struct PoolDashboardView: View {
             refreshLocalOAuthAccounts()
             manualOAuthCallbackURL = ""
             self.pendingManualOAuthContext = nil
+            Task { @MainActor in
+                await syncCodexUsage()
+            }
         }
     }
 
@@ -1868,6 +1893,11 @@ struct PoolDashboardView: View {
             }
         )
         applyLocalImportOutput(output)
+        if output.didImport {
+            Task { @MainActor in
+                await syncCodexUsage()
+            }
+        }
     }
 
     // MARK: - Switch & Launch
@@ -2382,6 +2412,35 @@ struct PoolDashboardView: View {
             return
         }
         usageAnalyticsStateRaw = text
+    }
+
+    private func clearUsageAnalyticsIdleDelay(accountKey: String?) {
+        usageAnalyticsState.records = usageAnalyticsState.records.map { record in
+            guard accountKey == nil || record.accountKey == accountKey else {
+                return record
+            }
+            guard record.weeklyIdleDelayMinutes > 0 else {
+                return record
+            }
+            return UsageAnalyticsRecord(
+                id: record.id,
+                timestamp: record.timestamp,
+                accountKey: record.accountKey,
+                weeklyDeltaPercent: record.weeklyDeltaPercent,
+                fiveHourDeltaPercent: record.fiveHourDeltaPercent,
+                weeklyAbsolutePercent: record.weeklyAbsolutePercent,
+                fiveHourAbsolutePercent: record.fiveHourAbsolutePercent,
+                weeklyRemainingPercent: record.weeklyRemainingPercent,
+                fiveHourRemainingPercent: record.fiveHourRemainingPercent,
+                weeklyWastedPercent: record.weeklyWastedPercent,
+                fiveHourWastedPercent: record.fiveHourWastedPercent,
+                weeklyIdleDelayMinutes: 0,
+                weeklyResetAt: record.weeklyResetAt,
+                fiveHourResetAt: record.fiveHourResetAt,
+                activeAccountKeyAtSync: record.activeAccountKeyAtSync
+            )
+        }
+        persistUsageAnalyticsState()
     }
 
     @MainActor
@@ -3384,6 +3443,16 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         var id: String { rawValue }
     }
 
+    private enum AccountSortMode: String, CaseIterable, Identifiable {
+        case name
+        case weeklyUsage
+        case fiveHourUsage
+        case weeklyRemaining
+        case fiveHourRemaining
+
+        var id: String { rawValue }
+    }
+
     private enum ChartGranularity: String, CaseIterable, Identifiable {
         case daily
         case weekly
@@ -3399,8 +3468,10 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     let analyticsState: UsageAnalyticsState
     let accounts: [AgentAccount]
+    let onClearIdleDelay: (_ accountKey: String?) -> Void
     @State private var analysisBasis: AnalysisBasis = .usage
     @State private var chartGranularity: ChartGranularity = .daily
+    @State private var accountSortMode: AccountSortMode = .name
     @State private var selectedAccountKey: String? = nil
     @State private var exportStatus: (message: String, tone: PanelStatusCalloutView.Tone)? = nil
 
@@ -3494,11 +3565,104 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     private var selectableAccountKeys: [String] {
         let keys = Set(analyticsState.records.map(\.accountKey))
-        return keys.sorted { lhs, rhs in
-            let leftName = accountNameByKey[lhs] ?? lhs
-            let rightName = accountNameByKey[rhs] ?? rhs
-            return leftName.localizedCaseInsensitiveCompare(rightName) == .orderedAscending
+        return keys.sorted(by: accountKeySortComparator)
+    }
+
+    private var latestSnapshotByKey: [String: UsageAnalyticsAccountSnapshot] {
+        analyticsState.snapshots.reduce(into: [String: UsageAnalyticsAccountSnapshot]()) { result, snapshot in
+            guard let existing = result[snapshot.accountKey] else {
+                result[snapshot.accountKey] = snapshot
+                return
+            }
+            if snapshot.lastSeenAt > existing.lastSeenAt {
+                result[snapshot.accountKey] = snapshot
+            }
         }
+    }
+
+    private var latestRecordByKey: [String: UsageAnalyticsRecord] {
+        analyticsState.records.reduce(into: [String: UsageAnalyticsRecord]()) { result, record in
+            guard let existing = result[record.accountKey] else {
+                result[record.accountKey] = record
+                return
+            }
+            if record.timestamp > existing.timestamp {
+                result[record.accountKey] = record
+            }
+        }
+    }
+
+    private func accountMetrics(for key: String) -> (
+        name: String,
+        weeklyUsage: Int,
+        fiveHourUsage: Int,
+        weeklyRemaining: Int,
+        fiveHourRemaining: Int
+    ) {
+        let name = accountNameByKey[key] ?? key
+
+        if let account = deduplicatedAccountsByKey[key] {
+            let weeklyUsage = account.secondaryUsagePercent ?? max(0, min(100, Int((account.usageRatio * 100).rounded())))
+            let fiveHourUsage = account.primaryUsagePercent ?? -1
+            let weeklyRemaining = max(0, min(100, Int((account.remainingRatio * 100).rounded())))
+            let fiveHourRemaining = account.primaryUsagePercent.map { max(0, 100 - min(max($0, 0), 100)) } ?? -1
+            return (name, weeklyUsage, fiveHourUsage, weeklyRemaining, fiveHourRemaining)
+        }
+
+        if let snapshot = latestSnapshotByKey[key] {
+            let weeklyUsage = max(0, min(100, snapshot.lastWeeklyPercent))
+            let fiveHourUsage = snapshot.lastFiveHourPercent.map { max(0, min(100, $0)) } ?? -1
+            let weeklyRemaining = max(0, 100 - weeklyUsage)
+            let fiveHourRemaining = fiveHourUsage >= 0 ? max(0, 100 - fiveHourUsage) : -1
+            return (name, weeklyUsage, fiveHourUsage, weeklyRemaining, fiveHourRemaining)
+        }
+
+        if let record = latestRecordByKey[key] {
+            let weeklyUsage = max(0, min(100, record.weeklyAbsolutePercent))
+            let fiveHourUsage = record.fiveHourAbsolutePercent.map { max(0, min(100, $0)) } ?? -1
+            let weeklyRemaining = max(0, min(100, record.weeklyRemainingPercent))
+            let fiveHourRemaining = record.fiveHourRemainingPercent.map { max(0, min(100, $0)) } ?? -1
+            return (name, weeklyUsage, fiveHourUsage, weeklyRemaining, fiveHourRemaining)
+        }
+
+        return (name, 0, -1, 0, -1)
+    }
+
+    private func accountKeySortComparator(_ lhs: String, _ rhs: String) -> Bool {
+        let left = accountMetrics(for: lhs)
+        let right = accountMetrics(for: rhs)
+
+        func compareDescending(_ leftValue: Int, _ rightValue: Int) -> Bool? {
+            if leftValue != rightValue {
+                return leftValue > rightValue
+            }
+            return nil
+        }
+
+        let primaryDecision: Bool? = {
+            switch accountSortMode {
+            case .name:
+                return nil
+            case .weeklyUsage:
+                return compareDescending(left.weeklyUsage, right.weeklyUsage)
+            case .fiveHourUsage:
+                return compareDescending(left.fiveHourUsage, right.fiveHourUsage)
+            case .weeklyRemaining:
+                return compareDescending(left.weeklyRemaining, right.weeklyRemaining)
+            case .fiveHourRemaining:
+                return compareDescending(left.fiveHourRemaining, right.fiveHourRemaining)
+            }
+        }()
+
+        if let primaryDecision {
+            return primaryDecision
+        }
+
+        let nameComparison = left.name.localizedCaseInsensitiveCompare(right.name)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+        return lhs < rhs
     }
 
     private var chartEntries: [ChartEntry] {
@@ -3612,12 +3776,40 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         weeklyWastedSeries(weeks: 8)
     }
 
+    private var weeklyWastedResetEventCount: Int {
+        let calendar = Calendar.autoupdatingCurrent
+        let todayStart = calendar.startOfDay(for: Date())
+        guard let periodStart = calendar.date(byAdding: .day, value: -6, to: todayStart),
+              let periodEnd = calendar.date(byAdding: .day, value: 1, to: todayStart) else {
+            return 0
+        }
+
+        return analyticsState.records
+            .filter {
+                $0.timestamp >= periodStart
+                && $0.timestamp < periodEnd
+                && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
+            }
+            .reduce(into: 0) { count, record in
+                if record.weeklyWastedPercent > 0 {
+                    count += 1
+                }
+            }
+    }
+
     private var dailyIdleDelayTotals: [UsageAnalyticsDailyTotal] {
         dailyIdleDelaySeries(days: 7)
     }
 
     private var weeklyIdleDelayTotals: [UsageAnalyticsWeeklyTotal] {
         weeklyIdleDelaySeries(weeks: 8)
+    }
+
+    private var hasIdleDelayData: Bool {
+        analyticsState.records.contains { record in
+            (selectedAccountKey == nil || record.accountKey == selectedAccountKey)
+            && record.weeklyIdleDelayMinutes > 0
+        }
     }
 
     private var analysisBasisDescriptionText: String {
@@ -3755,7 +3947,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
                 Spacer(minLength: 0)
 
-                Text(L10n.text("usage_analytics.summary.wasted_events_format", summary.weekWastedResetEvents))
+                Text(L10n.text("usage_analytics.summary.wasted_events_format", weeklyWastedResetEventCount))
                     .font(.caption2)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
             }
@@ -3769,14 +3961,6 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     title: L10n.text("usage_analytics.summary.wasted_weekly"),
                     value: L10n.text("usage_analytics.percent_format", summary.weekWastedWeeklyPercent)
                 )
-                summaryCard(
-                    title: L10n.text("usage_analytics.summary.wasted_today_five_hour"),
-                    value: L10n.text("usage_analytics.percent_format", summary.todayWastedFiveHourPercent)
-                )
-                summaryCard(
-                    title: L10n.text("usage_analytics.summary.wasted_week_five_hour"),
-                    value: L10n.text("usage_analytics.percent_format", summary.weekWastedFiveHourPercent)
-                )
             }
         }
     }
@@ -3789,6 +3973,12 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
                 Spacer(minLength: 0)
+
+                Button(L10n.text("usage_analytics.delay.clear")) {
+                    onClearIdleDelay(selectedAccountKey)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!hasIdleDelayData)
 
                 Text(L10n.text("usage_analytics.summary.delay_events_format", summary.weekIdleDelayEvents))
                     .font(.caption2)
@@ -3860,6 +4050,22 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
+                .frame(maxWidth: 180)
+
+                Picker(L10n.text("usage_analytics.sort.label"), selection: $accountSortMode) {
+                    Text(L10n.text("usage_analytics.sort.name"))
+                        .tag(AccountSortMode.name)
+                    Text(L10n.text("usage_analytics.sort.weekly_usage_desc"))
+                        .tag(AccountSortMode.weeklyUsage)
+                    Text(L10n.text("usage_analytics.sort.five_hour_usage_desc"))
+                        .tag(AccountSortMode.fiveHourUsage)
+                    Text(L10n.text("usage_analytics.sort.weekly_remaining_desc"))
+                        .tag(AccountSortMode.weeklyRemaining)
+                    Text(L10n.text("usage_analytics.sort.five_hour_remaining_desc"))
+                        .tag(AccountSortMode.fiveHourRemaining)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
                 .frame(maxWidth: 180)
 
                 Picker(L10n.text("usage_analytics.chart.account"), selection: $selectedAccountKey) {
@@ -4443,7 +4649,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
                 }
                 .reduce(0) { partial, record in
-                    partial + max(0, record.weeklyWastedPercent) + max(0, record.fiveHourWastedPercent)
+                    partial + max(0, record.weeklyWastedPercent)
                 }
 
             totals.append(UsageAnalyticsDailyTotal(date: dayStart, totalWeeklyPercent: total))
@@ -4471,7 +4677,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     && (selectedAccountKey == nil || $0.accountKey == selectedAccountKey)
                 }
                 .reduce(0) { partial, record in
-                    partial + max(0, record.weeklyWastedPercent) + max(0, record.fiveHourWastedPercent)
+                    partial + max(0, record.weeklyWastedPercent)
                 }
 
             totals.append(

@@ -1,5 +1,7 @@
 "sync.syncing" = "同步中...";
 "sync.sync_codex_usage" = "同步 Codex 用量";
+"sync.retry" = "重试同步";
+"sync.force_retry" = "强制重试";
 "sync.last_successful_sync" = "上次成功同步";
 "sync.error" = "同步错误";
 
@@ -477,3 +479,11 @@
 "usage.remaining_units_format" = "剩余 %d";
 "usage.window_format" = "窗口：%@";
 "usage.resets_format" = "重置时间：%@";
+
+"usage_analytics.delay.clear" = "清空延后";
+"usage_analytics.sort.label" = "排序";
+"usage_analytics.sort.name" = "名称";
+"usage_analytics.sort.weekly_usage_desc" = "周用量（高→低）";
+"usage_analytics.sort.five_hour_usage_desc" = "5 小时用量（高→低）";
+"usage_analytics.sort.weekly_remaining_desc" = "周剩余（高→低）";
+"usage_analytics.sort.five_hour_remaining_desc" = "5 小时剩余（高→低）";

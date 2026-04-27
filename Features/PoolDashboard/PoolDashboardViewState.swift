@@ -4,6 +4,7 @@ struct PoolDashboardViewState {
     var showLowUsageAlert = false
     var lowUsageAlertMessage: String?
     var isSyncingUsage = false
+    var usageSyncStartedAt: Date?
     var isSigningInOAuth = false
 
     var backupJSON = ""

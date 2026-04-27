@@ -128,6 +128,27 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func manualModeSwitchLaunchSelectionPersistsAfterEvaluate() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 200, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.markActiveAccountForSwitchLaunch(b, now: Date(timeIntervalSince1970: 5))
+        #expect(state.activeAccount?.id == b)
+        #expect(state.manualAccountID == b)
+
+        state.evaluate(now: Date(timeIntervalSince1970: 10))
+        #expect(state.activeAccount?.id == b)
+    }
+
+    @Test
     func enteringFocusModeKeepsCurrentActiveAccount() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
@@ -167,6 +188,29 @@ struct CodexPoolManagerTests {
         #expect(state.activeAccount?.id == b)
 
         state.setMode(.intelligent, now: Date(timeIntervalSince1970: 400))
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
+    func focusModeSwitchLaunchSelectionUpdatesFocusLock() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 200, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 100, quota: 1000)
+            ],
+            mode: .focus
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        #expect(state.activeAccount?.id == b)
+
+        state.markActiveAccountForSwitchLaunch(a, now: Date(timeIntervalSince1970: 5))
+        #expect(state.activeAccount?.id == a)
+        #expect(state.focusLockedID == a)
+
+        state.evaluate(now: Date(timeIntervalSince1970: 10))
         #expect(state.activeAccount?.id == a)
     }
 
@@ -4093,6 +4137,7 @@ extension CodexPoolManagerTests {
 
         #expect(viewState.showLowUsageAlert == false)
         #expect(viewState.isSyncingUsage == false)
+        #expect(viewState.usageSyncStartedAt == nil)
         #expect(viewState.isSigningInOAuth == false)
         #expect(viewState.backupJSON.isEmpty)
         #expect(viewState.syncError == nil)

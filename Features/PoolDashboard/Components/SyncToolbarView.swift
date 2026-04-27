@@ -9,6 +9,8 @@ struct SyncToolbarView: View {
     let lastSyncAt: Date?
     let errorText: String?
     let onSync: () -> Void
+    let onRetry: () -> Void
+    let onForceRetry: () -> Void
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -29,6 +31,20 @@ struct SyncToolbarView: View {
             .buttonStyle(DashboardPrimaryButtonStyle())
             .disabled(isSyncing)
             .accessibilityIdentifier("sync.toolbar.syncButton")
+
+            if isSyncing {
+                Button(L10n.text("sync.force_retry")) {
+                    onForceRetry()
+                }
+                .buttonStyle(DashboardWarningButtonStyle())
+                .accessibilityIdentifier("sync.toolbar.forceRetryButton")
+            } else if let errorText, !errorText.isEmpty {
+                Button(L10n.text("sync.retry")) {
+                    onRetry()
+                }
+                .buttonStyle(DashboardWarningButtonStyle())
+                .accessibilityIdentifier("sync.toolbar.retryButton")
+            }
 
             if let lastSyncAt {
                 PanelStatusCalloutView(

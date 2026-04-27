@@ -1,5 +1,7 @@
 "sync.syncing" = "同期中...";
 "sync.sync_codex_usage" = "Codex 使用量を同期";
+"sync.retry" = "再同期";
+"sync.force_retry" = "強制再試行";
 "sync.last_successful_sync" = "最終同期成功";
 "sync.error" = "同期エラー";
 
@@ -476,3 +478,11 @@
 "workspace.openai_reset_alert.title" = "OpenAI リセットアラート";
 "workspace.schedule.subtitle" = "全アカウントのリセットカバレッジと未カバー時間帯を可視化します。";
 "workspace.schedule.title" = "スケジュール";
+
+"usage_analytics.delay.clear" = "遅延をクリア";
+"usage_analytics.sort.label" = "並び順";
+"usage_analytics.sort.name" = "名前";
+"usage_analytics.sort.weekly_usage_desc" = "週使用量（高→低）";
+"usage_analytics.sort.five_hour_usage_desc" = "5時間使用量（高→低）";
+"usage_analytics.sort.weekly_remaining_desc" = "週残量（高→低）";
+"usage_analytics.sort.five_hour_remaining_desc" = "5時間残量（高→低）";

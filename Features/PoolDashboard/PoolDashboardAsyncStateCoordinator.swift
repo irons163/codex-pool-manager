@@ -1,14 +1,20 @@
 import Foundation
 
 struct PoolDashboardAsyncStateCoordinator {
-    func beginUsageSync(viewState: inout PoolDashboardViewState) -> Bool {
+    func beginUsageSync(
+        viewState: inout PoolDashboardViewState,
+        now: Date = .now
+    ) -> Bool {
         guard !viewState.isSyncingUsage else { return false }
         viewState.isSyncingUsage = true
+        viewState.usageSyncStartedAt = now
+        viewState.syncError = nil
         return true
     }
 
     func endUsageSync(viewState: inout PoolDashboardViewState) {
         viewState.isSyncingUsage = false
+        viewState.usageSyncStartedAt = nil
     }
 
     func beginOAuthSignIn(viewState: inout PoolDashboardViewState) -> Bool {

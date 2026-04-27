@@ -1,5 +1,7 @@
 "sync.syncing" = "Syncing...";
 "sync.sync_codex_usage" = "Sync Codex Usage";
+"sync.retry" = "Retry Sync";
+"sync.force_retry" = "Force Retry";
 "sync.last_successful_sync" = "Last Successful Sync";
 "sync.error" = "Sync Error";
 
@@ -485,3 +487,11 @@
 "usage.sync.error.unknown" = "Sync failed. Please try again later.";
 "usage.sync.excluded.missing_token" = "Missing API token. Excluded from sync and scheduling calculations.";
 "usage.sync.excluded.missing_account_id" = "Missing Account ID. Excluded from sync and scheduling calculations.";
+
+"usage_analytics.delay.clear" = "Clear Delay";
+"usage_analytics.sort.label" = "Sort";
+"usage_analytics.sort.name" = "Name";
+"usage_analytics.sort.weekly_usage_desc" = "Weekly Usage (High to Low)";
+"usage_analytics.sort.five_hour_usage_desc" = "5-hour Usage (High to Low)";
+"usage_analytics.sort.weekly_remaining_desc" = "Weekly Remaining (High to Low)";
+"usage_analytics.sort.five_hour_remaining_desc" = "5-hour Remaining (High to Low)";

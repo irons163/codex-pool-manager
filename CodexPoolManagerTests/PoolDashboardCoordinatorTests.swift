@@ -7,6 +7,7 @@ struct PoolDashboardAsyncStateCoordinatorTests {
     func poolDashboardAsyncStateCoordinatorBeginUsageSyncGuardsConcurrentRuns() {
         let coordinator = PoolDashboardAsyncStateCoordinator()
         var viewState = PoolDashboardViewState()
+        viewState.syncError = "old-error"
 
         let first = coordinator.beginUsageSync(viewState: &viewState)
         let second = coordinator.beginUsageSync(viewState: &viewState)
@@ -14,6 +15,8 @@ struct PoolDashboardAsyncStateCoordinatorTests {
         #expect(first)
         #expect(!second)
         #expect(viewState.isSyncingUsage)
+        #expect(viewState.usageSyncStartedAt != nil)
+        #expect(viewState.syncError == nil)
     }
 
     @Test
@@ -25,6 +28,7 @@ struct PoolDashboardAsyncStateCoordinatorTests {
         coordinator.endUsageSync(viewState: &viewState)
 
         #expect(!viewState.isSyncingUsage)
+        #expect(viewState.usageSyncStartedAt == nil)
     }
 
     @Test

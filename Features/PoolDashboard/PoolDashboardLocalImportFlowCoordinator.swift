@@ -5,6 +5,7 @@ struct PoolDashboardLocalImportFlowCoordinator {
         let state: AccountPoolState
         let viewModel: LocalOAuthImportViewModel
         let viewState: PoolDashboardViewState
+        let didImport: Bool
     }
 
     private let localImportCoordinator = PoolDashboardLocalImportCoordinator()
@@ -38,19 +39,22 @@ struct PoolDashboardLocalImportFlowCoordinator {
         return makeOutput(
             state: nextState,
             viewModel: nextViewModel,
-            viewState: nextViewState
+            viewState: nextViewState,
+            didImport: localImportOutput.didImport
         )
     }
 
     private func makeOutput(
         state: AccountPoolState,
         viewModel: LocalOAuthImportViewModel,
-        viewState: PoolDashboardViewState
+        viewState: PoolDashboardViewState,
+        didImport: Bool
     ) -> Output {
         Output(
             state: state,
             viewModel: viewModel,
-            viewState: viewState
+            viewState: viewState,
+            didImport: didImport
         )
     }
 }
