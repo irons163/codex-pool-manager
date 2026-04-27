@@ -629,6 +629,11 @@ struct AccountPoolState {
     }
 
     mutating func markActiveAccountForSwitchLaunch(_ accountID: UUID, now: Date = .now) {
+        if mode == .manual {
+            manualAccountID = accountID
+        } else if mode == .focus {
+            focusLockedAccountID = accountID
+        }
         switchActive(to: accountID, now: now)
     }
 
