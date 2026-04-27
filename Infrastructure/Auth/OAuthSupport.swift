@@ -563,7 +563,7 @@ final class LocalhostOAuthCallbackServer {
 
     func waitForCallback(
         config: LocalhostOAuthCallbackConfig,
-        timeoutNanoseconds: UInt64 = 120_000_000_000,
+        timeoutNanoseconds: UInt64 = 300_000_000_000,
         onReadyToReceiveCallback: @escaping () -> Bool = { true }
     ) async throws -> URL {
         return try await withCheckedThrowingContinuation { continuation in
