@@ -33,6 +33,7 @@ struct PoolDashboardAuthFlowCoordinator {
         let tokens: OAuthTokens
         let claims: OAuthIDTokenClaims?
         let usage: CodexUsage?
+        let identityScope: String
     }
 
     struct LocalImportContext {
@@ -78,15 +79,19 @@ struct PoolDashboardAuthFlowCoordinator {
         let tokens = try await loginService.signIn(configuration: configuration)
         return await makeOAuthSignInContext(
             tokens: tokens,
-            usageClient: usageClient
+            usageClient: usageClient,
+            fallbackWorkspaceID: configuration.forcedWorkspaceID
         )
     }
 
     func makeOAuthSignInContext(
         tokens: OAuthTokens,
-        usageClient: CodexUsageFetching
+        usageClient: CodexUsageFetching,
+        fallbackWorkspaceID: String? = nil
     ) async -> OAuthSignInContext {
         let claims = OAuthIDTokenClaimsParser.parse(tokens.idToken)
+        let identityScope = claims?.resolvedIdentityScope(fallbackWorkspaceID: fallbackWorkspaceID)
+            ?? AgentAccount.personalIdentityScope
 
         var usage: CodexUsage?
         if let accountID = (claims?.accountID ?? claims?.subject), !accountID.isEmpty {
@@ -103,7 +108,8 @@ struct PoolDashboardAuthFlowCoordinator {
         return OAuthSignInContext(
             tokens: tokens,
             claims: claims,
-            usage: usage
+            usage: usage,
+            identityScope: identityScope
         )
     }
 
@@ -118,6 +124,7 @@ struct PoolDashboardAuthFlowCoordinator {
             tokens: context.tokens,
             claims: context.claims,
             usage: context.usage,
+            identityScope: context.identityScope,
             accountNameInput: accountNameInput,
             fallbackQuota: fallbackQuota
         )

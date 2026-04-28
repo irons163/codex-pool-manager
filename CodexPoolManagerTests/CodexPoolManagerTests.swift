@@ -4340,7 +4340,19 @@ extension CodexPoolManagerTests {
 
     @Test
     func oauthIDTokenClaimsParserExtractsSubjectAccountAndEmail() throws {
-        let payload = "{\"sub\":\"user-123\",\"account_id\":\"acct-123\",\"email\":\"demo@example.com\"}"
+        let payload = """
+        {
+          "sub":"user-123",
+          "account_id":"acct-123",
+          "email":"demo@example.com",
+          "https://api.openai.com/auth": {
+            "organizations": [
+              {"id":"org-primary","is_default":true},
+              {"id":"org-secondary","is_default":false}
+            ]
+          }
+        }
+        """
         let payloadData = try #require(payload.data(using: .utf8))
         let encodedPayload = payloadData.base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
@@ -4353,6 +4365,7 @@ extension CodexPoolManagerTests {
         #expect(claims.subject == "user-123")
         #expect(claims.accountID == "acct-123")
         #expect(claims.email == "demo@example.com")
+        #expect(claims.organizationID == "org-primary")
     }
 
     @Test
@@ -4360,6 +4373,26 @@ extension CodexPoolManagerTests {
         #expect(OAuthIDTokenClaimsParser.parse("not.a.jwt") == nil)
         #expect(OAuthIDTokenClaimsParser.parse("header.invalid_base64.sig") == nil)
         #expect(OAuthIDTokenClaimsParser.parse(nil) == nil)
+    }
+
+    @Test
+    func oauthIDTokenClaimsResolvedIdentityScopePrefersOrganizationThenFallbackThenPersonal() {
+        let orgClaims = OAuthIDTokenClaims(
+            subject: "user-1",
+            accountID: "acct-1",
+            email: "demo@example.com",
+            organizationID: "org-abc"
+        )
+        #expect(orgClaims.resolvedIdentityScope(fallbackWorkspaceID: "ws-001") == "org:org-abc")
+
+        let fallbackClaims = OAuthIDTokenClaims(
+            subject: "user-1",
+            accountID: "acct-1",
+            email: "demo@example.com",
+            organizationID: nil
+        )
+        #expect(fallbackClaims.resolvedIdentityScope(fallbackWorkspaceID: "ws-001") == "org:ws-001")
+        #expect(fallbackClaims.resolvedIdentityScope(fallbackWorkspaceID: nil) == AgentAccount.personalIdentityScope)
     }
 
     @Test
@@ -4372,7 +4405,8 @@ extension CodexPoolManagerTests {
                 usedUnits: 10,
                 quota: 100,
                 apiToken: "old-token",
-                chatGPTAccountID: "acct-123"
+                chatGPTAccountID: "acct-123",
+                identityScope: "org:org-primary"
             )
         ]
 
@@ -4380,10 +4414,35 @@ extension CodexPoolManagerTests {
             in: accounts,
             chatGPTAccountID: "acct-123",
             accessToken: "new-token",
-            email: "existing@example.com"
+            identityScope: "org:org-primary"
         )
 
         #expect(matched == existingID)
+    }
+
+    @Test
+    func oauthAccountUpsertResolverDoesNotMatchDifferentScopeForSameAccountID() {
+        let existingID = UUID()
+        let accounts = [
+            AgentAccount(
+                id: existingID,
+                name: "existing@example.com",
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "old-token",
+                chatGPTAccountID: "acct-123",
+                identityScope: "org:org-business"
+            )
+        ]
+
+        let matched = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: accounts,
+            chatGPTAccountID: "acct-123",
+            accessToken: "new-token",
+            identityScope: "org:org-personal"
+        )
+
+        #expect(matched == nil)
     }
 
     @Test
@@ -4404,14 +4463,14 @@ extension CodexPoolManagerTests {
             in: accounts,
             chatGPTAccountID: nil,
             accessToken: "same-token",
-            email: nil
+            identityScope: nil
         )
 
         #expect(matched == existingID)
     }
 
     @Test
-    func oauthAccountUpsertResolverMatchesByEmailFallback() {
+    func oauthAccountUpsertResolverDoesNotMatchByEmailFallback() {
         let existingID = UUID()
         let accounts = [
             AgentAccount(
@@ -4429,10 +4488,10 @@ extension CodexPoolManagerTests {
             in: accounts,
             chatGPTAccountID: nil,
             accessToken: "new-token",
-            email: "existing@example.com"
+            identityScope: AgentAccount.personalIdentityScope
         )
 
-        #expect(matched == existingID)
+        #expect(matched == nil)
     }
 
     @Test
@@ -4454,7 +4513,7 @@ extension CodexPoolManagerTests {
             in: accounts,
             chatGPTAccountID: nil,
             accessToken: "new-token",
-            email: "existing@example.com"
+            identityScope: AgentAccount.personalIdentityScope
         )
 
         #expect(matched == nil)
@@ -4477,7 +4536,7 @@ extension CodexPoolManagerTests {
             in: accounts,
             chatGPTAccountID: "acct-b",
             accessToken: "token-b",
-            email: "other@example.com"
+            identityScope: AgentAccount.personalIdentityScope
         )
 
         #expect(matched == nil)
@@ -4512,6 +4571,7 @@ extension CodexPoolManagerTests {
             tokens: tokens,
             claims: claims,
             usage: nil,
+            identityScope: AgentAccount.personalIdentityScope,
             accountNameInput: "",
             fallbackQuota: 1000
         )
@@ -4550,6 +4610,7 @@ extension CodexPoolManagerTests {
             tokens: tokens,
             claims: claims,
             usage: CodexUsage(usedUnits: 11, quota: 100, accountID: "acct-1", accountEmail: "real@example.com"),
+            identityScope: AgentAccount.personalIdentityScope,
             accountNameInput: "",
             fallbackQuota: 1000
         )
@@ -4588,6 +4649,7 @@ extension CodexPoolManagerTests {
             tokens: tokens,
             claims: claims,
             usage: CodexUsage(usedUnits: 5, quota: 100),
+            identityScope: AgentAccount.personalIdentityScope,
             accountNameInput: "",
             fallbackQuota: 1000
         )
@@ -4997,6 +5059,62 @@ extension CodexPoolManagerTests {
         )
 
         #expect(result == nil)
+    }
+
+    @Test
+    func specialResetAlertDoesNotTriggerWhenObservedResetOnlyDriftsByOneMinute() {
+        let now = Date(timeIntervalSince1970: 1_760_000_000)
+        let weeklyExpected = now.addingTimeInterval(6 * 3_600)
+        let fiveHourExpected = now.addingTimeInterval(2 * 3_600)
+        let observedWeekly = now.addingTimeInterval(36 * 3_600 + 60)
+        let observedFiveHour = now.addingTimeInterval(8 * 3_600 + 60)
+        let previousObservedWeekly = observedWeekly.addingTimeInterval(-60)
+        let previousObservedFiveHour = observedFiveHour.addingTimeInterval(-60)
+
+        let result = SpecialResetAlertEvaluator.detectCombinedEarlyReset(
+            weeklyExpectedResetAt: weeklyExpected,
+            observedWeeklyResetAt: observedWeekly,
+            fiveHourExpectedResetAt: fiveHourExpected,
+            observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 35,
+            previousFiveHourUsagePercent: 22,
+            weeklyUsagePercent: 0,
+            fiveHourUsagePercent: 0,
+            now: now,
+            graceSeconds: 60,
+            previousObservedWeeklyResetAt: previousObservedWeekly,
+            previousObservedFiveHourResetAt: previousObservedFiveHour
+        )
+
+        #expect(result == nil)
+    }
+
+    @Test
+    func specialResetAlertTriggersWhenObservedResetAdvanceIsSignificant() {
+        let now = Date(timeIntervalSince1970: 1_760_000_000)
+        let weeklyExpected = now.addingTimeInterval(6 * 3_600)
+        let fiveHourExpected = now.addingTimeInterval(2 * 3_600)
+        let observedWeekly = now.addingTimeInterval(36 * 3_600)
+        let observedFiveHour = now.addingTimeInterval(8 * 3_600)
+        let previousObservedWeekly = observedWeekly.addingTimeInterval(-3_600)
+        let previousObservedFiveHour = observedFiveHour.addingTimeInterval(-3_600)
+
+        let result = SpecialResetAlertEvaluator.detectCombinedEarlyReset(
+            weeklyExpectedResetAt: weeklyExpected,
+            observedWeeklyResetAt: observedWeekly,
+            fiveHourExpectedResetAt: fiveHourExpected,
+            observedFiveHourResetAt: observedFiveHour,
+            previousWeeklyUsagePercent: 35,
+            previousFiveHourUsagePercent: 22,
+            weeklyUsagePercent: 0,
+            fiveHourUsagePercent: 0,
+            now: now,
+            graceSeconds: 60,
+            previousObservedWeeklyResetAt: previousObservedWeekly,
+            previousObservedFiveHourResetAt: previousObservedFiveHour
+        )
+
+        #expect(result != nil)
     }
 
 }

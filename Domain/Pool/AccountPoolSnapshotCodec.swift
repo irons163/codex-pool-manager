@@ -65,6 +65,7 @@ enum AccountPoolSnapshotCodec {
                 apiToken: account.apiToken,
                 email: account.email,
                 chatGPTAccountID: account.chatGPTAccountID,
+                identityScope: account.identityScope,
                 usageWindowName: nil,
                 usageWindowResetAt: nil
             )

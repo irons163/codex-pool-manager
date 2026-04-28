@@ -486,3 +486,5 @@
 "usage_analytics.sort.five_hour_usage_desc" = "Utilisation 5 h (décroissant)";
 "usage_analytics.sort.weekly_remaining_desc" = "Reste hebdo (décroissant)";
 "usage_analytics.sort.five_hour_remaining_desc" = "Reste 5 h (décroissant)";
+"developer.notification.test_button" = "Tester la notification en haut à droite";
+"developer.notification.test_title" = "Notification de test Codex Pool";

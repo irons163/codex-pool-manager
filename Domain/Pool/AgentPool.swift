@@ -2,6 +2,7 @@ import Foundation
 
 struct AgentAccount: Identifiable, Equatable, Codable {
     static let defaultGroupName = "Default"
+    static let personalIdentityScope = "personal"
 
     let id: UUID
     var createdAt: Date
@@ -12,6 +13,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var apiToken: String
     var email: String?
     var chatGPTAccountID: String?
+    var identityScope: String
     var usageWindowName: String?
     var usageWindowResetAt: Date?
     var primaryUsagePercent: Int?
@@ -32,6 +34,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         apiToken: String = "",
         email: String? = nil,
         chatGPTAccountID: String? = nil,
+        identityScope: String = AgentAccount.personalIdentityScope,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
         primaryUsagePercent: Int? = nil,
@@ -51,6 +54,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.apiToken = apiToken
         self.email = email
         self.chatGPTAccountID = chatGPTAccountID
+        self.identityScope = AgentAccount.normalizedIdentityScope(identityScope)
         self.usageWindowName = usageWindowName
         self.usageWindowResetAt = usageWindowResetAt
         self.primaryUsagePercent = primaryUsagePercent
@@ -75,6 +79,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
         email = try container.decodeIfPresent(String.self, forKey: .email)
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
+        identityScope = AgentAccount.normalizedIdentityScope(
+            try container.decodeIfPresent(String.self, forKey: .identityScope) ?? AgentAccount.personalIdentityScope
+        )
         usageWindowName = try container.decodeIfPresent(String.self, forKey: .usageWindowName)
         usageWindowResetAt = try container.decodeIfPresent(Date.self, forKey: .usageWindowResetAt)
         primaryUsagePercent = try container.decodeIfPresent(Int.self, forKey: .primaryUsagePercent)
@@ -111,6 +118,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             apiToken: "",
             email: email,
             chatGPTAccountID: chatGPTAccountID,
+            identityScope: identityScope,
             usageWindowName: usageWindowName,
             usageWindowResetAt: usageWindowResetAt,
             primaryUsagePercent: primaryUsagePercent,
@@ -127,12 +135,17 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? defaultGroupName : trimmed
     }
+
+    static func normalizedIdentityScope(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed.isEmpty ? personalIdentityScope : trimmed
+    }
 }
 
 extension AgentAccount {
     var deduplicationKey: String {
         if let chatGPTAccountID = normalizedIdentityComponent(chatGPTAccountID) {
-            return "account:\(chatGPTAccountID)"
+            return "account:\(chatGPTAccountID)|scope:\(identityScope)"
         }
 
         if let email = normalizedIdentityComponent(email) {
@@ -654,6 +667,7 @@ struct AccountPoolState {
         usedUnits: Int = 0,
         email: String? = nil,
         chatGPTAccountID: String? = nil,
+        identityScope: String = AgentAccount.personalIdentityScope,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
         now: Date = .now
@@ -669,6 +683,7 @@ struct AccountPoolState {
             quota: normalizedQuota,
             email: email,
             chatGPTAccountID: chatGPTAccountID,
+            identityScope: identityScope,
             usageWindowName: usageWindowName,
             usageWindowResetAt: usageWindowResetAt
         )
@@ -709,6 +724,7 @@ struct AccountPoolState {
         apiToken: String? = nil,
         email: String? = nil,
         chatGPTAccountID: String? = nil,
+        identityScope: String? = nil,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
         primaryUsagePercent: Int? = nil,
@@ -740,6 +756,9 @@ struct AccountPoolState {
         }
         if let chatGPTAccountID {
             accounts[index].chatGPTAccountID = chatGPTAccountID
+        }
+        if let identityScope {
+            accounts[index].identityScope = AgentAccount.normalizedIdentityScope(identityScope)
         }
         if let usageWindowName {
             accounts[index].usageWindowName = usageWindowName
@@ -785,6 +804,7 @@ struct AccountPoolState {
             apiToken: source.apiToken,
             email: source.email,
             chatGPTAccountID: source.chatGPTAccountID,
+            identityScope: source.identityScope,
             usageWindowName: source.usageWindowName,
             usageWindowResetAt: source.usageWindowResetAt,
             primaryUsagePercent: source.primaryUsagePercent,

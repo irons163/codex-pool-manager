@@ -6,6 +6,7 @@ struct PoolAccountUpsertCoordinator {
         tokens: OAuthTokens,
         claims: OAuthIDTokenClaims?,
         usage: CodexUsage?,
+        identityScope: String,
         accountNameInput: String,
         fallbackQuota: Int,
         now: Date = .now
@@ -16,6 +17,7 @@ struct PoolAccountUpsertCoordinator {
         var resolvedUsedUnits = 0
         var resolvedWindowName: String?
         var resolvedWindowResetAt: Date?
+        let resolvedIdentityScope = AgentAccount.normalizedIdentityScope(identityScope)
 
         if let usage {
             resolvedAccountID = usage.accountID ?? resolvedAccountID
@@ -36,7 +38,7 @@ struct PoolAccountUpsertCoordinator {
             in: state.accounts,
             chatGPTAccountID: resolvedAccountID,
             accessToken: tokens.accessToken,
-            email: resolvedEmail
+            identityScope: resolvedIdentityScope
         )
 
         if let existingAccountID {
@@ -60,6 +62,7 @@ struct PoolAccountUpsertCoordinator {
                 apiToken: tokens.accessToken,
                 email: resolvedEmail,
                 chatGPTAccountID: resolvedAccountID,
+                identityScope: resolvedIdentityScope,
                 usageWindowName: resolvedWindowName,
                 usageWindowResetAt: resolvedWindowResetAt,
                 now: now
@@ -73,6 +76,7 @@ struct PoolAccountUpsertCoordinator {
             usedUnits: resolvedUsedUnits,
             email: resolvedEmail,
             chatGPTAccountID: resolvedAccountID,
+            identityScope: resolvedIdentityScope,
             usageWindowName: resolvedWindowName,
             usageWindowResetAt: resolvedWindowResetAt,
             now: now
@@ -82,6 +86,7 @@ struct PoolAccountUpsertCoordinator {
             apiToken: tokens.accessToken,
             email: resolvedEmail,
             chatGPTAccountID: resolvedAccountID,
+            identityScope: resolvedIdentityScope,
             usageWindowName: resolvedWindowName,
             usageWindowResetAt: resolvedWindowResetAt,
             now: now
@@ -100,12 +105,13 @@ struct PoolAccountUpsertCoordinator {
         let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? fallbackName) : fallbackName
         let resolvedAccountID = usage.accountID ?? chatGPTAccountID
+        let resolvedIdentityScope = AgentAccount.personalIdentityScope
 
         let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
             in: state.accounts,
             chatGPTAccountID: resolvedAccountID,
             accessToken: accessToken,
-            email: normalizedEmail
+            identityScope: resolvedIdentityScope
         )
 
         if let existingAccountID {
@@ -117,6 +123,7 @@ struct PoolAccountUpsertCoordinator {
                 apiToken: accessToken,
                 email: normalizedEmail,
                 chatGPTAccountID: resolvedAccountID,
+                identityScope: resolvedIdentityScope,
                 usageWindowName: usage.usageWindowName,
                 usageWindowResetAt: usage.usageWindowResetAt,
                 now: now
@@ -130,6 +137,7 @@ struct PoolAccountUpsertCoordinator {
             usedUnits: usage.usedUnits,
             email: normalizedEmail,
             chatGPTAccountID: resolvedAccountID,
+            identityScope: resolvedIdentityScope,
             usageWindowName: usage.usageWindowName,
             usageWindowResetAt: usage.usageWindowResetAt,
             now: now
@@ -139,6 +147,7 @@ struct PoolAccountUpsertCoordinator {
             apiToken: accessToken,
             email: normalizedEmail,
             chatGPTAccountID: resolvedAccountID,
+            identityScope: resolvedIdentityScope,
             usageWindowName: usage.usageWindowName,
             usageWindowResetAt: usage.usageWindowResetAt,
             now: now

@@ -61,6 +61,8 @@ struct PoolDashboardView: View {
         var accountName: String
         var expectedWeeklyResetAt: Date? = nil
         var expectedFiveHourResetAt: Date? = nil
+        var lastObservedWeeklyResetAt: Date? = nil
+        var lastObservedFiveHourResetAt: Date? = nil
         var lastSeenWeeklyUsagePercent: Int? = nil
         var lastSeenUsedUnits: Int? = nil
         var lastSeenFiveHourUsagePercent: Int? = nil
@@ -181,7 +183,7 @@ struct PoolDashboardView: View {
     }
 
     private static var defaultAccounts: [AgentAccount] {
-        #if DEBUG || DEVELOPER_TOOLS_ENABLED
+        #if DEBUG
         guard UserDefaults.standard.bool(forKey: developerMockModeKey) else { return [] }
         return [
             AgentAccount(id: UUID(), name: "alpha@demo.local", usedUnits: 110, quota: PoolDashboardFormState.defaultQuota),
@@ -196,6 +198,14 @@ struct PoolDashboardView: View {
 
     private var isDeveloperBuild: Bool {
         #if DEBUG || DEVELOPER_TOOLS_ENABLED
+        true
+        #else
+        false
+        #endif
+    }
+
+    private var isDebugBuild: Bool {
+        #if DEBUG
         true
         #else
         false
@@ -343,7 +353,7 @@ struct PoolDashboardView: View {
             }
         }
         .onChange(of: developerMockModeEnabled) { _, _ in
-            guard isDeveloperBuild else { return }
+            guard isDebugBuild else { return }
             reloadStateForCurrentDataMode()
         }
         .onChange(of: specialResetWatchEnabled) { _, isEnabled in
@@ -696,40 +706,42 @@ struct PoolDashboardView: View {
                     .font(.footnote)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                GroupBox(L10n.text("developer.data_mode.title")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle(L10n.text("developer.data_mode.toggle"), isOn: $developerMockModeEnabled)
-                            .toggleStyle(.switch)
+                if isDebugBuild {
+                    GroupBox(L10n.text("developer.data_mode.title")) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle(L10n.text("developer.data_mode.toggle"), isOn: $developerMockModeEnabled)
+                                .toggleStyle(.switch)
 
-                        Text(
-                            developerMockModeEnabled
-                            ? L10n.text("developer.data_mode.enabled_hint")
-                            : L10n.text("developer.data_mode.disabled_hint")
-                        )
-                        .font(.caption)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                            Text(
+                                developerMockModeEnabled
+                                ? L10n.text("developer.data_mode.enabled_hint")
+                                : L10n.text("developer.data_mode.disabled_hint")
+                            )
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
 
-                        HStack(spacing: 8) {
-                            Button(L10n.text("developer.data_mode.seed")) {
-                                seedDeveloperMockData()
+                            HStack(spacing: 8) {
+                                Button(L10n.text("developer.data_mode.seed")) {
+                                    seedDeveloperMockData()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(PoolDashboardTheme.glowA)
+                                .disabled(!developerMockModeEnabled)
+
+                                Button(L10n.text("developer.data_mode.clear")) {
+                                    clearCurrentDataModeStore()
+                                }
+                                .buttonStyle(DashboardWarningButtonStyle())
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(PoolDashboardTheme.glowA)
-                            .disabled(!developerMockModeEnabled)
-
-                            Button(L10n.text("developer.data_mode.clear")) {
-                                clearCurrentDataModeStore()
-                            }
-                            .buttonStyle(DashboardWarningButtonStyle())
                         }
                     }
+                    .sectionCardStyle()
                 }
-                .sectionCardStyle()
 
-                Button("測試右上角通知") {
+                Button(L10n.text("developer.notification.test_button")) {
                     DesktopNotifier.post(
                         key: "manual-test-notification",
-                        title: "Codex Pool 測試通知",
+                        title: L10n.text("developer.notification.test_title"),
                         body: notificationUsageSummary(for: state.activeAccount),
                         minInterval: 0
                     )
@@ -1266,7 +1278,7 @@ struct PoolDashboardView: View {
     }
 
     private func seedDeveloperMockData() {
-        guard isDeveloperBuild, developerMockModeEnabled else { return }
+        guard isDebugBuild, developerMockModeEnabled else { return }
 
         var seededState = Self.makeDefaultState(accounts: Self.defaultAccounts)
         seededState.evaluate(now: .now)
@@ -1277,7 +1289,7 @@ struct PoolDashboardView: View {
 
     private func clearCurrentDataModeStore() {
         let defaults = UserDefaults.standard
-        if isDeveloperBuild && developerMockModeEnabled {
+        if isDebugBuild && developerMockModeEnabled {
             defaults.removeObject(forKey: Self.developerSnapshotKey)
             defaults.removeObject(forKey: Self.developerTokenKey)
         } else {
@@ -1966,10 +1978,10 @@ struct PoolDashboardView: View {
             .filter(\.isPaid)
             .map { account in
                 SpecialResetRecord(
-                    accountKey: account.deduplicationKey,
+                    accountKey: specialResetWatchAccountKey(for: account),
                     accountName: normalizedSpecialResetAccountName(account),
                     expectedWeeklyResetAt: normalizedExpectedResetDate(
-                        observedResetAt: account.usageWindowResetAt,
+                        observedResetAt: account.secondaryUsageResetAt ?? account.usageWindowResetAt,
                         kind: .weekly,
                         now: now
                     ),
@@ -1978,6 +1990,8 @@ struct PoolDashboardView: View {
                         kind: .fiveHour,
                         now: now
                     ),
+                    lastObservedWeeklyResetAt: account.secondaryUsageResetAt ?? account.usageWindowResetAt,
+                    lastObservedFiveHourResetAt: account.primaryUsageResetAt,
                     lastSeenWeeklyUsagePercent: specialResetWeeklyUsagePercent(for: account),
                     lastSeenUsedUnits: account.usedUnits,
                     lastSeenFiveHourUsagePercent: account.primaryUsagePercent,
@@ -2008,7 +2022,7 @@ struct PoolDashboardView: View {
         var detections: [SpecialResetDetection] = []
 
         for account in paidAccounts {
-            let accountKey = account.deduplicationKey
+            let accountKey = specialResetWatchAccountKey(for: account)
             var record = recordsByKey[accountKey] ?? SpecialResetRecord(
                 accountKey: accountKey,
                 accountName: normalizedSpecialResetAccountName(account)
@@ -2016,7 +2030,7 @@ struct PoolDashboardView: View {
             record.accountName = normalizedSpecialResetAccountName(account)
 
             let weeklyExpectedAt = record.expectedWeeklyResetAt
-            let observedWeeklyResetAt = account.usageWindowResetAt
+            let observedWeeklyResetAt = account.secondaryUsageResetAt ?? account.usageWindowResetAt
             record.expectedWeeklyResetAt = normalizedExpectedResetDate(
                 observedResetAt: observedWeeklyResetAt,
                 kind: .weekly,
@@ -2037,11 +2051,13 @@ struct PoolDashboardView: View {
                 weeklyUsagePercent: weeklyUsagePercent,
                 fiveHourUsagePercent: fiveHourUsagePercent,
                 now: now,
-                graceSeconds: graceSeconds
+                graceSeconds: graceSeconds,
+                previousObservedWeeklyResetAt: record.lastObservedWeeklyResetAt,
+                previousObservedFiveHourResetAt: record.lastObservedFiveHourResetAt
             ) {
                 detections.append(
                     SpecialResetDetection(
-                        accountKey: account.deduplicationKey,
+                        accountKey: accountKey,
                         accountName: normalizedSpecialResetAccountName(account),
                         previousWeeklyExpectedAt: combinedSignal.weekly.previousExpectedAt,
                         observedWeeklyNextResetAt: combinedSignal.weekly.observedNextResetAt,
@@ -2060,11 +2076,13 @@ struct PoolDashboardView: View {
             record.lastSeenWeeklyUsagePercent = weeklyUsagePercent
             record.lastSeenUsedUnits = account.usedUnits
             record.lastSeenFiveHourUsagePercent = fiveHourUsagePercent
+            record.lastObservedWeeklyResetAt = observedWeeklyResetAt
+            record.lastObservedFiveHourResetAt = observedFiveHourResetAt
             record.lastSeenAt = now
             recordsByKey[accountKey] = record
         }
 
-        let activeAccountKeys = Set(paidAccounts.map(\.deduplicationKey))
+        let activeAccountKeys = Set(paidAccounts.map { specialResetWatchAccountKey(for: $0) })
         specialResetWatchState.records = recordsByKey
             .filter { activeAccountKeys.contains($0.key) }
             .map(\.value)
@@ -2130,9 +2148,10 @@ struct PoolDashboardView: View {
     private func specialResetDisplayedResetDates(
         for record: SpecialResetRecord
     ) -> (weekly: String, fiveHour: String) {
-        if let account = state.accounts.first(where: { $0.isPaid && $0.deduplicationKey == record.accountKey }) {
+        if let account = state.accounts.first(where: { $0.isPaid && specialResetWatchAccountKey(for: $0) == record.accountKey }) {
             return (
-                account.usageWindowResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available"),
+                (account.secondaryUsageResetAt ?? account.usageWindowResetAt)
+                    .map(specialResetDateText) ?? L10n.text("schedule.summary.not_available"),
                 account.primaryUsageResetAt.map(specialResetDateText) ?? L10n.text("schedule.summary.not_available")
             )
         }
@@ -2474,9 +2493,16 @@ struct PoolDashboardView: View {
         if let weeklyPercent = account.secondaryUsagePercent {
             return max(0, min(100, weeklyPercent))
         }
+        if account.isPaid {
+            return nil
+        }
         guard account.quota > 0 else { return nil }
         let ratio = Double(account.usedUnits) / Double(account.quota)
         return max(0, min(100, Int((ratio * 100).rounded())))
+    }
+
+    private func specialResetWatchAccountKey(for account: AgentAccount) -> String {
+        "id:\(account.id.uuidString.lowercased())"
     }
 
     private func specialResetFiveHourUsagePercent(for account: AgentAccount) -> Int? {
@@ -2873,8 +2899,13 @@ enum SpecialResetAlertEvaluator {
         weeklyUsagePercent: Int?,
         fiveHourUsagePercent: Int?,
         now: Date,
-        graceSeconds: TimeInterval
+        graceSeconds: TimeInterval,
+        previousObservedWeeklyResetAt: Date? = nil,
+        previousObservedFiveHourResetAt: Date? = nil
     ) -> (weekly: TimeSignal, fiveHour: TimeSignal)? {
+        guard let observedWeeklyResetAt, let observedFiveHourResetAt else {
+            return nil
+        }
         guard isFullyReset(
             previousWeeklyUsagePercent: previousWeeklyUsagePercent,
             previousFiveHourUsagePercent: previousFiveHourUsagePercent,
@@ -2899,6 +2930,19 @@ enum SpecialResetAlertEvaluator {
         ) else {
             return nil
         }
+        let minimumObservedAdvanceSeconds = max(300, graceSeconds)
+        guard observedResetAdvancedSignificantly(
+            previousObservedResetAt: previousObservedWeeklyResetAt,
+            observedResetAt: observedWeeklyResetAt,
+            minimumAdvanceSeconds: minimumObservedAdvanceSeconds
+        ),
+        observedResetAdvancedSignificantly(
+            previousObservedResetAt: previousObservedFiveHourResetAt,
+            observedResetAt: observedFiveHourResetAt,
+            minimumAdvanceSeconds: minimumObservedAdvanceSeconds
+        ) else {
+            return nil
+        }
         return (weekly: weeklySignal, fiveHour: fiveHourSignal)
     }
 
@@ -2916,6 +2960,15 @@ enum SpecialResetAlertEvaluator {
         let weeklyTransitioned = (previousWeeklyUsagePercent ?? 0) > 0
         let fiveHourTransitioned = (previousFiveHourUsagePercent ?? 0) > 0
         return weeklyTransitioned || fiveHourTransitioned
+    }
+
+    private static func observedResetAdvancedSignificantly(
+        previousObservedResetAt: Date?,
+        observedResetAt: Date,
+        minimumAdvanceSeconds: TimeInterval
+    ) -> Bool {
+        guard let previousObservedResetAt else { return true }
+        return observedResetAt.timeIntervalSince(previousObservedResetAt) >= minimumAdvanceSeconds
     }
 }
 

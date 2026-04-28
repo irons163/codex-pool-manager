@@ -486,3 +486,5 @@
 "usage_analytics.sort.five_hour_usage_desc" = "5時間使用量（高→低）";
 "usage_analytics.sort.weekly_remaining_desc" = "週残量（高→低）";
 "usage_analytics.sort.five_hour_remaining_desc" = "5時間残量（高→低）";
+"developer.notification.test_button" = "右上通知をテスト";
+"developer.notification.test_title" = "Codex Pool テスト通知";

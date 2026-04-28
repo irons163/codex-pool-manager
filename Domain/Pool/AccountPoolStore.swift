@@ -81,7 +81,7 @@ struct DeveloperAwareAccountPoolStore: AccountPoolStoring {
     }
 
     private var resolvedStore: UserDefaultsAccountPoolStore {
-        #if DEBUG || DEVELOPER_TOOLS_ENABLED
+        #if DEBUG
         if defaults.bool(forKey: developerMockModeKey) {
             return UserDefaultsAccountPoolStore(
                 defaults: defaults,

@@ -495,3 +495,5 @@
 "usage_analytics.sort.five_hour_usage_desc" = "5-hour Usage (High to Low)";
 "usage_analytics.sort.weekly_remaining_desc" = "Weekly Remaining (High to Low)";
 "usage_analytics.sort.five_hour_remaining_desc" = "5-hour Remaining (High to Low)";
+"developer.notification.test_button" = "Test top-right notification";
+"developer.notification.test_title" = "Codex Pool Test Notification";

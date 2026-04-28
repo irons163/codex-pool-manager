@@ -148,6 +148,30 @@ struct OAuthIDTokenClaims: Equatable {
     let subject: String?
     let accountID: String?
     let email: String?
+    let organizationID: String?
+
+    init(subject: String?, accountID: String?, email: String?, organizationID: String? = nil) {
+        self.subject = subject
+        self.accountID = accountID
+        self.email = email
+        self.organizationID = organizationID
+    }
+
+    func resolvedIdentityScope(fallbackWorkspaceID: String?) -> String {
+        if let organizationID = normalizedIdentityComponent(organizationID) {
+            return "org:\(organizationID)"
+        }
+        if let fallbackWorkspaceID = normalizedIdentityComponent(fallbackWorkspaceID) {
+            return "org:\(fallbackWorkspaceID)"
+        }
+        return AgentAccount.personalIdentityScope
+    }
+
+    private func normalizedIdentityComponent(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 enum OAuthIDTokenClaimsParser {
@@ -173,7 +197,33 @@ enum OAuthIDTokenClaimsParser {
         let subject = payload["sub"] as? String
         let accountID = (payload["account_id"] as? String) ?? (payload["accountId"] as? String)
         let email = payload["email"] as? String
-        return OAuthIDTokenClaims(subject: subject, accountID: accountID, email: email)
+        let organizationID = extractOrganizationID(from: payload)
+        return OAuthIDTokenClaims(
+            subject: subject,
+            accountID: accountID,
+            email: email,
+            organizationID: organizationID
+        )
+    }
+
+    private static func extractOrganizationID(from payload: [String: Any]) -> String? {
+        guard let auth = payload["https://api.openai.com/auth"] as? [String: Any],
+              let organizations = auth["organizations"] as? [[String: Any]],
+              !organizations.isEmpty else {
+            return nil
+        }
+
+        if let defaultOrgID = organizations.first(where: { ($0["is_default"] as? Bool) == true })?["id"] as? String,
+           !defaultOrgID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return defaultOrgID
+        }
+
+        if let firstOrgID = organizations.first?["id"] as? String,
+           !firstOrgID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return firstOrgID
+        }
+
+        return nil
     }
 }
 

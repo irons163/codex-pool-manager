@@ -132,7 +132,8 @@ struct PoolDashboardRuntimeCoordinator {
 
             let context = await authFlowCoordinator.makeOAuthSignInContext(
                 tokens: tokens,
-                usageClient: OpenAICodexUsageClient()
+                usageClient: OpenAICodexUsageClient(),
+                fallbackWorkspaceID: oauthConfiguration.forcedWorkspaceID
             )
 
             var nextState = state
