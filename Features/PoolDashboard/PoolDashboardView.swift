@@ -181,7 +181,7 @@ struct PoolDashboardView: View {
     }
 
     private static var defaultAccounts: [AgentAccount] {
-        #if DEBUG
+        #if DEBUG || DEVELOPER_TOOLS_ENABLED
         guard UserDefaults.standard.bool(forKey: developerMockModeKey) else { return [] }
         return [
             AgentAccount(id: UUID(), name: "alpha@demo.local", usedUnits: 110, quota: PoolDashboardFormState.defaultQuota),
@@ -195,7 +195,7 @@ struct PoolDashboardView: View {
     }
 
     private var isDeveloperBuild: Bool {
-        #if DEBUG
+        #if DEBUG || DEVELOPER_TOOLS_ENABLED
         true
         #else
         false

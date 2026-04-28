@@ -4,6 +4,15 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      release_channel:
+        description: "Build channel"
+        required: true
+        default: stable
+        type: choice
+        options:
+          - stable
+          - dev
 
 permissions:
   contents: write
@@ -159,16 +168,31 @@ jobs:
           ARCH_ID: ${{ matrix.arch.id }}
           ARCH_LABEL: ${{ matrix.arch.label }}
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+          RELEASE_CHANNEL: ${{ github.event.inputs.release_channel }}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           chmod +x scripts/build_and_notarize_dmg.sh
 
+          CHANNEL="${RELEASE_CHANNEL:-stable}"
+          if [[ "$CHANNEL" != "stable" && "$CHANNEL" != "dev" ]]; then
+            echo "Unsupported release channel: $CHANNEL" >&2
+            exit 1
+          fi
+
           VERSION="$RELEASE_VERSION"
           if [[ -z "${VERSION:-}" ]]; then
             echo "Failed to resolve app version." >&2
             exit 1
+          fi
+          if [[ "$CHANNEL" == "dev" ]]; then
+            VERSION="${VERSION}-dev"
+          fi
+
+          SWIFT_CONDITIONS='$(inherited)'
+          if [[ "$CHANNEL" == "dev" ]]; then
+            SWIFT_CONDITIONS='$(inherited) DEVELOPER_TOOLS_ENABLED'
           fi
 
           APP_NAME=CodexPoolManager \
@@ -178,6 +202,7 @@ jobs:
           VERSION="$VERSION" \
           ARCHS="$ARCH_ID" \
           ARCH_LABEL="$ARCH_LABEL" \
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS_OVERRIDE="$SWIFT_CONDITIONS" \
           NOTARY_PROFILE=AC_NOTARY \
           scripts/build_and_notarize_dmg.sh
 

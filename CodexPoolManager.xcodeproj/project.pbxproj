@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		0AA1BB2CC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */; };
 		0AA1BB2DC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */; };
-		7A1B2C3D4E5F60718293A4B5 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1B2C3D4E5F60718293A4B6 /* Sparkle */; };
 		4969AB27C103A272942164A3 /* CodexPoolWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */; };
 		4A3753432F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753422F74344B008F6AF6 /* PoolDashboardActionCoordinator.swift */; };
 		4A3753452F743C30008F6AF6 /* PoolDashboardViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3753442F743C30008F6AF6 /* PoolDashboardViewState.swift */; };
@@ -74,6 +73,7 @@
 		4AB61F152F741395001AC4CB /* PoolDashboardMutationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */; };
 		5CFAC1AA2984CFCE58D19E86 /* CodexPoolWidgetHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA89599DF68730D5F45600B /* CodexPoolWidgetHostApp.swift */; };
 		67456F3EC374EED207565FB6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */; };
+		7A1B2C3D4E5F60718293A4B5 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1B2C3D4E5F60718293A4B6 /* Sparkle */; };
 		B798BA5381E4AA476C41401E /* CodexPoolWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EBB76EE172878B904303AE89 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6959EA954386004CC3A082DE /* ContentView.swift */; };
 		EF3F9DE51616D44028DC04A3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */; };
@@ -1037,6 +1037,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager;
 				PRODUCT_NAME = CodexPoolManager;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+					SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1149,17 +1150,6 @@
 		};
 /* End XCBuildConfiguration section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sparkle-project/Sparkle";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.6.4;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCConfigurationList section */
 		4AFBA57D2F72203A008D97C1 /* Build configuration list for PBXProject "CodexPoolManager" */ = {
 			isa = XCConfigurationList;
@@ -1216,6 +1206,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		7A1B2C3D4E5F60718293A4B6 /* Sparkle */ = {
