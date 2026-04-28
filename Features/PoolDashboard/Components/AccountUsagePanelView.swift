@@ -444,11 +444,8 @@ struct AccountUsagePanelView: View {
         guard let activeAccount else { return false }
         if activeAccount.id == account.id { return true }
 
-        if identifiersMatch(activeAccount.chatGPTAccountID, account.chatGPTAccountID) {
-            return true
-        }
-
-        if identifiersMatch(activeAccount.email, account.email) {
+        if identifiersMatch(activeAccount.chatGPTAccountID, account.chatGPTAccountID),
+           activeAccount.identityScope == account.identityScope {
             return true
         }
 
@@ -671,18 +668,6 @@ struct AccountUsagePanelView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             HStack(spacing: 6) {
-                if isCurrentEquivalentAccount(account) {
-                    Text(L10n.text("account.current_badge"))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PoolDashboardTheme.textPrimary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(PoolDashboardTheme.glowA.opacity(0.28))
-                        )
-                }
-
                 if isPaidAccount(account) {
                     Text(L10n.text("account.paid_badge"))
                         .font(.caption2.weight(.semibold))
