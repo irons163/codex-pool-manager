@@ -4411,15 +4411,16 @@ extension CodexPoolManagerTests {
     }
 
     @Test
-    func oauthAccountUpsertResolverMatchesByEmailNameAsFallback() {
+    func oauthAccountUpsertResolverMatchesByEmailFallback() {
         let existingID = UUID()
         let accounts = [
             AgentAccount(
                 id: existingID,
-                name: "existing@example.com",
+                name: "Custom Name",
                 usedUnits: 10,
                 quota: 100,
                 apiToken: "other-token",
+                email: "existing@example.com",
                 chatGPTAccountID: nil
             )
         ]
@@ -4432,6 +4433,31 @@ extension CodexPoolManagerTests {
         )
 
         #expect(matched == existingID)
+    }
+
+    @Test
+    func oauthAccountUpsertResolverDoesNotMatchByNameWhenEmailDiffers() {
+        let existingID = UUID()
+        let accounts = [
+            AgentAccount(
+                id: existingID,
+                name: "existing@example.com",
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "other-token",
+                email: "different@example.com",
+                chatGPTAccountID: nil
+            )
+        ]
+
+        let matched = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: accounts,
+            chatGPTAccountID: nil,
+            accessToken: "new-token",
+            email: "existing@example.com"
+        )
+
+        #expect(matched == nil)
     }
 
     @Test
