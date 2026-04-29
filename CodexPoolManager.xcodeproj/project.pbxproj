@@ -792,7 +792,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolWidgetHost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -813,7 +813,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexPoolWidget/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolWidgetHost.CodexPoolWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -836,7 +836,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexPoolWidget/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolWidgetHost.CodexPoolWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -993,7 +993,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager;
 				PRODUCT_NAME = CodexPoolManager;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1033,7 +1033,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManager;
 				PRODUCT_NAME = CodexPoolManager;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1054,7 +1054,7 @@
 				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManagerTests;
 				PRODUCT_NAME = CodexPoolManagerTests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1074,7 +1074,7 @@
 				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManagerTests;
 				PRODUCT_NAME = CodexPoolManagerTests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1092,7 +1092,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManagerUITests;
 				PRODUCT_NAME = CodexPoolManagerUITests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1110,7 +1110,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 108;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolManagerUITests;
 				PRODUCT_NAME = CodexPoolManagerUITests;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1140,7 +1140,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.1;
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.irons.CodexPoolWidgetHost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
