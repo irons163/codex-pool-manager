@@ -2212,7 +2212,9 @@ struct PoolDashboardView: View {
         appUpdateLastCheckedAt = Date().timeIntervalSince1970
 
         do {
-            let release = try await appUpdateService.fetchLatestRelease()
+            let release = try await appUpdateService.fetchLatestRelease(
+                languageOverrideCode: appLanguageOverride
+            )
             let currentVersion = appVersionText()
             let latestVersion = release.normalizedVersion
             guard AppUpdateVersioning.isRemoteNewer(
@@ -2583,6 +2585,7 @@ struct AppUpdateRelease: Equatable {
     let publishedAt: Date?
     let body: String?
     let assets: [AppUpdateAsset]
+    let notesLanguageCode: String?
 
     init(
         tagName: String,
@@ -2590,7 +2593,8 @@ struct AppUpdateRelease: Equatable {
         htmlURL: URL,
         publishedAt: Date?,
         body: String? = nil,
-        assets: [AppUpdateAsset]
+        assets: [AppUpdateAsset],
+        notesLanguageCode: String? = nil
     ) {
         self.tagName = tagName
         self.name = name
@@ -2598,6 +2602,7 @@ struct AppUpdateRelease: Equatable {
         self.publishedAt = publishedAt
         self.body = body
         self.assets = assets
+        self.notesLanguageCode = notesLanguageCode
     }
 
     var normalizedVersion: String {
@@ -2613,6 +2618,18 @@ struct AppUpdateRelease: Equatable {
         guard let body else { return nil }
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    func replacingReleaseNotes(_ text: String, languageCode: String?) -> AppUpdateRelease {
+        AppUpdateRelease(
+            tagName: tagName,
+            name: name,
+            htmlURL: htmlURL,
+            publishedAt: publishedAt,
+            body: text,
+            assets: assets,
+            notesLanguageCode: languageCode
+        )
     }
 
     var buildMatrixLines: [String] {
@@ -2655,6 +2672,42 @@ struct AppUpdateRelease: Equatable {
 
         return dmgAssets.first?.downloadURL
     }
+
+    func assetForLocalizedReleaseNotes(candidates: [String]) -> (asset: AppUpdateAsset, languageCode: String)? {
+        let noteAssets = assets.filter { asset in
+            let lowercased = asset.name.lowercased()
+            return lowercased.hasSuffix(".md") || lowercased.hasSuffix(".txt")
+        }
+        guard !noteAssets.isEmpty else { return nil }
+
+        for candidate in candidates {
+            for asset in noteAssets where AppUpdateRelease.assetName(asset.name, matchesLanguageCode: candidate) {
+                return (asset, candidate)
+            }
+        }
+        return nil
+    }
+
+    private static func assetName(_ name: String, matchesLanguageCode languageCode: String) -> Bool {
+        let normalizedName = name
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+        let normalizedCode = languageCode
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+        guard !normalizedCode.isEmpty else { return false }
+
+        let nameTokens = normalizedName.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        let codeTokens = normalizedCode.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+
+        guard !nameTokens.isEmpty, !codeTokens.isEmpty, nameTokens.count >= codeTokens.count else { return false }
+        for start in 0...(nameTokens.count - codeTokens.count) {
+            if Array(nameTokens[start..<(start + codeTokens.count)]) == codeTokens {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 enum AppUpdateVersioning {
@@ -2696,7 +2749,7 @@ struct AppUpdateService {
     var endpoint = URL(string: "https://api.github.com/repos/irons163/codex-pool-manager/releases/latest")!
     var session: URLSession = .shared
 
-    func fetchLatestRelease() async throws -> AppUpdateRelease {
+    func fetchLatestRelease(languageOverrideCode: String = "system") async throws -> AppUpdateRelease {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
@@ -2710,10 +2763,81 @@ struct AppUpdateService {
         let decoder = JSONDecoder()
         do {
             let payload = try decoder.decode(AppUpdateReleasePayload.self, from: data)
-            return payload.release
+            let release = payload.release
+            if let localizedNotes = try await fetchLocalizedReleaseNotes(
+                for: release,
+                languageOverrideCode: languageOverrideCode
+            ) {
+                return release.replacingReleaseNotes(localizedNotes.text, languageCode: localizedNotes.languageCode)
+            }
+            return release
         } catch {
             throw AppUpdateError.decodingFailed
         }
+    }
+
+    private func fetchLocalizedReleaseNotes(
+        for release: AppUpdateRelease,
+        languageOverrideCode: String
+    ) async throws -> (text: String, languageCode: String)? {
+        let candidates = AppUpdateReleaseNotesLanguageResolver.candidateLanguageCodes(
+            languageOverrideCode: languageOverrideCode
+        )
+        guard !candidates.isEmpty else { return nil }
+
+        guard let match = release.assetForLocalizedReleaseNotes(candidates: candidates) else {
+            return nil
+        }
+
+        var request = URLRequest(url: match.asset.downloadURL)
+        request.httpMethod = "GET"
+        request.setValue("CodexPoolManager/1.0", forHTTPHeaderField: "User-Agent")
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                return nil
+            }
+            guard let text = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty
+            else {
+                return nil
+            }
+            return (text, match.languageCode)
+        } catch {
+            return nil
+        }
+    }
+}
+
+private enum AppUpdateReleaseNotesLanguageResolver {
+    static func candidateLanguageCodes(languageOverrideCode: String) -> [String] {
+        let normalizedOverride = L10n.normalizedLanguageOverrideCode(languageOverrideCode)
+        let preferred = normalizedOverride == L10n.systemLanguageCode
+            ? L10n.locale().identifier
+            : normalizedOverride
+        let normalizedPreferred = normalize(preferred)
+        let basePreferred = normalizedPreferred.split(separator: "-").first.map(String.init) ?? normalizedPreferred
+
+        var ordered: [String] = []
+        func append(_ code: String) {
+            let normalized = normalize(code)
+            guard !normalized.isEmpty, !ordered.contains(normalized) else { return }
+            ordered.append(normalized)
+        }
+
+        append(normalizedPreferred)
+        append(basePreferred)
+        append("en")
+        return ordered
+    }
+
+    static func normalize(_ raw: String) -> String {
+        raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "_", with: "-")
+            .lowercased()
     }
 }
 

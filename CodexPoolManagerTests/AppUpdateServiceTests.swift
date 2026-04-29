@@ -188,6 +188,86 @@ struct AppUpdateServiceTests {
     }
 
     @Test
+    func fetchLatestReleaseUsesLocalizedNotesAssetForRequestedLanguage() async throws {
+        let endpoint = URL(string: "https://example.com/releases/latest-localized")!
+        let zhNotesURL = URL(string: "https://example.com/download/release-notes.zh-Hant.md")!
+        let payload = """
+        {
+          "tag_name": "v1.8.2",
+          "name": "Release 1.8.2",
+          "html_url": "https://example.com/releases/v1.8.2",
+          "published_at": "2026-04-18T08:30:45Z",
+          "body": "Default English body from GitHub release.",
+          "assets": [
+            {
+              "name": "release-notes.en.md",
+              "browser_download_url": "https://example.com/download/release-notes.en.md"
+            },
+            {
+              "name": "release-notes.zh-Hant.md",
+              "browser_download_url": "https://example.com/download/release-notes.zh-Hant.md"
+            }
+          ]
+        }
+        """
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: Data(payload.utf8)
+        )
+        MockUsageURLProtocol.setMock(
+            for: zhNotesURL.absoluteString,
+            statusCode: 200,
+            data: Data("繁體中文更新說明".utf8),
+            requestObserver: nil
+        )
+
+        let service = AppUpdateService(endpoint: endpoint, session: session)
+        let release = try await service.fetchLatestRelease(languageOverrideCode: "zh-Hant")
+
+        #expect(release.releaseNotesText == "繁體中文更新說明")
+        #expect(release.notesLanguageCode == "zh-hant")
+    }
+
+    @Test
+    func fetchLatestReleaseFallsBackToEnglishNotesAssetWhenRequestedLanguageMissing() async throws {
+        let endpoint = URL(string: "https://example.com/releases/latest-fallback-en")!
+        let enNotesURL = URL(string: "https://example.com/download/release-notes.en.md")!
+        let payload = """
+        {
+          "tag_name": "v1.8.3",
+          "name": "Release 1.8.3",
+          "html_url": "https://example.com/releases/v1.8.3",
+          "published_at": "2026-04-18T08:30:45Z",
+          "body": "Default English body from GitHub release.",
+          "assets": [
+            {
+              "name": "release-notes.en.md",
+              "browser_download_url": "https://example.com/download/release-notes.en.md"
+            }
+          ]
+        }
+        """
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: Data(payload.utf8)
+        )
+        MockUsageURLProtocol.setMock(
+            for: enNotesURL.absoluteString,
+            statusCode: 200,
+            data: Data("English notes from asset".utf8),
+            requestObserver: nil
+        )
+
+        let service = AppUpdateService(endpoint: endpoint, session: session)
+        let release = try await service.fetchLatestRelease(languageOverrideCode: "ja")
+
+        #expect(release.releaseNotesText == "English notes from asset")
+        #expect(release.notesLanguageCode == "en")
+    }
+
+    @Test
     func fetchLatestReleaseThrowsInvalidResponseOnNonSuccessStatus() async {
         let endpoint = URL(string: "https://example.com/releases/failure")!
         let session = makeMockedURLSession(
