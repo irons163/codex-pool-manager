@@ -213,16 +213,17 @@ jobs:
           path: dist/*.dmg
 
       - name: Attach DMG to GitHub Release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
         run: |
           set -euo pipefail
-          gh release upload "${{ github.event.release.tag_name }}" dist/*.dmg --clobber
+          gh release upload "$RELEASE_TAG" dist/*.dmg --clobber
 
   publish-sparkle-appcast:
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
     needs: build-dmg
     runs-on: ubuntu-latest
     steps:
@@ -234,7 +235,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
         run: |
           set -euo pipefail
           chmod +x scripts/generate_sparkle_appcast.sh
@@ -269,6 +270,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
         run: |
           set -euo pipefail
-          gh release upload "${{ github.event.release.tag_name }}" dist/appcast-*.xml --clobber
+          gh release upload "$RELEASE_TAG" dist/appcast-*.xml --clobber

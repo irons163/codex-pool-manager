@@ -11,6 +11,7 @@ ARM64_URL="${ARM64_URL:-}"
 ARM64_SIZE="${ARM64_SIZE:-}"
 X86_64_URL="${X86_64_URL:-}"
 X86_64_SIZE="${X86_64_SIZE:-}"
+MAX_NOTES_CHARS="${MAX_NOTES_CHARS:-2800}"
 
 if [[ -z "$RELEASE_TAG" ]]; then
   echo "RELEASE_TAG is required." >&2
@@ -33,6 +34,46 @@ if [[ -z "$RELEASE_NAME" ]]; then
   RELEASE_NAME="Release ${SHORT_VERSION}"
 fi
 
+sanitize_release_notes() {
+  local raw="$1"
+  local max_chars="$2"
+  local cleaned=""
+
+  cleaned="$(printf '%s' "$raw" \
+    | tr -d '\r' \
+    | sed -E 's/\[([^][]+)\]\(([^()]*)\)/\1/g' \
+    | sed -E 's/^#{1,6}[[:space:]]*//g' \
+    | sed -E 's/`([^`]*)`/\1/g' \
+    | sed -E 's/[*_~]{1,3}//g' \
+    | sed -E 's/^[[:space:]]*[-*][[:space:]]+/- /g' \
+    | sed -E '/release-notes\.[A-Za-z-]+\.md/d' \
+    | sed -E 's/[[:space:]]+$//g')"
+
+  cleaned="$(printf '%s\n' "$cleaned" \
+    | awk '
+      BEGIN { blank = 0 }
+      {
+        if ($0 ~ /^[[:space:]]*$/) {
+          if (blank == 0) { print ""; blank = 1 }
+        } else {
+          print $0; blank = 0
+        }
+      }')"
+
+  if [[ -z "${cleaned//[[:space:]]/}" ]]; then
+    cleaned="Bug fixes and improvements."
+  fi
+
+  if (( max_chars > 0 )) && (( ${#cleaned} > max_chars )); then
+    cleaned="${cleaned:0:max_chars}"
+    cleaned="${cleaned%$'\n'*}"
+    cleaned="${cleaned% }"
+    cleaned="${cleaned}…"
+  fi
+
+  printf '%s' "$cleaned"
+}
+
 if [[ -z "$ARM64_SIZE" || "$ARM64_SIZE" == "null" ]]; then
   ARM64_SIZE="0"
 fi
@@ -53,6 +94,7 @@ else
 fi
 
 mkdir -p "$OUTPUT_DIR"
+RELEASE_NOTES_SANITIZED="$(sanitize_release_notes "$RELEASE_NOTES" "$MAX_NOTES_CHARS")"
 
 generate_feed() {
   local arch_label="$1"
@@ -73,7 +115,7 @@ generate_feed() {
     <item>
       <title>${RELEASE_NAME}</title>
       <pubDate>${PUB_DATE}</pubDate>
-      <description><![CDATA[${RELEASE_NOTES}]]></description>
+      <description sparkle:format="plain-text"><![CDATA[${RELEASE_NOTES_SANITIZED}]]></description>
       <enclosure
         url="${url}"
         sparkle:version="${BUILD_VERSION}"
