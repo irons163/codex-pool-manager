@@ -975,7 +975,10 @@ struct PoolDashboardView: View {
     }
 
     private var schedulePanel: some View {
-        ScheduleWorkspacePanelView(accounts: state.accounts)
+        DailyUsagePlanningWorkspacePanelView(
+            accounts: state.accounts,
+            analyticsState: usageAnalyticsState
+        )
     }
 
     private var usageAnalyticsPanel: some View {
@@ -3608,6 +3611,368 @@ private struct ScheduleWorkspacePanelView: View {
     private func localizedMonthDayHourMinuteText(_ date: Date) -> String {
         date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
+}
+
+private struct DailyUsagePlanningWorkspacePanelView: View {
+    @AppStorage("pool_dashboard.schedule.daily_plan_enabled")
+    private var dailyPlanEnabled = true
+    @AppStorage("pool_dashboard.schedule.daily_plan_notify_enabled")
+    private var dailyPlanNotifyEnabled = true
+    @AppStorage("pool_dashboard.schedule.daily_plan_limit_percent")
+    private var dailyPlanLimitPercent = 30
+    @AppStorage("pool_dashboard.schedule.daily_plan_scope_account_key")
+    private var dailyPlanScopeAccountKey = ""
+    @AppStorage("pool_dashboard.schedule.daily_plan_notified_days")
+    private var dailyPlanNotifiedDaysRaw = ""
+
+    let accounts: [AgentAccount]
+    let analyticsState: UsageAnalyticsState
+
+    private var deduplicatedAccounts: [AgentAccount] {
+        var mapping: [String: AgentAccount] = [:]
+        for account in accounts {
+            if mapping[account.deduplicationKey] == nil {
+                mapping[account.deduplicationKey] = account
+            }
+        }
+
+        return mapping.values.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+
+    private var selectedAccountKey: String? {
+        let trimmed = dailyPlanScopeAccountKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return deduplicatedAccounts.contains(where: { $0.deduplicationKey == trimmed }) ? trimmed : nil
+    }
+
+    private var selectedScopeStorageKey: String {
+        selectedAccountKey ?? "__all__"
+    }
+
+    private var selectedScopeName: String {
+        if let selectedAccountKey,
+           let account = deduplicatedAccounts.first(where: { $0.deduplicationKey == selectedAccountKey }) {
+            return account.name
+        }
+        return L10n.text("schedule.plan.scope.all_accounts")
+    }
+
+    private var todayUsedPercent: Int {
+        UsageAnalyticsEngine.summary(
+            for: analyticsState,
+            now: Date(),
+            accountKey: selectedAccountKey
+        ).todayWeeklyPercent
+    }
+
+    private var plannedLimitPercent: Int {
+        max(1, dailyPlanLimitPercent)
+    }
+
+    private var remainingBudgetPercent: Int {
+        max(0, plannedLimitPercent - todayUsedPercent)
+    }
+
+    private var exceededByPercent: Int {
+        max(0, todayUsedPercent - plannedLimitPercent)
+    }
+
+    private var progressRatio: Double {
+        Double(todayUsedPercent) / Double(max(1, plannedLimitPercent))
+    }
+
+    private var progressColor: Color {
+        exceededByPercent > 0 ? PoolDashboardTheme.danger : PoolDashboardTheme.glowA
+    }
+
+    private var notifiedDaysByScope: [String: String] {
+        guard let data = dailyPlanNotifiedDaysRaw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data)
+        else {
+            return [:]
+        }
+        return decoded
+    }
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 12) {
+                headerRow
+                controlRow
+                summaryCards
+                progressCard
+
+                if exceededByPercent > 0 {
+                    PanelStatusCalloutView(
+                        message: L10n.text(
+                            "schedule.plan.callout.exceeded.message",
+                            todayUsedPercent,
+                            exceededByPercent
+                        ),
+                        title: L10n.text("schedule.plan.callout.exceeded.title"),
+                        tone: .warning
+                    )
+                } else {
+                    PanelStatusCalloutView(
+                        message: L10n.text(
+                            "schedule.plan.callout.on_track.message",
+                            remainingBudgetPercent
+                        ),
+                        title: L10n.text("schedule.plan.callout.on_track.title"),
+                        tone: .success
+                    )
+                }
+
+                resetCoveragePanel
+            }
+        }
+        .sectionCardStyle()
+        .tint(PoolDashboardTheme.glowA)
+        .onAppear {
+            normalizeSelectionIfNeeded()
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: accountsSignature) { _, _ in
+            normalizeSelectionIfNeeded()
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: usageAnalyticsUpdatedAt) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: dailyPlanEnabled) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: dailyPlanNotifyEnabled) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: dailyPlanLimitPercent) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: dailyPlanScopeAccountKey) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+    }
+
+    private var headerRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.text("workspace.schedule.title"))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+
+            Text(L10n.text("schedule.plan.subtitle"))
+            .font(.footnote)
+            .foregroundStyle(PoolDashboardTheme.textMuted)
+        }
+    }
+
+    private var controlRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Toggle(L10n.text("schedule.plan.toggle.enable"), isOn: $dailyPlanEnabled)
+                    .toggleStyle(.switch)
+
+                Toggle(L10n.text("schedule.plan.toggle.notify"), isOn: $dailyPlanNotifyEnabled)
+                    .toggleStyle(.switch)
+                    .disabled(!dailyPlanEnabled)
+            }
+
+            HStack(spacing: 10) {
+                Text(L10n.text("schedule.plan.scope.label"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                Picker("", selection: $dailyPlanScopeAccountKey) {
+                    Text(L10n.text("schedule.plan.scope.all_accounts")).tag("")
+                    ForEach(deduplicatedAccounts, id: \.deduplicationKey) { account in
+                        Text(account.name).tag(account.deduplicationKey)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+
+                Stepper(value: $dailyPlanLimitPercent, in: 1...300, step: 1) {
+                    Text(L10n.text("schedule.plan.limit.format", plannedLimitPercent))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                }
+                .disabled(!dailyPlanEnabled)
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var summaryCards: some View {
+        HStack(spacing: 8) {
+            summaryCard(
+                title: L10n.text("schedule.plan.summary.scope"),
+                value: selectedScopeName
+            )
+            summaryCard(
+                title: L10n.text("schedule.plan.summary.today_used"),
+                value: "\(todayUsedPercent)%"
+            )
+            summaryCard(
+                title: L10n.text("schedule.plan.summary.plan_limit"),
+                value: "\(plannedLimitPercent)%"
+            )
+            summaryCard(
+                title: L10n.text("schedule.plan.summary.remaining_budget"),
+                value: exceededByPercent > 0 ? "0%" : "\(remainingBudgetPercent)%"
+            )
+        }
+    }
+
+    private func summaryCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dashboardInfoCard()
+    }
+
+    private var progressCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(L10n.text("schedule.plan.progress.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                Spacer(minLength: 0)
+
+                if exceededByPercent > 0 {
+                    Text(L10n.text("schedule.plan.progress.over", exceededByPercent))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(PoolDashboardTheme.danger)
+                } else {
+                    Text(L10n.text("schedule.plan.progress.within"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(PoolDashboardTheme.success)
+                }
+            }
+
+            ProgressView(value: min(max(progressRatio, 0), 1))
+                .tint(progressColor)
+
+            if progressRatio > 1 {
+                ProgressView(value: min(progressRatio / 2, 1))
+                    .tint(PoolDashboardTheme.danger.opacity(0.75))
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var resetCoveragePanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("schedule.plan.timeline.title"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            if accounts.isEmpty {
+                Text(L10n.text("schedule.plan.timeline.empty"))
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            } else {
+                ForEach(Array(deduplicatedAccounts.prefix(8)), id: \.deduplicationKey) { account in
+                    HStack(spacing: 8) {
+                        Text(account.name)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            .lineLimit(1)
+
+                        Spacer(minLength: 0)
+
+                        Text(resetSummary(for: account))
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private func resetSummary(for account: AgentAccount) -> String {
+        let weekly = account.usageWindowResetAt.map { $0.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute()) }
+            ?? L10n.text("schedule.plan.timeline.na")
+        if account.isPaid {
+            let fiveHour = account.primaryUsageResetAt.map { $0.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute()) }
+                ?? L10n.text("schedule.plan.timeline.na")
+            return L10n.text("schedule.plan.timeline.row.paid", weekly, fiveHour)
+        }
+        return L10n.text("schedule.plan.timeline.row.free", weekly)
+    }
+
+    private var usageAnalyticsUpdatedAt: TimeInterval {
+        analyticsState.lastUpdatedAt?.timeIntervalSince1970 ?? 0
+    }
+
+    private var accountsSignature: String {
+        deduplicatedAccounts
+            .map { "\($0.deduplicationKey)|\($0.usedUnits)|\($0.quota)|\($0.primaryUsagePercent ?? -1)" }
+            .joined(separator: "\n")
+    }
+
+    private func normalizeSelectionIfNeeded() {
+        if let selectedAccountKey,
+           !deduplicatedAccounts.contains(where: { $0.deduplicationKey == selectedAccountKey }) {
+            dailyPlanScopeAccountKey = ""
+        }
+    }
+
+    private func evaluateDailyPlanNotificationIfNeeded() {
+        guard dailyPlanEnabled, dailyPlanNotifyEnabled, exceededByPercent > 0 else { return }
+
+        let todayKey = dayKey(Date())
+        var notified = notifiedDaysByScope
+        if notified[selectedScopeStorageKey] == todayKey {
+            return
+        }
+
+        DesktopNotifier.requestAuthorizationIfNeeded()
+        DesktopNotifier.post(
+            key: "schedule.daily-plan.\(selectedScopeStorageKey).\(todayKey)",
+            title: L10n.text("schedule.plan.notification.title"),
+            body: L10n.text(
+                "schedule.plan.notification.body",
+                selectedScopeName,
+                todayUsedPercent,
+                plannedLimitPercent,
+                exceededByPercent
+            ),
+            minInterval: 0
+        )
+
+        notified[selectedScopeStorageKey] = todayKey
+        persistNotifiedDays(notified)
+    }
+
+    private func persistNotifiedDays(_ map: [String: String]) {
+        guard let data = try? JSONEncoder().encode(map),
+              let encoded = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+        dailyPlanNotifiedDaysRaw = encoded
+    }
+
+    private func dayKey(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
 }
 
 private struct UsageAnalyticsWorkspacePanelView: View {

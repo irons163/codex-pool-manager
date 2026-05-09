@@ -236,62 +236,96 @@ struct AccountUsagePanelView: View {
     }
 
     private var sortingLayoutControls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                sortPriorityToggles
+                sortAndLayoutControls
+            }
+            VStack(alignment: .trailing, spacing: 8) {
+                sortPriorityToggles
+                sortAndLayoutControls
+            }
+        }
+    }
+
+    private var sortPriorityToggles: some View {
         HStack(spacing: 10) {
             Toggle(isOn: $persistedActiveAccountFirst) {
                 Text(L10n.text("sort.active_first"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    .lineLimit(1)
             }
             .toggleStyle(.checkbox)
+            .fixedSize(horizontal: true, vertical: false)
 
             Toggle(isOn: $persistedPaidAccountFirst) {
                 Text(L10n.text("sort.paid_first"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    .lineLimit(1)
             }
             .toggleStyle(.checkbox)
+            .fixedSize(horizontal: true, vertical: false)
+        }
+    }
 
-            Menu {
-                ForEach(SortMode.allCases) { mode in
-                    Button {
-                        persistedSortModeRawValue = mode.rawValue
-                    } label: {
-                        if sortMode == mode {
-                            Label(mode.title, systemImage: "checkmark")
-                        } else {
-                            Text(mode.title)
-                        }
+    private var sortAndLayoutControls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                sortMenuControl
+                layoutModePicker
+            }
+            VStack(alignment: .trailing, spacing: 8) {
+                sortMenuControl
+                layoutModePicker
+            }
+        }
+    }
+
+    private var sortMenuControl: some View {
+        Menu {
+            ForEach(SortMode.allCases) { mode in
+                Button {
+                    persistedSortModeRawValue = mode.rawValue
+                } label: {
+                    if sortMode == mode {
+                        Label(mode.title, systemImage: "checkmark")
+                    } else {
+                        Text(mode.title)
                     }
                 }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(L10n.text("sort.title"))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    Image(systemName: "arrow.up.arrow.down")
-                        .font(.caption)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(PoolDashboardTheme.panelMutedFill.opacity(0.8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.7), lineWidth: 0.8)
-                        )
-                )
             }
-            .menuStyle(.borderlessButton)
-
-            Picker(L10n.text("layout.title"), selection: layoutModeBinding) {
-                ForEach(LayoutMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
+        } label: {
+            HStack(spacing: 6) {
+                Text(L10n.text("sort.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textSecondary)
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
             }
-            .pickerStyle(.segmented)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.7), lineWidth: 0.8)
+                    )
+            )
         }
+        .menuStyle(.borderlessButton)
+    }
+
+    private var layoutModePicker: some View {
+        Picker(L10n.text("layout.title"), selection: layoutModeBinding) {
+            ForEach(LayoutMode.allCases) { mode in
+                Text(mode.title).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     private var groupManagerRow: some View {
@@ -413,7 +447,6 @@ struct AccountUsagePanelView: View {
                     .menuStyle(.borderlessButton)
                 }
             }
-            .fixedSize(horizontal: true, vertical: false)
 
             if let activeAccount, !selectedGroupHasCurrentAccount {
                 Button {
