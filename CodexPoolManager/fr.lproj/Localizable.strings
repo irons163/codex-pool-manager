@@ -483,12 +483,19 @@
 "schedule.plan.scope.label" = "Portée";
 "schedule.plan.scope.all_accounts" = "Tous les comptes";
 "schedule.plan.limit.format" = "Plan quotidien : %d%%";
+"schedule.plan.limit.pool.format" = "Budget quotidien du pool : %d%%";
+"schedule.plan.limit.account.format" = "Budget quotidien du compte : %d%%";
+"schedule.plan.limit.warning.format" = "Seuil d’alerte : %d%%";
 "schedule.plan.summary.scope" = "Portée";
 "schedule.plan.summary.today_used" = "Utilisé aujourd’hui";
 "schedule.plan.summary.plan_limit" = "Limite du plan";
+"schedule.plan.summary.scope_budget" = "Budget quotidien de la portée";
+"schedule.plan.summary.pool_budget" = "Budget quotidien du pool";
 "schedule.plan.summary.remaining_budget" = "Budget restant";
 "schedule.plan.progress.title" = "Usage du jour vs plan";
 "schedule.plan.progress.over" = "Dépassement +%d%%";
+"schedule.plan.progress.warning" = "Alerte (%d%%)";
+"schedule.plan.progress.warning_trigger" = "Alerte déclenchée à %d%% d’usage aujourd’hui.";
 "schedule.plan.progress.within" = "Dans le plan";
 "schedule.plan.timeline.title" = "Chronologie des resets (référence)";
 "schedule.plan.timeline.empty" = "Aucune donnée de compte.";
@@ -497,9 +504,15 @@
 "schedule.plan.timeline.row.free" = "Semaine : %@";
 "schedule.plan.callout.exceeded.title" = "Plan dépassé";
 "schedule.plan.callout.exceeded.message" = "L’usage du jour est de %d%% et dépasse votre plan de %d%%.";
+"schedule.plan.callout.warning.title" = "Proche de la limite";
+"schedule.plan.callout.warning.message" = "Usage du jour %d%%. Alerte à %d%%, limite du plan à %d%%.";
 "schedule.plan.callout.on_track.title" = "Sur la bonne voie";
 "schedule.plan.callout.on_track.message" = "Vous êtes dans le plan. Budget restant aujourd’hui : %d%%.";
 "schedule.plan.notification.title" = "Plan d’usage quotidien dépassé";
+"schedule.plan.notification.warning.title" = "Usage quotidien proche de la limite";
+"schedule.plan.notification.warning.body" = "%@ : utilisé %d%% (alerte %d%% / plan %d%%).";
+"schedule.plan.notification.exceeded.title" = "Plan d’usage quotidien dépassé";
+"schedule.plan.notification.exceeded.body" = "%@ : utilisé %d%% / plan %d%% (dépassement %d%%).";
 "schedule.plan.notification.body" = "%@ : utilisé %d%% / plan %d%% (dépassement %d%%).";
 "workspace.schedule.title" = "Planning";
 

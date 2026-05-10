@@ -483,12 +483,19 @@
 "schedule.plan.scope.label" = "Ámbito";
 "schedule.plan.scope.all_accounts" = "Todas las cuentas";
 "schedule.plan.limit.format" = "Plan diario: %d%%";
+"schedule.plan.limit.pool.format" = "Presupuesto diario del pool: %d%%";
+"schedule.plan.limit.account.format" = "Presupuesto diario de la cuenta: %d%%";
+"schedule.plan.limit.warning.format" = "Umbral de alerta: %d%%";
 "schedule.plan.summary.scope" = "Ámbito";
 "schedule.plan.summary.today_used" = "Uso de hoy";
 "schedule.plan.summary.plan_limit" = "Límite del plan";
+"schedule.plan.summary.scope_budget" = "Presupuesto diario del alcance";
+"schedule.plan.summary.pool_budget" = "Presupuesto diario del pool";
 "schedule.plan.summary.remaining_budget" = "Presupuesto restante";
 "schedule.plan.progress.title" = "Uso de hoy vs plan";
 "schedule.plan.progress.over" = "Exceso +%d%%";
+"schedule.plan.progress.warning" = "Alerta (%d%%)";
+"schedule.plan.progress.warning_trigger" = "La alerta se activa al llegar a %d%% usado hoy.";
 "schedule.plan.progress.within" = "Dentro del plan";
 "schedule.plan.timeline.title" = "Línea de reinicios (referencia)";
 "schedule.plan.timeline.empty" = "No hay datos de cuentas.";
@@ -497,9 +504,15 @@
 "schedule.plan.timeline.row.free" = "Semanal: %@";
 "schedule.plan.callout.exceeded.title" = "Plan superado";
 "schedule.plan.callout.exceeded.message" = "El uso de hoy es %d%% y supera tu plan por %d%%.";
+"schedule.plan.callout.warning.title" = "Cerca del límite";
+"schedule.plan.callout.warning.message" = "Uso de hoy %d%%. Alerta en %d%% y límite del plan en %d%%.";
 "schedule.plan.callout.on_track.title" = "En objetivo";
 "schedule.plan.callout.on_track.message" = "Estás dentro del plan. Presupuesto restante hoy: %d%%.";
 "schedule.plan.notification.title" = "Plan diario de uso superado";
+"schedule.plan.notification.warning.title" = "Uso diario cerca del límite";
+"schedule.plan.notification.warning.body" = "%@: usado %d%% (alerta %d%% / plan %d%%).";
+"schedule.plan.notification.exceeded.title" = "Plan diario de uso superado";
+"schedule.plan.notification.exceeded.body" = "%@: usado %d%% / plan %d%% (exceso %d%%).";
 "schedule.plan.notification.body" = "%@: usado %d%% / plan %d%% (exceso %d%%).";
 "workspace.schedule.title" = "Horario";
 

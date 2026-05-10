@@ -10,6 +10,88 @@ import Sparkle
 import UniformTypeIdentifiers
 #endif
 
+enum DailyUsagePlanEvaluator {
+    enum AlertLevel: String {
+        case none
+        case warning
+        case exceeded
+    }
+
+    static func plannedLimitPercent(from rawValue: Int) -> Int {
+        max(1, rawValue)
+    }
+
+    static func warningThresholdPercent(from rawValue: Int) -> Int {
+        min(99, max(1, rawValue))
+    }
+
+    static func remainingBudgetPercent(todayUsedPercent: Int, plannedLimitPercent: Int) -> Int {
+        max(0, plannedLimitPercent - todayUsedPercent)
+    }
+
+    static func exceededByPercent(todayUsedPercent: Int, plannedLimitPercent: Int) -> Int {
+        max(0, todayUsedPercent - plannedLimitPercent)
+    }
+
+    static func progressRatio(todayUsedPercent: Int, plannedLimitPercent: Int) -> Double {
+        Double(todayUsedPercent) / Double(max(1, plannedLimitPercent))
+    }
+
+    static func warningTriggerPercent(
+        plannedLimitPercent: Int,
+        warningThresholdPercent: Int
+    ) -> Int {
+        max(1, Int(ceil(Double(plannedLimitPercent) * Double(warningThresholdPercent) / 100.0)))
+    }
+
+    static func alertLevel(
+        todayUsedPercent: Int,
+        plannedLimitPercent: Int,
+        warningThresholdPercent: Int
+    ) -> AlertLevel {
+        if todayUsedPercent > plannedLimitPercent {
+            return .exceeded
+        }
+        let warningTrigger = warningTriggerPercent(
+            plannedLimitPercent: plannedLimitPercent,
+            warningThresholdPercent: warningThresholdPercent
+        )
+        if todayUsedPercent >= warningTrigger {
+            return .warning
+        }
+        return .none
+    }
+
+    static func shouldNotify(
+        isPlanEnabled: Bool,
+        isDesktopNotifyEnabled: Bool,
+        alertLevel: AlertLevel,
+        scopeStorageKey: String,
+        todayKey: String,
+        notifiedDaysByScopeAndLevel: [String: String]
+    ) -> Bool {
+        guard isPlanEnabled, isDesktopNotifyEnabled, alertLevel != .none else {
+            return false
+        }
+        return notifiedDaysByScopeAndLevel[notificationScopeLevelKey(scopeStorageKey: scopeStorageKey, alertLevel: alertLevel)] != todayKey
+    }
+
+    static func markNotified(
+        alertLevel: AlertLevel,
+        scopeStorageKey: String,
+        todayKey: String,
+        notifiedDaysByScopeAndLevel: [String: String]
+    ) -> [String: String] {
+        var updated = notifiedDaysByScopeAndLevel
+        updated[notificationScopeLevelKey(scopeStorageKey: scopeStorageKey, alertLevel: alertLevel)] = todayKey
+        return updated
+    }
+
+    private static func notificationScopeLevelKey(scopeStorageKey: String, alertLevel: AlertLevel) -> String {
+        "\(scopeStorageKey)|\(alertLevel.rawValue)"
+    }
+}
+
 struct PoolDashboardView: View {
     private enum SyncPolicy {
         static let timeoutNanoseconds: UInt64 = 45_000_000_000
@@ -430,15 +512,28 @@ struct PoolDashboardView: View {
             VStack(spacing: 0) {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                        HStack(alignment: .top, spacing: 12) {
-                            DashboardHeaderSectionView(
-                                accountCount: state.uniqueAccountsCount,
-                                availableCount: state.availableAccountsCount,
-                                overallUsagePercent: Int(state.overallUsageRatio * 100),
-                                modeTitle: state.mode.rawValue
-                            )
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top, spacing: 12) {
+                                DashboardHeaderSectionView(
+                                    accountCount: state.uniqueAccountsCount,
+                                    availableCount: state.availableAccountsCount,
+                                    overallUsagePercent: Int(state.overallUsageRatio * 100),
+                                    modeTitle: state.mode.rawValue
+                                )
 
-                            syncToolbarPanel
+                                syncToolbarPanel
+                            }
+
+                            VStack(alignment: .leading, spacing: 10) {
+                                DashboardHeaderSectionView(
+                                    accountCount: state.uniqueAccountsCount,
+                                    availableCount: state.availableAccountsCount,
+                                    overallUsagePercent: Int(state.overallUsageRatio * 100),
+                                    modeTitle: state.mode.rawValue
+                                )
+
+                                syncToolbarPanel
+                            }
                         }
 
                         accountUsagePanel
@@ -3618,10 +3713,14 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
     private var dailyPlanEnabled = true
     @AppStorage("pool_dashboard.schedule.daily_plan_notify_enabled")
     private var dailyPlanNotifyEnabled = true
-    @AppStorage("pool_dashboard.schedule.daily_plan_limit_percent")
-    private var dailyPlanLimitPercent = 30
+    @AppStorage("pool_dashboard.schedule.daily_plan_pool_limit_percent")
+    private var dailyPlanPoolLimitPercent = 120
+    @AppStorage("pool_dashboard.schedule.daily_plan_warning_threshold_percent")
+    private var dailyPlanWarningThresholdPercent = 80
     @AppStorage("pool_dashboard.schedule.daily_plan_scope_account_key")
     private var dailyPlanScopeAccountKey = ""
+    @AppStorage("pool_dashboard.schedule.daily_plan_account_limits")
+    private var dailyPlanAccountLimitsRaw = ""
     @AppStorage("pool_dashboard.schedule.daily_plan_notified_days")
     private var dailyPlanNotifiedDaysRaw = ""
 
@@ -3667,24 +3766,76 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
         ).todayWeeklyPercent
     }
 
+    private var accountBudgetByKey: [String: Int] {
+        guard let data = dailyPlanAccountLimitsRaw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: Int].self, from: data)
+        else {
+            return [:]
+        }
+        return decoded
+    }
+
     private var plannedLimitPercent: Int {
-        max(1, dailyPlanLimitPercent)
+        if let selectedAccountKey {
+            let perAccountLimit = accountBudgetByKey[selectedAccountKey] ?? dailyPlanPoolLimitPercent
+            return DailyUsagePlanEvaluator.plannedLimitPercent(from: perAccountLimit)
+        }
+        return DailyUsagePlanEvaluator.plannedLimitPercent(from: dailyPlanPoolLimitPercent)
+    }
+
+    private var poolLimitPercent: Int {
+        DailyUsagePlanEvaluator.plannedLimitPercent(from: dailyPlanPoolLimitPercent)
+    }
+
+    private var warningThresholdPercent: Int {
+        DailyUsagePlanEvaluator.warningThresholdPercent(from: dailyPlanWarningThresholdPercent)
+    }
+
+    private var warningTriggerPercent: Int {
+        DailyUsagePlanEvaluator.warningTriggerPercent(
+            plannedLimitPercent: plannedLimitPercent,
+            warningThresholdPercent: warningThresholdPercent
+        )
+    }
+
+    private var alertLevel: DailyUsagePlanEvaluator.AlertLevel {
+        DailyUsagePlanEvaluator.alertLevel(
+            todayUsedPercent: todayUsedPercent,
+            plannedLimitPercent: plannedLimitPercent,
+            warningThresholdPercent: warningThresholdPercent
+        )
     }
 
     private var remainingBudgetPercent: Int {
-        max(0, plannedLimitPercent - todayUsedPercent)
+        DailyUsagePlanEvaluator.remainingBudgetPercent(
+            todayUsedPercent: todayUsedPercent,
+            plannedLimitPercent: plannedLimitPercent
+        )
     }
 
     private var exceededByPercent: Int {
-        max(0, todayUsedPercent - plannedLimitPercent)
+        DailyUsagePlanEvaluator.exceededByPercent(
+            todayUsedPercent: todayUsedPercent,
+            plannedLimitPercent: plannedLimitPercent
+        )
     }
 
     private var progressRatio: Double {
-        Double(todayUsedPercent) / Double(max(1, plannedLimitPercent))
+        DailyUsagePlanEvaluator.progressRatio(
+            todayUsedPercent: todayUsedPercent,
+            plannedLimitPercent: plannedLimitPercent
+        )
     }
 
     private var progressColor: Color {
-        exceededByPercent > 0 ? PoolDashboardTheme.danger : PoolDashboardTheme.glowA
+        switch alertLevel {
+        case .exceeded:
+            return PoolDashboardTheme.danger
+        case .warning:
+            return PoolDashboardTheme.warning
+        case .none:
+            return PoolDashboardTheme.glowA
+        }
     }
 
     private var notifiedDaysByScope: [String: String] {
@@ -3704,26 +3855,7 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
                 summaryCards
                 progressCard
 
-                if exceededByPercent > 0 {
-                    PanelStatusCalloutView(
-                        message: L10n.text(
-                            "schedule.plan.callout.exceeded.message",
-                            todayUsedPercent,
-                            exceededByPercent
-                        ),
-                        title: L10n.text("schedule.plan.callout.exceeded.title"),
-                        tone: .warning
-                    )
-                } else {
-                    PanelStatusCalloutView(
-                        message: L10n.text(
-                            "schedule.plan.callout.on_track.message",
-                            remainingBudgetPercent
-                        ),
-                        title: L10n.text("schedule.plan.callout.on_track.title"),
-                        tone: .success
-                    )
-                }
+                planStatusCallout
 
                 resetCoveragePanel
             }
@@ -3747,7 +3879,13 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
         .onChange(of: dailyPlanNotifyEnabled) { _, _ in
             evaluateDailyPlanNotificationIfNeeded()
         }
-        .onChange(of: dailyPlanLimitPercent) { _, _ in
+        .onChange(of: dailyPlanPoolLimitPercent) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: dailyPlanWarningThresholdPercent) { _, _ in
+            evaluateDailyPlanNotificationIfNeeded()
+        }
+        .onChange(of: dailyPlanAccountLimitsRaw) { _, _ in
             evaluateDailyPlanNotificationIfNeeded()
         }
         .onChange(of: dailyPlanScopeAccountKey) { _, _ in
@@ -3792,8 +3930,24 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
                 .labelsHidden()
                 .pickerStyle(.menu)
 
-                Stepper(value: $dailyPlanLimitPercent, in: 1...300, step: 1) {
-                    Text(L10n.text("schedule.plan.limit.format", plannedLimitPercent))
+                Stepper(value: $dailyPlanPoolLimitPercent, in: 1...500, step: 1) {
+                    Text(L10n.text("schedule.plan.limit.pool.format", poolLimitPercent))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                }
+                .disabled(!dailyPlanEnabled)
+
+                if let selectedAccountKey {
+                    Stepper(value: accountLimitBinding(for: selectedAccountKey), in: 1...500, step: 1) {
+                        Text(L10n.text("schedule.plan.limit.account.format", plannedLimitPercent))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    }
+                    .disabled(!dailyPlanEnabled)
+                }
+
+                Stepper(value: $dailyPlanWarningThresholdPercent, in: 1...99, step: 1) {
+                    Text(L10n.text("schedule.plan.limit.warning.format", warningThresholdPercent))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textSecondary)
                 }
@@ -3814,12 +3968,16 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
                 value: "\(todayUsedPercent)%"
             )
             summaryCard(
-                title: L10n.text("schedule.plan.summary.plan_limit"),
+                title: L10n.text("schedule.plan.summary.scope_budget"),
                 value: "\(plannedLimitPercent)%"
             )
             summaryCard(
                 title: L10n.text("schedule.plan.summary.remaining_budget"),
                 value: exceededByPercent > 0 ? "0%" : "\(remainingBudgetPercent)%"
+            )
+            summaryCard(
+                title: L10n.text("schedule.plan.summary.pool_budget"),
+                value: "\(poolLimitPercent)%"
             )
         }
     }
@@ -3848,16 +4006,24 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
 
                 Spacer(minLength: 0)
 
-                if exceededByPercent > 0 {
+                if alertLevel == .exceeded {
                     Text(L10n.text("schedule.plan.progress.over", exceededByPercent))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(PoolDashboardTheme.danger)
+                } else if alertLevel == .warning {
+                    Text(L10n.text("schedule.plan.progress.warning", warningThresholdPercent))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(PoolDashboardTheme.warning)
                 } else {
                     Text(L10n.text("schedule.plan.progress.within"))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(PoolDashboardTheme.success)
                 }
             }
+
+            Text(L10n.text("schedule.plan.progress.warning_trigger", warningTriggerPercent))
+                .font(.caption)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
 
             ProgressView(value: min(max(progressRatio, 0), 1))
                 .tint(progressColor)
@@ -3868,6 +4034,41 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
             }
         }
         .dashboardInfoCard()
+    }
+
+    private var planStatusCallout: some View {
+        switch alertLevel {
+        case .exceeded:
+            PanelStatusCalloutView(
+                message: L10n.text(
+                    "schedule.plan.callout.exceeded.message",
+                    todayUsedPercent,
+                    exceededByPercent
+                ),
+                title: L10n.text("schedule.plan.callout.exceeded.title"),
+                tone: .warning
+            )
+        case .warning:
+            PanelStatusCalloutView(
+                message: L10n.text(
+                    "schedule.plan.callout.warning.message",
+                    todayUsedPercent,
+                    warningTriggerPercent,
+                    plannedLimitPercent
+                ),
+                title: L10n.text("schedule.plan.callout.warning.title"),
+                tone: .info
+            )
+        case .none:
+            PanelStatusCalloutView(
+                message: L10n.text(
+                    "schedule.plan.callout.on_track.message",
+                    remainingBudgetPercent
+                ),
+                title: L10n.text("schedule.plan.callout.on_track.title"),
+                tone: .success
+            )
+        }
     }
 
     private var resetCoveragePanel: some View {
@@ -3929,31 +4130,99 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
         }
     }
 
-    private func evaluateDailyPlanNotificationIfNeeded() {
-        guard dailyPlanEnabled, dailyPlanNotifyEnabled, exceededByPercent > 0 else { return }
+    private func accountLimitBinding(for accountKey: String) -> Binding<Int> {
+        Binding(
+            get: {
+                let limit = accountBudgetByKey[accountKey] ?? dailyPlanPoolLimitPercent
+                return DailyUsagePlanEvaluator.plannedLimitPercent(from: limit)
+            },
+            set: { newValue in
+                var updated = accountBudgetByKey
+                updated[accountKey] = DailyUsagePlanEvaluator.plannedLimitPercent(from: newValue)
+                persistAccountBudgetMap(updated)
+            }
+        )
+    }
 
+    private func evaluateDailyPlanNotificationIfNeeded() {
         let todayKey = dayKey(Date())
-        var notified = notifiedDaysByScope
-        if notified[selectedScopeStorageKey] == todayKey {
+        let notified = notifiedDaysByScope
+        guard DailyUsagePlanEvaluator.shouldNotify(
+            isPlanEnabled: dailyPlanEnabled,
+            isDesktopNotifyEnabled: dailyPlanNotifyEnabled,
+            alertLevel: alertLevel,
+            scopeStorageKey: selectedScopeStorageKey,
+            todayKey: todayKey,
+            notifiedDaysByScopeAndLevel: notified
+        ) else {
             return
         }
 
         DesktopNotifier.requestAuthorizationIfNeeded()
         DesktopNotifier.post(
-            key: "schedule.daily-plan.\(selectedScopeStorageKey).\(todayKey)",
-            title: L10n.text("schedule.plan.notification.title"),
-            body: L10n.text(
+            key: "schedule.daily-plan.\(selectedScopeStorageKey).\(alertLevel.rawValue).\(todayKey)",
+            title: notificationTitle,
+            body: notificationBody,
+            minInterval: 0
+        )
+
+        persistNotifiedDays(
+            DailyUsagePlanEvaluator.markNotified(
+                alertLevel: alertLevel,
+                scopeStorageKey: selectedScopeStorageKey,
+                todayKey: todayKey,
+                notifiedDaysByScopeAndLevel: notified
+            )
+        )
+    }
+
+    private var notificationTitle: String {
+        switch alertLevel {
+        case .warning:
+            return L10n.text("schedule.plan.notification.warning.title")
+        case .exceeded:
+            return L10n.text("schedule.plan.notification.exceeded.title")
+        case .none:
+            return L10n.text("schedule.plan.notification.title")
+        }
+    }
+
+    private var notificationBody: String {
+        switch alertLevel {
+        case .warning:
+            return L10n.text(
+                "schedule.plan.notification.warning.body",
+                selectedScopeName,
+                todayUsedPercent,
+                warningTriggerPercent,
+                plannedLimitPercent
+            )
+        case .exceeded:
+            return L10n.text(
+                "schedule.plan.notification.exceeded.body",
+                selectedScopeName,
+                todayUsedPercent,
+                plannedLimitPercent,
+                exceededByPercent
+            )
+        case .none:
+            return L10n.text(
                 "schedule.plan.notification.body",
                 selectedScopeName,
                 todayUsedPercent,
                 plannedLimitPercent,
                 exceededByPercent
-            ),
-            minInterval: 0
-        )
+            )
+        }
+    }
 
-        notified[selectedScopeStorageKey] = todayKey
-        persistNotifiedDays(notified)
+    private func persistAccountBudgetMap(_ map: [String: Int]) {
+        guard let data = try? JSONEncoder().encode(map),
+              let encoded = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+        dailyPlanAccountLimitsRaw = encoded
     }
 
     private func persistNotifiedDays(_ map: [String: String]) {

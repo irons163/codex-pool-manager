@@ -171,26 +171,24 @@ struct AccountUsagePanelView: View {
                     )
                 }
 
-                ScrollView {
-                    LazyVGrid(columns: gridColumns(for: gridContainerWidth), alignment: .leading, spacing: accountGridSpacing) {
-                        ForEach(sortedAccounts) { account in
-                            accountCard(account)
+                GeometryReader { proxy in
+                    let availableWidth = max(0, proxy.size.width)
+                    ScrollView {
+                        LazyVGrid(columns: gridColumns(for: availableWidth), alignment: .leading, spacing: accountGridSpacing) {
+                            ForEach(sortedAccounts) { account in
+                                accountCard(account)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onAppear {
+                            gridContainerWidth = availableWidth
+                        }
+                        .onChange(of: availableWidth) { _, newWidth in
+                            gridContainerWidth = newWidth
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(minHeight: PoolDashboardTheme.usageListMinHeight)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear
-                            .onAppear {
-                                gridContainerWidth = proxy.size.width
-                            }
-                            .onChange(of: proxy.size.width) { _, newWidth in
-                                gridContainerWidth = newWidth
-                            }
-                    }
-                }
             }
         }
         .sectionCardStyle()

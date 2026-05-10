@@ -483,12 +483,19 @@
 "schedule.plan.scope.label" = "対象";
 "schedule.plan.scope.all_accounts" = "すべてのアカウント";
 "schedule.plan.limit.format" = "日次計画: %d%%";
+"schedule.plan.limit.pool.format" = "プール日次予算: %d%%";
+"schedule.plan.limit.account.format" = "アカウント日次予算: %d%%";
+"schedule.plan.limit.warning.format" = "警告しきい値: %d%%";
 "schedule.plan.summary.scope" = "対象";
 "schedule.plan.summary.today_used" = "本日使用";
 "schedule.plan.summary.plan_limit" = "計画上限";
+"schedule.plan.summary.scope_budget" = "対象の日次予算";
+"schedule.plan.summary.pool_budget" = "プール日次予算";
 "schedule.plan.summary.remaining_budget" = "残り予算";
 "schedule.plan.progress.title" = "本日の使用量 vs 計画";
 "schedule.plan.progress.over" = "超過 +%d%%";
+"schedule.plan.progress.warning" = "警告（%d%%）";
+"schedule.plan.progress.warning_trigger" = "本日の使用量が %d%% に達すると警告します。";
 "schedule.plan.progress.within" = "計画内";
 "schedule.plan.timeline.title" = "リセット時刻（参考）";
 "schedule.plan.timeline.empty" = "アカウントデータがありません。";
@@ -497,9 +504,15 @@
 "schedule.plan.timeline.row.free" = "週: %@";
 "schedule.plan.callout.exceeded.title" = "計画超過";
 "schedule.plan.callout.exceeded.message" = "本日の使用量 %d%% は計画を %d%% 超えています。";
+"schedule.plan.callout.warning.title" = "計画上限に接近";
+"schedule.plan.callout.warning.message" = "本日の使用量は %d%%。警告しきい値 %d%%、計画上限 %d%% です。";
 "schedule.plan.callout.on_track.title" = "順調";
 "schedule.plan.callout.on_track.message" = "計画内です。本日の残り予算は %d%% です。";
 "schedule.plan.notification.title" = "日次利用計画を超過";
+"schedule.plan.notification.warning.title" = "日次利用量が上限に接近";
+"schedule.plan.notification.warning.body" = "%@: 使用 %d%%（警告 %d%% / 計画 %d%%）。";
+"schedule.plan.notification.exceeded.title" = "日次利用計画を超過";
+"schedule.plan.notification.exceeded.body" = "%@: 使用 %d%% / 計画 %d%%（超過 %d%%）。";
 "schedule.plan.notification.body" = "%@: 使用 %d%% / 計画 %d%%（超過 %d%%）。";
 "workspace.schedule.title" = "スケジュール";
 

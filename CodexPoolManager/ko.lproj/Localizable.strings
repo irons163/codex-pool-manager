@@ -483,12 +483,19 @@
 "schedule.plan.scope.label" = "범위";
 "schedule.plan.scope.all_accounts" = "모든 계정";
 "schedule.plan.limit.format" = "일일 계획: %d%%";
+"schedule.plan.limit.pool.format" = "풀 일일 예산: %d%%";
+"schedule.plan.limit.account.format" = "계정 일일 예산: %d%%";
+"schedule.plan.limit.warning.format" = "경고 임계값: %d%%";
 "schedule.plan.summary.scope" = "범위";
 "schedule.plan.summary.today_used" = "오늘 사용";
 "schedule.plan.summary.plan_limit" = "계획 한도";
+"schedule.plan.summary.scope_budget" = "범위 일일 예산";
+"schedule.plan.summary.pool_budget" = "풀 일일 예산";
 "schedule.plan.summary.remaining_budget" = "남은 예산";
 "schedule.plan.progress.title" = "오늘 사용량 vs 계획";
 "schedule.plan.progress.over" = "초과 +%d%%";
+"schedule.plan.progress.warning" = "경고(%d%%)";
+"schedule.plan.progress.warning_trigger" = "오늘 사용량이 %d%%에 도달하면 경고합니다.";
 "schedule.plan.progress.within" = "계획 내";
 "schedule.plan.timeline.title" = "리셋 타임라인(참고)";
 "schedule.plan.timeline.empty" = "계정 데이터가 없습니다.";
@@ -497,9 +504,15 @@
 "schedule.plan.timeline.row.free" = "주간: %@";
 "schedule.plan.callout.exceeded.title" = "계획 초과";
 "schedule.plan.callout.exceeded.message" = "오늘 사용량 %d%%가 계획을 %d%% 초과했습니다.";
+"schedule.plan.callout.warning.title" = "계획 한도 근접";
+"schedule.plan.callout.warning.message" = "오늘 사용량 %d%%, 경고 임계값 %d%%, 계획 한도 %d%%입니다.";
 "schedule.plan.callout.on_track.title" = "정상 범위";
 "schedule.plan.callout.on_track.message" = "계획 범위 내입니다. 오늘 남은 예산은 %d%%입니다.";
 "schedule.plan.notification.title" = "일일 사용 계획 초과";
+"schedule.plan.notification.warning.title" = "일일 사용량이 한도에 근접";
+"schedule.plan.notification.warning.body" = "%@: 사용 %d%% (경고 %d%% / 계획 %d%%).";
+"schedule.plan.notification.exceeded.title" = "일일 사용 계획 초과";
+"schedule.plan.notification.exceeded.body" = "%@: 사용 %d%% / 계획 %d%% (초과 %d%%).";
 "schedule.plan.notification.body" = "%@: 사용 %d%% / 계획 %d%% (초과 %d%%).";
 "workspace.schedule.title" = "일정";
 
