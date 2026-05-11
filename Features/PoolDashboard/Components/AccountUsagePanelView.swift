@@ -222,14 +222,25 @@ struct AccountUsagePanelView: View {
     }
 
     private var headerRow: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Text(L10n.text("account_usage.title"))
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 10) {
+                Text(L10n.text("account_usage.title"))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
 
-            Spacer(minLength: 0)
+                Spacer(minLength: 0)
 
-            sortingLayoutControls
+                sortingLayoutControls
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.text("account_usage.title"))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+
+                sortingLayoutControls
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
@@ -327,122 +338,32 @@ struct AccountUsagePanelView: View {
     }
 
     private var groupManagerRow: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            HStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    Text(L10n.text("group.title"))
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(PoolDashboardTheme.textPrimary)
+        VStack(alignment: .leading, spacing: 6) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    groupSelectionControls
 
-                    Picker("", selection: $selectedGroupName) {
-                        ForEach(groups, id: \.self) { group in
-                            Text(group).tag(group)
-                        }
+                    if isGroupRenameEditorVisible {
+                        renameGroupControls
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .accessibilityLabel(L10n.text("group.title"))
 
-                    Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isGroupRenameEditorVisible.toggle()
+                    newGroupControls
+
+                    addExistingAccountMenu
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        groupSelectionControls
                         if isGroupRenameEditorVisible {
-                            renameGroupName = selectedGroupName
-                            isRenameGroupNameFocused = true
-                        } else {
-                            isRenameGroupNameFocused = false
+                            renameGroupControls
                         }
                     }
-                } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(PoolDashboardTheme.glowA)
-                            .frame(width: 26, height: 26)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
-                                    )
-                            )
+
+                    HStack(spacing: 10) {
+                        newGroupControls
+                        addExistingAccountMenu
                     }
-                    .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .disabled(selectedGroupName.isEmpty)
-                    .help(L10n.text("group.rename"))
-
-                    Button {
-                        requestDeleteSelectedGroup()
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.red.opacity(0.9))
-                            .frame(width: 26, height: 26)
-                            .background(
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                            .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .disabled(!canDeleteSelectedGroup)
-                    .help(L10n.text("group.delete"))
-                }
-
-                if isGroupRenameEditorVisible {
-                    TextField(L10n.text("group.rename"), text: $renameGroupName)
-                        .focused($isRenameGroupNameFocused)
-                        .dashboardInputFieldStyle()
-                        .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
-                        .layoutPriority(1)
-
-                    Button(L10n.text("group.rename_action")) {
-                        let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !draft.isEmpty else { return }
-                        let previous = selectedGroupName
-                        onRenameGroup(previous, draft)
-                        selectedGroupName = draft
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isGroupRenameEditorVisible = false
-                            isRenameGroupNameFocused = false
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(selectedGroupName.isEmpty)
-                }
-
-                TextField(L10n.text("group.placeholder"), text: $newGroupName)
-                    .focused($isNewGroupNameFocused)
-                    .dashboardInputFieldStyle()
-                    .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
-                    .layoutPriority(1)
-
-                Button(L10n.text("group.add")) {
-                    let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !draft.isEmpty else { return }
-                    onCreateGroup(draft)
-                    selectedGroupName = draft
-                    newGroupName = ""
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(PoolDashboardTheme.glowA)
-
-                if !outsideGroupAccounts.isEmpty {
-                    Menu {
-                        ForEach(outsideGroupAccounts) { account in
-                            Button("\(account.name) (\(account.groupName))") {
-                                onMoveAccountToGroup(account.id, selectedGroupName)
-                            }
-                        }
-                    } label: {
-                        Text(L10n.text("group.add_existing"))
-                    }
-                    .menuStyle(.borderlessButton)
                 }
             }
 
@@ -460,7 +381,134 @@ struct AccountUsagePanelView: View {
                 .help(L10n.text("account.current_badge"))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var groupSelectionControls: some View {
+        HStack(spacing: 8) {
+            Text(L10n.text("group.title"))
+                .font(.title3.weight(.medium))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            Picker("", selection: $selectedGroupName) {
+                ForEach(groups, id: \.self) { group in
+                    Text(group).tag(group)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .accessibilityLabel(L10n.text("group.title"))
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isGroupRenameEditorVisible.toggle()
+                    if isGroupRenameEditorVisible {
+                        renameGroupName = selectedGroupName
+                        isRenameGroupNameFocused = true
+                    } else {
+                        isRenameGroupNameFocused = false
+                    }
+                }
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PoolDashboardTheme.glowA)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .disabled(selectedGroupName.isEmpty)
+            .help(L10n.text("group.rename"))
+
+            Button {
+                requestDeleteSelectedGroup()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.red.opacity(0.9))
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(PoolDashboardTheme.panelMutedFill.opacity(0.85))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .stroke(PoolDashboardTheme.panelInnerStroke.opacity(0.75), lineWidth: 0.8)
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .disabled(!canDeleteSelectedGroup)
+            .help(L10n.text("group.delete"))
+        }
+    }
+
+    private var renameGroupControls: some View {
+        HStack(spacing: 8) {
+            TextField(L10n.text("group.rename"), text: $renameGroupName)
+                .focused($isRenameGroupNameFocused)
+                .dashboardInputFieldStyle()
+                .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
+                .layoutPriority(1)
+
+            Button(L10n.text("group.rename_action")) {
+                let draft = renameGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !draft.isEmpty else { return }
+                let previous = selectedGroupName
+                onRenameGroup(previous, draft)
+                selectedGroupName = draft
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isGroupRenameEditorVisible = false
+                    isRenameGroupNameFocused = false
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(selectedGroupName.isEmpty)
+        }
+    }
+
+    private var newGroupControls: some View {
+        HStack(spacing: 8) {
+            TextField(L10n.text("group.placeholder"), text: $newGroupName)
+                .focused($isNewGroupNameFocused)
+                .dashboardInputFieldStyle()
+                .frame(minWidth: 100, idealWidth: 100, maxWidth: 220)
+                .layoutPriority(1)
+
+            Button(L10n.text("group.add")) {
+                let draft = newGroupName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !draft.isEmpty else { return }
+                onCreateGroup(draft)
+                selectedGroupName = draft
+                newGroupName = ""
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PoolDashboardTheme.glowA)
+        }
+    }
+
+    @ViewBuilder
+    private var addExistingAccountMenu: some View {
+        if !outsideGroupAccounts.isEmpty {
+            Menu {
+                ForEach(outsideGroupAccounts) { account in
+                    Button("\(account.name) (\(account.groupName))") {
+                        onMoveAccountToGroup(account.id, selectedGroupName)
+                    }
+                }
+            } label: {
+                Text(L10n.text("group.add_existing"))
+            }
+            .menuStyle(.borderlessButton)
+        }
     }
 
     private func groupContainsCurrentAccount(named groupName: String) -> Bool {
