@@ -4028,9 +4028,15 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
                     .font(.caption)
                     .foregroundStyle(PoolDashboardTheme.textMuted)
             } else {
-                VStack(spacing: 8) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.adaptive(minimum: 100, maximum: 130), spacing: 10, alignment: .top)
+                    ],
+                    alignment: .leading,
+                    spacing: 10
+                ) {
                     ForEach(deduplicatedAccounts, id: \.deduplicationKey) { account in
-                        allocationRow(for: account)
+                        allocationCard(for: account)
                     }
                 }
             }
@@ -4038,20 +4044,21 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
         .dashboardInfoCard()
     }
 
-    private func allocationRow(for account: AgentAccount) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
-                allocationAccountLabel(account)
-                Spacer(minLength: 0)
-                allocationStepper(for: account)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                allocationAccountLabel(account)
-                allocationStepper(for: account)
-            }
+    private func allocationCard(for account: AgentAccount) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            allocationAccountLabel(account)
+            allocationStepper(for: account)
         }
-        .padding(.vertical, 4)
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(PoolDashboardTheme.panelMutedFill.opacity(0.75))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(PoolDashboardTheme.panelStroke.opacity(0.55), lineWidth: 1)
+        )
     }
 
     private func allocationAccountLabel(_ account: AgentAccount) -> some View {
@@ -4073,6 +4080,7 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PoolDashboardTheme.textPrimary)
                 .monospacedDigit()
+                .lineLimit(1)
         }
         .disabled(!dailyPlanEnabled)
     }
