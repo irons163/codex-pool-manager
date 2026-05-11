@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import CodexPoolManager
 
@@ -25,6 +26,30 @@ struct DailyUsagePlanEvaluatorTests {
 
         #expect(DailyUsagePlanEvaluator.exceededByPercent(todayUsedPercent: 18, plannedLimitPercent: 30) == 0)
         #expect(DailyUsagePlanEvaluator.exceededByPercent(todayUsedPercent: 42, plannedLimitPercent: 30) == 12)
+    }
+
+    @Test
+    func weeklyPlanTotalsIgnoreEmptyAndNegativeBudgets() {
+        let budgets = [
+            "account-a": 25,
+            "account-b": 0,
+            "account-c": -10,
+            "account-d": 15
+        ]
+
+        #expect(DailyUsagePlanEvaluator.plannedTotalPercent(for: budgets) == 40)
+        #expect(DailyUsagePlanEvaluator.plannedAccountCount(for: budgets) == 2)
+    }
+
+    @Test
+    func weekdayKeyUsesCalendarWeekday() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let monday = Date(timeIntervalSince1970: 1_777_852_800) // 2026-05-04 00:00:00 UTC
+        let sunday = Date(timeIntervalSince1970: 1_777_766_400) // 2026-05-03 00:00:00 UTC
+
+        #expect(DailyUsagePlanEvaluator.weekdayKey(for: monday, calendar: calendar) == "mon")
+        #expect(DailyUsagePlanEvaluator.weekdayKey(for: sunday, calendar: calendar) == "sun")
     }
 
     @Test
