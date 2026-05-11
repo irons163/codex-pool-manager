@@ -7,15 +7,32 @@ struct DashboardHeaderSectionView: View {
     let modeTitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
-                dashboardTile(title: L10n.text("header.accounts"), value: "\(accountCount)", tone: .blue)
-                dashboardTile(title: L10n.text("header.available"), value: "\(availableCount)", tone: .green)
-                dashboardTile(title: L10n.text("header.pool_usage"), value: "\(overallUsagePercent)%", tone: .orange)
-                dashboardTile(title: L10n.text("header.mode"), value: localizedModeTitle(modeTitle), tone: .indigo)
+                ForEach(tiles) { tile in
+                    dashboardTile(tile)
+                }
             }
-            .layoutPriority(0)
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 130), spacing: 8)],
+                alignment: .leading,
+                spacing: 8
+            ) {
+                ForEach(tiles) { tile in
+                    dashboardTile(tile)
+                }
+            }
         }
+    }
+
+    private var tiles: [DashboardHeaderTile] {
+        [
+            DashboardHeaderTile(title: L10n.text("header.accounts"), value: "\(accountCount)", tone: .blue),
+            DashboardHeaderTile(title: L10n.text("header.available"), value: "\(availableCount)", tone: .green),
+            DashboardHeaderTile(title: L10n.text("header.pool_usage"), value: "\(overallUsagePercent)%", tone: .orange),
+            DashboardHeaderTile(title: L10n.text("header.mode"), value: localizedModeTitle(modeTitle), tone: .indigo)
+        ]
     }
 
     private func localizedModeTitle(_ title: String) -> String {
@@ -31,16 +48,20 @@ struct DashboardHeaderSectionView: View {
         }
     }
 
-    private func dashboardTile(title: String, value: String, tone: Color) -> some View {
+    private func dashboardTile(_ tile: DashboardHeaderTile) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title.uppercased())
+            Text(tile.title.uppercased())
                 .font(PoolDashboardTheme.metadataFont.weight(.semibold))
                 .tracking(0.8)
                 .foregroundStyle(PoolDashboardTheme.textMuted)
-            Text(value)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(tile.value)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, PoolDashboardTheme.headerTileVerticalPadding)
@@ -50,8 +71,15 @@ struct DashboardHeaderSectionView: View {
                 .fill(PoolDashboardTheme.panelMutedFill.opacity(0.78))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(tone.opacity(0.45), lineWidth: 0.9)
+                        .stroke(tile.tone.opacity(0.45), lineWidth: 0.9)
                 )
         )
     }
+}
+
+private struct DashboardHeaderTile: Identifiable {
+    var id: String { title }
+    let title: String
+    let value: String
+    let tone: Color
 }

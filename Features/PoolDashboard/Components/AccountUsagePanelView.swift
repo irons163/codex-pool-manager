@@ -84,6 +84,7 @@ struct AccountUsagePanelView: View {
     @FocusState private var isNewGroupNameFocused: Bool
 
     private let accountGridSpacing: CGFloat = 10
+    private let fullCardMinWidth: CGFloat = 220
     private let minimalCardMinWidth: CGFloat = 190
     private let minimalCardMaxWidth: CGFloat = 300
 
@@ -592,9 +593,17 @@ struct AccountUsagePanelView: View {
             return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing)]
         }
 
+        let columnsThatFit: Int
+        if availableWidth > 0 {
+            columnsThatFit = max(1, Int((availableWidth + accountGridSpacing) / (fullCardMinWidth + accountGridSpacing)))
+        } else {
+            columnsThatFit = fixedColumns
+        }
+        let visibleColumns = min(fixedColumns, columnsThatFit)
+
         return Array(
-            repeating: GridItem(.flexible(minimum: 220), spacing: accountGridSpacing),
-            count: fixedColumns
+            repeating: GridItem(.flexible(minimum: 0), spacing: accountGridSpacing),
+            count: visibleColumns
         )
     }
 
