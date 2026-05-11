@@ -42,6 +42,24 @@ struct DailyUsagePlanEvaluatorTests {
     }
 
     @Test
+    func activeBudgetsIgnoreDeletedAccountsAndEmptyBudgets() {
+        let budgets = [
+            "account-a": 25,
+            "account-b": 0,
+            "deleted-account": 40,
+            "account-c": 15
+        ]
+
+        let active = DailyUsagePlanEvaluator.activeBudgets(
+            for: budgets,
+            availableAccountKeys: ["account-a", "account-b", "account-c"]
+        )
+
+        #expect(active == ["account-a": 25, "account-c": 15])
+        #expect(DailyUsagePlanEvaluator.plannedTotalPercent(for: active) == 40)
+    }
+
+    @Test
     func weekdayKeyUsesCalendarWeekday() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -27,6 +27,16 @@ enum DailyUsagePlanEvaluator {
         }
     }
 
+    static func activeBudgets(
+        for dayBudgets: [String: Int],
+        availableAccountKeys: Set<String>
+    ) -> [String: Int] {
+        guard !availableAccountKeys.isEmpty else { return [:] }
+        return dayBudgets.filter { accountKey, budget in
+            availableAccountKeys.contains(accountKey) && budget > 0
+        }
+    }
+
     static func plannedAccountCount(for dayBudgets: [String: Int]) -> Int {
         dayBudgets.values.filter { $0 > 0 }.count
     }
@@ -3773,11 +3783,17 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
     }
 
     private var selectedDayBudgets: [String: Int] {
-        weeklyBudgetMap[selectedWeekday.rawValue] ?? [:]
+        DailyUsagePlanEvaluator.activeBudgets(
+            for: weeklyBudgetMap[selectedWeekday.rawValue] ?? [:],
+            availableAccountKeys: availableAccountKeys
+        )
     }
 
     private var todayBudgets: [String: Int] {
-        weeklyBudgetMap[todayWeekday.rawValue] ?? [:]
+        DailyUsagePlanEvaluator.activeBudgets(
+            for: weeklyBudgetMap[todayWeekday.rawValue] ?? [:],
+            availableAccountKeys: availableAccountKeys
+        )
     }
 
     private var selectedDayPlannedPercent: Int {
@@ -3789,11 +3805,13 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
     }
 
     private var todayUsedPercent: Int {
-        UsageAnalyticsEngine.summary(
-            for: analyticsState,
-            now: Date(),
-            accountKey: nil
-        ).todayWeeklyPercent
+        todayBudgets.keys.reduce(0) { partial, accountKey in
+            partial + UsageAnalyticsEngine.summary(
+                for: analyticsState,
+                now: Date(),
+                accountKey: accountKey
+            ).todayWeeklyPercent
+        }
     }
 
     private var plannedLimitForEvaluation: Int {
@@ -3864,6 +3882,10 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
         return mapping.values.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+    }
+
+    private var availableAccountKeys: Set<String> {
+        Set(deduplicatedAccounts.map(\.deduplicationKey))
     }
 
     private var weeklyBudgetMap: [String: [String: Int]] {
