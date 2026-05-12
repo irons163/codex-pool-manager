@@ -4396,9 +4396,17 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private struct ChartEntry: Identifiable {
-        let id = UUID()
+        let id: String
         let label: String
         let value: Int
+    }
+
+    private struct AccountAnalyticsMetrics {
+        let name: String
+        let weeklyUsage: Int
+        let fiveHourUsage: Int
+        let weeklyRemaining: Int
+        let fiveHourRemaining: Int
     }
 
     let analyticsState: UsageAnalyticsState
@@ -4499,8 +4507,42 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private var selectableAccountKeys: [String] {
+        let names = accountNameByKey
         let keys = Set(analyticsState.records.map(\.accountKey))
-        return keys.sorted(by: accountKeySortComparator)
+            .union(names.keys)
+            .filter { shouldShowAccountKeyInPicker($0, names: names) }
+        let accountsByKey = deduplicatedAccountsByKey
+        let snapshotsByKey = latestSnapshotByKey
+        let recordsByKey = latestRecordByKey
+        let metricsByKey = Dictionary(uniqueKeysWithValues: keys.map { key in
+            (
+                key,
+                accountMetrics(
+                    for: key,
+                    names: names,
+                    accountsByKey: accountsByKey,
+                    snapshotsByKey: snapshotsByKey,
+                    recordsByKey: recordsByKey
+                )
+            )
+        })
+        return keys.sorted { lhs, rhs in
+            accountKeySortComparator(lhs, rhs, metricsByKey: metricsByKey)
+        }
+    }
+
+    private func shouldShowAccountKeyInPicker(_ key: String, names: [String: String]) -> Bool {
+        if names[key] != nil {
+            return true
+        }
+
+        // Older analytics snapshots may contain internal identity keys. Keep them in history,
+        // but do not expose raw implementation details in the account picker.
+        return !isInternalAnalyticsAccountKey(key)
+    }
+
+    private func isInternalAnalyticsAccountKey(_ key: String) -> Bool {
+        key.hasPrefix("account:") || key.contains("|scope:")
     }
 
     private var latestSnapshotByKey: [String: UsageAnalyticsAccountSnapshot] {
@@ -4527,45 +4569,92 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         }
     }
 
-    private func accountMetrics(for key: String) -> (
-        name: String,
-        weeklyUsage: Int,
-        fiveHourUsage: Int,
-        weeklyRemaining: Int,
-        fiveHourRemaining: Int
-    ) {
-        let name = accountNameByKey[key] ?? key
+    private func accountMetrics(for key: String) -> AccountAnalyticsMetrics {
+        accountMetrics(
+            for: key,
+            names: accountNameByKey,
+            accountsByKey: deduplicatedAccountsByKey,
+            snapshotsByKey: latestSnapshotByKey,
+            recordsByKey: latestRecordByKey
+        )
+    }
 
-        if let account = deduplicatedAccountsByKey[key] {
+    private func accountMetrics(
+        for key: String,
+        names: [String: String],
+        accountsByKey: [String: AgentAccount],
+        snapshotsByKey: [String: UsageAnalyticsAccountSnapshot],
+        recordsByKey: [String: UsageAnalyticsRecord]
+    ) -> AccountAnalyticsMetrics {
+        let name = names[key] ?? key
+
+        if let account = accountsByKey[key] {
             let weeklyUsage = account.secondaryUsagePercent ?? max(0, min(100, Int((account.usageRatio * 100).rounded())))
             let fiveHourUsage = account.primaryUsagePercent ?? -1
             let weeklyRemaining = max(0, min(100, Int((account.remainingRatio * 100).rounded())))
             let fiveHourRemaining = account.primaryUsagePercent.map { max(0, 100 - min(max($0, 0), 100)) } ?? -1
-            return (name, weeklyUsage, fiveHourUsage, weeklyRemaining, fiveHourRemaining)
+            return AccountAnalyticsMetrics(
+                name: name,
+                weeklyUsage: weeklyUsage,
+                fiveHourUsage: fiveHourUsage,
+                weeklyRemaining: weeklyRemaining,
+                fiveHourRemaining: fiveHourRemaining
+            )
         }
 
-        if let snapshot = latestSnapshotByKey[key] {
+        if let snapshot = snapshotsByKey[key] {
             let weeklyUsage = max(0, min(100, snapshot.lastWeeklyPercent))
             let fiveHourUsage = snapshot.lastFiveHourPercent.map { max(0, min(100, $0)) } ?? -1
             let weeklyRemaining = max(0, 100 - weeklyUsage)
             let fiveHourRemaining = fiveHourUsage >= 0 ? max(0, 100 - fiveHourUsage) : -1
-            return (name, weeklyUsage, fiveHourUsage, weeklyRemaining, fiveHourRemaining)
+            return AccountAnalyticsMetrics(
+                name: name,
+                weeklyUsage: weeklyUsage,
+                fiveHourUsage: fiveHourUsage,
+                weeklyRemaining: weeklyRemaining,
+                fiveHourRemaining: fiveHourRemaining
+            )
         }
 
-        if let record = latestRecordByKey[key] {
+        if let record = recordsByKey[key] {
             let weeklyUsage = max(0, min(100, record.weeklyAbsolutePercent))
             let fiveHourUsage = record.fiveHourAbsolutePercent.map { max(0, min(100, $0)) } ?? -1
             let weeklyRemaining = max(0, min(100, record.weeklyRemainingPercent))
             let fiveHourRemaining = record.fiveHourRemainingPercent.map { max(0, min(100, $0)) } ?? -1
-            return (name, weeklyUsage, fiveHourUsage, weeklyRemaining, fiveHourRemaining)
+            return AccountAnalyticsMetrics(
+                name: name,
+                weeklyUsage: weeklyUsage,
+                fiveHourUsage: fiveHourUsage,
+                weeklyRemaining: weeklyRemaining,
+                fiveHourRemaining: fiveHourRemaining
+            )
         }
 
-        return (name, 0, -1, 0, -1)
+        return AccountAnalyticsMetrics(
+            name: name,
+            weeklyUsage: 0,
+            fiveHourUsage: -1,
+            weeklyRemaining: 0,
+            fiveHourRemaining: -1
+        )
     }
 
     private func accountKeySortComparator(_ lhs: String, _ rhs: String) -> Bool {
-        let left = accountMetrics(for: lhs)
-        let right = accountMetrics(for: rhs)
+        let metricsByKey = [
+            lhs: accountMetrics(for: lhs),
+            rhs: accountMetrics(for: rhs)
+        ]
+        return accountKeySortComparator(lhs, rhs, metricsByKey: metricsByKey)
+    }
+
+    private func accountKeySortComparator(
+        _ lhs: String,
+        _ rhs: String,
+        metricsByKey: [String: AccountAnalyticsMetrics]
+    ) -> Bool {
+        guard let left = metricsByKey[lhs], let right = metricsByKey[rhs] else {
+            return lhs < rhs
+        }
 
         func compareDescending(_ leftValue: Int, _ rightValue: Int) -> Bool? {
             if leftValue != rightValue {
@@ -4616,6 +4705,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             }
             return values.map { daily in
                 ChartEntry(
+                    id: "daily-\(analysisBasis.rawValue)-\(Int(daily.date.timeIntervalSince1970))",
                     label: daily.date.formatted(.dateTime.locale(L10n.locale()).weekday(.abbreviated)),
                     value: daily.totalWeeklyPercent
                 )
@@ -4634,6 +4724,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             }
             return values.map { weekly in
                 ChartEntry(
+                    id: "weekly-\(analysisBasis.rawValue)-\(Int(weekly.weekStartDate.timeIntervalSince1970))",
                     label: weeklyLabel(weekly.weekStartDate),
                     value: weekly.totalWeeklyPercent
                 )
@@ -4856,11 +4947,12 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                 } else {
                     chartView
                     insightsView
-                    operationsView
-                    coverageAndSwitchView
-                    recommendationView
-                    thresholdAndAnomalyView
-                    etaView
+                    UsageAnalyticsStableDetailSectionsView(
+                        analyticsState: analyticsState,
+                        accounts: accounts,
+                        selectedAccountKey: selectedAccountKey
+                    )
+                    .equatable()
                 }
             }
         }
@@ -4956,6 +5048,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     }
 
     private var chartView: some View {
+        let entries = chartEntries
+
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 8) {
                 Text(
@@ -5017,7 +5111,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             }
 
             GeometryReader { geometry in
-                let points = chartPoints(for: chartEntries, in: geometry.size)
+                let points = chartPoints(for: entries, in: geometry.size)
 
                 ZStack {
                     // horizontal guides for easier trend reading
@@ -5064,7 +5158,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             .frame(height: 120)
 
             HStack(alignment: .bottom, spacing: 8) {
-                ForEach(chartEntries) { entry in
+                ForEach(entries) { entry in
                     VStack(spacing: 4) {
                         Text(entry.label)
                             .font(.caption2)
@@ -5699,6 +5793,408 @@ private struct UsageAnalyticsWorkspacePanelView: View {
         }
 
         return averageWeeklyRemainingPercent
+    }
+
+    private func copyJSONReportToClipboard() {
+        let report = UsageAnalyticsEngine.jsonReport(
+            state: analyticsState,
+            accounts: accounts,
+            activeAccountKey: analyticsState.lastActiveAccountKey,
+            now: Date()
+        )
+        #if canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
+        exportStatus = (L10n.text("usage_analytics.export.success.copy_json"), .success)
+        #else
+        exportStatus = (L10n.text("usage_analytics.export.failure.copy_json"), .danger)
+        #endif
+    }
+
+    private func exportCSVReport() {
+        let content = UsageAnalyticsEngine.csvReport(state: analyticsState, accounts: accounts)
+        let success = saveReport(
+            content: content,
+            filename: "usage-analytics-\(timestampForFilename())",
+            fileExtension: "csv"
+        )
+        exportStatus = (
+            success ? L10n.text("usage_analytics.export.success.csv") : L10n.text("usage_analytics.export.failure.csv"),
+            success ? .success : .danger
+        )
+    }
+
+    private func exportJSONReport() {
+        let content = UsageAnalyticsEngine.jsonReport(
+            state: analyticsState,
+            accounts: accounts,
+            activeAccountKey: analyticsState.lastActiveAccountKey,
+            now: Date()
+        )
+        let success = saveReport(
+            content: content,
+            filename: "usage-analytics-\(timestampForFilename())",
+            fileExtension: "json"
+        )
+        exportStatus = (
+            success ? L10n.text("usage_analytics.export.success.json") : L10n.text("usage_analytics.export.failure.json"),
+            success ? .success : .danger
+        )
+    }
+
+    private func saveReport(content: String, filename: String, fileExtension: String) -> Bool {
+        #if canImport(AppKit)
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "\(filename).\(fileExtension)"
+        if #available(macOS 12.0, *) {
+            if let contentType = UTType(filenameExtension: fileExtension) {
+                panel.allowedContentTypes = [contentType]
+            }
+        } else {
+            panel.allowedFileTypes = [fileExtension]
+        }
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return false
+        }
+
+        do {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+            return true
+        } catch {
+            return false
+        }
+        #else
+        return false
+        #endif
+    }
+
+    private func timestampForFilename() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter.string(from: Date())
+    }
+}
+
+private struct UsageAnalyticsStableDetailSectionsView: View, Equatable {
+    let analyticsState: UsageAnalyticsState
+    let accounts: [AgentAccount]
+    let selectedAccountKey: String?
+    @State private var exportStatus: (message: String, tone: PanelStatusCalloutView.Tone)? = nil
+
+    static func == (lhs: UsageAnalyticsStableDetailSectionsView, rhs: UsageAnalyticsStableDetailSectionsView) -> Bool {
+        lhs.renderIdentity == rhs.renderIdentity
+    }
+
+    private var renderIdentity: String {
+        [
+            selectedAccountKey ?? "all",
+            String(analyticsState.records.count),
+            String(analyticsState.snapshots.count),
+            String(analyticsState.thresholdEvents.count),
+            String(analyticsState.switchEvents.count),
+            analyticsState.lastUpdatedAt?.timeIntervalSince1970.description ?? "never",
+            String(accounts.count),
+            accounts.map { "\($0.deduplicationKey)=\($0.name)" }.joined(separator: "|")
+        ].joined(separator: "#")
+    }
+
+    var body: some View {
+        operationsView
+        coverageAndSwitchView
+        recommendationView
+        thresholdAndAnomalyView
+        etaView
+    }
+
+    private var accountNameByKey: [String: String] {
+        var mapping: [String: String] = [:]
+        for account in accounts where mapping[account.deduplicationKey] == nil {
+            mapping[account.deduplicationKey] = account.name
+        }
+        return mapping
+    }
+
+    private var etasByAccountKey: [String: UsageAnalyticsETA] {
+        UsageAnalyticsEngine.etas(
+            accounts: accounts,
+            state: analyticsState,
+            now: Date()
+        )
+    }
+
+    private var sortedETAs: [UsageAnalyticsETA] {
+        etasByAccountKey
+            .values
+            .sorted { lhs, rhs in
+                if lhs.remainingPercent != rhs.remainingPercent {
+                    return lhs.remainingPercent > rhs.remainingPercent
+                }
+                return lhs.accountKey.localizedCaseInsensitiveCompare(rhs.accountKey) == .orderedAscending
+            }
+    }
+
+    private var displayedETAs: [UsageAnalyticsETA] {
+        if let selectedAccountKey {
+            return sortedETAs.filter { $0.accountKey == selectedAccountKey }
+        }
+        return Array(sortedETAs.prefix(6))
+    }
+
+    private var thresholdEvents: [UsageAnalyticsThresholdEvent] {
+        UsageAnalyticsEngine.thresholdTimeline(
+            for: analyticsState,
+            accountKey: selectedAccountKey,
+            limit: 8
+        )
+    }
+
+    private var switchEffectiveness: UsageAnalyticsSwitchEffectiveness {
+        UsageAnalyticsEngine.switchEffectiveness(for: analyticsState)
+    }
+
+    private var coverageSummary: UsageAnalyticsCoverageSummary {
+        UsageAnalyticsEngine.projectedCoverage(accounts: accounts, now: Date())
+    }
+
+    private var anomalyEvents: [UsageAnalyticsAnomaly] {
+        UsageAnalyticsEngine.anomalies(
+            state: analyticsState,
+            accounts: accounts,
+            now: Date()
+        )
+    }
+
+    private var recommendation: UsageAnalyticsRecommendation {
+        UsageAnalyticsEngine.recommendation(
+            accounts: accounts,
+            activeAccountKey: analyticsState.lastActiveAccountKey,
+            etasByAccountKey: etasByAccountKey
+        )
+    }
+
+    private var operationsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(L10n.text("usage_analytics.section.export"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                Spacer(minLength: 0)
+
+                Button(L10n.text("usage_analytics.export.copy_json")) {
+                    copyJSONReportToClipboard()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L10n.text("usage_analytics.export.csv")) {
+                    exportCSVReport()
+                }
+                .buttonStyle(.bordered)
+
+                Button(L10n.text("usage_analytics.export.json")) {
+                    exportJSONReport()
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let exportStatus {
+                PanelStatusCalloutView(
+                    message: exportStatus.message,
+                    tone: exportStatus.tone
+                )
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private var coverageAndSwitchView: some View {
+        HStack(spacing: 8) {
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.coverage"),
+                value: ratioText(coverageSummary.coveredRatio)
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.uncovered_slots"),
+                value: "\(coverageSummary.uncoveredSlots)/\(coverageSummary.totalSlots)"
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.switch_gain"),
+                value: String(format: "%.1f%%", switchEffectiveness.averageRemainingGain)
+            )
+            summaryCard(
+                title: L10n.text("usage_analytics.summary.switch_improved"),
+                value: ratioText(switchEffectiveness.improvedRate)
+            )
+        }
+    }
+
+    private var recommendationView: some View {
+        let targetName = recommendation.targetAccountKey.flatMap { accountNameByKey[$0] ?? $0 }
+        let titleKey = targetName == nil ? "usage_analytics.recommendation.none" : "usage_analytics.recommendation.title"
+        let message = targetName.map { "\($0) · \(recommendation.reason)" } ?? recommendation.reason
+        return PanelStatusCalloutView(
+            message: message,
+            title: L10n.text(titleKey),
+            tone: recommendation.targetAccountKey == nil ? .info : .success
+        )
+    }
+
+    private var thresholdAndAnomalyView: some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.text("usage_analytics.section.thresholds"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                if thresholdEvents.isEmpty {
+                    Text(L10n.text("usage_analytics.empty_thresholds"))
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                } else {
+                    ForEach(thresholdEvents) { event in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(thresholdEventHeadline(event))
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            Text(thresholdEventDetail(event))
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dashboardInfoCard()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.text("usage_analytics.section.anomalies"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                if anomalyEvents.isEmpty {
+                    Text(L10n.text("usage_analytics.empty_anomalies"))
+                        .font(.footnote)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                } else {
+                    ForEach(anomalyEvents.prefix(6)) { event in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.title)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(anomalyColor(for: event.severity))
+                            Text(event.detail)
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dashboardInfoCard()
+        }
+    }
+
+    private var etaView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("usage_analytics.section.eta"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            if sortedETAs.isEmpty {
+                Text(L10n.text("usage_analytics.empty_eta"))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            } else {
+                ForEach(displayedETAs, id: \.accountKey) { eta in
+                    HStack(alignment: .center, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(accountNameByKey[eta.accountKey] ?? eta.accountKey)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                                .lineLimit(1)
+                            Text(etaSubtitle(eta))
+                                .font(.caption)
+                                .foregroundStyle(PoolDashboardTheme.textMuted)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        Text(etaValueText(eta))
+                            .font(.footnote.weight(.bold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+        .dashboardInfoCard()
+    }
+
+    private func summaryCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dashboardInfoCard()
+    }
+
+    private func thresholdEventHeadline(_ event: UsageAnalyticsThresholdEvent) -> String {
+        let kind = event.kind == .weekly
+            ? L10n.text("usage_analytics.threshold.weekly")
+            : L10n.text("usage_analytics.threshold.five_hour")
+        let account = accountNameByKey[event.accountKey] ?? event.accountKey
+        return L10n.text("usage_analytics.threshold.headline", account, kind, event.thresholdPercent)
+    }
+
+    private func thresholdEventDetail(_ event: UsageAnalyticsThresholdEvent) -> String {
+        let previous = L10n.text("usage_analytics.percent_format", event.previousRemainingPercent)
+        let current = L10n.text("usage_analytics.percent_format", event.currentRemainingPercent)
+        let time = event.timestamp.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+        return L10n.text("usage_analytics.threshold.detail", previous, current, time)
+    }
+
+    private func anomalyColor(for severity: UsageAnalyticsAnomaly.Severity) -> Color {
+        switch severity {
+        case .critical:
+            return PoolDashboardTheme.danger
+        case .warning:
+            return PoolDashboardTheme.warning
+        case .info:
+            return PoolDashboardTheme.textSecondary
+        }
+    }
+
+    private func etaSubtitle(_ eta: UsageAnalyticsETA) -> String {
+        let remaining = L10n.text("usage_analytics.percent_format", eta.remainingPercent)
+        return L10n.text(
+            "usage_analytics.eta.subtitle",
+            remaining,
+            String(format: "%.1f", eta.burnPerHour)
+        )
+    }
+
+    private func etaValueText(_ eta: UsageAnalyticsETA) -> String {
+        guard let hours = eta.etaHours else {
+            return L10n.text("usage_analytics.not_available")
+        }
+        if hours < 1 {
+            return L10n.text("usage_analytics.eta.less_than_hour")
+        }
+        return L10n.text("usage_analytics.eta.hours", Int(hours.rounded()))
+    }
+
+    private func ratioText(_ ratio: Double) -> String {
+        "\(Int((ratio * 100).rounded()))%"
     }
 
     private func copyJSONReportToClipboard() {
