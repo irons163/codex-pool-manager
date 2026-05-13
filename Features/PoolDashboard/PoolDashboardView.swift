@@ -1332,8 +1332,77 @@ struct PoolDashboardView: View {
             showUsageRawJSON: $viewState.showUsageRawJSON,
             lastUsageRawJSON: $viewState.lastUsageRawJSON,
             showSwitchLaunchLog: $viewState.showSwitchLaunchLog,
-            lastSwitchLaunchLog: $viewState.lastSwitchLaunchLog
+            lastSwitchLaunchLog: $viewState.lastSwitchLaunchLog,
+            diagnostics: debugDiagnostics
         )
+    }
+
+    private var debugDiagnostics: [DebugDiagnosticMetric] {
+        let tokenStorage = activeTokenStorage()
+        let accountIDs = Set(state.accounts.map { $0.id.uuidString })
+        let orphanTokenCount = tokenStorage.keys.filter { !accountIDs.contains($0) }.count
+
+        return [
+            DebugDiagnosticMetric(
+                id: "accounts",
+                title: L10n.text("debug_tools.metric.accounts"),
+                value: "\(state.accounts.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "tokens",
+                title: L10n.text("debug_tools.metric.tokens"),
+                value: "\(tokenStorage.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "orphan_tokens",
+                title: L10n.text("debug_tools.metric.orphan_tokens"),
+                value: "\(orphanTokenCount)"
+            ),
+            DebugDiagnosticMetric(
+                id: "activities",
+                title: L10n.text("debug_tools.metric.activities"),
+                value: "\(state.activities.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "analytics_records",
+                title: L10n.text("debug_tools.metric.analytics_records"),
+                value: "\(usageAnalyticsState.records.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "analytics_snapshots",
+                title: L10n.text("debug_tools.metric.analytics_snapshots"),
+                value: "\(usageAnalyticsState.snapshots.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "reset_watch",
+                title: L10n.text("debug_tools.metric.reset_watch"),
+                value: "\(specialResetWatchState.records.count)/\(specialResetWatchState.events.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "local_oauth",
+                title: L10n.text("debug_tools.metric.local_oauth"),
+                value: "\(localOAuthImportViewModel.accounts.count)"
+            ),
+            DebugDiagnosticMetric(
+                id: "raw_json",
+                title: L10n.text("debug_tools.metric.raw_json"),
+                value: byteCountText(viewState.lastUsageRawJSON)
+            ),
+            DebugDiagnosticMetric(
+                id: "backup_json",
+                title: L10n.text("debug_tools.metric.backup_json"),
+                value: byteCountText(viewState.backupJSON)
+            )
+        ]
+    }
+
+    private func activeTokenStorage() -> [String: String] {
+        let key = isDebugBuild && developerMockModeEnabled ? Self.developerTokenKey : Self.productionTokenKey
+        return UserDefaults.standard.dictionary(forKey: key) as? [String: String] ?? [:]
+    }
+
+    private func byteCountText(_ value: String) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(value.utf8.count), countStyle: .memory)
     }
 
     @ViewBuilder
@@ -1372,6 +1441,7 @@ struct PoolDashboardView: View {
             currentAuthorizedAuthFileURL: sessionAuthorizedAuthFileURL
         )
         applyLifecycleOnAppearOutput(output)
+        store.save(state.snapshot)
         evaluateSpecialResetWatchAfterSync(now: .now)
         seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
@@ -4882,6 +4952,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                             Text(L10n.text("usage_analytics.basis.wasted")).tag(AnalysisBasis.wasted)
                             Text(L10n.text("usage_analytics.basis.delay")).tag(AnalysisBasis.delay)
                         }
+                        .labelsHidden()
                         .pickerStyle(.segmented)
                         .frame(maxWidth: 460)
                     }

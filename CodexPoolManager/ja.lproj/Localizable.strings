@@ -546,3 +546,14 @@
 "schedule.plan.progress.no_today_plan" = "今日はアカウント予算が割り当てられていません。";
 "schedule.plan.callout.unplanned.title" = "今日の計画なし";
 "schedule.plan.callout.unplanned.message" = "%@ にはまだアカウント予算がありません。";
+"debug_tools.memory_storage" = "メモリ / ストレージ診断";
+"debug_tools.metric.accounts" = "アカウント";
+"debug_tools.metric.tokens" = "保存済みトークン";
+"debug_tools.metric.orphan_tokens" = "孤立トークン";
+"debug_tools.metric.activities" = "アクティビティ";
+"debug_tools.metric.analytics_records" = "分析レコード";
+"debug_tools.metric.analytics_snapshots" = "分析スナップショット";
+"debug_tools.metric.reset_watch" = "Reset 監視レコード/イベント";
+"debug_tools.metric.local_oauth" = "ローカル OAuth アカウント";
+"debug_tools.metric.raw_json" = "Raw JSON バッファ";
+"debug_tools.metric.backup_json" = "バックアップ JSON バッファ";

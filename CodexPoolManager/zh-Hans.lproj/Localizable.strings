@@ -547,3 +547,14 @@
 "schedule.plan.progress.no_today_plan" = "今天尚未分配任何账号预算。";
 "schedule.plan.callout.unplanned.title" = "今天尚未规划";
 "schedule.plan.callout.unplanned.message" = "%@ 尚未分配账号预算。";
+"debug_tools.memory_storage" = "内存 / 存储诊断";
+"debug_tools.metric.accounts" = "账号";
+"debug_tools.metric.tokens" = "已存 Token";
+"debug_tools.metric.orphan_tokens" = "孤儿 Token";
+"debug_tools.metric.activities" = "活动记录";
+"debug_tools.metric.analytics_records" = "分析记录";
+"debug_tools.metric.analytics_snapshots" = "分析快照";
+"debug_tools.metric.reset_watch" = "Reset 监测记录/事件";
+"debug_tools.metric.local_oauth" = "本机 OAuth 账号";
+"debug_tools.metric.raw_json" = "Raw JSON 暂存";
+"debug_tools.metric.backup_json" = "备份 JSON 暂存";

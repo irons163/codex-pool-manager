@@ -1,10 +1,17 @@
 import SwiftUI
 
+struct DebugDiagnosticMetric: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let value: String
+}
+
 struct DebugToolsPanelView: View {
     @Binding var showUsageRawJSON: Bool
     @Binding var lastUsageRawJSON: String
     @Binding var showSwitchLaunchLog: Bool
     @Binding var lastSwitchLaunchLog: String
+    let diagnostics: [DebugDiagnosticMetric]
 
     var body: some View {
         GroupBox(L10n.text("debug_tools.title")) {
@@ -14,6 +21,10 @@ struct DebugToolsPanelView: View {
                     title: L10n.text("debug_tools.warning.title"),
                     tone: .warning
                 )
+
+                if !diagnostics.isEmpty {
+                    diagnosticsGrid
+                }
 
                 debugDisclosure(
                     title: L10n.text("debug_tools.usage_raw_json"),
@@ -34,6 +45,33 @@ struct DebugToolsPanelView: View {
         }
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
+    }
+
+    private var diagnosticsGrid: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("debug_tools.memory_storage"))
+                .font(.headline)
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 150), spacing: 10)],
+                alignment: .leading,
+                spacing: 10
+            ) {
+                ForEach(diagnostics) { metric in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(metric.title)
+                            .font(.caption)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
+                        Text(metric.value)
+                            .font(.headline.monospacedDigit())
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(PoolDashboardTheme.panelFill.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
     }
 
     private func debugDisclosure(

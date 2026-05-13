@@ -40,6 +40,7 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
                 tokenVault.setToken(account.apiToken, for: account.id)
             }
         }
+        tokenVault.pruneTokens(keeping: Set(snapshot.accounts.map(\.id)))
 
         let redacted = snapshot.redactingAPITokens()
 

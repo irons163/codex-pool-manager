@@ -555,3 +555,14 @@
 "schedule.plan.progress.no_today_plan" = "No account budget is assigned for today.";
 "schedule.plan.callout.unplanned.title" = "No plan for today";
 "schedule.plan.callout.unplanned.message" = "%@ has no assigned account budget yet.";
+"debug_tools.memory_storage" = "Memory / Storage Diagnostics";
+"debug_tools.metric.accounts" = "Accounts";
+"debug_tools.metric.tokens" = "Stored Tokens";
+"debug_tools.metric.orphan_tokens" = "Orphan Tokens";
+"debug_tools.metric.activities" = "Activities";
+"debug_tools.metric.analytics_records" = "Analytics Records";
+"debug_tools.metric.analytics_snapshots" = "Analytics Snapshots";
+"debug_tools.metric.reset_watch" = "Reset Watch Records/Events";
+"debug_tools.metric.local_oauth" = "Local OAuth Accounts";
+"debug_tools.metric.raw_json" = "Raw JSON Buffer";
+"debug_tools.metric.backup_json" = "Backup JSON Buffer";

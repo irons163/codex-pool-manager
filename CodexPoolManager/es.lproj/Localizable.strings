@@ -546,3 +546,14 @@
 "schedule.plan.progress.no_today_plan" = "No hay presupuesto de cuenta asignado para hoy.";
 "schedule.plan.callout.unplanned.title" = "Sin plan para hoy";
 "schedule.plan.callout.unplanned.message" = "%@ aún no tiene presupuesto de cuenta asignado.";
+"debug_tools.memory_storage" = "Diagnóstico de memoria / almacenamiento";
+"debug_tools.metric.accounts" = "Cuentas";
+"debug_tools.metric.tokens" = "Tokens guardados";
+"debug_tools.metric.orphan_tokens" = "Tokens huérfanos";
+"debug_tools.metric.activities" = "Actividades";
+"debug_tools.metric.analytics_records" = "Registros de análisis";
+"debug_tools.metric.analytics_snapshots" = "Instantáneas de análisis";
+"debug_tools.metric.reset_watch" = "Registros/eventos Reset Watch";
+"debug_tools.metric.local_oauth" = "Cuentas OAuth locales";
+"debug_tools.metric.raw_json" = "Búfer JSON bruto";
+"debug_tools.metric.backup_json" = "Búfer JSON de respaldo";

@@ -3096,6 +3096,51 @@ struct CodexPoolManagerTests {
         #expect(vault.token(for: accountID) == nil)
         defaults.removePersistentDomain(forName: suiteName)
     }
+
+    @Test
+    func userDefaultsStoreSavePrunesTokensForDeletedAccounts() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let keptAccountID = UUID()
+        let deletedAccountID = UUID()
+        vault.setToken("kept-token", for: keptAccountID)
+        vault.setToken("deleted-token", for: deletedAccountID)
+
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: keptAccountID,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "kept-token",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: keptAccountID,
+            manualAccountID: keptAccountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+
+        #expect(vault.token(for: keptAccountID) == "kept-token")
+        #expect(vault.token(for: deletedAccountID) == nil)
+        #expect(vault.tokenCount == 1)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
 }
 
 extension CodexPoolManagerTests {

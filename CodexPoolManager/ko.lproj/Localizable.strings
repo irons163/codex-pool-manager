@@ -546,3 +546,14 @@
 "schedule.plan.progress.no_today_plan" = "오늘 배정된 계정 예산이 없습니다.";
 "schedule.plan.callout.unplanned.title" = "오늘 계획 없음";
 "schedule.plan.callout.unplanned.message" = "%@에 아직 계정 예산이 없습니다.";
+"debug_tools.memory_storage" = "메모리 / 저장소 진단";
+"debug_tools.metric.accounts" = "계정";
+"debug_tools.metric.tokens" = "저장된 토큰";
+"debug_tools.metric.orphan_tokens" = "고아 토큰";
+"debug_tools.metric.activities" = "활동 기록";
+"debug_tools.metric.analytics_records" = "분석 기록";
+"debug_tools.metric.analytics_snapshots" = "분석 스냅샷";
+"debug_tools.metric.reset_watch" = "Reset 감시 기록/이벤트";
+"debug_tools.metric.local_oauth" = "로컬 OAuth 계정";
+"debug_tools.metric.raw_json" = "Raw JSON 버퍼";
+"debug_tools.metric.backup_json" = "백업 JSON 버퍼";

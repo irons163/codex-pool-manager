@@ -547,3 +547,14 @@
 "schedule.plan.progress.no_today_plan" = "今天尚未分配任何帳號預算。";
 "schedule.plan.callout.unplanned.title" = "今天尚未規劃";
 "schedule.plan.callout.unplanned.message" = "%@ 尚未分配帳號預算。";
+"debug_tools.memory_storage" = "記憶體 / 儲存診斷";
+"debug_tools.metric.accounts" = "帳號";
+"debug_tools.metric.tokens" = "已存 Token";
+"debug_tools.metric.orphan_tokens" = "孤兒 Token";
+"debug_tools.metric.activities" = "活動紀錄";
+"debug_tools.metric.analytics_records" = "分析紀錄";
+"debug_tools.metric.analytics_snapshots" = "分析快照";
+"debug_tools.metric.reset_watch" = "Reset 監測紀錄/事件";
+"debug_tools.metric.local_oauth" = "本機 OAuth 帳號";
+"debug_tools.metric.raw_json" = "Raw JSON 暫存";
+"debug_tools.metric.backup_json" = "備份 JSON 暫存";
