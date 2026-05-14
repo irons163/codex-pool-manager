@@ -486,6 +486,7 @@ struct PoolDashboardView: View {
         }
         .onChange(of: selectedWorkspace) { _, _ in
             ensureUsageAnalyticsStateLoadedIfNeeded()
+            releaseUsageAnalyticsStateIfPossible()
         }
         .onChange(of: appLanguageOverride) { _, value in
             let normalized = L10n.normalizedLanguageOverrideCode(value)
@@ -648,6 +649,7 @@ struct PoolDashboardView: View {
 
             ScrollView(showsIndicators: false) {
                 workspaceContent
+                    .id(selectedWorkspace.id)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
             }
@@ -757,18 +759,11 @@ struct PoolDashboardView: View {
             )
 
             if hasWorkspaceContextPanel {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
-                        workspaceMainPanel
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                        workspaceContextPanel
-                            .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
-                    }
-
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                        workspaceMainPanel
-                        workspaceContextPanel
-                    }
+                HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                    workspaceMainPanel
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    workspaceContextPanel
+                        .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
                 }
             } else {
                 workspaceMainPanel
@@ -2640,6 +2635,12 @@ struct PoolDashboardView: View {
     private func ensureUsageAnalyticsStateLoaded() {
         guard !usageAnalyticsStateLoaded else { return }
         loadUsageAnalyticsStateFromStorage()
+    }
+
+    private func releaseUsageAnalyticsStateIfPossible() {
+        guard !selectedWorkspaceUsesUsageAnalytics else { return }
+        usageAnalyticsState = UsageAnalyticsState()
+        usageAnalyticsStateLoaded = false
     }
 
     private func loadUsageAnalyticsStateFromStorage() {
