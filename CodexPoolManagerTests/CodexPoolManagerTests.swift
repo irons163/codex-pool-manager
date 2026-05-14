@@ -960,6 +960,27 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsNormalizesRecordsToStorageCap() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let records = (0..<(UsageAnalyticsEngine.maxStoredRecords + 25)).map { offset in
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(TimeInterval(-offset)),
+                accountKey: "account-\(offset)",
+                weeklyDeltaPercent: 1,
+                fiveHourDeltaPercent: 0
+            )
+        }
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let normalized = UsageAnalyticsEngine.normalized(state: state, now: now, calendar: calendar)
+
+        #expect(normalized.records.count == UsageAnalyticsEngine.maxStoredRecords)
+        #expect(normalized.records.first?.timestamp == now)
+        #expect(normalized.records.last?.timestamp == now.addingTimeInterval(TimeInterval(-(UsageAnalyticsEngine.maxStoredRecords - 1))))
+    }
+
+    @Test
     func usageAnalyticsUpdateHandlesDuplicateAccountKeysWithoutCrash() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let duplicateKey = "account:user-duplicate"

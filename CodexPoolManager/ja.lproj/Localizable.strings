@@ -557,3 +557,4 @@
 "debug_tools.metric.local_oauth" = "ローカル OAuth アカウント";
 "debug_tools.metric.raw_json" = "Raw JSON バッファ";
 "debug_tools.metric.backup_json" = "バックアップ JSON バッファ";
+"debug_tools.metric.lazy" = "遅延読み込み";

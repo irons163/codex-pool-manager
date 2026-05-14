@@ -566,3 +566,4 @@
 "debug_tools.metric.local_oauth" = "Local OAuth Accounts";
 "debug_tools.metric.raw_json" = "Raw JSON Buffer";
 "debug_tools.metric.backup_json" = "Backup JSON Buffer";
+"debug_tools.metric.lazy" = "Lazy";

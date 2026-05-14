@@ -257,6 +257,7 @@ struct PoolDashboardView: View {
     @State private var oauthSignInTask: Task<Void, Never>?
     @State private var specialResetWatchState = SpecialResetWatchState()
     @State private var usageAnalyticsState = UsageAnalyticsState()
+    @State private var usageAnalyticsStateLoaded = false
     @State private var appUpdateAvailablePrompt: AppUpdatePrompt?
     @State private var appUpdatePrompt: AppUpdatePrompt?
     @State private var isCheckingForAppUpdate = false
@@ -482,6 +483,9 @@ struct PoolDashboardView: View {
             } else if !groups.contains(selectedGroupName) {
                 selectedGroupName = groups[0]
             }
+        }
+        .onChange(of: selectedWorkspace) { _, _ in
+            ensureUsageAnalyticsStateLoadedIfNeeded()
         }
         .onChange(of: appLanguageOverride) { _, value in
             let normalized = L10n.normalizedLanguageOverrideCode(value)
@@ -1107,6 +1111,9 @@ struct PoolDashboardView: View {
             accounts: state.accounts,
             analyticsState: usageAnalyticsState
         )
+        .onAppear {
+            ensureUsageAnalyticsStateLoaded()
+        }
     }
 
     private var usageAnalyticsPanel: some View {
@@ -1115,6 +1122,9 @@ struct PoolDashboardView: View {
             accounts: state.accounts,
             onClearIdleDelay: clearUsageAnalyticsIdleDelay
         )
+        .onAppear {
+            ensureUsageAnalyticsStateLoaded()
+        }
     }
 
     private var specialResetWatchPanel: some View {
@@ -1366,12 +1376,12 @@ struct PoolDashboardView: View {
             DebugDiagnosticMetric(
                 id: "analytics_records",
                 title: L10n.text("debug_tools.metric.analytics_records"),
-                value: "\(usageAnalyticsState.records.count)"
+                value: usageAnalyticsStateLoaded ? "\(usageAnalyticsState.records.count)" : L10n.text("debug_tools.metric.lazy")
             ),
             DebugDiagnosticMetric(
                 id: "analytics_snapshots",
                 title: L10n.text("debug_tools.metric.analytics_snapshots"),
-                value: "\(usageAnalyticsState.snapshots.count)"
+                value: usageAnalyticsStateLoaded ? "\(usageAnalyticsState.snapshots.count)" : L10n.text("debug_tools.metric.lazy")
             ),
             DebugDiagnosticMetric(
                 id: "reset_watch",
@@ -1430,7 +1440,7 @@ struct PoolDashboardView: View {
         migrateAppearancePreferenceIfNeeded()
         migrateSpecialResetGraceMinutesIfNeeded()
         loadSpecialResetWatchStateFromStorage()
-        loadUsageAnalyticsStateFromStorage()
+        ensureUsageAnalyticsStateLoadedIfNeeded()
         DesktopNotifier.requestAuthorizationIfNeeded()
 
         let output = lifecycleFlowCoordinator.onAppear(
@@ -1474,6 +1484,8 @@ struct PoolDashboardView: View {
         lowUsageAlertPolicy = LowUsageAlertPolicy()
         viewState.showLowUsageAlert = false
         viewState.lowUsageAlertMessage = nil
+        usageAnalyticsState = UsageAnalyticsState()
+        usageAnalyticsStateLoaded = false
         seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
     }
@@ -2616,15 +2628,35 @@ struct PoolDashboardView: View {
 
     // MARK: - Usage Analytics
 
+    private var selectedWorkspaceUsesUsageAnalytics: Bool {
+        selectedWorkspace == .schedule || selectedWorkspace == .usageAnalytics
+    }
+
+    private func ensureUsageAnalyticsStateLoadedIfNeeded() {
+        guard selectedWorkspaceUsesUsageAnalytics else { return }
+        ensureUsageAnalyticsStateLoaded()
+    }
+
+    private func ensureUsageAnalyticsStateLoaded() {
+        guard !usageAnalyticsStateLoaded else { return }
+        loadUsageAnalyticsStateFromStorage()
+    }
+
     private func loadUsageAnalyticsStateFromStorage() {
         guard !usageAnalyticsStateRaw.isEmpty,
               let data = usageAnalyticsStateRaw.data(using: .utf8),
               let decoded = try? JSONDecoder().decode(UsageAnalyticsState.self, from: data)
         else {
             usageAnalyticsState = UsageAnalyticsState()
+            usageAnalyticsStateLoaded = true
             return
         }
-        usageAnalyticsState = decoded
+        let normalized = UsageAnalyticsEngine.normalized(state: decoded, now: .now)
+        usageAnalyticsState = normalized
+        usageAnalyticsStateLoaded = true
+        if normalized != decoded {
+            persistUsageAnalyticsState()
+        }
     }
 
     private func persistUsageAnalyticsState() {
@@ -2637,6 +2669,7 @@ struct PoolDashboardView: View {
     }
 
     private func clearUsageAnalyticsIdleDelay(accountKey: String?) {
+        ensureUsageAnalyticsStateLoaded()
         usageAnalyticsState.records = usageAnalyticsState.records.map { record in
             guard accountKey == nil || record.accountKey == accountKey else {
                 return record
@@ -2667,6 +2700,7 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func seedUsageAnalyticsIfNeeded(now: Date = .now) {
+        guard usageAnalyticsStateLoaded else { return }
         guard usageAnalyticsState.snapshots.isEmpty else { return }
         usageAnalyticsState = UsageAnalyticsEngine.seed(
             state: usageAnalyticsState,
@@ -2679,6 +2713,8 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func updateUsageAnalyticsAfterSync(now: Date) {
+        guard usageAnalyticsStateLoaded || selectedWorkspaceUsesUsageAnalytics else { return }
+        ensureUsageAnalyticsStateLoaded()
         usageAnalyticsState = UsageAnalyticsEngine.update(
             state: usageAnalyticsState,
             accounts: state.accounts,

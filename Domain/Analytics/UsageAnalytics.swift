@@ -378,6 +378,7 @@ struct UsageAnalyticsExportPayload: Codable, Equatable {
 enum UsageAnalyticsEngine {
     static let retentionDays: Int = 45
     static let eventRetentionDays: Int = 90
+    static let maxStoredRecords: Int = 5_000
     private static let thresholdLevels: [Int] = [50, 30, 20, 10, 5, 0]
     private static let resetDelayNoiseSeconds: TimeInterval = 60
     private static let idleWeeklyJitterTolerancePercent: Int = 1
@@ -546,6 +547,21 @@ enum UsageAnalyticsEngine {
         )
         updatedState.records = trim(records: updatedState.records, now: now, calendar: calendar)
         return updatedState
+    }
+
+    static func normalized(
+        state: UsageAnalyticsState,
+        now: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> UsageAnalyticsState {
+        UsageAnalyticsState(
+            records: trim(records: state.records, now: now, calendar: calendar),
+            snapshots: deduplicatedSnapshots(state.snapshots),
+            thresholdEvents: Array(trim(events: state.thresholdEvents, now: now, calendar: calendar).prefix(300)),
+            switchEvents: Array(trim(events: state.switchEvents, now: now, calendar: calendar).prefix(200)),
+            lastActiveAccountKey: state.lastActiveAccountKey,
+            lastUpdatedAt: state.lastUpdatedAt
+        )
     }
 
     static func seed(
@@ -1117,9 +1133,27 @@ enum UsageAnalyticsEngine {
         calendar: Calendar
     ) -> [UsageAnalyticsRecord] {
         guard let cutoff = calendar.date(byAdding: .day, value: -retentionDays, to: now) else {
-            return records
+            return Array(records.sorted { $0.timestamp > $1.timestamp }.prefix(maxStoredRecords))
         }
-        return records.filter { $0.timestamp >= cutoff }
+        return Array(
+            records
+                .filter { $0.timestamp >= cutoff }
+                .sorted { $0.timestamp > $1.timestamp }
+                .prefix(maxStoredRecords)
+        )
+    }
+
+    private static func deduplicatedSnapshots(
+        _ snapshots: [UsageAnalyticsAccountSnapshot]
+    ) -> [UsageAnalyticsAccountSnapshot] {
+        Array(
+            snapshots.reduce(into: [String: UsageAnalyticsAccountSnapshot]()) { partial, snapshot in
+                let existing = partial[snapshot.accountKey]
+                if existing == nil || snapshot.lastSeenAt > existing!.lastSeenAt {
+                    partial[snapshot.accountKey] = snapshot
+                }
+            }.values
+        )
     }
 
     private static func trim(

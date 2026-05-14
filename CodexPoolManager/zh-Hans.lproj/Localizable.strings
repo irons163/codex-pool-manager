@@ -558,3 +558,4 @@
 "debug_tools.metric.local_oauth" = "本机 OAuth 账号";
 "debug_tools.metric.raw_json" = "Raw JSON 暂存";
 "debug_tools.metric.backup_json" = "备份 JSON 暂存";
+"debug_tools.metric.lazy" = "延迟加载";

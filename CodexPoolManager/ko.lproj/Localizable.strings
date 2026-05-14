@@ -557,3 +557,4 @@
 "debug_tools.metric.local_oauth" = "로컬 OAuth 계정";
 "debug_tools.metric.raw_json" = "Raw JSON 버퍼";
 "debug_tools.metric.backup_json" = "백업 JSON 버퍼";
+"debug_tools.metric.lazy" = "지연 로드";

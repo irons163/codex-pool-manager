@@ -557,3 +557,4 @@
 "debug_tools.metric.local_oauth" = "Comptes OAuth locaux";
 "debug_tools.metric.raw_json" = "Tampon JSON brut";
 "debug_tools.metric.backup_json" = "Tampon JSON sauvegarde";
+"debug_tools.metric.lazy" = "Différé";
