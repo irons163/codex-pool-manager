@@ -6103,16 +6103,25 @@ private struct UsageAnalyticsStableDetailSectionsView: View, Equatable {
     }
 
     private var renderIdentity: String {
-        [
-            selectedAccountKey ?? "all",
-            String(analyticsState.records.count),
-            String(analyticsState.snapshots.count),
-            String(analyticsState.thresholdEvents.count),
-            String(analyticsState.switchEvents.count),
-            analyticsState.lastUpdatedAt?.timeIntervalSince1970.description ?? "never",
-            String(accounts.count),
-            accounts.map { "\($0.deduplicationKey)=\($0.name)" }.joined(separator: "|")
-        ].joined(separator: "#")
+        var parts: [String] = []
+        parts.reserveCapacity(8)
+        parts.append(selectedAccountKey ?? "all")
+        parts.append(String(analyticsState.records.count))
+        parts.append(String(analyticsState.snapshots.count))
+        parts.append(String(analyticsState.thresholdEvents.count))
+        parts.append(String(analyticsState.switchEvents.count))
+        parts.append(analyticsState.lastUpdatedAt?.timeIntervalSince1970.description ?? "never")
+        parts.append(String(accounts.count))
+        parts.append(accountRenderIdentity)
+        return parts.joined(separator: "#")
+    }
+
+    private var accountRenderIdentity: String {
+        accounts
+            .map { account in
+                "\(account.deduplicationKey)=\(account.name)"
+            }
+            .joined(separator: "|")
     }
 
     var body: some View {
