@@ -913,7 +913,7 @@ struct CodexPoolManagerTests {
         )
 
         #expect(seeded.snapshots.count == 1)
-        #expect(seeded.snapshots[0].accountKey == "account:user-shared")
+        #expect(seeded.snapshots[0].accountKey == first.deduplicationKey)
     }
 
     @Test
@@ -981,9 +981,45 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsNormalizesRecordsToCustomStorageCap() {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let customLimit = 1_000
+        let records = (0..<(customLimit + 25)).map { offset in
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(TimeInterval(-offset)),
+                accountKey: "account-\(offset)",
+                weeklyDeltaPercent: 1,
+                fiveHourDeltaPercent: 0
+            )
+        }
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let normalized = UsageAnalyticsEngine.normalized(
+            state: state,
+            now: now,
+            calendar: calendar,
+            maxStoredRecords: customLimit
+        )
+
+        #expect(normalized.records.count == customLimit)
+        #expect(normalized.records.first?.timestamp == now)
+        #expect(normalized.records.last?.timestamp == now.addingTimeInterval(TimeInterval(-(customLimit - 1))))
+    }
+
+    @Test
+    func usageAnalyticsClampsCustomStorageCap() {
+        #expect(UsageAnalyticsEngine.clampedMaxStoredRecords(1) == UsageAnalyticsEngine.minStoredRecords)
+        #expect(
+            UsageAnalyticsEngine.clampedMaxStoredRecords(UsageAnalyticsEngine.maxStoredRecordsLimit + 1)
+                == UsageAnalyticsEngine.maxStoredRecordsLimit
+        )
+    }
+
+    @Test
     func usageAnalyticsUpdateHandlesDuplicateAccountKeysWithoutCrash() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let duplicateKey = "account:user-duplicate"
+        let duplicateKey = "account:user-duplicate|scope:personal"
         let state = UsageAnalyticsState(
             records: [],
             snapshots: [
@@ -2059,7 +2095,7 @@ struct CodexPoolManagerTests {
         state.evaluate(now: Date(timeIntervalSince1970: 0))
 
         #expect(state.activities.count == 1)
-        #expect(state.activities[0].message.contains("切換"))
+        #expect(state.activities[0].message == L10n.text("activity.switch_account_to_format", "B"))
     }
 
     @Test
@@ -2077,7 +2113,7 @@ struct CodexPoolManagerTests {
         let restored = AccountPoolState(snapshot: snapshot)
 
         #expect(!restored.activities.isEmpty)
-        #expect(restored.activities.contains(where: { $0.message.contains("重設") }))
+        #expect(restored.activities.contains(where: { $0.message == L10n.text("activity.account_reset_usage_format", "A") }))
     }
 
     @Test
@@ -3427,7 +3463,7 @@ extension CodexPoolManagerTests {
         let result = coordinator.importSnapshotState(from: "{invalid-json")
 
         #expect(result.state == nil)
-        #expect(result.errorMessage?.hasPrefix("匯入失敗：") == true)
+        #expect(result.errorMessage?.hasPrefix("\(L10n.text("backup.operation.import_failed")):") == true)
     }
 
     @Test
@@ -3461,8 +3497,8 @@ extension CodexPoolManagerTests {
             authorizeAuthFile: { nil }
         )
 
-        #expect(output.errorMessage == "此帳號沒有可用 token，無法切換")
-        #expect(output.switchLaunchLog.contains("失敗：沒有 token"))
+        #expect(output.errorMessage == L10n.text("switch.error.missing_token"))
+        #expect(output.switchLaunchLog.contains(L10n.text("switch.log.missing_token")))
     }
 
     @Test
@@ -3484,8 +3520,8 @@ extension CodexPoolManagerTests {
             authorizeAuthFile: { nil }
         )
 
-        #expect(output.errorMessage == "此帳號缺少 Account ID，無法切換")
-        #expect(output.switchLaunchLog.contains("失敗：沒有 account_id"))
+        #expect(output.errorMessage == L10n.text("switch.error.missing_account_id"))
+        #expect(output.switchLaunchLog.contains(L10n.text("switch.log.missing_account_id")))
     }
 
     @Test
@@ -3817,7 +3853,7 @@ extension CodexPoolManagerTests {
 
         #expect(output.state.accounts.isEmpty)
         #expect(output.viewState.syncError == "keep")
-        #expect(output.viewModel.errorMessage == "auth.json 缺少 ChatGPT Account ID，無法查詢用量")
+        #expect(output.viewModel.errorMessage == L10n.text("auth.missing_chatgpt_account_id"))
     }
 
     @Test @MainActor
@@ -4136,7 +4172,7 @@ extension CodexPoolManagerTests {
             thresholdRatio: 0.15
         )
 
-        #expect(message == "Codex A 剩餘 10%，已低於 15% 門檻。")
+        #expect(message == L10n.text("alert.low_usage.message.account_format", "Codex A", 10, 15))
     }
 
     @Test
@@ -4156,7 +4192,7 @@ extension CodexPoolManagerTests {
             thresholdRatio: 0.50
         )
 
-        #expect(message == "Codex Paid 剩餘 50%，已低於 50% 門檻。")
+        #expect(message == L10n.text("alert.low_usage.message.account_format", "Codex Paid", 50, 50))
     }
 
     @Test
@@ -4168,7 +4204,7 @@ extension CodexPoolManagerTests {
             thresholdRatio: 0.15
         )
 
-        #expect(message == "目前帳號剩餘用量偏低。")
+        #expect(message == L10n.text("alert.low_usage.message.generic"))
     }
 
     @Test
@@ -4178,7 +4214,7 @@ extension CodexPoolManagerTests {
         let result = coordinator.importSnapshotState(from: "{ invalid-json }")
 
         #expect(result.state == nil)
-        #expect(result.errorMessage?.hasPrefix("匯入失敗：") == true)
+        #expect(result.errorMessage?.hasPrefix("\(L10n.text("backup.operation.import_failed")):") == true)
     }
 
     @Test
@@ -4642,7 +4678,7 @@ extension CodexPoolManagerTests {
             fallbackQuota: 1000
         )
 
-        #expect(message == "登入成功，已新增帳號")
+        #expect(message == L10n.text("auth.sign_in_success_added"))
         #expect(state.accounts.count == 1)
         #expect(state.accounts[0].name == "new@example.com")
         #expect(state.accounts[0].apiToken == "token-new")
@@ -4681,7 +4717,7 @@ extension CodexPoolManagerTests {
             fallbackQuota: 1000
         )
 
-        #expect(message == "登入成功，已更新既有帳號")
+        #expect(message == L10n.text("auth.sign_in_success_updated"))
         #expect(state.accounts.count == 1)
         #expect(state.accounts[0].id == accountID)
         #expect(state.accounts[0].name == "real@example.com")

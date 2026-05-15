@@ -558,3 +558,6 @@
 "debug_tools.metric.raw_json" = "Tampon JSON brut";
 "debug_tools.metric.backup_json" = "Tampon JSON sauvegarde";
 "debug_tools.metric.lazy" = "Différé";
+"settings.usage_analytics_history_limit_format" = "Limite d'historique d'analyse : %d enregistrements";
+"settings.usage_analytics_history_limit_hint" = "Une limite plus élevée conserve plus d'historique pour les graphiques, mais utilise plus de mémoire et de stockage.";
+"drawer.expand_full" = "Ouvrir entièrement";

@@ -7,6 +7,7 @@ struct WorkspaceSettingsPanelView: View {
     let autoSyncIntervalSecondsBinding: Binding<Double>
     let languageOverrideBinding: Binding<String>
     let appearanceOverrideBinding: Binding<String>
+    let usageAnalyticsMaxStoredRecordsBinding: Binding<Int>
     let languageOptions: [L10n.LanguageOption]
     let appUpdateAutoCheckEnabledBinding: Binding<Bool>
     let isCheckingForUpdates: Bool
@@ -109,6 +110,27 @@ struct WorkspaceSettingsPanelView: View {
                     }
                     .pickerStyle(.menu)
                     .tint(PoolDashboardTheme.glowA)
+                }
+                .dashboardInfoCard()
+
+                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Stepper(
+                        value: usageAnalyticsMaxStoredRecordsBinding,
+                        in: UsageAnalyticsEngine.minStoredRecords...UsageAnalyticsEngine.maxStoredRecordsLimit,
+                        step: UsageAnalyticsEngine.maxStoredRecordsStep
+                    ) {
+                        Text(
+                            L10n.text(
+                                "settings.usage_analytics_history_limit_format",
+                                usageAnalyticsMaxStoredRecordsBinding.wrappedValue
+                            )
+                        )
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    }
+
+                    Text(L10n.text("settings.usage_analytics_history_limit_hint"))
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
                 }
                 .dashboardInfoCard()
 

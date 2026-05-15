@@ -12,7 +12,7 @@ struct LocalOAuthImportViewModelTests {
 
         #expect(viewModel.accounts.isEmpty)
         #expect(viewModel.successMessage == nil)
-        #expect(viewModel.errorMessage == "自動掃描沒有讀到帳號，可能是 macOS Sandbox 限制。請按「選擇 auth.json」授權。")
+        #expect(viewModel.errorMessage == L10n.text("local_import.auto_scan_empty"))
     }
 
     @Test
@@ -32,7 +32,7 @@ struct LocalOAuthImportViewModelTests {
 
         viewModel.applyLoadedAccountsFromFile([])
 
-        #expect(viewModel.errorMessage == "檔案格式可讀，但未找到 access token")
+        #expect(viewModel.errorMessage == L10n.text("local_import.file_readable_but_no_token"))
     }
 
     @Test
@@ -89,7 +89,7 @@ struct LocalOAuthImportViewModelTests {
 
         #expect(decision == .missingAccountID)
         #expect(viewModel.successMessage == nil)
-        #expect(viewModel.errorMessage == "auth.json 缺少 ChatGPT Account ID，無法查詢用量")
+        #expect(viewModel.errorMessage == L10n.text("auth.missing_chatgpt_account_id"))
     }
 
     private func sampleAccount(email: String, token: String) -> LocalCodexOAuthAccount {

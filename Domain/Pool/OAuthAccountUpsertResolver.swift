@@ -17,11 +17,6 @@ enum OAuthAccountUpsertResolver {
                 return scopedMatch.id
             }
 
-            // Backward compatibility for older data before scope was introduced.
-            if candidates.count == 1 {
-                return candidates[0].id
-            }
-
             return nil
         }
 

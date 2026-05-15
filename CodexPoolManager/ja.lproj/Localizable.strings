@@ -558,3 +558,6 @@
 "debug_tools.metric.raw_json" = "Raw JSON バッファ";
 "debug_tools.metric.backup_json" = "バックアップ JSON バッファ";
 "debug_tools.metric.lazy" = "遅延読み込み";
+"settings.usage_analytics_history_limit_format" = "使用分析の履歴上限: %d 件";
+"settings.usage_analytics_history_limit_hint" = "上限を高くするとグラフ用の同期履歴を多く保持できますが、メモリとストレージ使用量が増えます。";
+"drawer.expand_full" = "全開";

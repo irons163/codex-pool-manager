@@ -130,6 +130,49 @@ struct PoolDashboardView: View {
         static let timeoutNanoseconds: UInt64 = 45_000_000_000
         static let stuckRecoveryNanoseconds: UInt64 = 70_000_000_000
     }
+    private enum WorkspaceDrawerState {
+        case collapsed
+        case partial
+        case expanded
+
+        var isVisible: Bool {
+            self != .collapsed
+        }
+
+        var symbolName: String {
+            switch self {
+            case .collapsed:
+                return "chevron.right"
+            case .partial:
+                return "chevron.up"
+            case .expanded:
+                return "chevron.down"
+            }
+        }
+
+        var actionTitleKey: String {
+            switch self {
+            case .collapsed:
+                return "drawer.expand"
+            case .partial:
+                return "drawer.expand_full"
+            case .expanded:
+                return "drawer.collapse"
+            }
+        }
+
+        func next() -> WorkspaceDrawerState {
+            switch self {
+            case .collapsed:
+                return .partial
+            case .partial:
+                return .expanded
+            case .expanded:
+                return .collapsed
+            }
+        }
+    }
+
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
     private static let productionSnapshotKey = "account_pool_snapshot"
@@ -140,6 +183,7 @@ struct PoolDashboardView: View {
     private static let switchLaunchTargetKey = "pool_dashboard.switch_launch_target"
     private static let specialResetWatchStateKey = "pool_dashboard.special_reset_watch_state"
     private static let usageAnalyticsStateKey = "pool_dashboard.usage_analytics_state"
+    private static let usageAnalyticsMaxStoredRecordsKey = "pool_dashboard.usage_analytics.max_stored_records"
     private static let specialResetGraceMinutesMigrationKey = "pool_dashboard.special_reset_watch_grace_minutes_migrated_v1"
     private static let appUpdateAutoCheckEnabledKey = "pool_dashboard.app_update.auto_check_enabled"
     private static let appUpdateSkippedVersionKey = "pool_dashboard.app_update.skipped_version"
@@ -229,6 +273,7 @@ struct PoolDashboardView: View {
     @AppStorage(Self.switchLaunchTargetKey) private var switchLaunchTargetRaw = CodexLaunchTarget.defaultPickerTarget.rawValue
     @AppStorage(Self.specialResetWatchStateKey) private var specialResetWatchStateRaw = ""
     @AppStorage(Self.usageAnalyticsStateKey) private var usageAnalyticsStateRaw = ""
+    @AppStorage(Self.usageAnalyticsMaxStoredRecordsKey) private var usageAnalyticsMaxStoredRecords = UsageAnalyticsEngine.defaultMaxStoredRecords
     @AppStorage("pool_dashboard.special_reset_watch_enabled") private var specialResetWatchEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_notify_enabled") private var specialResetWatchNotifyEnabled = true
     @AppStorage("pool_dashboard.special_reset_watch_grace_minutes") private var specialResetWatchGraceMinutes = 1
@@ -247,7 +292,7 @@ struct PoolDashboardView: View {
     @State private var sessionAuthorizedAuthFileURL: URL?
     @State private var selectedWorkspace: Workspace = .authentication
     @State private var selectedGroupName: String = AgentAccount.defaultGroupName
-    @State private var isWorkspaceSectionCollapsed = false
+    @State private var workspaceDrawerState: WorkspaceDrawerState = .partial
     @State private var isSidebarCollapsed = false
     @State private var themeRenderToken = 0
     @State private var suppressNextSnapshotDrivenSwitch = false
@@ -501,6 +546,14 @@ struct PoolDashboardView: View {
             }
             syncThemePaletteIfNeeded()
         }
+        .onChange(of: usageAnalyticsMaxStoredRecords) { _, value in
+            let normalized = UsageAnalyticsEngine.clampedMaxStoredRecords(value)
+            if normalized != value {
+                usageAnalyticsMaxStoredRecords = normalized
+                return
+            }
+            normalizeStoredUsageAnalyticsForCurrentLimit()
+        }
         .onChange(of: colorScheme) { _, _ in
             syncThemePaletteIfNeeded()
         }
@@ -547,54 +600,56 @@ struct PoolDashboardView: View {
                 .frame(width: 1)
                 .frame(maxHeight: .infinity)
 
-            VStack(spacing: 0) {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                        ViewThatFits(in: .horizontal) {
-                            HStack(alignment: .top, spacing: 12) {
-                                DashboardHeaderSectionView(
-                                    accountCount: state.uniqueAccountsCount,
-                                    availableCount: state.availableAccountsCount,
-                                    overallUsagePercent: Int(state.overallUsageRatio * 100),
-                                    modeTitle: state.mode.rawValue
-                                )
+            GeometryReader { contentGeometry in
+                VStack(spacing: 0) {
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                            ViewThatFits(in: .horizontal) {
+                                HStack(alignment: .top, spacing: 12) {
+                                    DashboardHeaderSectionView(
+                                        accountCount: state.uniqueAccountsCount,
+                                        availableCount: state.availableAccountsCount,
+                                        overallUsagePercent: Int(state.overallUsageRatio * 100),
+                                        modeTitle: state.mode.rawValue
+                                    )
 
-                                syncToolbarPanel
+                                    syncToolbarPanel
+                                }
+
+                                VStack(alignment: .leading, spacing: 10) {
+                                    DashboardHeaderSectionView(
+                                        accountCount: state.uniqueAccountsCount,
+                                        availableCount: state.availableAccountsCount,
+                                        overallUsagePercent: Int(state.overallUsageRatio * 100),
+                                        modeTitle: state.mode.rawValue
+                                    )
+
+                                    syncToolbarPanel
+                                }
                             }
 
-                            VStack(alignment: .leading, spacing: 10) {
-                                DashboardHeaderSectionView(
-                                    accountCount: state.uniqueAccountsCount,
-                                    availableCount: state.availableAccountsCount,
-                                    overallUsagePercent: Int(state.overallUsageRatio * 100),
-                                    modeTitle: state.mode.rawValue
-                                )
-
-                                syncToolbarPanel
-                            }
+                            accountUsagePanel
                         }
-
-                        accountUsagePanel
+                        .padding(.horizontal, 16)
+                        .padding(.top, 14)
+                        .padding(.bottom, 10)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 10)
-                }
 
-                workspaceCollapseToggle()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-                    .background(
-                        PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeFooterOpacity)
-                            .overlay(alignment: .top) {
-                                Rectangle()
-                                    .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
-                                    .frame(height: 1)
-                            }
-                    )
+                    workspaceCollapseToggle()
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 10)
+                        .background(
+                            PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeFooterOpacity)
+                                .overlay(alignment: .top) {
+                                    Rectangle()
+                                        .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
+                                        .frame(height: 1)
+                                }
+                        )
 
-                if !isWorkspaceSectionCollapsed {
-                    workspaceDrawerPanel
+                    if workspaceDrawerState.isVisible {
+                        workspaceDrawerPanel(height: workspaceDrawerHeight(for: contentGeometry.size.height))
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -641,7 +696,18 @@ struct PoolDashboardView: View {
         .background(PoolDashboardTheme.panelMutedFill.opacity(PoolDashboardTheme.chromeSidebarOpacity))
     }
 
-    private var workspaceDrawerPanel: some View {
+    private func workspaceDrawerHeight(for availableHeight: CGFloat) -> CGFloat {
+        switch workspaceDrawerState {
+        case .collapsed:
+            return 0
+        case .partial:
+            return min(440, max(300, availableHeight * 0.38))
+        case .expanded:
+            return max(260, availableHeight - 56)
+        }
+    }
+
+    private func workspaceDrawerPanel(height: CGFloat) -> some View {
         VStack(spacing: 0) {
             Rectangle()
                 .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
@@ -653,14 +719,14 @@ struct PoolDashboardView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
             }
-            .frame(minHeight: 300, maxHeight: 440, alignment: .topLeading)
+            .frame(height: height, alignment: .topLeading)
             .background(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeStrongOpacity))
         }
     }
 
     private func workspaceCollapseToggle() -> some View {
         HStack(spacing: 8) {
-            Image(systemName: isWorkspaceSectionCollapsed ? "chevron.right" : "chevron.down")
+            Image(systemName: workspaceDrawerState.symbolName)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(PoolDashboardTheme.textMuted)
                 .frame(width: 12)
@@ -673,7 +739,7 @@ struct PoolDashboardView: View {
                 .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.9))
                 .frame(height: 1)
 
-            Text(isWorkspaceSectionCollapsed ? L10n.text("drawer.expand") : L10n.text("drawer.collapse"))
+            Text(L10n.text(workspaceDrawerState.actionTitleKey))
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(PoolDashboardTheme.textMuted)
         }
@@ -686,7 +752,7 @@ struct PoolDashboardView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
-                isWorkspaceSectionCollapsed.toggle()
+                workspaceDrawerState = workspaceDrawerState.next()
             }
         }
     }
@@ -888,9 +954,9 @@ struct PoolDashboardView: View {
 
         return Button {
             selectedWorkspace = workspace
-            if isWorkspaceSectionCollapsed {
+            if workspaceDrawerState == .collapsed {
                 withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
-                    isWorkspaceSectionCollapsed = false
+                    workspaceDrawerState = .partial
                 }
             }
         } label: {
@@ -1085,6 +1151,7 @@ struct PoolDashboardView: View {
             autoSyncIntervalSecondsBinding: strategyBindings.autoSyncIntervalSeconds,
             languageOverrideBinding: $appLanguageOverride,
             appearanceOverrideBinding: $appAppearanceOverride,
+            usageAnalyticsMaxStoredRecordsBinding: $usageAnalyticsMaxStoredRecords,
             languageOptions: L10n.languageOptions,
             appUpdateAutoCheckEnabledBinding: $appUpdateAutoCheckEnabled,
             isCheckingForUpdates: isCheckingForAppUpdate,
@@ -2652,7 +2719,11 @@ struct PoolDashboardView: View {
             usageAnalyticsStateLoaded = true
             return
         }
-        let normalized = UsageAnalyticsEngine.normalized(state: decoded, now: .now)
+        let normalized = UsageAnalyticsEngine.normalized(
+            state: decoded,
+            now: .now,
+            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
+        )
         usageAnalyticsState = normalized
         usageAnalyticsStateLoaded = true
         if normalized != decoded {
@@ -2661,8 +2732,41 @@ struct PoolDashboardView: View {
     }
 
     private func persistUsageAnalyticsState() {
+        usageAnalyticsState = UsageAnalyticsEngine.normalized(
+            state: usageAnalyticsState,
+            now: .now,
+            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
+        )
         guard let data = try? JSONEncoder().encode(usageAnalyticsState),
               let text = String(data: data, encoding: .utf8)
+        else {
+            return
+        }
+        usageAnalyticsStateRaw = text
+    }
+
+    private var normalizedUsageAnalyticsMaxStoredRecords: Int {
+        UsageAnalyticsEngine.clampedMaxStoredRecords(usageAnalyticsMaxStoredRecords)
+    }
+
+    private func normalizeStoredUsageAnalyticsForCurrentLimit() {
+        guard !usageAnalyticsStateRaw.isEmpty,
+              let data = usageAnalyticsStateRaw.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(UsageAnalyticsState.self, from: data)
+        else {
+            return
+        }
+        let normalized = UsageAnalyticsEngine.normalized(
+            state: decoded,
+            now: .now,
+            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
+        )
+        if usageAnalyticsStateLoaded {
+            usageAnalyticsState = normalized
+        }
+        guard normalized != decoded,
+              let normalizedData = try? JSONEncoder().encode(normalized),
+              let text = String(data: normalizedData, encoding: .utf8)
         else {
             return
         }
@@ -2720,7 +2824,8 @@ struct PoolDashboardView: View {
             state: usageAnalyticsState,
             accounts: state.accounts,
             activeAccountKey: state.activeAccount?.deduplicationKey,
-            now: now
+            now: now,
+            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
         )
         persistUsageAnalyticsState()
     }

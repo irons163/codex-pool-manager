@@ -558,3 +558,6 @@
 "debug_tools.metric.raw_json" = "Búfer JSON bruto";
 "debug_tools.metric.backup_json" = "Búfer JSON de respaldo";
 "debug_tools.metric.lazy" = "Diferido";
+"settings.usage_analytics_history_limit_format" = "Límite de historial de analítica: %d registros";
+"settings.usage_analytics_history_limit_hint" = "Un límite más alto conserva más historial para los gráficos, pero usa más memoria y almacenamiento.";
+"drawer.expand_full" = "Abrir completo";

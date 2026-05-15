@@ -567,3 +567,6 @@
 "debug_tools.metric.raw_json" = "Raw JSON Buffer";
 "debug_tools.metric.backup_json" = "Backup JSON Buffer";
 "debug_tools.metric.lazy" = "Lazy";
+"settings.usage_analytics_history_limit_format" = "Usage analytics history limit: %d records";
+"settings.usage_analytics_history_limit_hint" = "Higher limits keep more sync history for charts, but use more memory and storage.";
+"drawer.expand_full" = "Full Open";
