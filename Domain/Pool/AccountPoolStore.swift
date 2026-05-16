@@ -34,10 +34,9 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
 
     func save(_ snapshot: AccountPoolSnapshot) {
         for account in snapshot.accounts {
-            if account.apiToken.isEmpty {
-                tokenVault.removeToken(for: account.id)
-            } else {
-                tokenVault.setToken(account.apiToken, for: account.id)
+            let normalizedToken = account.apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalizedToken.isEmpty {
+                tokenVault.setToken(normalizedToken, for: account.id)
             }
         }
         tokenVault.pruneTokens(keeping: Set(snapshot.accounts.map(\.id)))

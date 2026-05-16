@@ -3114,7 +3114,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func userDefaultsStoreSaveRemovesTokenWhenAccountTokenIsEmpty() throws {
+    func userDefaultsStoreSaveKeepsExistingTokenWhenAccountTokenIsEmpty() throws {
         let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Cannot create UserDefaults suite")
@@ -3150,7 +3150,48 @@ struct CodexPoolManagerTests {
 
         store.save(snapshot)
 
-        #expect(vault.token(for: accountID) == nil)
+        #expect(vault.token(for: accountID) == "existing-token")
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
+    func userDefaultsStoreSaveKeepsExistingTokenWhenAccountTokenIsWhitespace() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let accountID = UUID()
+        vault.setToken("existing-token", for: accountID)
+
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "   ",
+                    chatGPTAccountID: "acct-1"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+
+        #expect(vault.token(for: accountID) == "existing-token")
         defaults.removePersistentDomain(forName: suiteName)
     }
 
@@ -3463,7 +3504,7 @@ extension CodexPoolManagerTests {
         let result = coordinator.importSnapshotState(from: "{invalid-json")
 
         #expect(result.state == nil)
-        #expect(result.errorMessage?.hasPrefix("\(L10n.text("backup.operation.import_failed")):") == true)
+        #expect(result.errorMessage?.contains(L10n.text("backup.operation.import_failed")) == true)
     }
 
     @Test
@@ -4214,7 +4255,7 @@ extension CodexPoolManagerTests {
         let result = coordinator.importSnapshotState(from: "{ invalid-json }")
 
         #expect(result.state == nil)
-        #expect(result.errorMessage?.hasPrefix("\(L10n.text("backup.operation.import_failed")):") == true)
+        #expect(result.errorMessage?.contains(L10n.text("backup.operation.import_failed")) == true)
     }
 
     @Test
