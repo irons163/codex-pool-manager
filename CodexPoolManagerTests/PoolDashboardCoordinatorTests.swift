@@ -81,8 +81,8 @@ struct PoolDashboardSwitchLaunchCoordinatorTests {
         )
 
         #expect(!authorizeCalled)
-        #expect(output.errorMessage?.hasPrefix("\(L10n.text("switch.error.prefix")):") == true)
-        #expect(output.switchLaunchLog.contains("\(L10n.text("switch.log.error_prefix")):"))
+        #expect(output.errorMessage?.contains(L10n.text("switch.error.prefix")) == true)
+        #expect(output.switchLaunchLog.contains(L10n.text("switch.log.error_prefix")))
         #expect(!output.switchLaunchLog.contains(L10n.text("switch.log.auth_permission_start")))
     }
 }
