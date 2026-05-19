@@ -214,6 +214,67 @@ private final class FailureTokenURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
+private final class SharedUsageURLProtocol: URLProtocol {
+    private static let lock = NSLock()
+    private static var statusCode: Int = 200
+    private static var data = Data()
+    private static var expectedAuthorization: String?
+
+    static func configure(statusCode: Int, data: Data, expectedAuthorization: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.statusCode = statusCode
+        self.data = data
+        self.expectedAuthorization = expectedAuthorization
+    }
+
+    static func reset() {
+        lock.lock()
+        defer { lock.unlock() }
+        statusCode = 200
+        data = Data()
+        expectedAuthorization = nil
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        guard
+            let url = request.url,
+            url.host == "chatgpt.com",
+            url.path == "/backend-api/wham/usage"
+        else {
+            return false
+        }
+
+        let expected: String?
+        lock.lock()
+        expected = expectedAuthorization
+        lock.unlock()
+        guard let expected else { return false }
+        return request.value(forHTTPHeaderField: "Authorization") == "Bearer \(expected)"
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let tuple: (Int, Data)
+        Self.lock.lock()
+        tuple = (Self.statusCode, Self.data)
+        Self.lock.unlock()
+
+        let response = HTTPURLResponse(
+            url: request.url ?? URL(string: "https://chatgpt.com/backend-api/wham/usage")!,
+            statusCode: tuple.0,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: tuple.1)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
 private func makeSuccessTokenSession(
     statusCode: Int,
     data: Data,
@@ -1364,6 +1425,59 @@ struct LocalImportCoordinatorCoverageExpansionTests {
         #expect(output.viewModel.successMessage?.isEmpty == false)
         #expect(output.viewModel.errorMessage == nil)
         #expect(usageFetcher.requests.value.count == 1)
+    }
+
+    @Test
+    func importLocalOAuthAccountUsesDefaultUsageClientAndCapturesRawResponse() async throws {
+        let responseJSON = """
+        {
+          "used_units": 7,
+          "quota": 100,
+          "account_id": "acct-default-path",
+          "email": "default-path@example.com"
+        }
+        """
+        let accessToken = "sk-default-local-import-coverage-token"
+        SharedUsageURLProtocol.configure(
+            statusCode: 200,
+            data: Data(responseJSON.utf8),
+            expectedAuthorization: accessToken
+        )
+        URLProtocol.registerClass(SharedUsageURLProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(SharedUsageURLProtocol.self)
+            SharedUsageURLProtocol.reset()
+        }
+
+        let coordinator = PoolDashboardLocalImportCoordinator()
+        let localAccount = LocalCodexOAuthAccount(
+            id: "local-default-client",
+            displayName: "OAuth Account",
+            email: "fallback@example.com",
+            source: "test",
+            accessToken: accessToken,
+            chatGPTAccountID: "acct-default-path"
+        )
+        let rawResponses = LockedValue<[String]>([])
+        let output = await coordinator.importLocalOAuthAccount(
+            localAccount,
+            state: AccountPoolState(accounts: [], mode: .manual),
+            viewModel: LocalOAuthImportViewModel(),
+            onRawResponse: { raw in
+                rawResponses.withLock { $0.append(raw) }
+            }
+        )
+
+        #expect(output.didImport == true)
+        #expect(output.state.accounts.count == 1)
+        #expect(output.state.accounts.first?.usedUnits == 7)
+        #expect(output.state.accounts.first?.quota == 100)
+
+        for _ in 0..<20 where rawResponses.value.isEmpty {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        #expect(rawResponses.value.count == 1)
+        #expect(rawResponses.value.first?.contains("\"used_units\": 7") == true)
     }
 }
 
