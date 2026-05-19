@@ -7,7 +7,16 @@ struct PoolDashboardLocalImportCoordinator {
         let didImport: Bool
     }
 
-    private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
+    private let authFlowCoordinator: PoolDashboardAuthFlowCoordinator
+    private let usageClientFactory: ((@escaping @MainActor (String) -> Void) -> CodexUsageFetching)?
+
+    init(
+        authFlowCoordinator: PoolDashboardAuthFlowCoordinator = PoolDashboardAuthFlowCoordinator(),
+        usageClientFactory: ((@escaping @MainActor (String) -> Void) -> CodexUsageFetching)? = nil
+    ) {
+        self.authFlowCoordinator = authFlowCoordinator
+        self.usageClientFactory = usageClientFactory
+    }
 
     @MainActor
     func importLocalOAuthAccount(
@@ -30,15 +39,10 @@ struct PoolDashboardLocalImportCoordinator {
 
         do {
             let previousAccountCount = nextState.accounts.count
+            let usageClient = usageClientFactory?(onRawResponse) ?? Self.makeDefaultUsageClient(onRawResponse: onRawResponse)
             let context = try await authFlowCoordinator.fetchLocalImportContext(
                 decision: decision,
-                usageClient: OpenAICodexUsageClient(
-                    onRawResponse: { raw in
-                        Task { @MainActor in
-                            onRawResponse(raw)
-                        }
-                    }
-                )
+                usageClient: usageClient
             )
             authFlowCoordinator.applyLocalImport(state: &nextState, context: context)
             nextViewModel.errorMessage = nil
@@ -54,5 +58,17 @@ struct PoolDashboardLocalImportCoordinator {
             nextViewModel.errorMessage = L10n.text("local_import.usage_fetch_failed_format", syncErrorMessage)
             return Output(state: nextState, viewModel: nextViewModel, didImport: false)
         }
+    }
+
+    private static func makeDefaultUsageClient(
+        onRawResponse: @escaping @MainActor (String) -> Void
+    ) -> CodexUsageFetching {
+        OpenAICodexUsageClient(
+            onRawResponse: { raw in
+                Task { @MainActor in
+                    onRawResponse(raw)
+                }
+            }
+        )
     }
 }

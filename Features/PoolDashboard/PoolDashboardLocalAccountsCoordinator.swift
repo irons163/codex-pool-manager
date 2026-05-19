@@ -100,9 +100,11 @@ struct PoolDashboardLocalAccountsCoordinator {
     func openAuthFilePanelAndLoad(
         state: inout AccountPoolState,
         viewModel: inout LocalOAuthImportViewModel,
-        authFileAccessService: CodexAuthFileAccessService
+        authFileAccessService: CodexAuthFileAccessService,
+        filePanelService: CodexAuthFilePanelService? = nil
     ) -> URL? {
-        guard let url = CodexAuthFilePanelService().pickAuthFileURL() else {
+        let panelService = filePanelService ?? CodexAuthFilePanelService()
+        guard let url = panelService.pickAuthFileURL() else {
 #if !canImport(AppKit)
             viewModel.errorMessage = L10n.text("local_accounts.file_panel_unsupported")
 #endif

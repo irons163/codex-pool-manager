@@ -37,14 +37,16 @@ struct PoolDashboardLocalAccountsFlowCoordinator {
         from state: AccountPoolState,
         viewModel: LocalOAuthImportViewModel,
         currentAuthorizedAuthFileURL: URL?,
-        authFileAccessService: CodexAuthFileAccessService
+        authFileAccessService: CodexAuthFileAccessService,
+        filePanelService: CodexAuthFilePanelService? = nil
     ) -> Output {
         var nextState = state
         var nextViewModel = viewModel
         let pickedURL = localAccountsCoordinator.openAuthFilePanelAndLoad(
             state: &nextState,
             viewModel: &nextViewModel,
-            authFileAccessService: authFileAccessService
+            authFileAccessService: authFileAccessService,
+            filePanelService: filePanelService
         )
         let nextSessionAuthorizedAuthFileURL = pickedURL ?? currentAuthorizedAuthFileURL
         return makeOutput(

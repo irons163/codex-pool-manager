@@ -5,7 +5,23 @@ import UniformTypeIdentifiers
 #endif
 
 struct CodexAuthFilePanelService {
+    private let picker: () -> URL?
+
+    init(picker: @escaping () -> URL?) {
+        self.picker = picker
+    }
+
+    @MainActor
+    init() {
+        self.picker = { Self.defaultPicker() }
+    }
+
     func pickAuthFileURL() -> URL? {
+        picker()
+    }
+
+    @MainActor
+    private static func defaultPicker() -> URL? {
 #if canImport(AppKit)
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
