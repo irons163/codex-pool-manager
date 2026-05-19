@@ -6,6 +6,20 @@ private enum CoverageExpansionError: Error {
     case expected
 }
 
+private final class StubUsageFetcher: CodexUsageFetching {
+    let result: Result<CodexUsage, Error>
+    let requests = LockedValue<[(token: String, accountID: String)]>([])
+
+    init(result: Result<CodexUsage, Error>) {
+        self.result = result
+    }
+
+    func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
+        requests.withLock { $0.append((token: accessToken, accountID: accountID)) }
+        return try result.get()
+    }
+}
+
 private final class SuccessTokenURLProtocol: URLProtocol {
     private static let lock = NSLock()
     private static var statusCode: Int = 200
@@ -660,5 +674,105 @@ struct RuntimeCoordinatorCoverageExpansionTests {
         #expect(output.oauthSuccessMessage == nil)
         #expect(output.nextOAuthAccountName == "Input Name")
         #expect(output.shouldRefreshLocalOAuthAccounts == false)
+    }
+}
+
+@MainActor
+struct LocalImportCoordinatorCoverageExpansionTests {
+    @Test
+    func importLocalOAuthAccountAddsAccountOnSuccessfulUsageFetch() async {
+        let usage = CodexUsage(
+            usedUnits: 12,
+            quota: 100,
+            accountID: "acct-imported",
+            accountEmail: "imported@example.com",
+            isPaid: true
+        )
+        let usageFetcher = StubUsageFetcher(result: .success(usage))
+        let coordinator = PoolDashboardLocalImportCoordinator(
+            usageClientFactory: { _ in usageFetcher }
+        )
+        let localAccount = LocalCodexOAuthAccount(
+            id: "local-import-1",
+            displayName: "OAuth Account",
+            email: "fallback@example.com",
+            source: "test",
+            accessToken: "sk-import-token",
+            chatGPTAccountID: "acct-imported"
+        )
+
+        let output = await coordinator.importLocalOAuthAccount(
+            localAccount,
+            state: AccountPoolState(accounts: [], mode: .manual),
+            viewModel: LocalOAuthImportViewModel(),
+            onRawResponse: { _ in }
+        )
+
+        #expect(output.didImport == true)
+        #expect(output.state.accounts.count == 1)
+        #expect(output.state.accounts.first?.chatGPTAccountID == "acct-imported")
+        #expect(output.state.accounts.first?.name == "imported@example.com")
+        #expect(output.viewModel.errorMessage == nil)
+        #expect(output.viewModel.successMessage?.isEmpty == false)
+        #expect(usageFetcher.requests.value.count == 1)
+        #expect(usageFetcher.requests.value.first?.token == "sk-import-token")
+        #expect(usageFetcher.requests.value.first?.accountID == "acct-imported")
+    }
+
+    @Test
+    func importLocalOAuthAccountReturnsLocalizedErrorWhenUsageFetchFails() async {
+        let usageFetcher = StubUsageFetcher(result: .failure(URLError(.timedOut)))
+        let coordinator = PoolDashboardLocalImportCoordinator(
+            usageClientFactory: { _ in usageFetcher }
+        )
+        let localAccount = LocalCodexOAuthAccount(
+            id: "local-import-2",
+            displayName: "OAuth Account",
+            email: "fallback@example.com",
+            source: "test",
+            accessToken: "sk-import-token-2",
+            chatGPTAccountID: "acct-imported-2"
+        )
+
+        let output = await coordinator.importLocalOAuthAccount(
+            localAccount,
+            state: AccountPoolState(accounts: [], mode: .manual),
+            viewModel: LocalOAuthImportViewModel(),
+            onRawResponse: { _ in }
+        )
+
+        #expect(output.didImport == false)
+        #expect(output.state.accounts.isEmpty)
+        #expect(output.viewModel.successMessage == nil)
+        #expect(output.viewModel.errorMessage?.contains(L10n.text("usage.sync.error.network")) == true)
+        #expect(usageFetcher.requests.value.count == 1)
+    }
+
+    @Test
+    func importLocalOAuthAccountSkipsImportWhenChatGPTAccountIDMissing() async {
+        let usageFetcher = StubUsageFetcher(result: .success(CodexUsage(usedUnits: 1, quota: 100)))
+        let coordinator = PoolDashboardLocalImportCoordinator(
+            usageClientFactory: { _ in usageFetcher }
+        )
+        let localAccount = LocalCodexOAuthAccount(
+            id: "local-import-3",
+            displayName: "OAuth Account",
+            email: "missing-id@example.com",
+            source: "test",
+            accessToken: "sk-import-token-3",
+            chatGPTAccountID: nil
+        )
+
+        let output = await coordinator.importLocalOAuthAccount(
+            localAccount,
+            state: AccountPoolState(accounts: [], mode: .manual),
+            viewModel: LocalOAuthImportViewModel(),
+            onRawResponse: { _ in }
+        )
+
+        #expect(output.didImport == false)
+        #expect(output.state.accounts.isEmpty)
+        #expect(output.viewModel.errorMessage == L10n.text("auth.missing_chatgpt_account_id"))
+        #expect(usageFetcher.requests.value.isEmpty)
     }
 }
