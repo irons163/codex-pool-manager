@@ -15,9 +15,17 @@ struct CodexAuthFileAccessService {
     }
 
     let bookmarkKey: String
+    private let fallbackAuthFileURLProvider: () -> URL
 
-    init(bookmarkKey: String) {
+    init(
+        bookmarkKey: String,
+        fallbackAuthFileURLProvider: @escaping () -> URL = {
+            FileManager.default.homeDirectoryForCurrentUser
+                .appending(path: Self.fallbackAuthRelativePath)
+        }
+    ) {
         self.bookmarkKey = bookmarkKey
+        self.fallbackAuthFileURLProvider = fallbackAuthFileURLProvider
     }
 
     func saveBookmark(for url: URL) throws {
@@ -54,8 +62,7 @@ struct CodexAuthFileAccessService {
             return try resolveURL(from: bookmark).url
         }
 
-        let fallback = FileManager.default.homeDirectoryForCurrentUser
-            .appending(path: Self.fallbackAuthRelativePath)
+        let fallback = fallbackAuthFileURLProvider()
         if FileManager.default.fileExists(atPath: fallback.path) {
             return fallback
         }

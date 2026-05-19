@@ -619,6 +619,28 @@ struct CodexAuthFileAccessServiceCoverageExpansionTests {
             }
         }
     }
+
+    @Test
+    func resolveAuthFileURLForSwitchThrowsMissingWhenInjectedFallbackPathDoesNotExist() {
+        let missingFallback = FileManager.default.temporaryDirectory
+            .appendingPathComponent("missing-\(UUID().uuidString)-auth.json")
+        let service = CodexAuthFileAccessService(
+            bookmarkKey: "test.auth.file.resolve.missing.\(UUID().uuidString)",
+            fallbackAuthFileURLProvider: { missingFallback }
+        )
+
+        do {
+            _ = try service.resolveAuthFileURLForSwitch(sessionAuthorizedURL: nil)
+            Issue.record("Expected missingAuthFile error when fallback path is missing")
+        } catch let accessError as CodexAuthFileAccessService.AccessError {
+            switch accessError {
+            case .missingAuthFile:
+                #expect(true)
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
 }
 
 struct LocalAccountsCoordinatorCoverageExpansionTests {
