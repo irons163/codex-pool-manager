@@ -152,6 +152,57 @@ struct CodexAuthSwitchServiceCoverageTests {
             }
         }
     }
+
+    @Test
+    @MainActor
+    func codexAuthSwitchServicePerformSwitchAndLaunchRewritesAuthFileBeforeLaunch() async throws {
+        let service = CodexAuthSwitchService()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "display-name-only",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "launch-token"
+        )
+        let sourceJSON = """
+        {
+          "session": {
+            "access_token": "old-token",
+            "profile": { "email": "old@example.com" },
+            "account_id": "old-account"
+          }
+        }
+        """
+
+        let authURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-auth-launch-\(UUID().uuidString).json")
+        try Data(sourceJSON.utf8).write(to: authURL, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: authURL) }
+
+        var launchError: Error?
+        do {
+            try await service.performSwitchAndLaunch(
+                authFileURL: authURL,
+                account: account,
+                chatGPTAccountID: "launch-account",
+                launchTarget: .antigravity
+            )
+        } catch {
+            launchError = error
+        }
+
+        let rewritten = try Data(contentsOf: authURL)
+        let root = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let session = try #require(root["session"] as? [String: Any])
+        let profile = try #require(session["profile"] as? [String: Any])
+
+        #expect(session["access_token"] as? String == "launch-token")
+        #expect(session["account_id"] as? String == "launch-account")
+        #expect(profile["email"] as? String == "old@example.com")
+        if let launchError {
+            #expect(launchError is CodexAuthSwitchError)
+        }
+    }
 }
 
 struct PoolDashboardAuthFlowCoordinatorCoverageTests {
