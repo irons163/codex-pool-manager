@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import CodexPoolManager
 
@@ -1594,5 +1595,108 @@ struct MutationCoordinatorCoverageExpansionTests {
         #expect(viewState.switchLaunchWarning == nil)
         #expect(viewState.lastSwitchLaunchLog == "ok")
         #expect(authorizedURL == nil)
+    }
+}
+
+@MainActor
+struct StrategyAndVaultCoverageExpansionTests {
+    @Test
+    func strategyBindingAdapterCoversLaunchAndAutoSyncBindings() {
+        var state = AccountPoolState(
+            accounts: [],
+            mode: .manual,
+            autoSyncEnabled: true,
+            autoSyncIntervalSeconds: 30
+        )
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardStrategyBindingAdapter(state: binding)
+
+        #expect(adapter.mode.wrappedValue == .intelligent)
+        adapter.mode.wrappedValue = .manual
+        #expect(state.mode == .intelligent)
+
+        #expect(adapter.switchWithoutLaunching.wrappedValue == false)
+        adapter.switchWithoutLaunching.wrappedValue = true
+        #expect(state.switchWithoutLaunching == true)
+
+        #expect(adapter.autoSyncEnabled.wrappedValue == true)
+        adapter.autoSyncEnabled.wrappedValue = false
+        #expect(state.autoSyncEnabled == false)
+
+        adapter.autoSyncIntervalSeconds.wrappedValue = 500
+        #expect(state.autoSyncIntervalSeconds == 300)
+        adapter.autoSyncIntervalSeconds.wrappedValue = 1
+        #expect(state.autoSyncIntervalSeconds == 5)
+    }
+
+    @Test
+    func strategyBindingAdapterManualSelectionHandlesEmptyAccountList() {
+        var state = AccountPoolState(accounts: [], mode: .intelligent)
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardStrategyBindingAdapter(state: binding)
+
+        let generatedID = adapter.manualSelection.wrappedValue
+        #expect(state.manualAccountID == nil)
+
+        adapter.manualSelection.wrappedValue = generatedID
+        #expect(state.manualAccountID == generatedID)
+    }
+
+    @Test
+    func tokenVaultsCoverRemoveAndEmptyStorageFallback() {
+        let inMemoryVault = InMemoryAccountTokenVault()
+        let inMemoryID = UUID()
+        inMemoryVault.setToken("memory-token", for: inMemoryID)
+        #expect(inMemoryVault.tokenCount == 1)
+        inMemoryVault.removeToken(for: inMemoryID)
+        #expect(inMemoryVault.token(for: inMemoryID) == nil)
+        #expect(inMemoryVault.tokenCount == 0)
+
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let defaultsVault = UserDefaultsAccountTokenVault(defaults: defaults, key: "tokens")
+        #expect(defaultsVault.tokenCount == 0)
+
+        let defaultsID = UUID()
+        defaultsVault.setToken("defaults-token", for: defaultsID)
+        #expect(defaultsVault.tokenCount == 1)
+        defaultsVault.removeToken(for: defaultsID)
+        #expect(defaultsVault.token(for: defaultsID) == nil)
+        #expect(defaultsVault.tokenCount == 0)
+    }
+
+    @Test
+    func backupFlowCoordinatorCoversRefetchableExportPath() {
+        let coordinator = PoolDashboardBackupFlowCoordinator()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Refetchable",
+            usedUnits: 55,
+            quota: 100,
+            apiToken: "token-refetchable",
+            chatGPTAccountID: "acct-refetchable",
+            usageWindowName: "primary_window",
+            usageWindowResetAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let state = AccountPoolState(accounts: [account], mode: .manual)
+        var viewState = PoolDashboardViewState()
+
+        coordinator.exportRefetchableSnapshot(from: state, viewState: &viewState)
+
+        #expect(viewState.backupError == nil)
+        #expect(!viewState.backupJSON.isEmpty)
+        #expect(viewState.backupJSON.contains("acct-refetchable"))
     }
 }

@@ -276,4 +276,46 @@ struct ViewSmokeCoverageTests {
         let item = Item(timestamp: .now)
         #expect(item.timestamp <= .now)
     }
+
+    @Test
+    @MainActor
+    func syncToolbarViewBodyRendersSyncingRetryAndStatusBadges() {
+        var syncCount = 0
+        var retryCount = 0
+        var forceRetryCount = 0
+
+        let syncing = SyncToolbarView(
+            isSyncing: true,
+            lastSyncAt: nil,
+            errorText: nil,
+            onSync: { syncCount += 1 },
+            onRetry: { retryCount += 1 },
+            onForceRetry: { forceRetryCount += 1 }
+        )
+        let _ = syncing.body
+
+        let retry = SyncToolbarView(
+            isSyncing: false,
+            lastSyncAt: Date(timeIntervalSince1970: 1_700_000_000),
+            errorText: "timeout",
+            onSync: { syncCount += 1 },
+            onRetry: { retryCount += 1 },
+            onForceRetry: { forceRetryCount += 1 }
+        )
+        let _ = retry.body
+
+        let idle = SyncToolbarView(
+            isSyncing: false,
+            lastSyncAt: nil,
+            errorText: "",
+            onSync: { syncCount += 1 },
+            onRetry: { retryCount += 1 },
+            onForceRetry: { forceRetryCount += 1 }
+        )
+        let _ = idle.body
+
+        #expect(syncCount == 0)
+        #expect(retryCount == 0)
+        #expect(forceRetryCount == 0)
+    }
 }

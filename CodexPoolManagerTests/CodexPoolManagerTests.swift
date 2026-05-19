@@ -3026,6 +3026,45 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexAuthFileSwitcherRewritesKnownFieldsInsideArrays() throws {
+        let json = """
+        {
+          "profiles": [
+            {
+              "token": "old-token-1",
+              "chatgpt_account_id": "old-account-1",
+              "user_email": "old1@example.com"
+            },
+            {
+              "accessToken": "old-token-2",
+              "accountId": "old-account-2",
+              "emailAddress": "old2@example.com"
+            }
+          ]
+        }
+        """
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            Data(json.utf8),
+            accessToken: "new-token",
+            accountID: "new-account",
+            email: "new@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let profiles = try #require(object["profiles"] as? [[String: Any]])
+        #expect(profiles.count == 2)
+
+        let first = profiles[0]
+        #expect(first["token"] as? String == "new-token")
+        #expect(first["chatgpt_account_id"] as? String == "new-account")
+        #expect(first["user_email"] as? String == "new@example.com")
+
+        let second = profiles[1]
+        #expect(second["accessToken"] as? String == "new-token")
+        #expect(second["accountId"] as? String == "new-account")
+        #expect(second["emailAddress"] as? String == "new@example.com")
+    }
+
+    @Test
     func localCodexDiscoveryReturnsEmptyForInvalidJSON() {
         let data = Data("not-json".utf8)
         let accounts = LocalCodexAccountDiscovery.parseAccounts(from: data, source: "/tmp/auth.json")
