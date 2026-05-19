@@ -219,6 +219,35 @@ struct PoolDashboardViewMutationCoordinatorTests {
     }
 
     @Test
+    func poolDashboardViewMutationCoordinatorApplyLifecycleSnapshotChangeOutputUpdatesPolicyAndViewState() {
+        var lowUsageAlertPolicy = LowUsageAlertPolicy()
+        var viewState = PoolDashboardViewState()
+        viewState.syncError = "before"
+
+        var nextPolicy = LowUsageAlertPolicy()
+        _ = nextPolicy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
+        var nextViewState = PoolDashboardViewState()
+        nextViewState.showLowUsageAlert = true
+        nextViewState.syncError = "after"
+        let output = PoolDashboardLifecycleFlowCoordinator.SnapshotChangeOutput(
+            lowUsageAlertPolicy: nextPolicy,
+            viewState: nextViewState
+        )
+        let coordinator = PoolDashboardViewMutationCoordinator()
+
+        coordinator.applyLifecycleSnapshotChangeOutput(
+            output,
+            lowUsageAlertPolicy: &lowUsageAlertPolicy,
+            viewState: &viewState
+        )
+
+        #expect(viewState.showLowUsageAlert)
+        #expect(viewState.syncError == "after")
+        let shouldTriggerAgain = lowUsageAlertPolicy.shouldTriggerAlert(mode: .focus, hasLowUsageWarning: true)
+        #expect(!shouldTriggerAgain)
+    }
+
+    @Test
     func poolDashboardViewMutationCoordinatorApplyLocalAccountsOutputReturnsPickedURL() {
         var state = AccountPoolState(accounts: [], mode: .manual)
         var viewModel = LocalOAuthImportViewModel()
@@ -247,6 +276,52 @@ struct PoolDashboardViewMutationCoordinatorTests {
         #expect(state.accounts[0].name == "Imported")
         #expect(sessionURL == expectedSessionURL)
         #expect(pickedURL == expectedPickedURL)
+    }
+
+    @Test
+    func poolDashboardViewMutationCoordinatorApplyLocalImportOutputUpdatesStateViewModelAndViewState() {
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "Before", usedUnits: 1, quota: 10)],
+            mode: .manual
+        )
+        var viewModel = LocalOAuthImportViewModel()
+        viewModel.errorMessage = "before-error"
+        var viewState = PoolDashboardViewState()
+        viewState.syncError = "before-sync-error"
+
+        let importedAccount = AgentAccount(id: UUID(), name: "Imported", usedUnits: 0, quota: 100)
+        let nextState = AccountPoolState(accounts: [importedAccount], mode: .focus)
+        let nextViewModel = LocalOAuthImportViewModel(accounts: [
+            LocalCodexOAuthAccount(
+                id: UUID().uuidString,
+                displayName: "Imported OAuth",
+                email: "imported@example.com",
+                source: "~/.codex/auth.json",
+                accessToken: "sk-imported",
+                chatGPTAccountID: "account-imported"
+            )
+        ])
+        var nextViewState = PoolDashboardViewState()
+        nextViewState.oauthSuccessMessage = "import-ok"
+        let output = PoolDashboardLocalImportFlowCoordinator.Output(
+            state: nextState,
+            viewModel: nextViewModel,
+            viewState: nextViewState,
+            didImport: true
+        )
+        let coordinator = PoolDashboardViewMutationCoordinator()
+
+        coordinator.applyLocalImportOutput(
+            output,
+            state: &state,
+            viewModel: &viewModel,
+            viewState: &viewState
+        )
+
+        #expect(state.snapshot == nextState.snapshot)
+        #expect(viewModel.accounts.count == 1)
+        #expect(viewModel.accounts.first?.email == "imported@example.com")
+        #expect(viewState.oauthSuccessMessage == "import-ok")
     }
 
     @Test

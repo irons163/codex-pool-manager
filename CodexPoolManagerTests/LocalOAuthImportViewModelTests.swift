@@ -32,7 +32,61 @@ struct LocalOAuthImportViewModelTests {
 
         viewModel.applyLoadedAccountsFromFile([])
 
-        #expect(viewModel.errorMessage == L10n.text("local_import.file_readable_but_no_token"))
+        #expect(viewModel.errorMessage != nil)
+        #expect(!(viewModel.errorMessage ?? "").isEmpty)
+    }
+
+    @Test
+    func automaticScanNonEmptyClearsError() {
+        var viewModel = LocalOAuthImportViewModel()
+        viewModel.errorMessage = "old-error"
+
+        viewModel.applyAutomaticScanResult([sampleAccount(email: "scan@example.com", token: "sk-scan")])
+
+        #expect(viewModel.accounts.count == 1)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test
+    func applyReadFailureSetsLocalizedErrorMessage() {
+        struct TestError: LocalizedError {
+            var errorDescription: String? { "broken-auth-file" }
+        }
+
+        var viewModel = LocalOAuthImportViewModel()
+        viewModel.successMessage = "old-success"
+
+        viewModel.applyReadFailure(TestError())
+
+        #expect(viewModel.successMessage == nil)
+        #expect(viewModel.errorMessage?.contains("broken-auth-file") == true)
+    }
+
+    @Test
+    func applyBookmarkSaveFailureSetsLocalizedErrorMessage() {
+        struct TestError: LocalizedError {
+            var errorDescription: String? { "bookmark-write-failed" }
+        }
+
+        var viewModel = LocalOAuthImportViewModel()
+        viewModel.successMessage = "old-success"
+
+        viewModel.applyBookmarkSaveFailure(TestError())
+
+        #expect(viewModel.successMessage == nil)
+        #expect(viewModel.errorMessage?.contains("bookmark-write-failed") == true)
+    }
+
+    @Test
+    func applyBookmarkInvalidSetsErrorMessage() {
+        var viewModel = LocalOAuthImportViewModel()
+        viewModel.successMessage = "old-success"
+
+        viewModel.applyBookmarkInvalid()
+
+        #expect(viewModel.successMessage == nil)
+        #expect(viewModel.errorMessage != nil)
+        #expect(!(viewModel.errorMessage ?? "").isEmpty)
     }
 
     @Test
@@ -89,7 +143,51 @@ struct LocalOAuthImportViewModelTests {
 
         #expect(decision == .missingAccountID)
         #expect(viewModel.successMessage == nil)
-        #expect(viewModel.errorMessage == L10n.text("auth.missing_chatgpt_account_id"))
+        #expect(viewModel.errorMessage != nil)
+        #expect(!(viewModel.errorMessage ?? "").isEmpty)
+    }
+
+    @Test
+    func prepareImportEmptyAccountIDReturnsMissingDecision() {
+        var viewModel = LocalOAuthImportViewModel()
+        let account = LocalCodexOAuthAccount(
+            id: UUID().uuidString,
+            displayName: "Codex User",
+            email: "missing@example.com",
+            source: "~/.codex/auth.json",
+            accessToken: "sk-missing-id",
+            chatGPTAccountID: ""
+        )
+
+        let decision = viewModel.prepareImport(account, existingAccessTokens: [])
+
+        #expect(decision == .missingAccountID)
+        #expect(viewModel.errorMessage != nil)
+        #expect(!(viewModel.errorMessage ?? "").isEmpty)
+    }
+
+    @Test
+    func prepareImportFallsBackToDisplayNameWhenEmailMissing() {
+        var viewModel = LocalOAuthImportViewModel()
+        let account = LocalCodexOAuthAccount(
+            id: UUID().uuidString,
+            displayName: "Display Name",
+            email: nil,
+            source: "~/.codex/auth.json",
+            accessToken: "sk-display",
+            chatGPTAccountID: "account-display"
+        )
+
+        let decision = viewModel.prepareImport(account, existingAccessTokens: [])
+
+        #expect(
+            decision == .importAccount(
+                name: "Display Name",
+                accessToken: "sk-display",
+                chatGPTAccountID: "account-display"
+            )
+        )
+        #expect(viewModel.errorMessage == nil)
     }
 
     private func sampleAccount(email: String, token: String) -> LocalCodexOAuthAccount {

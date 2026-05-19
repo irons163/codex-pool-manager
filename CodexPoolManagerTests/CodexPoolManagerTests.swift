@@ -3278,6 +3278,71 @@ struct CodexPoolManagerTests {
         #expect(vault.tokenCount == 1)
         defaults.removePersistentDomain(forName: suiteName)
     }
+
+    #if DEBUG
+    @Test
+    func developerAwareAccountPoolStoreUsesDeveloperKeysWhenMockModeEnabled() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let mockModeKey = "mock_mode_key"
+        let productionSnapshotKey = "prod_snapshot"
+        let productionTokenKey = "prod_tokens"
+        let developerSnapshotKey = "dev_snapshot"
+        let developerTokenKey = "dev_tokens"
+        defaults.set(true, forKey: mockModeKey)
+
+        let accountID = UUID()
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Developer",
+                    usedUnits: 2,
+                    quota: 100,
+                    apiToken: "dev-token",
+                    chatGPTAccountID: "acct-dev"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+        let store = DeveloperAwareAccountPoolStore(
+            defaults: defaults,
+            productionSnapshotKey: productionSnapshotKey,
+            productionTokenKey: productionTokenKey,
+            developerSnapshotKey: developerSnapshotKey,
+            developerTokenKey: developerTokenKey,
+            developerMockModeKey: mockModeKey
+        )
+
+        store.save(snapshot)
+
+        #expect(defaults.data(forKey: developerSnapshotKey) != nil)
+        #expect(defaults.data(forKey: productionSnapshotKey) == nil)
+
+        let developerVault = UserDefaultsAccountTokenVault(defaults: defaults, key: developerTokenKey)
+        let productionVault = UserDefaultsAccountTokenVault(defaults: defaults, key: productionTokenKey)
+        #expect(developerVault.token(for: accountID) == "dev-token")
+        #expect(productionVault.token(for: accountID) == nil)
+
+        let loaded = try #require(store.load())
+        #expect(loaded.accounts.count == 1)
+        #expect(loaded.accounts.first?.apiToken == "dev-token")
+    }
+    #endif
 }
 
 extension CodexPoolManagerTests {
@@ -3456,7 +3521,7 @@ extension CodexPoolManagerTests {
     func poolDashboardAccountBindingAdapterUpdatesNameAndQuotaAndUsed() {
         let id = UUID()
         var state = AccountPoolState(
-            accounts: [AgentAccount(id: id, name: "Old", usedUnits: 10, quota: 100)],
+            accounts: [AgentAccount(id: id, name: "Old", groupName: "Default", usedUnits: 10, quota: 100)],
             mode: .manual
         )
         let binding = Binding<AccountPoolState>(
@@ -3468,10 +3533,12 @@ extension CodexPoolManagerTests {
         adapter.nameBinding(for: id).wrappedValue = "New"
         adapter.quotaBinding(for: id).wrappedValue = 200
         adapter.usedBinding(for: id).wrappedValue = 25
+        adapter.groupNameBinding(for: id).wrappedValue = "Workspace"
 
         #expect(state.accounts.first?.name == "New")
         #expect(state.accounts.first?.quota == 200)
         #expect(state.accounts.first?.usedUnits == 25)
+        #expect(state.accounts.first?.groupName == "Workspace")
     }
 
     @Test
@@ -3487,6 +3554,7 @@ extension CodexPoolManagerTests {
         #expect(adapter.nameBinding(for: unknownID).wrappedValue == "")
         #expect(adapter.quotaBinding(for: unknownID).wrappedValue == 100)
         #expect(adapter.usedBinding(for: unknownID).wrappedValue == 0)
+        #expect(adapter.groupNameBinding(for: unknownID).wrappedValue == AgentAccount.defaultGroupName)
     }
 
     @Test

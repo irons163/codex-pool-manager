@@ -571,6 +571,54 @@ struct CodexAuthFileAccessServiceCoverageExpansionTests {
 
         #expect(value == "hello")
     }
+
+    @Test
+    func accessErrorDescriptionAndMissingBookmarkPathAreCovered() {
+        let error = CodexAuthFileAccessService.AccessError.missingAuthFile
+        #expect(error.errorDescription != nil)
+        #expect(!(error.errorDescription ?? "").isEmpty)
+
+        let service = CodexAuthFileAccessService(bookmarkKey: "test.auth.file.missing.bookmark.\(UUID().uuidString)")
+        do {
+            _ = try service.loadAuthorizedURLFromBookmark()
+            Issue.record("Expected loadAuthorizedURLFromBookmark to throw when bookmark is missing")
+        } catch let accessError as CodexAuthFileAccessService.AccessError {
+            switch accessError {
+            case .missingAuthFile:
+                #expect(true)
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test
+    func resolveAuthFileURLForSwitchCoversFallbackOrMissingPath() {
+        let service = CodexAuthFileAccessService(bookmarkKey: "test.auth.file.resolve.\(UUID().uuidString)")
+        let fallbackURL = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex/auth.json")
+        let fallbackExists = FileManager.default.fileExists(atPath: fallbackURL.path)
+
+        if fallbackExists {
+            do {
+                let resolved = try service.resolveAuthFileURLForSwitch(sessionAuthorizedURL: nil)
+                #expect(resolved.standardizedFileURL.path == fallbackURL.standardizedFileURL.path)
+            } catch {
+                Issue.record("Expected fallback auth file path to resolve, got error: \(error)")
+            }
+        } else {
+            do {
+                _ = try service.resolveAuthFileURLForSwitch(sessionAuthorizedURL: nil)
+                Issue.record("Expected missing auth file error when fallback path does not exist")
+            } catch let accessError as CodexAuthFileAccessService.AccessError {
+                switch accessError {
+                case .missingAuthFile:
+                    #expect(true)
+                }
+            } catch {
+                Issue.record("Unexpected error type: \(error)")
+            }
+        }
+    }
 }
 
 struct LocalAccountsCoordinatorCoverageExpansionTests {
@@ -691,6 +739,105 @@ struct LocalAccountsCoordinatorCoverageExpansionTests {
         #expect(result.authorizedURL == fallbackURL)
         #expect(viewModel.errorMessage?.isEmpty == false)
         #expect(viewModel.errorMessage?.localizedCaseInsensitiveContains("auth.json") == true)
+    }
+
+    @Test
+    func loadLocalOAuthAccountsReadFailureSetsErrorMessage() {
+        let coordinator = PoolDashboardLocalAccountsCoordinator()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewModel = LocalOAuthImportViewModel()
+        let missingURL = URL(fileURLWithPath: "/tmp/nonexistent-\(UUID().uuidString)-auth.json")
+
+        coordinator.loadLocalOAuthAccounts(
+            from: missingURL,
+            state: &state,
+            viewModel: &viewModel,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "test.local.accounts.missing.\(UUID().uuidString)")
+        )
+
+        #expect(viewModel.errorMessage != nil)
+        #expect(!(viewModel.errorMessage ?? "").isEmpty)
+    }
+
+    @Test
+    func saveAuthFileBookmarkFailureSetsErrorMessage() {
+        let coordinator = PoolDashboardLocalAccountsCoordinator()
+        var viewModel = LocalOAuthImportViewModel()
+        let invalidURL = URL(string: "https://example.com/auth.json")!
+
+        coordinator.saveAuthFileBookmark(
+            for: invalidURL,
+            viewModel: &viewModel,
+            authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "test.local.accounts.save.fail.\(UUID().uuidString)")
+        )
+
+        #expect(viewModel.errorMessage != nil)
+        #expect(!(viewModel.errorMessage ?? "").isEmpty)
+    }
+
+    @Test
+    func loadLocalOAuthAccountsFromBookmarkResavesWhenBookmarkIsStale() throws {
+        let bookmarkKey = "test.local.accounts.stale.\(UUID().uuidString)"
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: bookmarkKey)
+        defer { defaults.removeObject(forKey: bookmarkKey) }
+
+        let service = CodexAuthFileAccessService(bookmarkKey: bookmarkKey)
+        let coordinator = PoolDashboardLocalAccountsCoordinator()
+        let authJSON = """
+        {
+          "session": {
+            "email": "stale@example.com",
+            "account_id": "acct-stale",
+            "access_token": "sk-stale-token"
+          }
+        }
+        """
+
+        try withTemporaryFile(contents: authJSON) { originalURL in
+            try service.saveBookmark(for: originalURL)
+
+            let movedURL = originalURL.deletingLastPathComponent().appendingPathComponent("moved-\(UUID().uuidString).json")
+            try FileManager.default.moveItem(at: originalURL, to: movedURL)
+            defer { try? FileManager.default.removeItem(at: movedURL) }
+
+            var state = AccountPoolState(accounts: [], mode: .manual)
+            var viewModel = LocalOAuthImportViewModel()
+
+            let result = coordinator.loadLocalOAuthAccountsFromBookmark(
+                state: &state,
+                viewModel: &viewModel,
+                authFileAccessService: service,
+                currentAuthorizedAuthFileURL: nil
+            )
+
+            #expect(result.didLoadAccounts)
+            #expect(result.authorizedURL?.standardizedFileURL.lastPathComponent == movedURL.lastPathComponent)
+            #expect(viewModel.accounts.count == 1)
+            #expect(viewModel.errorMessage == nil)
+
+            let resolvedAfterResave = try service.loadAuthorizedURLFromBookmark()
+            #expect(resolvedAfterResave.url.standardizedFileURL.lastPathComponent == movedURL.lastPathComponent)
+            #expect(!resolvedAfterResave.wasStale)
+        }
+    }
+
+    @Test
+    func hasSavedAuthFileBookmarkReflectsBookmarkPresence() throws {
+        let bookmarkKey = "test.local.accounts.saved.check.\(UUID().uuidString)"
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: bookmarkKey)
+        defer { defaults.removeObject(forKey: bookmarkKey) }
+
+        let service = CodexAuthFileAccessService(bookmarkKey: bookmarkKey)
+        let coordinator = PoolDashboardLocalAccountsCoordinator()
+
+        #expect(!coordinator.hasSavedAuthFileBookmark(authFileAccessService: service))
+
+        try withTemporaryFile(contents: "{\"access_token\":\"token\"}") { authFileURL in
+            try service.saveBookmark(for: authFileURL)
+            #expect(coordinator.hasSavedAuthFileBookmark(authFileAccessService: service))
+        }
     }
 }
 
