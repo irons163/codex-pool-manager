@@ -163,25 +163,29 @@ struct PoolDashboardAuthFlowCoordinator {
         )
     }
 
-    func localizedSyncError(_ error: Error) -> String {
+    func syncErrorKind(for error: Error) -> CodexSyncError {
         if let syncError = error as? CodexSyncError {
-            return syncError.localizedDescription
+            return syncError
         }
 
         if let http = error as? CodexClientHTTPError {
             if http.statusCode == 401 || http.statusCode == 403 {
-                return CodexSyncError.unauthorized.localizedDescription
+                return .unauthorized
             }
             if http.statusCode == 429 {
-                return CodexSyncError.rateLimited.localizedDescription
+                return .rateLimited
             }
-            return CodexSyncError.unknown.localizedDescription
+            return .unknown
         }
 
         if error is URLError {
-            return CodexSyncError.network.localizedDescription
+            return .network
         }
 
-        return CodexSyncError.unknown.localizedDescription
+        return .unknown
+    }
+
+    func localizedSyncError(_ error: Error) -> String {
+        syncErrorKind(for: error).localizedDescription
     }
 }

@@ -341,26 +341,11 @@ struct PoolDashboardAuthFlowCoordinatorCoverageTests {
     func authFlowLocalizedSyncErrorMapsKnownErrorKinds() {
         let coordinator = PoolDashboardAuthFlowCoordinator()
 
-        #expect(
-            coordinator.localizedSyncError(CodexSyncError.unauthorized)
-                == CodexSyncError.unauthorized.localizedDescription
-        )
-        #expect(
-            coordinator.localizedSyncError(CodexClientHTTPError(statusCode: 401))
-                == CodexSyncError.unauthorized.localizedDescription
-        )
-        #expect(
-            coordinator.localizedSyncError(CodexClientHTTPError(statusCode: 429))
-                == CodexSyncError.rateLimited.localizedDescription
-        )
-        #expect(
-            coordinator.localizedSyncError(URLError(.timedOut))
-                == CodexSyncError.network.localizedDescription
-        )
-        #expect(
-            coordinator.localizedSyncError(CoverageBoostMockError.expected)
-                == CodexSyncError.unknown.localizedDescription
-        )
+        #expect(coordinator.syncErrorKind(for: CodexSyncError.unauthorized) == .unauthorized)
+        #expect(coordinator.syncErrorKind(for: CodexClientHTTPError(statusCode: 401)) == .unauthorized)
+        #expect(coordinator.syncErrorKind(for: CodexClientHTTPError(statusCode: 429)) == .rateLimited)
+        #expect(coordinator.syncErrorKind(for: URLError(.timedOut)) == .network)
+        #expect(coordinator.syncErrorKind(for: CoverageBoostMockError.expected) == .unknown)
     }
 }
 

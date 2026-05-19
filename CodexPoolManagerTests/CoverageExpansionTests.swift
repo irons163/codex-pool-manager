@@ -1318,4 +1318,167 @@ struct LocalImportCoordinatorCoverageExpansionTests {
         #expect(output.viewModel.errorMessage == L10n.text("auth.missing_chatgpt_account_id"))
         #expect(usageFetcher.requests.value.isEmpty)
     }
+
+    @Test
+    func importLocalOAuthAccountUpdatesExistingAccountAndUsesUpdatedMessage() async {
+        let usage = CodexUsage(
+            usedUnits: 22,
+            quota: 100,
+            accountID: "acct-imported-existing",
+            accountEmail: "updated@example.com",
+            isPaid: true
+        )
+        let usageFetcher = StubUsageFetcher(result: .success(usage))
+        let coordinator = PoolDashboardLocalImportCoordinator(
+            usageClientFactory: { _ in usageFetcher }
+        )
+        let localAccount = LocalCodexOAuthAccount(
+            id: "local-import-existing",
+            displayName: "OAuth Account",
+            email: "fallback@example.com",
+            source: "test",
+            accessToken: "sk-import-token-existing",
+            chatGPTAccountID: "acct-imported-existing"
+        )
+        let existingAccount = AgentAccount(
+            id: UUID(),
+            name: "old@example.com",
+            usedUnits: 1,
+            quota: 100,
+            apiToken: "sk-old-token",
+            chatGPTAccountID: "acct-imported-existing"
+        )
+        let existingState = AccountPoolState(accounts: [existingAccount], mode: .manual)
+
+        let output = await coordinator.importLocalOAuthAccount(
+            localAccount,
+            state: existingState,
+            viewModel: LocalOAuthImportViewModel(),
+            onRawResponse: { _ in }
+        )
+
+        #expect(output.didImport == true)
+        #expect(output.state.accounts.count == 1)
+        #expect(output.state.accounts.first?.chatGPTAccountID == "acct-imported-existing")
+        #expect(output.state.accounts.first?.usedUnits == 22)
+        #expect(output.viewModel.successMessage?.isEmpty == false)
+        #expect(output.viewModel.errorMessage == nil)
+        #expect(usageFetcher.requests.value.count == 1)
+    }
+}
+
+@MainActor
+struct MutationCoordinatorCoverageExpansionTests {
+    @Test
+    func applyBackupExportResultKeepsExistingStateWhenNoPayloadAndNoError() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var viewState = PoolDashboardViewState()
+        viewState.backupJSON = "{\"old\":true}"
+        viewState.backupError = "old-error"
+
+        coordinator.applyBackupExportResult((json: nil, errorMessage: nil), viewState: &viewState)
+
+        #expect(viewState.backupJSON == "{\"old\":true}")
+        #expect(viewState.backupError == "old-error")
+    }
+
+    @Test
+    func applyBackupImportResultReturnsFalseWhenNoStateAndNoError() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        let originalState = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "Keep", usedUnits: 1, quota: 100)],
+            mode: .manual
+        )
+        var state = originalState
+        var viewState = PoolDashboardViewState()
+        viewState.backupError = "old-error"
+
+        let shouldSync = coordinator.applyBackupImportResult(
+            (state: nil, errorMessage: nil),
+            state: &state,
+            viewState: &viewState
+        )
+
+        #expect(shouldSync == false)
+        #expect(state.snapshot == originalState.snapshot)
+        #expect(viewState.backupError == "old-error")
+    }
+
+    @Test
+    func applyLocalImportOutputWithoutImportKeepsSyncError() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewModel = LocalOAuthImportViewModel()
+        viewModel.errorMessage = "import-failed"
+        var viewState = PoolDashboardViewState()
+        viewState.syncError = "existing-sync-error"
+        let output = PoolDashboardLocalImportCoordinator.Output(
+            state: state,
+            viewModel: viewModel,
+            didImport: false
+        )
+
+        coordinator.applyLocalImportOutput(
+            output,
+            state: &state,
+            viewModel: &viewModel,
+            viewState: &viewState
+        )
+
+        #expect(viewState.syncError == "existing-sync-error")
+        #expect(viewModel.errorMessage == "import-failed")
+    }
+
+    @Test
+    func applySwitchOutputSetsWarningWhenAuthSwitchedButLaunchFailed() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var viewModel = LocalOAuthImportViewModel()
+        var viewState = PoolDashboardViewState()
+        var authorizedURL: URL? = nil
+        let output = PoolDashboardSwitchLaunchCoordinator.Output(
+            switchLaunchLog: "switch-log",
+            errorMessage: "launch failed",
+            sessionAuthorizedAuthFileURL: URL(fileURLWithPath: "/tmp/auth-switched.json"),
+            didSwitchAuth: true
+        )
+
+        coordinator.applySwitchOutput(
+            output,
+            viewModel: &viewModel,
+            viewState: &viewState,
+            sessionAuthorizedAuthFileURL: &authorizedURL
+        )
+
+        #expect(viewState.switchLaunchError == nil)
+        #expect(viewState.switchLaunchWarning == L10n.text("switch.warning.launch_failed_but_switched"))
+        #expect(viewState.lastSwitchLaunchLog == "switch-log")
+        #expect(authorizedURL?.path == "/tmp/auth-switched.json")
+    }
+
+    @Test
+    func applySwitchOutputClearsWarningWhenAuthSwitchedWithoutError() {
+        let coordinator = PoolDashboardMutationCoordinator()
+        var viewModel = LocalOAuthImportViewModel()
+        var viewState = PoolDashboardViewState()
+        viewState.switchLaunchWarning = "old-warning"
+        var authorizedURL: URL? = URL(fileURLWithPath: "/tmp/old.json")
+        let output = PoolDashboardSwitchLaunchCoordinator.Output(
+            switchLaunchLog: "ok",
+            errorMessage: nil,
+            sessionAuthorizedAuthFileURL: nil,
+            didSwitchAuth: true
+        )
+
+        coordinator.applySwitchOutput(
+            output,
+            viewModel: &viewModel,
+            viewState: &viewState,
+            sessionAuthorizedAuthFileURL: &authorizedURL
+        )
+
+        #expect(viewState.switchLaunchError == nil)
+        #expect(viewState.switchLaunchWarning == nil)
+        #expect(viewState.lastSwitchLaunchLog == "ok")
+        #expect(authorizedURL == nil)
+    }
 }
