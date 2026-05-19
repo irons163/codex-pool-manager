@@ -1,5 +1,37 @@
 import Foundation
 
+protocol PoolDashboardRuntimeOAuthCoordinating {
+    func signInWithOAuth(
+        from state: AccountPoolState,
+        input: PoolDashboardRuntimeCoordinator.OAuthSignInInput
+    ) async -> PoolDashboardRuntimeCoordinator.OAuthSignInOutput
+
+    func prepareManualOAuthSignIn(
+        input: PoolDashboardRuntimeCoordinator.OAuthSignInInput
+    ) -> PoolDashboardRuntimeCoordinator.ManualOAuthPreparationOutput
+
+    func importManualOAuthCallback(
+        from state: AccountPoolState,
+        input: PoolDashboardRuntimeCoordinator.OAuthSignInInput,
+        callbackURLString: String,
+        expectedState: String,
+        codeVerifier: String
+    ) async -> PoolDashboardRuntimeCoordinator.OAuthSignInOutput
+}
+
+extension PoolDashboardRuntimeCoordinator: PoolDashboardRuntimeOAuthCoordinating {}
+
+protocol PoolDashboardOAuthMutationCoordinating {
+    func applyOAuthOutput(
+        _ output: PoolDashboardRuntimeCoordinator.OAuthSignInOutput,
+        state: inout AccountPoolState,
+        viewState: inout PoolDashboardViewState,
+        oauthAccountName: inout String
+    ) -> Bool
+}
+
+extension PoolDashboardMutationCoordinator: PoolDashboardOAuthMutationCoordinating {}
+
 struct PoolDashboardOAuthSignInFlowCoordinator {
     struct Input {
         let issuer: String
@@ -25,8 +57,16 @@ struct PoolDashboardOAuthSignInFlowCoordinator {
         let oauthError: String?
     }
 
-    private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
-    private let mutationCoordinator = PoolDashboardMutationCoordinator()
+    private let runtimeCoordinator: PoolDashboardRuntimeOAuthCoordinating
+    private let mutationCoordinator: PoolDashboardOAuthMutationCoordinating
+
+    init(
+        runtimeCoordinator: PoolDashboardRuntimeOAuthCoordinating = PoolDashboardRuntimeCoordinator(),
+        mutationCoordinator: PoolDashboardOAuthMutationCoordinating = PoolDashboardMutationCoordinator()
+    ) {
+        self.runtimeCoordinator = runtimeCoordinator
+        self.mutationCoordinator = mutationCoordinator
+    }
 
     func signInWithOAuth(
         from state: AccountPoolState,

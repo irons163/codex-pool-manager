@@ -1,5 +1,60 @@
 import Foundation
 
+protocol PoolDashboardDataFlowCoordinating {
+    func syncState(
+        from state: AccountPoolState
+    ) async throws -> (state: AccountPoolState, rawResponse: String?)
+}
+
+extension PoolDashboardDataFlowCoordinator: PoolDashboardDataFlowCoordinating {}
+
+protocol PoolDashboardAuthFlowCoordinating {
+    func buildConfiguration(
+        issuer: String,
+        clientID: String,
+        scopes: String,
+        redirectURI: String,
+        originator: String,
+        workspaceID: String
+    ) throws -> OAuthClientConfiguration
+
+    func fetchOAuthSignInContext(
+        configuration: OAuthClientConfiguration,
+        loginService: OAuthLoginServicing,
+        usageClient: CodexUsageFetching
+    ) async throws -> PoolDashboardAuthFlowCoordinator.OAuthSignInContext
+
+    func makeOAuthSignInContext(
+        tokens: OAuthTokens,
+        usageClient: CodexUsageFetching,
+        fallbackWorkspaceID: String?
+    ) async -> PoolDashboardAuthFlowCoordinator.OAuthSignInContext
+
+    func applyOAuthSignIn(
+        state: inout AccountPoolState,
+        context: PoolDashboardAuthFlowCoordinator.OAuthSignInContext,
+        accountNameInput: String,
+        fallbackQuota: Int
+    ) -> String
+}
+
+extension PoolDashboardAuthFlowCoordinator: PoolDashboardAuthFlowCoordinating {}
+
+protocol OAuthManualSignInServicing {
+    func prepareManualSignIn(configuration: OAuthClientConfiguration) throws -> OAuthManualSignInPreparation
+
+    func completeManualSignIn(
+        configuration: OAuthClientConfiguration,
+        callbackURL: URL,
+        expectedState: String,
+        codeVerifier: String
+    ) async throws -> OAuthTokens
+}
+
+typealias OAuthCompleteLoginServicing = OAuthLoginServicing & OAuthManualSignInServicing
+
+extension OAuthLoginService: OAuthManualSignInServicing {}
+
 struct PoolDashboardRuntimeCoordinator {
     private enum Message {
         static let syncFailurePrefix = "sync.failure.prefix"
@@ -37,8 +92,22 @@ struct PoolDashboardRuntimeCoordinator {
         let oauthError: String?
     }
 
-    private let authFlowCoordinator = PoolDashboardAuthFlowCoordinator()
-    private let dataFlowCoordinator = PoolDashboardDataFlowCoordinator()
+    private let authFlowCoordinator: PoolDashboardAuthFlowCoordinating
+    private let dataFlowCoordinator: PoolDashboardDataFlowCoordinating
+    private let loginServiceFactory: (() -> OAuthCompleteLoginServicing)?
+    private let usageClientFactory: (() -> CodexUsageFetching)?
+
+    init(
+        authFlowCoordinator: PoolDashboardAuthFlowCoordinating = PoolDashboardAuthFlowCoordinator(),
+        dataFlowCoordinator: PoolDashboardDataFlowCoordinating = PoolDashboardDataFlowCoordinator(),
+        loginServiceFactory: (() -> OAuthCompleteLoginServicing)? = nil,
+        usageClientFactory: (() -> CodexUsageFetching)? = nil
+    ) {
+        self.authFlowCoordinator = authFlowCoordinator
+        self.dataFlowCoordinator = dataFlowCoordinator
+        self.loginServiceFactory = loginServiceFactory
+        self.usageClientFactory = usageClientFactory
+    }
 
     func syncCodexUsage(from state: AccountPoolState) async -> SyncOutput {
         do {
@@ -59,11 +128,12 @@ struct PoolDashboardRuntimeCoordinator {
     ) async -> OAuthSignInOutput {
         do {
             let oauthConfiguration = try makeOAuthConfiguration(input: input)
+            let loginService = loginServiceFactory?() ?? OAuthLoginService()
 
             let context = try await authFlowCoordinator.fetchOAuthSignInContext(
                 configuration: oauthConfiguration,
-                loginService: OAuthLoginService(),
-                usageClient: OpenAICodexUsageClient()
+                loginService: loginService,
+                usageClient: usageClientFactory?() ?? OpenAICodexUsageClient()
             )
 
             var nextState = state
@@ -92,7 +162,8 @@ struct PoolDashboardRuntimeCoordinator {
     ) -> ManualOAuthPreparationOutput {
         do {
             let oauthConfiguration = try makeOAuthConfiguration(input: input)
-            let preparation = try OAuthLoginService().prepareManualSignIn(configuration: oauthConfiguration)
+            let preparation = try (loginServiceFactory?() ?? OAuthLoginService())
+                .prepareManualSignIn(configuration: oauthConfiguration)
             return ManualOAuthPreparationOutput(
                 authorizationURL: preparation.authorizationURL,
                 expectedState: preparation.state,
@@ -118,12 +189,13 @@ struct PoolDashboardRuntimeCoordinator {
     ) async -> OAuthSignInOutput {
         do {
             let oauthConfiguration = try makeOAuthConfiguration(input: input)
+            let loginService = loginServiceFactory?() ?? OAuthLoginService()
             let trimmedCallbackURL = callbackURLString.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let callbackURL = URL(string: trimmedCallbackURL), !trimmedCallbackURL.isEmpty else {
                 throw OAuthLoginError.invalidCallback
             }
 
-            let tokens = try await OAuthLoginService().completeManualSignIn(
+            let tokens = try await loginService.completeManualSignIn(
                 configuration: oauthConfiguration,
                 callbackURL: callbackURL,
                 expectedState: expectedState,
@@ -132,7 +204,7 @@ struct PoolDashboardRuntimeCoordinator {
 
             let context = await authFlowCoordinator.makeOAuthSignInContext(
                 tokens: tokens,
-                usageClient: OpenAICodexUsageClient(),
+                usageClient: usageClientFactory?() ?? OpenAICodexUsageClient(),
                 fallbackWorkspaceID: oauthConfiguration.forcedWorkspaceID
             )
 

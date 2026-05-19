@@ -20,6 +20,123 @@ private final class StubUsageFetcher: CodexUsageFetching {
     }
 }
 
+private final class StubOAuthCompleteLoginService: OAuthCompleteLoginServicing {
+    var signInResult: Result<OAuthTokens, Error>
+    var manualPreparationResult: Result<OAuthManualSignInPreparation, Error>
+    var manualCompleteResult: Result<OAuthTokens, Error>
+
+    let signInConfigurations = LockedValue<[OAuthClientConfiguration]>([])
+    let manualPreparationConfigurations = LockedValue<[OAuthClientConfiguration]>([])
+    let manualCompleteRequests = LockedValue<[(config: OAuthClientConfiguration, callbackURL: URL, expectedState: String, codeVerifier: String)]>([])
+
+    init(
+        signInResult: Result<OAuthTokens, Error>,
+        manualPreparationResult: Result<OAuthManualSignInPreparation, Error>,
+        manualCompleteResult: Result<OAuthTokens, Error>
+    ) {
+        self.signInResult = signInResult
+        self.manualPreparationResult = manualPreparationResult
+        self.manualCompleteResult = manualCompleteResult
+    }
+
+    func signIn(configuration: OAuthClientConfiguration) async throws -> OAuthTokens {
+        signInConfigurations.withLock { $0.append(configuration) }
+        return try signInResult.get()
+    }
+
+    func prepareManualSignIn(configuration: OAuthClientConfiguration) throws -> OAuthManualSignInPreparation {
+        manualPreparationConfigurations.withLock { $0.append(configuration) }
+        return try manualPreparationResult.get()
+    }
+
+    func completeManualSignIn(
+        configuration: OAuthClientConfiguration,
+        callbackURL: URL,
+        expectedState: String,
+        codeVerifier: String
+    ) async throws -> OAuthTokens {
+        manualCompleteRequests.withLock {
+            $0.append((config: configuration, callbackURL: callbackURL, expectedState: expectedState, codeVerifier: codeVerifier))
+        }
+        return try manualCompleteResult.get()
+    }
+}
+
+private struct StubDataFlowCoordinator: PoolDashboardDataFlowCoordinating {
+    let result: Result<(state: AccountPoolState, rawResponse: String?), Error>
+
+    func syncState(
+        from state: AccountPoolState
+    ) async throws -> (state: AccountPoolState, rawResponse: String?) {
+        try result.get()
+    }
+}
+
+private struct StubAuthFileURLResolver: AuthFileURLResolving {
+    let result: Result<URL, Error>
+
+    func resolveAuthFileURLForSwitch(sessionAuthorizedURL: URL?) throws -> URL {
+        try result.get()
+    }
+}
+
+private final class StubRuntimeOAuthCoordinator: PoolDashboardRuntimeOAuthCoordinating {
+    var signInOutput: PoolDashboardRuntimeCoordinator.OAuthSignInOutput
+    var manualPreparationOutput: PoolDashboardRuntimeCoordinator.ManualOAuthPreparationOutput
+    var manualImportOutput: PoolDashboardRuntimeCoordinator.OAuthSignInOutput
+
+    let signInInputs = LockedValue<[PoolDashboardRuntimeCoordinator.OAuthSignInInput]>([])
+    let manualPreparationInputs = LockedValue<[PoolDashboardRuntimeCoordinator.OAuthSignInInput]>([])
+    let manualImportRequests = LockedValue<[(input: PoolDashboardRuntimeCoordinator.OAuthSignInInput, callbackURLString: String, expectedState: String, codeVerifier: String)]>([])
+
+    init(
+        signInOutput: PoolDashboardRuntimeCoordinator.OAuthSignInOutput,
+        manualPreparationOutput: PoolDashboardRuntimeCoordinator.ManualOAuthPreparationOutput,
+        manualImportOutput: PoolDashboardRuntimeCoordinator.OAuthSignInOutput
+    ) {
+        self.signInOutput = signInOutput
+        self.manualPreparationOutput = manualPreparationOutput
+        self.manualImportOutput = manualImportOutput
+    }
+
+    func signInWithOAuth(
+        from state: AccountPoolState,
+        input: PoolDashboardRuntimeCoordinator.OAuthSignInInput
+    ) async -> PoolDashboardRuntimeCoordinator.OAuthSignInOutput {
+        signInInputs.withLock { $0.append(input) }
+        return signInOutput
+    }
+
+    func prepareManualOAuthSignIn(
+        input: PoolDashboardRuntimeCoordinator.OAuthSignInInput
+    ) -> PoolDashboardRuntimeCoordinator.ManualOAuthPreparationOutput {
+        manualPreparationInputs.withLock { $0.append(input) }
+        return manualPreparationOutput
+    }
+
+    func importManualOAuthCallback(
+        from state: AccountPoolState,
+        input: PoolDashboardRuntimeCoordinator.OAuthSignInInput,
+        callbackURLString: String,
+        expectedState: String,
+        codeVerifier: String
+    ) async -> PoolDashboardRuntimeCoordinator.OAuthSignInOutput {
+        manualImportRequests.withLock {
+            $0.append((input: input, callbackURLString: callbackURLString, expectedState: expectedState, codeVerifier: codeVerifier))
+        }
+        return manualImportOutput
+    }
+}
+
+private func makeOAuthIDToken(payload: [String: Any]) throws -> String {
+    let payloadData = try JSONSerialization.data(withJSONObject: payload)
+    let encodedPayload = payloadData.base64EncodedString()
+        .replacingOccurrences(of: "+", with: "-")
+        .replacingOccurrences(of: "/", with: "_")
+        .replacingOccurrences(of: "=", with: "")
+    return "header.\(encodedPayload).sig"
+}
+
 private final class SuccessTokenURLProtocol: URLProtocol {
     private static let lock = NSLock()
     private static var statusCode: Int = 200
@@ -589,6 +706,19 @@ struct AuthFilePanelAndFlowCoverageExpansionTests {
 
 @MainActor
 struct RuntimeCoordinatorCoverageExpansionTests {
+    private func makeOAuthInput(accountNameInput: String = "") -> PoolDashboardRuntimeCoordinator.OAuthSignInInput {
+        .init(
+            issuer: "https://auth.openai.com",
+            clientID: "app",
+            scopes: "openid profile email",
+            redirectURI: "aiaagentpool://oauth/callback",
+            originator: "codex_cli_rs",
+            workspaceID: "",
+            accountNameInput: accountNameInput,
+            fallbackQuota: 1000
+        )
+    }
+
     @Test
     func prepareManualOAuthSignInReturnsErrorForInvalidConfiguration() {
         let coordinator = PoolDashboardRuntimeCoordinator()
@@ -674,6 +804,419 @@ struct RuntimeCoordinatorCoverageExpansionTests {
         #expect(output.oauthSuccessMessage == nil)
         #expect(output.nextOAuthAccountName == "Input Name")
         #expect(output.shouldRefreshLocalOAuthAccounts == false)
+    }
+
+    @Test
+    func syncCodexUsageReturnsInjectedSyncResult() async {
+        var syncedState = AccountPoolState(accounts: [], mode: .manual)
+        syncedState.addAccount(name: "synced@example.com", quota: 100, usedUnits: 7)
+
+        let coordinator = PoolDashboardRuntimeCoordinator(
+            dataFlowCoordinator: StubDataFlowCoordinator(result: .success((state: syncedState, rawResponse: #"{"ok":true}"#)))
+        )
+        let output = await coordinator.syncCodexUsage(from: AccountPoolState(accounts: [], mode: .manual))
+
+        #expect(output.state.snapshot == syncedState.snapshot)
+        #expect(output.syncError == nil)
+        #expect(output.lastUsageRawJSON == #"{"ok":true}"#)
+    }
+
+    @Test
+    func syncCodexUsageReturnsFailureMessageWhenSyncThrows() async {
+        let coordinator = PoolDashboardRuntimeCoordinator(
+            dataFlowCoordinator: StubDataFlowCoordinator(result: .failure(URLError(.timedOut)))
+        )
+        let initialState = AccountPoolState(accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 1, quota: 100)], mode: .manual)
+
+        let output = await coordinator.syncCodexUsage(from: initialState)
+
+        #expect(output.state.snapshot == initialState.snapshot)
+        #expect(output.syncError?.isEmpty == false)
+        #expect(output.lastUsageRawJSON == nil)
+    }
+
+    @Test
+    func signInWithOAuthAddsAccountOnSuccessfulInjectedDependencies() async throws {
+        let idToken = try makeOAuthIDToken(payload: [
+            "sub": "user-signin-1",
+            "account_id": "acct-signin-1",
+            "email": "signin@example.com"
+        ])
+        let loginService = StubOAuthCompleteLoginService(
+            signInResult: .success(
+                OAuthTokens(
+                    accessToken: "sk-signin-1",
+                    refreshToken: "refresh-signin-1",
+                    idToken: idToken
+                )
+            ),
+            manualPreparationResult: .failure(CoverageExpansionError.expected),
+            manualCompleteResult: .failure(CoverageExpansionError.expected)
+        )
+        let usageFetcher = StubUsageFetcher(result: .success(
+            CodexUsage(
+                usedUnits: 21,
+                quota: 100,
+                accountID: "acct-signin-1",
+                accountEmail: "signin@example.com",
+                isPaid: true
+            )
+        ))
+        let coordinator = PoolDashboardRuntimeCoordinator(
+            loginServiceFactory: { loginService },
+            usageClientFactory: { usageFetcher }
+        )
+
+        let output = await coordinator.signInWithOAuth(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            input: makeOAuthInput(accountNameInput: "")
+        )
+
+        #expect(output.oauthError == nil)
+        #expect(output.oauthSuccessMessage?.isEmpty == false)
+        #expect(output.nextOAuthAccountName.isEmpty)
+        #expect(output.shouldRefreshLocalOAuthAccounts == true)
+        #expect(output.state.accounts.count == 1)
+        #expect(output.state.accounts.first?.name == "signin@example.com")
+        #expect(output.state.accounts.first?.chatGPTAccountID == "acct-signin-1")
+        #expect(loginService.signInConfigurations.value.count == 1)
+        #expect(usageFetcher.requests.value.first?.accountID == "acct-signin-1")
+    }
+
+    @Test
+    func prepareManualOAuthSignInReturnsInjectedManualPreparation() throws {
+        let expectedURL = try #require(
+            URL(string: "https://auth.openai.com/oauth/authorize?state=stub-state")
+        )
+        let loginService = StubOAuthCompleteLoginService(
+            signInResult: .failure(CoverageExpansionError.expected),
+            manualPreparationResult: .success(
+                OAuthManualSignInPreparation(
+                    authorizationURL: expectedURL,
+                    state: "stub-state",
+                    codeVerifier: "stub-verifier"
+                )
+            ),
+            manualCompleteResult: .failure(CoverageExpansionError.expected)
+        )
+        let coordinator = PoolDashboardRuntimeCoordinator(loginServiceFactory: { loginService })
+
+        let output = coordinator.prepareManualOAuthSignIn(input: makeOAuthInput())
+
+        #expect(output.authorizationURL == expectedURL)
+        #expect(output.expectedState == "stub-state")
+        #expect(output.codeVerifier == "stub-verifier")
+        #expect(output.oauthError == nil)
+        #expect(loginService.manualPreparationConfigurations.value.count == 1)
+    }
+
+    @Test
+    func importManualOAuthCallbackCompletesAndCreatesAccountWithInjectedDependencies() async throws {
+        let idToken = try makeOAuthIDToken(payload: [
+            "sub": "user-manual-1",
+            "account_id": "acct-manual-1",
+            "email": "manual@example.com"
+        ])
+        let loginService = StubOAuthCompleteLoginService(
+            signInResult: .failure(CoverageExpansionError.expected),
+            manualPreparationResult: .failure(CoverageExpansionError.expected),
+            manualCompleteResult: .success(
+                OAuthTokens(
+                    accessToken: "sk-manual-1",
+                    refreshToken: nil,
+                    idToken: idToken
+                )
+            )
+        )
+        let usageFetcher = StubUsageFetcher(result: .success(
+            CodexUsage(
+                usedUnits: 5,
+                quota: 50,
+                accountID: "acct-manual-1",
+                accountEmail: "manual@example.com",
+                isPaid: false
+            )
+        ))
+        let coordinator = PoolDashboardRuntimeCoordinator(
+            loginServiceFactory: { loginService },
+            usageClientFactory: { usageFetcher }
+        )
+
+        let output = await coordinator.importManualOAuthCallback(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            input: makeOAuthInput(accountNameInput: "Manual Input"),
+            callbackURLString: "aiaagentpool://oauth/callback?code=abc123&state=expected-state",
+            expectedState: "expected-state",
+            codeVerifier: "manual-verifier"
+        )
+
+        #expect(output.oauthError == nil)
+        #expect(output.oauthSuccessMessage?.isEmpty == false)
+        #expect(output.shouldRefreshLocalOAuthAccounts == true)
+        #expect(output.state.accounts.count == 1)
+        #expect(output.state.accounts.first?.chatGPTAccountID == "acct-manual-1")
+        #expect(loginService.manualCompleteRequests.value.count == 1)
+        #expect(usageFetcher.requests.value.first?.accountID == "acct-manual-1")
+    }
+}
+
+@MainActor
+struct OAuthSignInFlowCoordinatorCoverageExpansionTests {
+    private func makeFlowInput() -> PoolDashboardOAuthSignInFlowCoordinator.Input {
+        .init(
+            issuer: "https://auth.openai.com",
+            clientID: "app-client",
+            scopes: "openid profile email",
+            redirectURI: "aiaagentpool://oauth/callback",
+            originator: "codex_cli_rs",
+            workspaceID: "",
+            fallbackQuota: 100
+        )
+    }
+
+    @Test
+    func signInWithOAuthAppliesRuntimeOutputAndPreservesMutationContract() async {
+        var runtimeState = AccountPoolState(accounts: [], mode: .manual)
+        runtimeState.addAccount(name: "flow@example.com", quota: 100, usedUnits: 3)
+        let runtimeOutput = PoolDashboardRuntimeCoordinator.OAuthSignInOutput(
+            state: runtimeState,
+            oauthError: "oauth-error",
+            oauthSuccessMessage: "oauth-success",
+            nextOAuthAccountName: "next-name",
+            shouldRefreshLocalOAuthAccounts: true
+        )
+        let runtimeCoordinator = StubRuntimeOAuthCoordinator(
+            signInOutput: runtimeOutput,
+            manualPreparationOutput: .init(authorizationURL: nil, expectedState: nil, codeVerifier: nil, oauthError: nil),
+            manualImportOutput: runtimeOutput
+        )
+        let coordinator = PoolDashboardOAuthSignInFlowCoordinator(runtimeCoordinator: runtimeCoordinator)
+        let initialViewState = PoolDashboardViewState()
+        let output = await coordinator.signInWithOAuth(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            viewState: initialViewState,
+            oauthAccountName: "before-name",
+            input: makeFlowInput()
+        )
+
+        #expect(output.state.snapshot == runtimeState.snapshot)
+        #expect(output.viewState.oauthError == "oauth-error")
+        #expect(output.viewState.oauthSuccessMessage == "oauth-success")
+        #expect(output.oauthAccountName == "next-name")
+        #expect(output.shouldRefreshLocalOAuthAccounts == true)
+        #expect(runtimeCoordinator.signInInputs.value.first?.accountNameInput == "before-name")
+    }
+
+    @Test
+    func prepareManualOAuthSignInMapsRuntimePreparationOutput() throws {
+        let authorizationURL = try #require(URL(string: "https://auth.openai.com/oauth/authorize?state=flow"))
+        let runtimeCoordinator = StubRuntimeOAuthCoordinator(
+            signInOutput: .init(
+                state: AccountPoolState(accounts: [], mode: .manual),
+                oauthError: nil,
+                oauthSuccessMessage: nil,
+                nextOAuthAccountName: "",
+                shouldRefreshLocalOAuthAccounts: false
+            ),
+            manualPreparationOutput: .init(
+                authorizationURL: authorizationURL,
+                expectedState: "flow-state",
+                codeVerifier: "flow-verifier",
+                oauthError: "flow-error"
+            ),
+            manualImportOutput: .init(
+                state: AccountPoolState(accounts: [], mode: .manual),
+                oauthError: nil,
+                oauthSuccessMessage: nil,
+                nextOAuthAccountName: "",
+                shouldRefreshLocalOAuthAccounts: false
+            )
+        )
+        let coordinator = PoolDashboardOAuthSignInFlowCoordinator(runtimeCoordinator: runtimeCoordinator)
+
+        let output = coordinator.prepareManualOAuthSignIn(input: makeFlowInput())
+
+        #expect(output.authorizationURL == authorizationURL)
+        #expect(output.expectedState == "flow-state")
+        #expect(output.codeVerifier == "flow-verifier")
+        #expect(output.oauthError == "flow-error")
+        #expect(runtimeCoordinator.manualPreparationInputs.value.count == 1)
+        #expect(runtimeCoordinator.manualPreparationInputs.value.first?.accountNameInput.isEmpty == true)
+    }
+
+    @Test
+    func importManualOAuthCallbackPassesCallbackFieldsAndAppliesMutation() async {
+        var runtimeState = AccountPoolState(accounts: [], mode: .manual)
+        runtimeState.addAccount(name: "manual-flow@example.com", quota: 100, usedUnits: 9)
+        let runtimeOutput = PoolDashboardRuntimeCoordinator.OAuthSignInOutput(
+            state: runtimeState,
+            oauthError: nil,
+            oauthSuccessMessage: "done",
+            nextOAuthAccountName: "",
+            shouldRefreshLocalOAuthAccounts: false
+        )
+        let runtimeCoordinator = StubRuntimeOAuthCoordinator(
+            signInOutput: runtimeOutput,
+            manualPreparationOutput: .init(authorizationURL: nil, expectedState: nil, codeVerifier: nil, oauthError: nil),
+            manualImportOutput: runtimeOutput
+        )
+        let coordinator = PoolDashboardOAuthSignInFlowCoordinator(runtimeCoordinator: runtimeCoordinator)
+
+        let output = await coordinator.importManualOAuthCallback(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            viewState: PoolDashboardViewState(),
+            oauthAccountName: "Manual Name",
+            input: makeFlowInput(),
+            callbackURLString: "aiaagentpool://oauth/callback?code=abc&state=flow-state",
+            expectedState: "flow-state",
+            codeVerifier: "flow-verifier"
+        )
+
+        #expect(output.state.snapshot == runtimeState.snapshot)
+        #expect(output.viewState.oauthError == nil)
+        #expect(output.viewState.oauthSuccessMessage == "done")
+        #expect(output.oauthAccountName.isEmpty)
+        #expect(output.shouldRefreshLocalOAuthAccounts == false)
+        #expect(runtimeCoordinator.manualImportRequests.value.count == 1)
+        #expect(runtimeCoordinator.manualImportRequests.value.first?.expectedState == "flow-state")
+        #expect(runtimeCoordinator.manualImportRequests.value.first?.codeVerifier == "flow-verifier")
+    }
+}
+
+@MainActor
+struct SwitchLaunchCoordinatorCoverageExpansionTests {
+    private func makeSwitchableAccount(
+        token: String = "sk-token",
+        accountID: String? = "acct-123"
+    ) -> AgentAccount {
+        AgentAccount(
+            id: UUID(),
+            name: "switch@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: token,
+            chatGPTAccountID: accountID
+        )
+    }
+
+    @Test
+    func switchAndLaunchSucceedsWithResolvedAuthURL() async {
+        let authURL = URL(fileURLWithPath: "/tmp/auth-success.json")
+        let capturedLogs = LockedValue<[String]>([])
+        let coordinator = PoolDashboardSwitchLaunchCoordinator(
+            switchExecutor: { _, _, _, _, _, logger in
+                logger("switch ok")
+                capturedLogs.withLock { $0.append("executor-called") }
+            }
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(),
+            currentAuthorizedAuthFileURL: authURL,
+            authFileAccessService: StubAuthFileURLResolver(result: .success(authURL)),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.errorMessage == nil)
+        #expect(output.didSwitchAuth == true)
+        #expect(output.sessionAuthorizedAuthFileURL == authURL)
+        #expect(output.switchLaunchLog.contains("switch ok"))
+        #expect(capturedLogs.value == ["executor-called"])
+    }
+
+    @Test
+    func switchAndLaunchReportsLaunchFailureButKeepsSuccessfulAuthSwitch() async {
+        let authURL = URL(fileURLWithPath: "/tmp/auth-launch-failure.json")
+        let coordinator = PoolDashboardSwitchLaunchCoordinator(
+            switchExecutor: { _, _, _, _, _, _ in
+                throw CodexAuthSwitchError.launchFailedAfterSwitch(reason: "app relaunch failed")
+            }
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(),
+            currentAuthorizedAuthFileURL: authURL,
+            authFileAccessService: StubAuthFileURLResolver(result: .success(authURL)),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.didSwitchAuth == true)
+        #expect(output.sessionAuthorizedAuthFileURL == authURL)
+        #expect(output.errorMessage?.contains("app relaunch failed") == true)
+    }
+
+    @Test
+    func switchAndLaunchReturnsPermissionErrorWhenAuthFileMissingAndAuthorizationCancelled() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator(
+            switchExecutor: { _, _, _, _, _, _ in
+                Issue.record("switch executor should not be called when auth permission is cancelled")
+            }
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(),
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: StubAuthFileURLResolver(
+                result: .failure(CodexAuthFileAccessService.AccessError.missingAuthFile)
+            ),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.didSwitchAuth == false)
+        #expect(output.sessionAuthorizedAuthFileURL == nil)
+        #expect(output.errorMessage == L10n.text("switch.error.requires_auth_file_permission"))
+    }
+
+    @Test
+    func switchAndLaunchRetriesAfterPermissionGrantAndUsesAuthorizedURL() async {
+        let grantedURL = URL(fileURLWithPath: "/tmp/auth-granted.json")
+        let capturedAuthURLs = LockedValue<[URL]>([])
+        let coordinator = PoolDashboardSwitchLaunchCoordinator(
+            switchExecutor: { authURL, _, _, _, _, _ in
+                capturedAuthURLs.withLock { $0.append(authURL) }
+            }
+        )
+
+        let output = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(),
+            currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: StubAuthFileURLResolver(
+                result: .failure(CodexAuthFileAccessService.AccessError.missingAuthFile)
+            ),
+            authorizeAuthFile: { grantedURL }
+        )
+
+        #expect(output.didSwitchAuth == true)
+        #expect(output.errorMessage == nil)
+        #expect(output.sessionAuthorizedAuthFileURL == grantedURL)
+        #expect(capturedAuthURLs.value == [grantedURL])
+    }
+
+    @Test
+    func switchAndLaunchReturnsValidationErrorsBeforeExecutor() async {
+        let coordinator = PoolDashboardSwitchLaunchCoordinator(
+            switchExecutor: { _, _, _, _, _, _ in
+                Issue.record("switch executor should not run when required account fields are missing")
+            }
+        )
+
+        let missingToken = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(token: ""),
+            currentAuthorizedAuthFileURL: URL(fileURLWithPath: "/tmp/auth.json"),
+            authFileAccessService: StubAuthFileURLResolver(result: .success(URL(fileURLWithPath: "/tmp/auth.json"))),
+            authorizeAuthFile: { nil }
+        )
+        #expect(missingToken.errorMessage == L10n.text("switch.error.missing_token"))
+        #expect(missingToken.didSwitchAuth == false)
+
+        let missingAccountID = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(accountID: nil),
+            currentAuthorizedAuthFileURL: URL(fileURLWithPath: "/tmp/auth.json"),
+            authFileAccessService: StubAuthFileURLResolver(result: .success(URL(fileURLWithPath: "/tmp/auth.json"))),
+            authorizeAuthFile: { nil }
+        )
+        #expect(missingAccountID.errorMessage == L10n.text("switch.error.missing_account_id"))
+        #expect(missingAccountID.didSwitchAuth == false)
     }
 }
 

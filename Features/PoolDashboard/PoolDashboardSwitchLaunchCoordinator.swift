@@ -1,6 +1,21 @@
 import Foundation
 
+protocol AuthFileURLResolving {
+    func resolveAuthFileURLForSwitch(sessionAuthorizedURL: URL?) throws -> URL
+}
+
+extension CodexAuthFileAccessService: AuthFileURLResolving {}
+
 struct PoolDashboardSwitchLaunchCoordinator {
+    typealias SwitchExecutor = @MainActor (
+        _ authFileURL: URL,
+        _ account: AgentAccount,
+        _ chatGPTAccountID: String,
+        _ switchWithoutLaunching: Bool,
+        _ launchTarget: CodexLaunchTarget,
+        _ logger: @Sendable @escaping (String) -> Void
+    ) async throws -> Void
+
     private struct SwitchAttemptContext {
         let authFileURL: URL
         let failureLogPrefix: String
@@ -29,13 +44,21 @@ struct PoolDashboardSwitchLaunchCoordinator {
         let didSwitchAuth: Bool
     }
 
+    private let switchExecutor: SwitchExecutor
+
+    init(
+        switchExecutor: SwitchExecutor? = nil
+    ) {
+        self.switchExecutor = switchExecutor ?? Self.defaultSwitchExecutor
+    }
+
     @MainActor
     func switchAndLaunch(
         account: AgentAccount,
         switchWithoutLaunching: Bool = false,
         launchTarget: CodexLaunchTarget = .auto,
         currentAuthorizedAuthFileURL: URL?,
-        authFileAccessService: CodexAuthFileAccessService,
+        authFileAccessService: AuthFileURLResolving,
         authorizeAuthFile: () -> URL?
     ) async -> Output {
         var logLines: [String] = [L10n.text(Message.startSwitchFormat, account.name)]
@@ -90,13 +113,13 @@ struct PoolDashboardSwitchLaunchCoordinator {
 
         func attemptSwitch(_ context: SwitchAttemptContext) async -> Output {
             do {
-                try await performSwitchAndLaunch(
-                    authFileURL: context.authFileURL,
-                    account: account,
-                    chatGPTAccountID: chatGPTAccountID,
-                    switchWithoutLaunching: switchWithoutLaunching,
-                    launchTarget: launchTarget,
-                    logger: append
+                try await switchExecutor(
+                    context.authFileURL,
+                    account,
+                    chatGPTAccountID,
+                    switchWithoutLaunching,
+                    launchTarget,
+                    append
                 )
                 return output(
                     errorMessage: nil,
@@ -162,7 +185,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
     }
 
     @MainActor
-    private func performSwitchAndLaunch(
+    private static func defaultSwitchExecutor(
         authFileURL: URL,
         account: AgentAccount,
         chatGPTAccountID: String,
