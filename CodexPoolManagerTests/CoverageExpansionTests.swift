@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Testing
+import Darwin
 @testable import CodexPoolManager
 
 private enum CoverageExpansionError: Error {
@@ -365,6 +366,45 @@ private func requestBodyData(_ request: URLRequest) -> Data {
     return data
 }
 
+private enum LocalhostCallbackTestError: Error {
+    case socketCreateFailed
+    case socketBindFailed
+    case socketLookupFailed
+    case invalidPort
+}
+
+private func availableLoopbackPort() throws -> UInt16 {
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    guard fd >= 0 else { throw LocalhostCallbackTestError.socketCreateFailed }
+    defer { close(fd) }
+
+    var address = sockaddr_in()
+    address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+    address.sin_family = sa_family_t(AF_INET)
+    address.sin_port = in_port_t(0).bigEndian
+    address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
+
+    let bindResult = withUnsafePointer(to: &address) { pointer in
+        pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+            bind(fd, sockaddrPointer, socklen_t(MemoryLayout<sockaddr_in>.size))
+        }
+    }
+    guard bindResult == 0 else { throw LocalhostCallbackTestError.socketBindFailed }
+
+    var boundAddress = sockaddr_in()
+    var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+    let lookupResult = withUnsafeMutablePointer(to: &boundAddress) { pointer in
+        pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+            getsockname(fd, sockaddrPointer, &length)
+        }
+    }
+    guard lookupResult == 0 else { throw LocalhostCallbackTestError.socketLookupFailed }
+
+    let port = UInt16(bigEndian: boundAddress.sin_port)
+    guard port > 0 else { throw LocalhostCallbackTestError.invalidPort }
+    return port
+}
+
 @MainActor
 struct OAuthLoginServiceCoverageExpansionTests {
     @Test
@@ -464,6 +504,88 @@ struct OAuthLoginServiceCoverageExpansionTests {
                 expectedState: "state-1",
                 codeVerifier: "verifier-123"
             )
+        }
+    }
+}
+
+@MainActor
+struct LocalhostOAuthCallbackServerCoverageExpansionTests {
+    @Test
+    func localhostCallbackServerCapturesCallbackURL() async throws {
+        let port = try availableLoopbackPort()
+        let config = LocalhostOAuthCallbackConfig(host: "127.0.0.1", port: port, callbackPath: "/auth/callback")
+        let server = LocalhostOAuthCallbackServer()
+
+        let waitTask = Task {
+            try await server.waitForCallback(
+                config: config,
+                timeoutNanoseconds: 5_000_000_000,
+                onReadyToReceiveCallback: { true }
+            )
+        }
+
+        let callbackURL = URL(string: "http://127.0.0.1:\(port)/auth/callback?code=smoke-code&state=smoke-state")!
+        try await Task.sleep(nanoseconds: 150_000_000)
+        let (_, response) = try await URLSession.shared.data(from: callbackURL)
+
+        let http = try #require(response as? HTTPURLResponse)
+        #expect(http.statusCode == 200)
+
+        let captured = try await waitTask.value
+        let payload = try OAuthCallbackParser.parse(callbackURL: captured)
+        #expect(payload.code == "smoke-code")
+        #expect(payload.state == "smoke-state")
+    }
+
+    @Test
+    func localhostCallbackServerReturnsBrowserStartFailureWhenReadyActionFails() async throws {
+        let port = try availableLoopbackPort()
+        let config = LocalhostOAuthCallbackConfig(host: "127.0.0.1", port: port, callbackPath: "/auth/callback")
+        let server = LocalhostOAuthCallbackServer()
+
+        await #expect(throws: OAuthLoginError.browserStartFailed) {
+            _ = try await server.waitForCallback(
+                config: config,
+                timeoutNanoseconds: 5_000_000_000,
+                onReadyToReceiveCallback: { false }
+            )
+        }
+    }
+
+    @Test
+    func localhostCallbackServerTimesOutWhenNoCallbackArrives() async throws {
+        let port = try availableLoopbackPort()
+        let config = LocalhostOAuthCallbackConfig(host: "127.0.0.1", port: port, callbackPath: "/auth/callback")
+        let server = LocalhostOAuthCallbackServer()
+
+        await #expect(throws: OAuthLoginError.localhostCallbackTimedOut) {
+            _ = try await server.waitForCallback(
+                config: config,
+                timeoutNanoseconds: 250_000_000,
+                onReadyToReceiveCallback: { true }
+            )
+        }
+    }
+
+    @Test
+    func localhostCallbackServerCanCancelPendingWait() async throws {
+        let port = try availableLoopbackPort()
+        let config = LocalhostOAuthCallbackConfig(host: "127.0.0.1", port: port, callbackPath: "/auth/callback")
+        let server = LocalhostOAuthCallbackServer()
+
+        let waitTask = Task {
+            try await server.waitForCallback(
+                config: config,
+                timeoutNanoseconds: 5_000_000_000,
+                onReadyToReceiveCallback: { true }
+            )
+        }
+
+        try await Task.sleep(nanoseconds: 150_000_000)
+        server.cancelPendingWait()
+
+        await #expect(throws: CancellationError.self) {
+            _ = try await waitTask.value
         }
     }
 }

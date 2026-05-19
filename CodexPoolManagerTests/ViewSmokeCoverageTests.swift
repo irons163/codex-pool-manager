@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Testing
+import AppKit
 @testable import CodexPoolManager
 
 private final class BindingBox<Value> {
@@ -38,6 +39,37 @@ private func makeSmokeAccount(
         secondaryUsageResetAt: .now.addingTimeInterval(7200),
         isPaid: isPaid
     )
+}
+
+private final class ViewSmokeStore: AccountPoolStoring {
+    var snapshot: AccountPoolSnapshot?
+    var saved: [AccountPoolSnapshot] = []
+    var loadCount = 0
+
+    init(snapshot: AccountPoolSnapshot?) {
+        self.snapshot = snapshot
+    }
+
+    func load() -> AccountPoolSnapshot? {
+        loadCount += 1
+        return snapshot
+    }
+
+    func save(_ snapshot: AccountPoolSnapshot) {
+        saved.append(snapshot)
+    }
+}
+
+@MainActor
+private func renderInHostingView<V: View>(
+    _ view: V,
+    size: CGSize = CGSize(width: 1200, height: 900)
+) {
+    let hostingView = NSHostingView(rootView: view)
+    hostingView.frame = CGRect(origin: .zero, size: size)
+    hostingView.layoutSubtreeIfNeeded()
+    hostingView.needsLayout = true
+    hostingView.layoutSubtreeIfNeeded()
 }
 
 struct ViewSmokeCoverageTests {
@@ -317,5 +349,198 @@ struct ViewSmokeCoverageTests {
         #expect(syncCount == 0)
         #expect(retryCount == 0)
         #expect(forceRetryCount == 0)
+    }
+
+    @Test
+    @MainActor
+    func accountUsagePanelViewRendersFullAndMinimalLayouts() {
+        let defaults = UserDefaults.standard
+        let sortModeKey = "pool_dashboard.account_usage.sort_mode"
+        let activeFirstKey = "pool_dashboard.account_usage.active_first"
+        let paidFirstKey = "pool_dashboard.account_usage.paid_first"
+        let layoutModeKey = "pool_dashboard.account_usage.layout_mode"
+
+        let oldSort = defaults.object(forKey: sortModeKey)
+        let oldActiveFirst = defaults.object(forKey: activeFirstKey)
+        let oldPaidFirst = defaults.object(forKey: paidFirstKey)
+        let oldLayout = defaults.object(forKey: layoutModeKey)
+        defer {
+            if let oldSort { defaults.set(oldSort, forKey: sortModeKey) } else { defaults.removeObject(forKey: sortModeKey) }
+            if let oldActiveFirst { defaults.set(oldActiveFirst, forKey: activeFirstKey) } else { defaults.removeObject(forKey: activeFirstKey) }
+            if let oldPaidFirst { defaults.set(oldPaidFirst, forKey: paidFirstKey) } else { defaults.removeObject(forKey: paidFirstKey) }
+            if let oldLayout { defaults.set(oldLayout, forKey: layoutModeKey) } else { defaults.removeObject(forKey: layoutModeKey) }
+        }
+
+        defaults.set("remainingHigh", forKey: sortModeKey)
+        defaults.set(true, forKey: activeFirstKey)
+        defaults.set(true, forKey: paidFirstKey)
+
+        let baseDate = Date(timeIntervalSince1970: 1_750_000_000)
+        let activeID = UUID()
+        let paidOtherID = UUID()
+        let freeID = UUID()
+        let externalID = UUID()
+
+        let accounts = [
+            AgentAccount(
+                id: activeID,
+                createdAt: baseDate,
+                name: "active@example.com",
+                groupName: AgentAccount.defaultGroupName,
+                usedUnits: 20,
+                quota: 100,
+                apiToken: "token-active",
+                email: "active@example.com",
+                chatGPTAccountID: "acct-active",
+                identityScope: AgentAccount.personalIdentityScope,
+                primaryUsagePercent: 30,
+                primaryUsageResetAt: baseDate.addingTimeInterval(300),
+                secondaryUsagePercent: 40,
+                secondaryUsageResetAt: baseDate.addingTimeInterval(600),
+                isPaid: true
+            ),
+            AgentAccount(
+                id: paidOtherID,
+                createdAt: baseDate.addingTimeInterval(-10),
+                name: "paid-other@example.com",
+                groupName: AgentAccount.defaultGroupName,
+                usedUnits: 70,
+                quota: 100,
+                apiToken: "token-other",
+                email: "paid-other@example.com",
+                chatGPTAccountID: "acct-other",
+                identityScope: AgentAccount.personalIdentityScope,
+                primaryUsagePercent: 90,
+                primaryUsageResetAt: baseDate.addingTimeInterval(900),
+                secondaryUsagePercent: 95,
+                secondaryUsageResetAt: baseDate.addingTimeInterval(1_800),
+                isPaid: true,
+                isUsageSyncExcluded: true,
+                usageSyncError: "auth failed"
+            ),
+            AgentAccount(
+                id: freeID,
+                createdAt: baseDate.addingTimeInterval(-30),
+                name: "free@example.com",
+                groupName: AgentAccount.defaultGroupName,
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "token-free",
+                email: "free@example.com",
+                chatGPTAccountID: "acct-free",
+                identityScope: AgentAccount.personalIdentityScope,
+                primaryUsagePercent: nil,
+                primaryUsageResetAt: baseDate.addingTimeInterval(3_000),
+                isPaid: false
+            ),
+            AgentAccount(
+                id: externalID,
+                createdAt: baseDate.addingTimeInterval(-60),
+                name: "external@example.com",
+                groupName: "Ops",
+                usedUnits: 30,
+                quota: 100,
+                apiToken: "token-external",
+                email: "external@example.com",
+                chatGPTAccountID: "acct-external",
+                identityScope: AgentAccount.personalIdentityScope,
+                primaryUsagePercent: 45,
+                primaryUsageResetAt: baseDate.addingTimeInterval(3_600),
+                secondaryUsagePercent: 50,
+                secondaryUsageResetAt: baseDate.addingTimeInterval(4_200),
+                isPaid: true
+            )
+        ]
+
+        let nameBox = BindingBox("new-account")
+        let quotaBox = BindingBox(200)
+        let groupBox = BindingBox(AgentAccount.defaultGroupName)
+        let accountNames = BindingBox(Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.name) }))
+        let accountQuotas = BindingBox(Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.quota) }))
+        let accountUsed = BindingBox(Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.usedUnits) }))
+
+        var addCount = 0
+        var removeCount = 0
+        var moveCount = 0
+        var createGroupCount = 0
+        var renameGroupCount = 0
+        var deleteGroupCount = 0
+        var switchCount = 0
+
+        func makeView(layoutMode: String) -> AccountUsagePanelView {
+            defaults.set(layoutMode, forKey: layoutModeKey)
+            return AccountUsagePanelView(
+                newAccountName: binding(nameBox),
+                newAccountQuota: binding(quotaBox),
+                selectedGroupName: binding(groupBox),
+                accounts: accounts,
+                groups: [AgentAccount.defaultGroupName, "Ops"],
+                activeAccountID: activeID,
+                switchLaunchError: "launch failed",
+                switchLaunchWarning: "switch warning",
+                showAddAccountControls: true,
+                onAddAccount: { _, _ in addCount += 1 },
+                onSwitchAndLaunch: { _ in switchCount += 1 },
+                onRemoveAccount: { _ in removeCount += 1 },
+                onMoveAccountToGroup: { _, _ in moveCount += 1 },
+                onCreateGroup: { _ in createGroupCount += 1 },
+                onRenameGroup: { _, _ in renameGroupCount += 1 },
+                onDeleteGroup: { _ in deleteGroupCount += 1 },
+                accountNameBinding: { id in
+                    Binding(
+                        get: { accountNames.value[id] ?? "" },
+                        set: { accountNames.value[id] = $0 }
+                    )
+                },
+                accountQuotaBinding: { id in
+                    Binding(
+                        get: { accountQuotas.value[id] ?? 0 },
+                        set: { accountQuotas.value[id] = $0 }
+                    )
+                },
+                accountUsedBinding: { id in
+                    Binding(
+                        get: { accountUsed.value[id] ?? 0 },
+                        set: { accountUsed.value[id] = $0 }
+                    )
+                },
+                isPercentUsageAccount: { account in account.isPaid },
+                remainingLabel: { account in "\(account.remainingUnits)" },
+                usageProgressColor: { account in account.remainingRatio > 0.2 ? .blue : .red }
+            )
+        }
+
+        renderInHostingView(makeView(layoutMode: "quad"), size: CGSize(width: 1280, height: 840))
+        renderInHostingView(makeView(layoutMode: "minimal"), size: CGSize(width: 520, height: 840))
+
+        #expect(addCount == 0)
+        #expect(removeCount == 0)
+        #expect(moveCount == 0)
+        #expect(createGroupCount == 0)
+        #expect(renameGroupCount == 0)
+        #expect(deleteGroupCount == 0)
+        #expect(switchCount == 0)
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardViewCanRenderWithSeededSnapshot() {
+        var state = AccountPoolState(
+            accounts: [
+                makeSmokeAccount(name: "seed-a@example.com", usedUnits: 35, quota: 100, isPaid: true),
+                makeSmokeAccount(name: "seed-b@example.com", usedUnits: 5, quota: 100, isPaid: false)
+            ],
+            mode: .intelligent
+        )
+        state.evaluate()
+        let store = ViewSmokeStore(snapshot: state.snapshot)
+
+        let view = PoolDashboardView(store: store)
+        renderInHostingView(view, size: CGSize(width: 1500, height: 980))
+
+        #expect(store.loadCount > 0)
+        if let persisted = store.saved.last {
+            #expect(persisted.accounts.count == state.accounts.count)
+        }
     }
 }
