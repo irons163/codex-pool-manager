@@ -24,11 +24,7 @@ struct CodexAuthFilePanelService {
     private static func defaultPicker() -> URL? {
 #if canImport(AppKit)
         let panel = configuredOpenPanel()
-
-        guard panel.runModal() == .OK else {
-            return nil
-        }
-        return panel.url
+        return pickURLFromPanel(panel)
 #else
         return nil
 #endif
@@ -49,6 +45,17 @@ struct CodexAuthFilePanelService {
         panel.directoryURL = homeDirectory.appending(path: ".codex")
         panel.nameFieldStringValue = "auth.json"
         return panel
+    }
+
+    @MainActor
+    static func pickURLFromPanel(
+        _ panel: NSOpenPanel,
+        runModal: (NSOpenPanel) -> NSApplication.ModalResponse = { $0.runModal() }
+    ) -> URL? {
+        guard runModal(panel) == .OK else {
+            return nil
+        }
+        return panel.url
     }
     #endif
 }

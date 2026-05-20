@@ -317,6 +317,9 @@ private func withTemporaryFile(
 }
 
 private func preserveLanguageOverride(_ body: () throws -> Void) rethrows {
+    languageOverrideMutationLock.lock()
+    defer { languageOverrideMutationLock.unlock() }
+
     let defaults = UserDefaults.standard
     let key = L10n.languageOverrideKey
     let previous = defaults.object(forKey: key)
@@ -329,6 +332,8 @@ private func preserveLanguageOverride(_ body: () throws -> Void) rethrows {
     }
     try body()
 }
+
+private let languageOverrideMutationLock = NSLock()
 
 private func parsedFormBody(_ form: String) -> [String: String] {
     var values: [String: String] = [:]
@@ -1028,6 +1033,27 @@ struct AuthFilePanelAndFlowCoverageExpansionTests {
         #expect(panel.message == L10n.text("auth.file_panel.message_select_auth_json"))
         #expect(panel.directoryURL?.path == home.appending(path: ".codex").path)
         #expect(panel.nameFieldStringValue.isEmpty == false)
+    }
+
+    @Test
+    func authFilePanelPickURLFromPanelHandlesAcceptedAndCancelledStates() {
+        let panel = NSOpenPanel()
+        var acceptedRunModalCalled = false
+        var cancelledRunModalCalled = false
+
+        let accepted = CodexAuthFilePanelService.pickURLFromPanel(panel) { _ in
+            acceptedRunModalCalled = true
+            return .OK
+        }
+        #expect(acceptedRunModalCalled)
+        #expect(accepted == panel.url)
+
+        let cancelled = CodexAuthFilePanelService.pickURLFromPanel(panel) { _ in
+            cancelledRunModalCalled = true
+            return .cancel
+        }
+        #expect(cancelledRunModalCalled)
+        #expect(cancelled == nil)
     }
     #endif
 

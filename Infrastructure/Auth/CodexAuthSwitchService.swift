@@ -503,3 +503,23 @@ struct CodexAuthSwitchService {
 #endif
     }
 }
+
+#if DEBUG
+extension CodexAuthSwitchService {
+    func debugCloseBundleIdentifiers(for launchTarget: CodexLaunchTarget) -> [String] {
+        closeBundleIdentifiers(for: launchTarget)
+    }
+
+    func debugLaunchBundleIdentifiers(for launchTarget: CodexLaunchTarget) -> [String] {
+        launchBundleIdentifiers(for: launchTarget)
+    }
+
+    func debugLaunchAppURLs(for launchTarget: CodexLaunchTarget) -> [URL] {
+        launchAppURLs(for: launchTarget)
+    }
+
+    func debugOrderedUniqueValues<T: Hashable>(of values: [T]) -> [T] {
+        orderedUniqueValues(of: values)
+    }
+}
+#endif

@@ -106,7 +106,7 @@ private enum PreferenceValueNormalizer {
     }
 }
 
-private struct MenuBarBridgeSnapshot: Codable {
+struct MenuBarBridgeSnapshot: Codable {
     let updatedAt: Date
     let activeAccountName: String?
     let activeIsPaid: Bool?
@@ -117,13 +117,11 @@ private struct MenuBarBridgeSnapshot: Codable {
     let activeFiveHourResetAt: Date?
 }
 
-@MainActor
-private final class MenuBarSnapshotModel: ObservableObject {
-    @Published private(set) var snapshot: MenuBarBridgeSnapshot?
-
-    private var timer: Timer?
-
-    var menuBarTitle: String {
+enum MenuBarSnapshotFormatter {
+    static func menuBarTitle(
+        snapshot: MenuBarBridgeSnapshot?,
+        now: Date = Date()
+    ) -> String {
         guard let snapshot else { return "Codex --" }
 
         var segments: [String] = []
@@ -152,9 +150,38 @@ private final class MenuBarSnapshotModel: ObservableObject {
             segments.append("5h \(fiveHourLeft)%")
         }
 
-        segments.append(shortAgeText(since: snapshot.updatedAt))
+        segments.append(shortAgeText(since: snapshot.updatedAt, now: now))
 
         return "Codex " + segments.joined(separator: " · ")
+    }
+
+    static func shortAgeText(
+        since date: Date,
+        now: Date = Date()
+    ) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        if seconds < 10 { return "now" }
+        if seconds < 60 { return "\(seconds)s" }
+
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes)m" }
+
+        let hours = minutes / 60
+        if hours < 24 { return "\(hours)h" }
+
+        let days = hours / 24
+        return "\(days)d"
+    }
+}
+
+@MainActor
+private final class MenuBarSnapshotModel: ObservableObject {
+    @Published private(set) var snapshot: MenuBarBridgeSnapshot?
+
+    private var timer: Timer?
+
+    var menuBarTitle: String {
+        MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
     }
 
     init() {
@@ -207,20 +234,6 @@ private final class MenuBarSnapshotModel: ObservableObject {
         }
     }
 
-    private func shortAgeText(since date: Date) -> String {
-        let seconds = max(0, Int(Date().timeIntervalSince(date)))
-        if seconds < 10 { return "now" }
-        if seconds < 60 { return "\(seconds)s" }
-
-        let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes)m" }
-
-        let hours = minutes / 60
-        if hours < 24 { return "\(hours)h" }
-
-        let days = hours / 24
-        return "\(days)d"
-    }
 }
 
 private struct MenuBarStatusMenuView: View {

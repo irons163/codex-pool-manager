@@ -205,6 +205,105 @@ struct CodexAuthSwitchServiceCoverageTests {
     }
 }
 
+struct CodexAuthSwitchServiceDebugHelperTests {
+    @Test
+    func launchSetHelpersReturnStableUniqueValues() {
+        let service = CodexAuthSwitchService()
+
+        let autoClose = service.debugCloseBundleIdentifiers(for: .auto)
+        #expect(autoClose == ["com.openai.chatgpt", "com.openai.codex"])
+
+        let autoLaunchIDs = service.debugLaunchBundleIdentifiers(for: .auto)
+        #expect(autoLaunchIDs.contains("com.openai.chatgpt"))
+        #expect(autoLaunchIDs.contains("com.openai.codex"))
+        #expect(autoLaunchIDs.contains("com.apple.Terminal"))
+        #expect(autoLaunchIDs.count == Set(autoLaunchIDs).count)
+
+        let intellijBundleIDs = service.debugLaunchBundleIdentifiers(for: .intellijIDEA)
+        #expect(intellijBundleIDs == ["com.jetbrains.intellij", "com.jetbrains.intellij.ce"])
+
+        let autoURLs = service.debugLaunchAppURLs(for: .auto).map(\.path)
+        #expect(autoURLs.contains("/Applications/ChatGPT.app"))
+        #expect(autoURLs.contains("/Applications/Codex.app"))
+        #expect(autoURLs.contains("/System/Applications/Utilities/Terminal.app"))
+        #expect(autoURLs.count == Set(autoURLs).count)
+
+        let uniques = service.debugOrderedUniqueValues(of: [1, 2, 1, 3, 2, 4])
+        #expect(uniques == [1, 2, 3, 4])
+    }
+}
+
+struct MenuBarSnapshotFormatterTests {
+    @Test
+    func menuBarTitleFallsBackWhenNoSnapshot() {
+        #expect(MenuBarSnapshotFormatter.menuBarTitle(snapshot: nil) == "Codex --")
+    }
+
+    @Test
+    func menuBarTitleFormatsPaidSnapshotWithWeeklyAndFiveHourRemaining() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let snapshot = MenuBarBridgeSnapshot(
+            updatedAt: now.addingTimeInterval(-80),
+            activeAccountName: "paid@example.com",
+            activeIsPaid: true,
+            activeRemainingUnits: 25,
+            activeQuota: 50,
+            activeFiveHourRemainingPercent: 42,
+            activeWeeklyResetAt: nil,
+            activeFiveHourResetAt: nil
+        )
+
+        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
+        #expect(title == "Codex w 50% · 5h 42% · 1m")
+    }
+
+    @Test
+    func menuBarTitleFormatsNonPaidSnapshotUsingRemainingPercent() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        let snapshot = MenuBarBridgeSnapshot(
+            updatedAt: now.addingTimeInterval(-8),
+            activeAccountName: "free@example.com",
+            activeIsPaid: false,
+            activeRemainingUnits: 33,
+            activeQuota: 100,
+            activeFiveHourRemainingPercent: nil,
+            activeWeeklyResetAt: nil,
+            activeFiveHourResetAt: nil
+        )
+
+        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
+        #expect(title == "Codex 33% · now")
+    }
+
+    @Test
+    func menuBarTitleFormatsRawUnitsWhenQuotaUnavailable() {
+        let now = Date(timeIntervalSince1970: 3_000_000)
+        let snapshot = MenuBarBridgeSnapshot(
+            updatedAt: now.addingTimeInterval(-3_800),
+            activeAccountName: "unknown@example.com",
+            activeIsPaid: false,
+            activeRemainingUnits: 7,
+            activeQuota: nil,
+            activeFiveHourRemainingPercent: nil,
+            activeWeeklyResetAt: nil,
+            activeFiveHourResetAt: nil
+        )
+
+        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
+        #expect(title == "Codex 7 · 1h")
+    }
+
+    @Test
+    func shortAgeTextHandlesRangeBoundaries() {
+        let now = Date(timeIntervalSince1970: 4_000_000)
+        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-9), now: now) == "now")
+        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-15), now: now) == "15s")
+        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-180), now: now) == "3m")
+        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-7_200), now: now) == "2h")
+        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-172_800), now: now) == "2d")
+    }
+}
+
 struct PoolDashboardAuthFlowCoordinatorCoverageTests {
     @Test
     func authFlowBuildConfigurationTrimsAndKeepsWorkspaceScope() throws {
