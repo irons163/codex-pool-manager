@@ -597,3 +597,121 @@ struct AppAppearancePreferenceCoverageTests {
         #expect(AppAppearancePreference.preferredColorScheme(for: "invalid") == nil)
     }
 }
+
+@MainActor
+struct OAuthSupportCoverageBoostTests {
+    @Test
+    func oauthClientConfigurationCallbackSchemeParsesValidAndInvalidRedirects() {
+        let valid = OAuthClientConfiguration(
+            issuer: URL(string: "https://auth.example.com")!,
+            scopes: "openid",
+            redirectURI: "aiaagentpool://oauth/callback"
+        )
+        #expect(valid.callbackURLScheme == "aiaagentpool")
+
+        let invalid = OAuthClientConfiguration(
+            issuer: URL(string: "https://auth.example.com")!,
+            scopes: "openid",
+            redirectURI: "not a valid url"
+        )
+        #expect(invalid.callbackURLScheme == nil)
+    }
+
+    @Test
+    func oauthIDTokenClaimsParserExtractsOrganizationUsingDefaultThenFirstFallback() throws {
+        let defaultOrgToken = try makeOAuthIDToken(payload: [
+            "sub": "user-default",
+            "https://api.openai.com/auth": [
+                "organizations": [
+                    ["id": "org-other", "is_default": false],
+                    ["id": "org-default", "is_default": true]
+                ]
+            ]
+        ])
+        let defaultClaims = try #require(OAuthIDTokenClaimsParser.parse(defaultOrgToken))
+        #expect(defaultClaims.organizationID == "org-default")
+
+        let fallbackFirstToken = try makeOAuthIDToken(payload: [
+            "sub": "user-first",
+            "https://api.openai.com/auth": [
+                "organizations": [
+                    ["id": "org-first"],
+                    ["id": "org-second", "is_default": false]
+                ]
+            ]
+        ])
+        let fallbackClaims = try #require(OAuthIDTokenClaimsParser.parse(fallbackFirstToken))
+        #expect(fallbackClaims.organizationID == "org-first")
+    }
+
+    @Test
+    func oauthLoginErrorDescriptionsCoverAllCases() {
+        let cases: [OAuthLoginError] = [
+            .invalidAuthorizeURL,
+            .invalidRedirectURI,
+            .browserStartFailed,
+            .invalidCallback,
+            .localhostCallbackStartFailed("boom"),
+            .localhostCallbackTimedOut,
+            .authorizationFailed("denied"),
+            .missingCode,
+            .stateMismatch,
+            .tokenExchangeFailed("unauthorized")
+        ]
+
+        for error in cases {
+            #expect(!(error.errorDescription ?? "").isEmpty)
+        }
+    }
+
+    @Test
+    func oauthLoginServiceSignInRejectsInvalidRedirectBeforeLaunchingBrowser() async {
+        let service = OAuthLoginService(session: .shared)
+        let config = OAuthClientConfiguration(
+            issuer: URL(string: "https://auth.example.com")!,
+            scopes: "openid profile",
+            redirectURI: "not a valid redirect"
+        )
+
+        await #expect(throws: OAuthLoginError.invalidRedirectURI) {
+            _ = try await service.signIn(configuration: config)
+        }
+    }
+}
+
+struct PoolDashboardDebugCoverageHookTests {
+    @Test
+    func workspaceDrawerHooksCoverCycleAndMetadata() {
+        let snapshots = PoolDashboardView.debugWorkspaceDrawerStateSnapshots()
+        #expect(snapshots.count == 3)
+        #expect(snapshots[0].isVisible == false)
+        #expect(snapshots[0].symbolName == "chevron.right")
+        #expect(snapshots[0].actionTitleKey == "drawer.expand")
+        #expect(snapshots[0].nextSymbolName == "chevron.up")
+
+        #expect(snapshots[1].isVisible)
+        #expect(snapshots[1].symbolName == "chevron.up")
+        #expect(snapshots[1].actionTitleKey == "drawer.expand_full")
+        #expect(snapshots[1].nextSymbolName == "chevron.down")
+
+        #expect(snapshots[2].isVisible)
+        #expect(snapshots[2].symbolName == "chevron.down")
+        #expect(snapshots[2].actionTitleKey == "drawer.collapse")
+        #expect(snapshots[2].nextSymbolName == "chevron.right")
+    }
+
+    @Test
+    func specialResetHooksExposeExpectedIdentifiersAndTitles() {
+        let kinds = PoolDashboardView.debugSpecialResetKinds()
+        #expect(kinds.count == 2)
+        #expect(kinds[0].rawValue == "weekly")
+        #expect(kinds[0].interval == 7 * 24 * 3_600)
+        #expect(!kinds[0].title.isEmpty)
+        #expect(kinds[1].rawValue == "fiveHour")
+        #expect(kinds[1].interval == 5 * 3_600)
+        #expect(!kinds[1].title.isEmpty)
+
+        #expect(PoolDashboardView.debugSpecialResetRecordID(accountKey: "account:abc") == "account:abc")
+        #expect(PoolDashboardView.debugAppUpdatePromptID(latestVersion: "1.2.3") == "1.2.3")
+    }
+}

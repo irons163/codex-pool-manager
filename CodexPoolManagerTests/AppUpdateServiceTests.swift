@@ -5,6 +5,12 @@ import Testing
 @MainActor
 struct AppUpdateServiceTests {
     @Test
+    func appUpdateErrorDescriptionsAreNonEmptyAndSpecific() {
+        #expect(AppUpdateError.invalidResponse.errorDescription == "Invalid update response.")
+        #expect(AppUpdateError.decodingFailed.errorDescription == "Failed to decode update metadata.")
+    }
+
+    @Test
     func normalizedVersionTrimsPrefixAndWhitespace() {
         #expect(AppUpdateVersioning.normalizedVersion(from: " v1.7.5 ") == "1.7.5")
         #expect(AppUpdateVersioning.normalizedVersion(from: "V2.0.1") == "2.0.1")

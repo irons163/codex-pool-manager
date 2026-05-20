@@ -6595,6 +6595,46 @@ private enum DesktopNotifier {
     }
 }
 
+#if DEBUG
+extension PoolDashboardView {
+    static func debugWorkspaceDrawerStateSnapshots() -> [(isVisible: Bool, symbolName: String, actionTitleKey: String, nextSymbolName: String)] {
+        [WorkspaceDrawerState.collapsed, .partial, .expanded].map { state in
+            (
+                isVisible: state.isVisible,
+                symbolName: state.symbolName,
+                actionTitleKey: state.actionTitleKey,
+                nextSymbolName: state.next().symbolName
+            )
+        }
+    }
+
+    static func debugSpecialResetKinds() -> [(rawValue: String, interval: TimeInterval, title: String)] {
+        [SpecialResetKind.weekly, .fiveHour].map { kind in
+            (rawValue: kind.rawValue, interval: kind.interval, title: kind.title)
+        }
+    }
+
+    static func debugSpecialResetRecordID(accountKey: String = "account:test", accountName: String = "Test") -> String {
+        SpecialResetRecord(accountKey: accountKey, accountName: accountName).id
+    }
+
+    static func debugAppUpdatePromptID(latestVersion: String) -> String {
+        let release = AppUpdateRelease(
+            tagName: latestVersion,
+            name: latestVersion,
+            htmlURL: URL(string: "https://example.com/release")!,
+            publishedAt: nil,
+            assets: []
+        )
+        return AppUpdatePrompt(
+            currentVersion: "0.0.0",
+            latestVersion: latestVersion,
+            release: release
+        ).id
+    }
+}
+#endif
+
 #Preview {
     PoolDashboardView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
 }

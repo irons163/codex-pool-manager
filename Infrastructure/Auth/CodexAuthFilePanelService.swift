@@ -7,13 +7,28 @@ import UniformTypeIdentifiers
 struct CodexAuthFilePanelService {
     private let picker: () -> URL?
 
+#if DEBUG
+    @MainActor
+    static var defaultPickerOverride: (() -> URL?)?
+
+    @MainActor
+    static var runModalOverride: ((NSOpenPanel) -> NSApplication.ModalResponse)?
+#endif
+
     init(picker: @escaping () -> URL?) {
         self.picker = picker
     }
 
     @MainActor
     init() {
-        self.picker = { Self.defaultPicker() }
+        self.picker = {
+#if DEBUG
+            if let override = Self.defaultPickerOverride {
+                return override()
+            }
+#endif
+            return Self.defaultPicker()
+        }
     }
 
     func pickAuthFileURL() -> URL? {
@@ -50,9 +65,24 @@ struct CodexAuthFilePanelService {
     @MainActor
     static func pickURLFromPanel(
         _ panel: NSOpenPanel,
-        runModal: (NSOpenPanel) -> NSApplication.ModalResponse = { $0.runModal() }
+        runModal: ((NSOpenPanel) -> NSApplication.ModalResponse)? = nil
     ) -> URL? {
-        guard runModal(panel) == .OK else {
+        let modalResult: NSApplication.ModalResponse
+        if let runModal {
+            modalResult = runModal(panel)
+        } else {
+#if DEBUG
+            if let override = Self.runModalOverride {
+                modalResult = override(panel)
+            } else {
+                modalResult = panel.runModal()
+            }
+#else
+            modalResult = panel.runModal()
+#endif
+        }
+
+        guard modalResult == .OK else {
             return nil
         }
         return panel.url
