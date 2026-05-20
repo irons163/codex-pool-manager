@@ -169,6 +169,28 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func activityLogPanelDebugHooksCoverLocalizedTimeAndClearAction() {
+        var clearCount = 0
+        let panel = ActivityLogPanelView(
+            activities: [
+                PoolActivity(
+                    id: UUID(),
+                    timestamp: Date(timeIntervalSince1970: 1_700_000_000),
+                    message: "Debug"
+                )
+            ],
+            onClearActivities: { clearCount += 1 }
+        )
+
+        let localized = panel.debugLocalizedTimeText(Date(timeIntervalSince1970: 1_700_000_000))
+        #expect(!localized.isEmpty)
+
+        panel.debugInvokeClearAction()
+        #expect(clearCount == 1)
+    }
+
+    @Test
+    @MainActor
     func backupRestorePanelViewBodyRendersErrorAndEditorStates() {
         let jsonBox = BindingBox("{\"ok\":true}")
         let errorBox = BindingBox<String?>(nil)

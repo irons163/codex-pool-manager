@@ -2591,6 +2591,50 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncMapsForbiddenErrorAsUnauthorized() async {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        if let accountID = state.accounts.first?.id {
+            state.updateAccount(accountID, chatGPTAccountID: "acct-a")
+        }
+        let client = MockCodexUsageClient(
+            responseByToken: [:],
+            shouldThrowError: CodexClientHTTPError(statusCode: 403)
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try? await sync.sync(state: &state)
+
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.unauthorized.localizedDescription)
+    }
+
+    @Test
+    func codexSyncMapsUnhandledHTTPErrorAsUnknown() async {
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        if let accountID = state.accounts.first?.id {
+            state.updateAccount(accountID, chatGPTAccountID: "acct-a")
+        }
+        let client = MockCodexUsageClient(
+            responseByToken: [:],
+            shouldThrowError: CodexClientHTTPError(statusCode: 500)
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try? await sync.sync(state: &state)
+
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.unknown.localizedDescription)
+    }
+
+    @Test
     func codexSyncRecordsLastSyncTimestampOnSuccess() async throws {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         var state = AccountPoolState(
@@ -2807,6 +2851,99 @@ struct CodexPoolManagerTests {
         #expect(usage.usedUnits == 18)
         #expect(usage.quota == 100)
         #expect(usage.usageWindowName == "weekly_window")
+    }
+
+    @Test
+    func openAICodexUsageClientResolvesPaidRolesFromResetTimeWhenNamesAndDurationsAreAmbiguous() async throws {
+        let primaryResetRaw = "2026-05-20T10:00:00Z"
+        let secondaryResetUnix = 1_779_275_400.0
+        let responseJSON = """
+        {
+          "account_id": "acct-paid",
+          "email": "paid@example.com",
+          "plan_type": "pro",
+          "rate_limit": {
+            "primary_window": {
+              "name": "alpha_window",
+              "used_percent": 30,
+              "limit_window_seconds": 9999,
+              "reset_after_seconds": 1111,
+              "reset_at": "\(primaryResetRaw)"
+            },
+            "secondary_window": {
+              "name": "beta_window",
+              "used_percent": 70,
+              "limit_window_seconds": 9999,
+              "reset_after_seconds": 1111,
+              "reset_at": "\(secondaryResetUnix)"
+            }
+          }
+        }
+        """
+        let data = Data(responseJSON.utf8)
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=paid-reset-fallback"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: data
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token-paid", accountID: "acct-paid")
+
+        let expectedPrimaryReset = try #require(ISO8601DateFormatter().date(from: primaryResetRaw))
+        let expectedSecondaryReset = Date(timeIntervalSince1970: secondaryResetUnix)
+
+        #expect(usage.isPaid)
+        #expect(usage.primaryUsagePercent == 30)
+        #expect(usage.secondaryUsagePercent == 70)
+        #expect(usage.primaryUsageResetAt == expectedPrimaryReset)
+        #expect(usage.secondaryUsageResetAt == expectedSecondaryReset)
+        #expect(usage.usedUnits == 70)
+        #expect(usage.quota == 100)
+        #expect(usage.usageWindowName == "beta_window")
+        #expect(usage.usageWindowResetAt == expectedSecondaryReset)
+    }
+
+    @Test
+    func openAICodexUsageClientInfersFiveHourRoleFromHourNamedWindow() async throws {
+        let responseJSON = """
+        {
+          "account_id": "acct-hour",
+          "email": "hour@example.com",
+          "plan_type": "plus",
+          "rate_limit": {
+            "primary_window": {
+              "name": "hourly_limit_window",
+              "used_percent": 15,
+              "reset_at": 1774600000
+            },
+            "secondary_window": {
+              "name": "weekly_limit_window",
+              "used_percent": 61,
+              "reset_at": 1775200000
+            }
+          }
+        }
+        """
+        let data = Data(responseJSON.utf8)
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=paid-hour-name"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: data
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token-hour", accountID: "acct-hour")
+
+        #expect(usage.isPaid)
+        #expect(usage.primaryUsagePercent == 15)
+        #expect(usage.secondaryUsagePercent == 61)
+        #expect(usage.usedUnits == 61)
+        #expect(usage.quota == 100)
+        #expect(usage.usageWindowName == "weekly_limit_window")
+        #expect(usage.usageWindowResetAt == Date(timeIntervalSince1970: 1_775_200_000))
     }
 
     @Test

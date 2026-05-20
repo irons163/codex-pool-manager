@@ -61,3 +61,15 @@ struct ActivityLogPanelView: View {
         return formatter.string(from: date)
     }
 }
+
+#if DEBUG
+extension ActivityLogPanelView {
+    func debugLocalizedTimeText(_ date: Date) -> String {
+        localizedTimeText(date)
+    }
+
+    func debugInvokeClearAction() {
+        onClearActivities()
+    }
+}
+#endif
