@@ -50,14 +50,23 @@ private enum LegacySandboxPreferencesMigrator {
     private static let legacyPreferencesPath =
         "Library/Containers/com.irons.CodexPoolManager/Data/Library/Preferences/com.irons.CodexPoolManager.plist"
 
-    static func migrateIfNeeded(defaults: UserDefaults = .standard) {
+    static func migrateIfNeeded(
+        defaults: UserDefaults = .standard,
+        legacyPreferencesOverride: [String: Any]? = nil
+    ) {
         guard !defaults.bool(forKey: migrationMarkerKey) else { return }
 
-        let legacyURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(legacyPreferencesPath)
-        guard let legacyPreferences = NSDictionary(contentsOf: legacyURL) as? [String: Any] else {
-            defaults.set(true, forKey: migrationMarkerKey)
-            return
+        let legacyPreferences: [String: Any]
+        if let legacyPreferencesOverride {
+            legacyPreferences = legacyPreferencesOverride
+        } else {
+            let legacyURL = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(legacyPreferencesPath)
+            guard let loaded = NSDictionary(contentsOf: legacyURL) as? [String: Any] else {
+                defaults.set(true, forKey: migrationMarkerKey)
+                return
+            }
+            legacyPreferences = loaded
         }
 
         var migrated = false
@@ -304,3 +313,21 @@ private struct MenuBarStatusMenuView: View {
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
+
+#if DEBUG
+extension CodexPoolManagerApp {
+    static func debugRunLegacyMigration(
+        defaults: UserDefaults,
+        legacyPreferences: [String: Any]?
+    ) {
+        LegacySandboxPreferencesMigrator.migrateIfNeeded(
+            defaults: defaults,
+            legacyPreferencesOverride: legacyPreferences
+        )
+    }
+
+    static func debugNormalizePreferences(defaults: UserDefaults) {
+        PreferenceValueNormalizer.normalizeIfNeeded(defaults: defaults)
+    }
+}
+#endif

@@ -53,6 +53,14 @@ enum WidgetBridgePublisher {
     }
 
     static func publish(from poolSnapshot: AccountPoolSnapshot) {
+        let snapshot = buildSnapshot(from: poolSnapshot)
+        publish(snapshot)
+    }
+
+    private static func buildSnapshot(
+        from poolSnapshot: AccountPoolSnapshot,
+        updatedAt: Date = Date()
+    ) -> Snapshot {
         let includedAccounts = poolSnapshot.accounts.filter { !$0.isUsageSyncExcluded }
         let uniqueIncludedAccounts = uniqueAccounts(from: includedAccounts)
         let totalAccounts = uniqueIncludedAccounts.count
@@ -71,8 +79,8 @@ enum WidgetBridgePublisher {
         let status = activeAccountName.map { "Active: \($0)" } ?? "No active account"
         let activeFiveHourRemainingPercent = activeAccount?.primaryUsagePercent.map { max(0, min(100, 100 - $0)) }
 
-        let snapshot = Snapshot(
-            updatedAt: Date(),
+        return Snapshot(
+            updatedAt: updatedAt,
             status: status,
             source: "CodexPoolManager",
             mode: poolSnapshot.mode.rawValue,
@@ -87,7 +95,6 @@ enum WidgetBridgePublisher {
             activeWeeklyResetAt: activeAccount?.usageWindowResetAt,
             activeFiveHourResetAt: activeAccount?.primaryUsageResetAt
         )
-        publish(snapshot)
     }
 
     private static func publish(_ snapshot: Snapshot) {
@@ -97,11 +104,7 @@ enum WidgetBridgePublisher {
 
         let signature = snapshotSignature(for: snapshot)
         let now = Date()
-        stateLock.lock()
-        let shouldThrottle = lastPublishedSignature == signature &&
-            now.timeIntervalSince(lastPublishedAt) < minimumPublishInterval
-        stateLock.unlock()
-        guard !shouldThrottle else { return }
+        guard !shouldThrottlePublish(signature: signature, now: now) else { return }
 
         do {
             let encoder = JSONEncoder()
@@ -111,10 +114,7 @@ enum WidgetBridgePublisher {
             WidgetBridgeLocalServer.shared.startIfNeeded()
             WidgetBridgeLocalServer.shared.update(snapshotData: data)
 
-            stateLock.lock()
-            lastPublishedSignature = signature
-            lastPublishedAt = now
-            stateLock.unlock()
+            markPublished(signature: signature, at: now)
 
             #if canImport(WidgetKit)
             WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
@@ -123,6 +123,26 @@ enum WidgetBridgePublisher {
         } catch {
             NSLog("WidgetBridgePublisher failed: \(error.localizedDescription)")
         }
+    }
+
+    private static func shouldThrottlePublish(
+        signature: String,
+        now: Date
+    ) -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return lastPublishedSignature == signature &&
+            now.timeIntervalSince(lastPublishedAt) < minimumPublishInterval
+    }
+
+    private static func markPublished(
+        signature: String,
+        at publishedAt: Date
+    ) {
+        stateLock.lock()
+        lastPublishedSignature = signature
+        lastPublishedAt = publishedAt
+        stateLock.unlock()
     }
 
     private static func snapshotSignature(for snapshot: Snapshot) -> String {
@@ -167,6 +187,40 @@ enum WidgetBridgePublisher {
         return unique
     }
 }
+
+#if DEBUG
+extension WidgetBridgePublisher {
+    static func debugBuildSnapshot(
+        from poolSnapshot: AccountPoolSnapshot,
+        updatedAt: Date
+    ) -> Snapshot {
+        buildSnapshot(from: poolSnapshot, updatedAt: updatedAt)
+    }
+
+    static func debugSnapshotSignature(for snapshot: Snapshot) -> String {
+        snapshotSignature(for: snapshot)
+    }
+
+    static func debugUniqueAccountDedupKeys(from accounts: [AgentAccount]) -> [String] {
+        uniqueAccounts(from: accounts).map(\.deduplicationKey)
+    }
+
+    static func debugShouldThrottle(signature: String, now: Date) -> Bool {
+        shouldThrottlePublish(signature: signature, now: now)
+    }
+
+    static func debugMarkPublished(signature: String, at publishedAt: Date) {
+        markPublished(signature: signature, at: publishedAt)
+    }
+
+    static func debugResetPublishState() {
+        stateLock.lock()
+        lastPublishedSignature = nil
+        lastPublishedAt = .distantPast
+        stateLock.unlock()
+    }
+}
+#endif
 
 private final class WidgetBridgeLocalServer {
     static let shared = WidgetBridgeLocalServer()

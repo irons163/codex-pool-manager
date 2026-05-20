@@ -304,6 +304,76 @@ struct MenuBarSnapshotFormatterTests {
     }
 }
 
+struct CodexPoolManagerAppMigrationCoverageTests {
+    private let migrationMarkerKey = "did_migrate_sandbox_preferences_v1"
+    private let snapshotKey = "account_pool_snapshot"
+    private let tokenKey = "account_pool_tokens"
+
+    private func makeDefaults() -> UserDefaults {
+        let suiteName = "tests.coverage.app.migration.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }
+
+    @Test
+    func migrationMarksCompletedWhenNoLegacyPreferencesProvided() {
+        let defaults = makeDefaults()
+        CodexPoolManagerApp.debugRunLegacyMigration(defaults: defaults, legacyPreferences: nil)
+        #expect(defaults.bool(forKey: migrationMarkerKey))
+    }
+
+    @Test
+    func migrationMergesTokensAndSnapshotWithoutOverwritingNonEmptyToken() {
+        let defaults = makeDefaults()
+        defaults.set(["keep": "existing-token", "fill": ""], forKey: tokenKey)
+
+        let legacySnapshot = Data([1, 2, 3, 4])
+        let legacy: [String: Any] = [
+            tokenKey: [
+                "keep": "legacy-should-not-replace",
+                "fill": "legacy-fill",
+                "new": "legacy-new"
+            ],
+            snapshotKey: legacySnapshot
+        ]
+
+        CodexPoolManagerApp.debugRunLegacyMigration(defaults: defaults, legacyPreferences: legacy)
+
+        let mergedTokens = defaults.dictionary(forKey: tokenKey) as? [String: String]
+        #expect(mergedTokens?["keep"] == "existing-token")
+        #expect(mergedTokens?["fill"] == "legacy-fill")
+        #expect(mergedTokens?["new"] == "legacy-new")
+        #expect(defaults.data(forKey: snapshotKey) == legacySnapshot)
+        #expect(defaults.bool(forKey: migrationMarkerKey))
+    }
+
+    @Test
+    func migrationSkipsWhenMarkerAlreadySet() {
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: migrationMarkerKey)
+        defaults.set(["a": "before"], forKey: tokenKey)
+
+        let legacy: [String: Any] = [tokenKey: ["a": "after"]]
+        CodexPoolManagerApp.debugRunLegacyMigration(defaults: defaults, legacyPreferences: legacy)
+
+        let tokens = defaults.dictionary(forKey: tokenKey) as? [String: String]
+        #expect(tokens?["a"] == "before")
+    }
+
+    @Test
+    func preferenceNormalizerRewritesInvalidAppearanceAndLanguageValues() {
+        let defaults = makeDefaults()
+        defaults.set("bad-value", forKey: AppAppearancePreference.storageKey)
+        defaults.set(" zh-cn ", forKey: L10n.languageOverrideKey)
+
+        CodexPoolManagerApp.debugNormalizePreferences(defaults: defaults)
+
+        #expect(defaults.string(forKey: AppAppearancePreference.storageKey) == AppAppearancePreference.system.rawValue)
+        #expect(defaults.string(forKey: L10n.languageOverrideKey) == "zh-Hans")
+    }
+}
+
 struct PoolDashboardAuthFlowCoordinatorCoverageTests {
     @Test
     func authFlowBuildConfigurationTrimsAndKeepsWorkspaceScope() throws {
@@ -715,3 +785,177 @@ struct PoolDashboardDebugCoverageHookTests {
         #expect(PoolDashboardView.debugAppUpdatePromptID(latestVersion: "1.2.3") == "1.2.3")
     }
 }
+
+@MainActor
+struct WidgetBridgePublisherCoverageBoostTests {
+    private func makeAccount(
+        id: UUID = UUID(),
+        name: String,
+        usedUnits: Int,
+        quota: Int,
+        chatGPTAccountID: String,
+        isPaid: Bool,
+        isExcluded: Bool = false,
+        primaryUsagePercent: Int? = nil
+    ) -> AgentAccount {
+        AgentAccount(
+            id: id,
+            name: name,
+            usedUnits: usedUnits,
+            quota: quota,
+            apiToken: "token-\(name)",
+            email: name,
+            chatGPTAccountID: chatGPTAccountID,
+            identityScope: AgentAccount.personalIdentityScope,
+            primaryUsagePercent: primaryUsagePercent,
+            isPaid: isPaid,
+            isUsageSyncExcluded: isExcluded
+        )
+    }
+
+    @Test
+    func buildSnapshotComputesDeduplicatedPoolMetricsAndActiveSummary() {
+        let activeID = UUID()
+        let active = makeAccount(
+            id: activeID,
+            name: "paid@example.com",
+            usedUnits: 30,
+            quota: 100,
+            chatGPTAccountID: "acct-paid",
+            isPaid: true,
+            primaryUsagePercent: 20
+        )
+        let duplicate = makeAccount(
+            name: "paid-duplicate@example.com",
+            usedUnits: 99,
+            quota: 100,
+            chatGPTAccountID: "acct-paid",
+            isPaid: true,
+            primaryUsagePercent: 90
+        )
+        let excluded = makeAccount(
+            name: "excluded@example.com",
+            usedUnits: 10,
+            quota: 100,
+            chatGPTAccountID: "acct-excluded",
+            isPaid: false,
+            isExcluded: true
+        )
+
+        var state = AccountPoolState(
+            accounts: [active, duplicate, excluded],
+            mode: .intelligent
+        )
+        state.markActiveAccountForSwitchLaunch(activeID)
+        let snapshot = state.snapshot
+
+        let now = Date(timeIntervalSince1970: 1_800_000)
+        let rendered = WidgetBridgePublisher.debugBuildSnapshot(from: snapshot, updatedAt: now)
+
+        #expect(rendered.updatedAt == now)
+        #expect(rendered.mode == SwitchMode.intelligent.rawValue)
+        #expect(rendered.totalAccounts == 1)
+        #expect(rendered.availableAccounts == 1)
+        #expect(rendered.overallUsagePercent == 30)
+        #expect(rendered.activeAccountName == "paid@example.com")
+        #expect(rendered.activeIsPaid == true)
+        #expect(rendered.activeRemainingUnits == 70)
+        #expect(rendered.activeQuota == 100)
+        #expect(rendered.activeFiveHourRemainingPercent == 80)
+        #expect(rendered.status == "Active: paid@example.com")
+    }
+
+    @Test
+    func signatureAndThrottleHelpersBehaveDeterministically() {
+        WidgetBridgePublisher.debugResetPublishState()
+
+        let snapshot = WidgetBridgePublisher.Snapshot(
+            updatedAt: Date(timeIntervalSince1970: 1_900_000),
+            status: "Active: demo@example.com",
+            source: "CodexPoolManager",
+            mode: "intelligent",
+            totalAccounts: 3,
+            availableAccounts: 2,
+            overallUsagePercent: 55,
+            activeAccountName: "demo@example.com",
+            activeIsPaid: true,
+            activeRemainingUnits: 45,
+            activeQuota: 100,
+            activeFiveHourRemainingPercent: 72,
+            activeWeeklyResetAt: Date(timeIntervalSince1970: 1_900_800),
+            activeFiveHourResetAt: Date(timeIntervalSince1970: 1_900_200)
+        )
+
+        let signature = WidgetBridgePublisher.debugSnapshotSignature(for: snapshot)
+        #expect(!signature.isEmpty)
+
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        #expect(!WidgetBridgePublisher.debugShouldThrottle(signature: signature, now: now))
+        WidgetBridgePublisher.debugMarkPublished(signature: signature, at: now)
+        #expect(WidgetBridgePublisher.debugShouldThrottle(signature: signature, now: now.addingTimeInterval(5)))
+        #expect(!WidgetBridgePublisher.debugShouldThrottle(signature: signature, now: now.addingTimeInterval(11)))
+
+        WidgetBridgePublisher.debugResetPublishState()
+        #expect(!WidgetBridgePublisher.debugShouldThrottle(signature: signature, now: now))
+    }
+
+    @Test
+    func uniqueAccountHelperPreservesFirstSeenOrderByDedupKey() {
+        let first = makeAccount(
+            name: "first@example.com",
+            usedUnits: 10,
+            quota: 100,
+            chatGPTAccountID: "same-id",
+            isPaid: false
+        )
+        let secondDuplicate = makeAccount(
+            name: "second@example.com",
+            usedUnits: 80,
+            quota: 100,
+            chatGPTAccountID: "same-id",
+            isPaid: true
+        )
+        let third = makeAccount(
+            name: "third@example.com",
+            usedUnits: 50,
+            quota: 100,
+            chatGPTAccountID: "third-id",
+            isPaid: false
+        )
+
+        let keys = WidgetBridgePublisher.debugUniqueAccountDedupKeys(from: [first, secondDuplicate, third])
+        #expect(keys.count == 2)
+        #expect(keys[0] == first.deduplicationKey)
+        #expect(keys[1] == third.deduplicationKey)
+    }
+}
+
+#if canImport(AppKit)
+@MainActor
+struct CodexAuthFilePanelServiceDebugOverrideTests {
+    @Test
+    func defaultInitializerUsesDefaultPickerOverrideWhenPresent() {
+        let expectedURL = URL(fileURLWithPath: "/tmp/auth-\(UUID().uuidString).json")
+        CodexAuthFilePanelService.defaultPickerOverride = { expectedURL }
+        defer { CodexAuthFilePanelService.defaultPickerOverride = nil }
+
+        let service = CodexAuthFilePanelService()
+        #expect(service.pickAuthFileURL() == expectedURL)
+    }
+
+    @Test
+    func pickURLFromPanelUsesRunModalOverrideWhenExplicitClosureMissing() {
+        let panel = NSOpenPanel()
+        var overrideCalled = false
+        CodexAuthFilePanelService.runModalOverride = { _ in
+            overrideCalled = true
+            return .cancel
+        }
+        defer { CodexAuthFilePanelService.runModalOverride = nil }
+
+        let selectedURL = CodexAuthFilePanelService.pickURLFromPanel(panel)
+        #expect(overrideCalled)
+        #expect(selectedURL == nil)
+    }
+}
+#endif
