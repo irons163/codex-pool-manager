@@ -1054,4 +1054,25 @@ struct ViewSmokeCoverageTests {
             #expect(persisted.accounts.count == state.accounts.count)
         }
     }
+
+    @Test
+    @MainActor
+    func poolDashboardViewDebugCoreCoverageSnapshotCoversPrivateBindingsAndDefaults() {
+        let account = makeSmokeAccount(name: "core-coverage@example.com", usedUnits: 10, quota: 200, isPaid: true)
+        let seedState = AccountPoolState(accounts: [account], mode: .manual)
+        let store = ViewSmokeStore(snapshot: seedState.snapshot)
+
+        let snapshot = PoolDashboardView.debugCoreCoverageSnapshot(store: store)
+
+        #expect(
+            snapshot.selectedLaunchTarget.rawValue
+                == CodexLaunchTarget.normalizedRawValue(snapshot.selectedLaunchTargetRaw)
+        )
+        #expect(snapshot.isDebugBuild)
+        #expect(snapshot.defaultAccountCount >= 0)
+        #expect(snapshot.defaultStateMode == .intelligent)
+        #expect(snapshot.firstAccountName == "core-coverage@example.com")
+        #expect(snapshot.firstAccountQuota == 200)
+        #expect(snapshot.strategyMode == .intelligent)
+    }
 }

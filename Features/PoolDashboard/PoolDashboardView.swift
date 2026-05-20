@@ -6701,6 +6701,39 @@ extension PoolDashboardView {
     ) -> (first: Bool, second: Bool, afterReset: Bool) {
         DesktopNotifier.debugThrottleSequence(minInterval: minInterval)
     }
+
+    @MainActor
+    static func debugCoreCoverageSnapshot(
+        store: AccountPoolStoring = DeveloperAwareAccountPoolStore()
+    ) -> (
+        selectedLaunchTargetRaw: String,
+        selectedLaunchTarget: CodexLaunchTarget,
+        isDebugBuild: Bool,
+        defaultAccountCount: Int,
+        defaultStateMode: SwitchMode,
+        firstAccountName: String,
+        firstAccountQuota: Int,
+        strategyMode: SwitchMode
+    ) {
+        let view = PoolDashboardView(store: store)
+
+        let firstAccountID = view.state.accounts.first?.id ?? UUID()
+        let firstName = view.accountBindings.nameBinding(for: firstAccountID).wrappedValue
+        let firstQuota = view.accountBindings.quotaBinding(for: firstAccountID).wrappedValue
+        let strategyMode = view.strategyBindings.mode.wrappedValue
+        let defaultStateMode = makeDefaultState(accounts: []).mode
+
+        return (
+            selectedLaunchTargetRaw: view.switchLaunchTargetRaw,
+            selectedLaunchTarget: view.selectedLaunchTarget,
+            isDebugBuild: view.isDebugBuild,
+            defaultAccountCount: defaultAccounts.count,
+            defaultStateMode: defaultStateMode,
+            firstAccountName: firstName,
+            firstAccountQuota: firstQuota,
+            strategyMode: strategyMode
+        )
+    }
 }
 #endif
 
