@@ -23,17 +23,7 @@ struct CodexAuthFilePanelService {
     @MainActor
     private static func defaultPicker() -> URL? {
 #if canImport(AppKit)
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json]
-        panel.prompt = L10n.text("common.choose")
-        panel.message = L10n.text("auth.file_panel.message_select_auth_json")
-
-        let codexDirectory = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex")
-        panel.directoryURL = codexDirectory
-        panel.nameFieldStringValue = "auth.json"
+        let panel = configuredOpenPanel()
 
         guard panel.runModal() == .OK else {
             return nil
@@ -43,4 +33,22 @@ struct CodexAuthFilePanelService {
         return nil
 #endif
     }
+
+    #if canImport(AppKit)
+    @MainActor
+    static func configuredOpenPanel(
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
+    ) -> NSOpenPanel {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.json]
+        panel.prompt = L10n.text("common.choose")
+        panel.message = L10n.text("auth.file_panel.message_select_auth_json")
+        panel.directoryURL = homeDirectory.appending(path: ".codex")
+        panel.nameFieldStringValue = "auth.json"
+        return panel
+    }
+    #endif
 }

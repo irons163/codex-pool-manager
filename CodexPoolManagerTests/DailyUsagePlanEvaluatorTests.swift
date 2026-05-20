@@ -29,6 +29,13 @@ struct DailyUsagePlanEvaluatorTests {
     }
 
     @Test
+    func progressRatioUsesSafeDivisorForZeroPlan() {
+        #expect(DailyUsagePlanEvaluator.progressRatio(todayUsedPercent: 0, plannedLimitPercent: 0) == 0)
+        #expect(DailyUsagePlanEvaluator.progressRatio(todayUsedPercent: 25, plannedLimitPercent: 0) == 25)
+        #expect(DailyUsagePlanEvaluator.progressRatio(todayUsedPercent: 15, plannedLimitPercent: 30) == 0.5)
+    }
+
+    @Test
     func weeklyPlanTotalsIgnoreEmptyAndNegativeBudgets() {
         let budgets = [
             "account-a": 25,

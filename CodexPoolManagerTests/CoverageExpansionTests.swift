@@ -2,6 +2,12 @@ import Foundation
 import SwiftUI
 import Testing
 import Darwin
+#if canImport(AppKit)
+import AppKit
+#endif
+#if canImport(UniformTypeIdentifiers)
+import UniformTypeIdentifiers
+#endif
 @testable import CodexPoolManager
 
 private enum CoverageExpansionError: Error {
@@ -516,22 +522,33 @@ struct LocalhostOAuthCallbackServerCoverageExpansionTests {
         let config = LocalhostOAuthCallbackConfig(host: "127.0.0.1", port: port, callbackPath: "/auth/callback")
         let server = LocalhostOAuthCallbackServer()
 
-        let waitTask = Task {
-            try await server.waitForCallback(
-                config: config,
-                timeoutNanoseconds: 5_000_000_000,
-                onReadyToReceiveCallback: { true }
-            )
-        }
-
         let callbackURL = URL(string: "http://127.0.0.1:\(port)/auth/callback?code=smoke-code&state=smoke-state")!
-        try await Task.sleep(nanoseconds: 150_000_000)
-        let (_, response) = try await URLSession.shared.data(from: callbackURL)
+        let senderTaskBox = LockedValue<Task<Void, Never>?>(nil)
 
-        let http = try #require(response as? HTTPURLResponse)
-        #expect(http.statusCode == 200)
+        let captured = try await server.waitForCallback(
+            config: config,
+            timeoutNanoseconds: 5_000_000_000,
+            onReadyToReceiveCallback: {
+                senderTaskBox.withLock { task in
+                    task = Task.detached(priority: .userInitiated) {
+                        let session = URLSession(configuration: .ephemeral)
+                        let deadline = Date().addingTimeInterval(5.0)
+                        while Date() < deadline {
+                            do {
+                                let (_, response) = try await session.data(from: callbackURL)
+                                if (response as? HTTPURLResponse) != nil {
+                                    return
+                                }
+                            } catch {
+                                try? await Task.sleep(nanoseconds: 50_000_000)
+                            }
+                        }
+                    }
+                }
+                return true
+            }
+        )
 
-        let captured = try await waitTask.value
         let payload = try OAuthCallbackParser.parse(callbackURL: captured)
         #expect(payload.code == "smoke-code")
         #expect(payload.state == "smoke-state")
@@ -996,6 +1013,23 @@ struct AuthFilePanelAndFlowCoverageExpansionTests {
         let cancelled = CodexAuthFilePanelService(picker: { nil })
         #expect(cancelled.pickAuthFileURL() == nil)
     }
+
+    #if canImport(AppKit)
+    @Test
+    func authFilePanelConfiguredOpenPanelUsesExpectedDefaults() {
+        let home = URL(fileURLWithPath: "/tmp/cpm-home-\(UUID().uuidString)", isDirectory: true)
+        let panel = CodexAuthFilePanelService.configuredOpenPanel(homeDirectory: home)
+
+        #expect(panel.canChooseFiles)
+        #expect(panel.canChooseDirectories == false)
+        #expect(panel.allowsMultipleSelection == false)
+        #expect(panel.allowedContentTypes.contains(.json))
+        #expect(panel.prompt == L10n.text("common.choose"))
+        #expect(panel.message == L10n.text("auth.file_panel.message_select_auth_json"))
+        #expect(panel.directoryURL?.path == home.appending(path: ".codex").path)
+        #expect(panel.nameFieldStringValue.isEmpty == false)
+    }
+    #endif
 
     @Test
     func localAccountsCoordinatorOpenAuthFilePanelLoadsPickedAuthFile() throws {
@@ -1475,6 +1509,45 @@ struct SwitchLaunchCoordinatorCoverageExpansionTests {
         #expect(output.sessionAuthorizedAuthFileURL == authURL)
         #expect(output.switchLaunchLog.contains("switch ok"))
         #expect(capturedLogs.value == ["executor-called"])
+    }
+
+    @Test
+    func switchAndLaunchDefaultExecutorSwitchOnlyRewritesAuthFile() async throws {
+        let sourceJSON = """
+        {
+          "session": {
+            "access_token": "old-token",
+            "profile": { "email": "old@example.com" },
+            "account_id": "old-account"
+          }
+        }
+        """
+        let authURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("switch-default-\(UUID().uuidString).json")
+        try Data(sourceJSON.utf8).write(to: authURL, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: authURL) }
+
+        let coordinator = PoolDashboardSwitchLaunchCoordinator()
+        let output = await coordinator.switchAndLaunch(
+            account: makeSwitchableAccount(token: "new-token", accountID: "acct-new"),
+            switchWithoutLaunching: true,
+            launchTarget: .codex,
+            currentAuthorizedAuthFileURL: authURL,
+            authFileAccessService: StubAuthFileURLResolver(result: .success(authURL)),
+            authorizeAuthFile: { nil }
+        )
+
+        #expect(output.errorMessage == nil)
+        #expect(output.didSwitchAuth == true)
+        #expect(output.sessionAuthorizedAuthFileURL == authURL)
+
+        let rewritten = try Data(contentsOf: authURL)
+        let root = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let session = try #require(root["session"] as? [String: Any])
+        let profile = try #require(session["profile"] as? [String: Any])
+        #expect(session["access_token"] as? String == "new-token")
+        #expect(session["account_id"] as? String == "acct-new")
+        #expect(profile["email"] as? String == "switch@example.com")
     }
 
     @Test

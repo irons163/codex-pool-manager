@@ -2026,6 +2026,9 @@ struct CodexPoolManagerTests {
         #expect(intelligent == .intelligent)
         #expect(manual == .manual)
         #expect(focus == .focus)
+        #expect(intelligent.id == "intelligent")
+        #expect(manual.id == "manual")
+        #expect(focus.id == "focus")
     }
 
     @Test
@@ -2170,6 +2173,18 @@ struct CodexPoolManagerTests {
         let third = latch.confirmOrArm()
 
         #expect(!third)
+    }
+
+    @Test
+    func destructiveActionLatchResetDisarmsLatch() {
+        var latch = DestructiveActionLatch()
+        _ = latch.confirmOrArm()
+        #expect(latch.isArmed)
+
+        latch.reset()
+
+        #expect(!latch.isArmed)
+        #expect(latch.confirmOrArm() == false)
     }
 
     @Test
