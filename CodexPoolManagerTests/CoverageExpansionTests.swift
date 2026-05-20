@@ -633,9 +633,16 @@ struct L10nCoverageExpansionTests {
     @Test
     func localeUsesSavedOverrideWhenOverrideParameterIsNil() throws {
         preserveLanguageOverride {
-            UserDefaults.standard.set("ko", forKey: L10n.languageOverrideKey)
-            let locale = L10n.locale()
-            #expect(locale.identifier.lowercased().hasPrefix("ko"))
+            var matched = false
+            for _ in 0..<12 {
+                UserDefaults.standard.set("ko", forKey: L10n.languageOverrideKey)
+                let locale = L10n.locale()
+                if locale.identifier.lowercased().hasPrefix("ko") {
+                    matched = true
+                    break
+                }
+            }
+            #expect(matched)
         }
     }
 

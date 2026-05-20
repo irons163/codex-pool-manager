@@ -41,6 +41,15 @@ private func makeSmokeAccount(
     )
 }
 
+private func makeJWTLikeToken(payload: [String: Any]) -> String {
+    let jsonData = (try? JSONSerialization.data(withJSONObject: payload, options: [])) ?? Data()
+    let encoded = jsonData.base64EncodedString()
+        .replacingOccurrences(of: "+", with: "-")
+        .replacingOccurrences(of: "/", with: "_")
+        .replacingOccurrences(of: "=", with: "")
+    return "header.\(encoded).signature"
+}
+
 private final class ViewSmokeStore: AccountPoolStoring {
     var snapshot: AccountPoolSnapshot?
     var saved: [AccountPoolSnapshot] = []
@@ -520,6 +529,141 @@ struct ViewSmokeCoverageTests {
         #expect(renameGroupCount == 0)
         #expect(deleteGroupCount == 0)
         #expect(switchCount == 0)
+    }
+
+    @Test
+    @MainActor
+    func oauthLoginPanelViewRendersSigningIdleManualAndErrorStates() {
+        let issuerBox = BindingBox("https://auth.openai.com")
+        let clientIDBox = BindingBox("app_test_client")
+        let scopesBox = BindingBox("openid profile email")
+        let redirectBox = BindingBox("http://localhost:1455/auth/callback")
+        let originatorBox = BindingBox("codex_cli_rs")
+        let workspaceBox = BindingBox("org-test")
+        let oauthNameBox = BindingBox("OAuth Account")
+        let quotaBox = BindingBox(100)
+        let callbackBox = BindingBox("")
+
+        var signInCount = 0
+        var copyCount = 0
+        var manualImportCount = 0
+        var cancelCount = 0
+
+        let idleView = OAuthLoginPanelView(
+            oauthIssuer: binding(issuerBox),
+            oauthClientID: binding(clientIDBox),
+            oauthScopes: binding(scopesBox),
+            oauthRedirectURI: binding(redirectBox),
+            oauthOriginator: binding(originatorBox),
+            oauthWorkspaceID: binding(workspaceBox),
+            oauthAccountName: binding(oauthNameBox),
+            oauthAccountQuota: binding(quotaBox),
+            manualCallbackURL: binding(callbackBox),
+            isSigningInOAuth: false,
+            oauthSuccessMessage: "Done",
+            oauthError: nil,
+            manualAuthorizationURLOverride: nil,
+            showManualImportSection: false,
+            onSignIn: { signInCount += 1 },
+            onCopyURLAndManualSignIn: { copyCount += 1 },
+            onManualImport: { manualImportCount += 1 },
+            onCancelSignIn: { cancelCount += 1 }
+        )
+        renderInHostingView(idleView, size: CGSize(width: 1320, height: 840))
+
+        callbackBox.value = "http://localhost:1455/auth/callback?code=abc&state=xyz"
+        let signingManualView = OAuthLoginPanelView(
+            oauthIssuer: binding(issuerBox),
+            oauthClientID: binding(clientIDBox),
+            oauthScopes: binding(scopesBox),
+            oauthRedirectURI: binding(redirectBox),
+            oauthOriginator: binding(originatorBox),
+            oauthWorkspaceID: binding(workspaceBox),
+            oauthAccountName: binding(oauthNameBox),
+            oauthAccountQuota: binding(quotaBox),
+            manualCallbackURL: binding(callbackBox),
+            isSigningInOAuth: true,
+            oauthSuccessMessage: nil,
+            oauthError: "Failed",
+            manualAuthorizationURLOverride: " https://manual.example/authorize?foo=bar ",
+            showManualImportSection: true,
+            onSignIn: { signInCount += 1 },
+            onCopyURLAndManualSignIn: { copyCount += 1 },
+            onManualImport: { manualImportCount += 1 },
+            onCancelSignIn: { cancelCount += 1 }
+        )
+        renderInHostingView(signingManualView, size: CGSize(width: 1320, height: 920))
+
+        #expect(signInCount == 0)
+        #expect(copyCount == 0)
+        #expect(manualImportCount == 0)
+        #expect(cancelCount == 0)
+    }
+
+    @Test
+    @MainActor
+    func localOAuthAccountsPanelViewRendersEmptyErrorSuccessAndJWTFallbackRows() {
+        let tokenWithEmail = makeJWTLikeToken(
+            payload: ["https://api.openai.com/profile": ["email": "jwt@example.com"]]
+        )
+
+        let missingID = LocalCodexOAuthAccount(
+            id: "acc-missing",
+            displayName: "Missing ID Account",
+            email: nil,
+            source: "scan",
+            accessToken: tokenWithEmail,
+            chatGPTAccountID: nil
+        )
+        let ready = LocalCodexOAuthAccount(
+            id: "acc-ready",
+            displayName: "Ready Account",
+            email: "ready@example.com",
+            source: "scan",
+            accessToken: "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InJlYWR5QGV4YW1wbGUuY29tIn0.sig",
+            chatGPTAccountID: "acct-ready"
+        )
+
+        var scanCount = 0
+        var chooseCount = 0
+        var importCount = 0
+
+        let empty = LocalOAuthAccountsPanelView(
+            accounts: [],
+            errorMessage: nil,
+            successMessage: nil,
+            importingAccountID: nil,
+            onScan: { scanCount += 1 },
+            onChooseAuthFile: { chooseCount += 1 },
+            onImport: { _ in importCount += 1 }
+        )
+        renderInHostingView(empty, size: CGSize(width: 1200, height: 780))
+
+        let withError = LocalOAuthAccountsPanelView(
+            accounts: [missingID, ready],
+            errorMessage: "scan failed",
+            successMessage: nil,
+            importingAccountID: nil,
+            onScan: { scanCount += 1 },
+            onChooseAuthFile: { chooseCount += 1 },
+            onImport: { _ in importCount += 1 }
+        )
+        renderInHostingView(withError, size: CGSize(width: 1200, height: 900))
+
+        let withSuccessImporting = LocalOAuthAccountsPanelView(
+            accounts: [missingID, ready],
+            errorMessage: nil,
+            successMessage: "imported",
+            importingAccountID: "acc-ready",
+            onScan: { scanCount += 1 },
+            onChooseAuthFile: { chooseCount += 1 },
+            onImport: { _ in importCount += 1 }
+        )
+        renderInHostingView(withSuccessImporting, size: CGSize(width: 1200, height: 900))
+
+        #expect(scanCount == 0)
+        #expect(chooseCount == 0)
+        #expect(importCount == 0)
     }
 
     @Test
