@@ -2,6 +2,9 @@ import Foundation
 import SwiftUI
 import Testing
 @testable import CodexPoolManager
+#if canImport(AppKit)
+import AppKit
+#endif
 
 private enum CoverageBoostMockError: Error {
     case expected
@@ -231,6 +234,66 @@ struct CodexAuthSwitchServiceDebugHelperTests {
         let uniques = service.debugOrderedUniqueValues(of: [1, 2, 1, 3, 2, 4])
         #expect(uniques == [1, 2, 3, 4])
     }
+
+    @Test
+    func sandboxFlagHelperReflectsEnvironmentVariable() {
+        let key = "APP_SANDBOX_CONTAINER_ID"
+        let service = CodexAuthSwitchService()
+        let original = ProcessInfo.processInfo.environment[key]
+
+        if let original {
+            setenv(key, original, 1)
+        } else {
+            unsetenv(key)
+        }
+
+        setenv(key, "sandbox-test", 1)
+        #expect(service.debugIsSandboxedEnvironment())
+
+        if let original {
+            setenv(key, original, 1)
+        } else {
+            unsetenv(key)
+        }
+    }
+
+    @Test
+    func closeAndWaitHelpersHandleNonRunningBundleQuickly() async {
+        let service = CodexAuthSwitchService()
+        let bundleID = "com.irons.nonexistent.\(UUID().uuidString)"
+        let closeResult = await service.debugCloseAppIfRunning(bundleIdentifier: bundleID)
+        #expect(closeResult)
+
+        let waitResult = await service.debugWaitUntilAppExits(
+            bundleIdentifier: bundleID,
+            timeoutNanoseconds: 1
+        )
+        #expect(waitResult)
+    }
+
+    #if canImport(AppKit)
+    @Test
+    func closeHelperReturnsFalseForRunningAppInSandboxMode() async {
+        let key = "APP_SANDBOX_CONTAINER_ID"
+        let original = ProcessInfo.processInfo.environment[key]
+        setenv(key, "sandbox-test", 1)
+        defer {
+            if let original {
+                setenv(key, original, 1)
+            } else {
+                unsetenv(key)
+            }
+        }
+
+        let runningBundleID = Bundle.main.bundleIdentifier ?? "com.apple.finder"
+        let isRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: runningBundleID).isEmpty
+        guard isRunning else { return }
+
+        let service = CodexAuthSwitchService()
+        let result = await service.debugCloseAppIfRunning(bundleIdentifier: runningBundleID)
+        #expect(!result)
+    }
+    #endif
 }
 
 struct MenuBarSnapshotFormatterTests {

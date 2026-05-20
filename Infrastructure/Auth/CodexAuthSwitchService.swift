@@ -521,5 +521,17 @@ extension CodexAuthSwitchService {
     func debugOrderedUniqueValues<T: Hashable>(of values: [T]) -> [T] {
         orderedUniqueValues(of: values)
     }
+
+    func debugIsSandboxedEnvironment() -> Bool {
+        isSandboxedEnvironment
+    }
+
+    func debugCloseAppIfRunning(bundleIdentifier: String) async -> Bool {
+        await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
+    }
+
+    func debugWaitUntilAppExits(bundleIdentifier: String, timeoutNanoseconds: UInt64) async -> Bool {
+        await waitUntilAppExits(bundleIdentifier: bundleIdentifier, timeoutNanoseconds: timeoutNanoseconds)
+    }
 }
 #endif
