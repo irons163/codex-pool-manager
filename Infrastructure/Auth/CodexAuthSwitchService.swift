@@ -359,7 +359,18 @@ struct CodexAuthSwitchService {
     ) async throws -> Bool {
         let launchBundleIDs = launchBundleIdentifiers(for: launchTarget)
         let launchAppPaths = launchAppURLs(for: launchTarget)
+        return try await launchCodexAppWithRetry(
+            launchBundleIDs: launchBundleIDs,
+            launchAppPaths: launchAppPaths,
+            maxAttempts: maxAttempts
+        )
+    }
 
+    private func launchCodexAppWithRetry(
+        launchBundleIDs: [String],
+        launchAppPaths: [URL],
+        maxAttempts: Int
+    ) async throws -> Bool {
         for attempt in 1...maxAttempts {
             logger(String(format: L10n.text("switch.service.log.launch_attempt_format"), attempt))
 
@@ -532,6 +543,22 @@ extension CodexAuthSwitchService {
 
     func debugWaitUntilAppExits(bundleIdentifier: String, timeoutNanoseconds: UInt64) async -> Bool {
         await waitUntilAppExits(bundleIdentifier: bundleIdentifier, timeoutNanoseconds: timeoutNanoseconds)
+    }
+
+    func debugLaunchApp(bundleIdentifier: String) async throws -> Bool {
+        try await launchApp(bundleIdentifier: bundleIdentifier)
+    }
+
+    func debugLaunchCodexAppWithRetry(
+        launchBundleIDs: [String],
+        launchAppPaths: [URL],
+        maxAttempts: Int
+    ) async throws -> Bool {
+        try await launchCodexAppWithRetry(
+            launchBundleIDs: launchBundleIDs,
+            launchAppPaths: launchAppPaths,
+            maxAttempts: maxAttempts
+        )
     }
 }
 #endif

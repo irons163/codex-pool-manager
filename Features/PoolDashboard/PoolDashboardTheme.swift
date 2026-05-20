@@ -366,3 +366,15 @@ struct DashboardSubtleButtonStyle: ButtonStyle {
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
+
+#if DEBUG
+extension PoolDashboardTheme {
+    static func debugResetForcedPalette() {
+        forcedLightPalette = nil
+    }
+
+    static func debugSystemPrefersDarkMode() -> Bool {
+        systemPrefersDarkMode
+    }
+}
+#endif

@@ -320,6 +320,47 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func dashboardThemeSystemPaletteAndSubtleButtonRender() {
+        let defaults = UserDefaults.standard
+        let appearanceKey = AppAppearancePreference.storageKey
+        let interfaceStyleKey = "AppleInterfaceStyle"
+        let originalAppearance = defaults.object(forKey: appearanceKey)
+        let originalInterfaceStyle = defaults.object(forKey: interfaceStyleKey)
+        defer {
+            if let originalAppearance {
+                defaults.set(originalAppearance, forKey: appearanceKey)
+            } else {
+                defaults.removeObject(forKey: appearanceKey)
+            }
+            if let originalInterfaceStyle {
+                defaults.set(originalInterfaceStyle, forKey: interfaceStyleKey)
+            } else {
+                defaults.removeObject(forKey: interfaceStyleKey)
+            }
+            PoolDashboardTheme.debugResetForcedPalette()
+        }
+
+        PoolDashboardTheme.debugResetForcedPalette()
+        defaults.set(AppAppearancePreference.system.rawValue, forKey: appearanceKey)
+        defaults.set("Dark", forKey: interfaceStyleKey)
+        #expect(PoolDashboardTheme.debugSystemPrefersDarkMode())
+        _ = PoolDashboardTheme.isLightPalette
+        _ = PoolDashboardTheme.modalSolidFill
+
+        defaults.set("Light", forKey: interfaceStyleKey)
+        _ = PoolDashboardTheme.debugSystemPrefersDarkMode()
+        _ = PoolDashboardTheme.isLightPalette
+        _ = PoolDashboardTheme.modalSolidFill
+
+        let subtleButton = Button("Subtle") {}
+            .buttonStyle(DashboardSubtleButtonStyle())
+            .padding()
+            .background(PoolDashboardTheme.panelFill)
+        renderInHostingView(subtleButton, size: CGSize(width: 240, height: 120))
+    }
+
+    @Test
+    @MainActor
     func syncToolbarViewBodyRendersSyncingRetryAndStatusBadges() {
         var syncCount = 0
         var retryCount = 0

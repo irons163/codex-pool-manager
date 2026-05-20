@@ -272,6 +272,25 @@ struct CodexAuthSwitchServiceDebugHelperTests {
         #expect(waitResult)
     }
 
+    @Test
+    func launchAppHelperReturnsFalseForUnknownBundleIdentifier() async throws {
+        let service = CodexAuthSwitchService()
+        let unknownBundleID = "com.irons.missing.\(UUID().uuidString)"
+        let didLaunch = try await service.debugLaunchApp(bundleIdentifier: unknownBundleID)
+        #expect(!didLaunch)
+    }
+
+    @Test
+    func launchRetryHelperReturnsFalseWhenNoCandidatesProvided() async throws {
+        let service = CodexAuthSwitchService()
+        let didLaunch = try await service.debugLaunchCodexAppWithRetry(
+            launchBundleIDs: [],
+            launchAppPaths: [],
+            maxAttempts: 1
+        )
+        #expect(!didLaunch)
+    }
+
     #if canImport(AppKit)
     @Test
     func closeHelperReturnsFalseForRunningAppInSandboxMode() async {
