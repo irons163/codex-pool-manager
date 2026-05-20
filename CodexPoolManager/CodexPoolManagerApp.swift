@@ -62,7 +62,9 @@ private enum LegacySandboxPreferencesMigrator {
         } else {
             let legacyURL = FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent(legacyPreferencesPath)
-            guard let loaded = NSDictionary(contentsOf: legacyURL) as? [String: Any] else {
+            guard FileManager.default.fileExists(atPath: legacyURL.path),
+                  let loaded = NSDictionary(contentsOf: legacyURL) as? [String: Any]
+            else {
                 defaults.set(true, forKey: migrationMarkerKey)
                 return
             }
@@ -193,10 +195,16 @@ private final class MenuBarSnapshotModel: ObservableObject {
         MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
     }
 
-    init() {
-        refresh()
+    init(fetchOnInit: Bool = true, startTimer: Bool = true) {
+        if fetchOnInit {
+            refresh()
+        }
+        guard startTimer else { return }
+
         timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-            self?.refresh()
+            Task { @MainActor [weak self] in
+                self?.refresh()
+            }
         }
         if let timer {
             RunLoop.main.add(timer, forMode: .common)
@@ -315,6 +323,13 @@ private struct MenuBarStatusMenuView: View {
 }
 
 #if DEBUG
+extension MenuBarSnapshotModel {
+    convenience init(debugSnapshot: MenuBarBridgeSnapshot?) {
+        self.init(fetchOnInit: false, startTimer: false)
+        snapshot = debugSnapshot
+    }
+}
+
 extension CodexPoolManagerApp {
     static func debugRunLegacyMigration(
         defaults: UserDefaults,
@@ -328,6 +343,15 @@ extension CodexPoolManagerApp {
 
     static func debugNormalizePreferences(defaults: UserDefaults) {
         PreferenceValueNormalizer.normalizeIfNeeded(defaults: defaults)
+    }
+
+    static func debugMenuBarTitle(snapshot: MenuBarBridgeSnapshot?, now: Date = Date()) -> String {
+        MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
+    }
+
+    @MainActor
+    static func debugMenuBarStatusMenuView(snapshot: MenuBarBridgeSnapshot?) -> some View {
+        MenuBarStatusMenuView(model: MenuBarSnapshotModel(debugSnapshot: snapshot))
     }
 }
 #endif

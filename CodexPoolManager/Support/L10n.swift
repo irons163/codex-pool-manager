@@ -60,11 +60,21 @@ enum L10n {
     }
 
     private static var resolvedLanguageCode: String {
+        resolveLanguageCode(
+            selectedOverrideLanguageCode: selectedOverrideLanguageCode,
+            preferredLanguages: Locale.preferredLanguages
+        )
+    }
+
+    private static func resolveLanguageCode(
+        selectedOverrideLanguageCode: String?,
+        preferredLanguages: [String]
+    ) -> String {
         if let selectedOverrideLanguageCode {
             return selectedOverrideLanguageCode
         }
 
-        for preferred in Locale.preferredLanguages {
+        for preferred in preferredLanguages {
             let lowercased = preferred.lowercased()
             if lowercased.hasPrefix("zh-hant") || lowercased.hasPrefix("zh-tw") || lowercased.hasPrefix("zh-hk") {
                 return "zh-Hant"
@@ -124,3 +134,17 @@ enum L10n {
         return Locale.autoupdatingCurrent
     }
 }
+
+#if DEBUG
+extension L10n {
+    static func debugResolvedLanguageCode(
+        selectedOverrideLanguageCode: String?,
+        preferredLanguages: [String]
+    ) -> String {
+        resolveLanguageCode(
+            selectedOverrideLanguageCode: selectedOverrideLanguageCode,
+            preferredLanguages: preferredLanguages
+        )
+    }
+}
+#endif

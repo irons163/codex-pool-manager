@@ -400,9 +400,9 @@ struct CodexPoolManagerAppMigrationCoverageTests {
     }
 
     @Test
-    func migrationMarksCompletedWhenNoLegacyPreferencesProvided() {
+    func migrationMarksCompletedWhenLegacyPreferencesUnavailable() {
         let defaults = makeDefaults()
-        CodexPoolManagerApp.debugRunLegacyMigration(defaults: defaults, legacyPreferences: nil)
+        CodexPoolManagerApp.debugRunLegacyMigration(defaults: defaults, legacyPreferences: [:])
         #expect(defaults.bool(forKey: migrationMarkerKey))
     }
 
@@ -454,6 +454,91 @@ struct CodexPoolManagerAppMigrationCoverageTests {
 
         #expect(defaults.string(forKey: AppAppearancePreference.storageKey) == AppAppearancePreference.system.rawValue)
         #expect(defaults.string(forKey: L10n.languageOverrideKey) == "zh-Hans")
+    }
+}
+
+struct L10nCoverageTests {
+    @Test
+    func normalizedLanguageOverrideCodeCoversCommonMappings() {
+        #expect(L10n.normalizedLanguageOverrideCode("") == L10n.systemLanguageCode)
+        #expect(L10n.normalizedLanguageOverrideCode("system") == L10n.systemLanguageCode)
+        #expect(L10n.normalizedLanguageOverrideCode("Follow System") == L10n.systemLanguageCode)
+        #expect(L10n.normalizedLanguageOverrideCode(" zh-TW ") == "zh-Hant")
+        #expect(L10n.normalizedLanguageOverrideCode("zh-HK") == "zh-Hant")
+        #expect(L10n.normalizedLanguageOverrideCode("zh-SG") == "zh-Hans")
+        #expect(L10n.normalizedLanguageOverrideCode("en-US") == "en")
+        #expect(L10n.normalizedLanguageOverrideCode("fr-CA") == "fr")
+        #expect(L10n.normalizedLanguageOverrideCode("es-MX") == "es")
+        #expect(L10n.normalizedLanguageOverrideCode("ja-JP") == "ja")
+        #expect(L10n.normalizedLanguageOverrideCode("ko-KR") == "ko")
+        #expect(L10n.normalizedLanguageOverrideCode("unknown-language") == L10n.systemLanguageCode)
+    }
+
+    @Test
+    func localeUsesExplicitOverrideThenStoredPreference() {
+        let defaults = UserDefaults.standard
+        let key = L10n.languageOverrideKey
+        let original = defaults.object(forKey: key)
+        defer {
+            if let original {
+                defaults.set(original, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+
+        defaults.removeObject(forKey: key)
+        #expect(L10n.locale(for: "fr").identifier.hasPrefix("fr"))
+
+        defaults.set("ja", forKey: key)
+        #expect(L10n.locale().identifier.hasPrefix("ja"))
+
+        defaults.set(L10n.systemLanguageCode, forKey: key)
+        #expect(!L10n.locale(for: "unsupported").identifier.isEmpty)
+    }
+
+    @Test
+    func textFallsBackToKeyForUnknownLocalizationKey() {
+        let key = "l10n.coverage.unknown.\(UUID().uuidString)"
+        #expect(L10n.text(key) == key)
+    }
+
+    @Test
+    func resolvedLanguageCodePrefersOverrideThenPreferredLanguageMappings() {
+        #expect(
+            L10n.debugResolvedLanguageCode(
+                selectedOverrideLanguageCode: "fr",
+                preferredLanguages: ["zh-TW", "en-US"]
+            ) == "fr"
+        )
+
+        #expect(
+            L10n.debugResolvedLanguageCode(
+                selectedOverrideLanguageCode: nil,
+                preferredLanguages: ["zh-HK", "en-US"]
+            ) == "zh-Hant"
+        )
+
+        #expect(
+            L10n.debugResolvedLanguageCode(
+                selectedOverrideLanguageCode: nil,
+                preferredLanguages: ["zh-CN", "fr-FR"]
+            ) == "zh-Hans"
+        )
+
+        #expect(
+            L10n.debugResolvedLanguageCode(
+                selectedOverrideLanguageCode: nil,
+                preferredLanguages: ["es-MX", "fr-FR"]
+            ) == "es"
+        )
+
+        #expect(
+            L10n.debugResolvedLanguageCode(
+                selectedOverrideLanguageCode: nil,
+                preferredLanguages: ["xx-YY", "yy-ZZ"]
+            ) == "en"
+        )
     }
 }
 

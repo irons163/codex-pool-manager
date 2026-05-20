@@ -1075,4 +1075,62 @@ struct ViewSmokeCoverageTests {
         #expect(snapshot.firstAccountQuota == 200)
         #expect(snapshot.strategyMode == .intelligent)
     }
+
+    @Test
+    @MainActor
+    func menuBarStatusMenuViewRendersEmptyAndAccountSnapshots() {
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let emptyView = CodexPoolManagerApp.debugMenuBarStatusMenuView(snapshot: nil)
+        renderInHostingView(emptyView, size: CGSize(width: 420, height: 240))
+
+        let paidSnapshot = MenuBarBridgeSnapshot(
+            updatedAt: now.addingTimeInterval(-120),
+            activeAccountName: "paid@example.com",
+            activeIsPaid: true,
+            activeRemainingUnits: 44,
+            activeQuota: 100,
+            activeFiveHourRemainingPercent: 67,
+            activeWeeklyResetAt: now.addingTimeInterval(86_400),
+            activeFiveHourResetAt: now.addingTimeInterval(9_000)
+        )
+        let paidView = CodexPoolManagerApp.debugMenuBarStatusMenuView(snapshot: paidSnapshot)
+        renderInHostingView(paidView, size: CGSize(width: 420, height: 280))
+
+        let freeSnapshot = MenuBarBridgeSnapshot(
+            updatedAt: now.addingTimeInterval(-20),
+            activeAccountName: "free@example.com",
+            activeIsPaid: false,
+            activeRemainingUnits: 12,
+            activeQuota: 20,
+            activeFiveHourRemainingPercent: nil,
+            activeWeeklyResetAt: now.addingTimeInterval(7_200),
+            activeFiveHourResetAt: nil
+        )
+        let freeView = CodexPoolManagerApp.debugMenuBarStatusMenuView(snapshot: freeSnapshot)
+        renderInHostingView(freeView, size: CGSize(width: 420, height: 260))
+
+        let paidTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: paidSnapshot, now: now)
+        #expect(paidTitle.contains("Codex "))
+        #expect(paidTitle.contains("w 44%"))
+        #expect(paidTitle.contains("5h 67%"))
+
+        let freeTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: freeSnapshot, now: now)
+        #expect(freeTitle.contains("60%"))
+        #expect(!freeTitle.contains("5h"))
+
+        let fallbackTitle = CodexPoolManagerApp.debugMenuBarTitle(
+            snapshot: MenuBarBridgeSnapshot(
+                updatedAt: now.addingTimeInterval(-3_700),
+                activeAccountName: nil,
+                activeIsPaid: nil,
+                activeRemainingUnits: nil,
+                activeQuota: nil,
+                activeFiveHourRemainingPercent: nil,
+                activeWeeklyResetAt: nil,
+                activeFiveHourResetAt: nil
+            ),
+            now: now
+        )
+        #expect(fallbackTitle == "Codex -- · 1h")
+    }
 }
