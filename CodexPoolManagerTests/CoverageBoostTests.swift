@@ -872,6 +872,14 @@ struct PoolDashboardDebugCoverageHookTests {
         #expect(PoolDashboardView.debugSpecialResetRecordID(accountKey: "account:abc") == "account:abc")
         #expect(PoolDashboardView.debugAppUpdatePromptID(latestVersion: "1.2.3") == "1.2.3")
     }
+
+    @Test
+    func desktopNotifierThrottleHookCoversSuppressionAndReset() {
+        let sequence = PoolDashboardView.debugDesktopNotifierThrottleSequence(minInterval: 60)
+        #expect(sequence.first)
+        #expect(!sequence.second)
+        #expect(sequence.afterReset)
+    }
 }
 
 @MainActor

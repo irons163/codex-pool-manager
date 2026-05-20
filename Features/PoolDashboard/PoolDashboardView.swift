@@ -6596,6 +6596,27 @@ private enum DesktopNotifier {
 }
 
 #if DEBUG
+extension DesktopNotifier {
+    static func debugThrottleSequence(
+        key: String = "debug.notifier",
+        minInterval: TimeInterval
+    ) -> (first: Bool, second: Bool, afterReset: Bool) {
+        lock.lock()
+        lastSentAtByKey.removeAll()
+        lock.unlock()
+
+        let first = shouldPost(key: key, minInterval: minInterval)
+        let second = shouldPost(key: key, minInterval: minInterval)
+
+        lock.lock()
+        lastSentAtByKey.removeAll()
+        lock.unlock()
+
+        let afterReset = shouldPost(key: key, minInterval: minInterval)
+        return (first, second, afterReset)
+    }
+}
+
 extension PoolDashboardView {
     static func debugWorkspaceDrawerStateSnapshots() -> [(isVisible: Bool, symbolName: String, actionTitleKey: String, nextSymbolName: String)] {
         [WorkspaceDrawerState.collapsed, .partial, .expanded].map { state in
@@ -6644,6 +6665,41 @@ extension PoolDashboardView {
             accounts: accounts,
             selectedAccountKey: selectedAccountKey
         )
+    }
+
+    @MainActor
+    static func debugScheduleWorkspacePanelView(accounts: [AgentAccount]) -> some View {
+        ScheduleWorkspacePanelView(accounts: accounts)
+    }
+
+    @MainActor
+    static func debugDailyUsagePlanningWorkspacePanelView(
+        accounts: [AgentAccount],
+        analyticsState: UsageAnalyticsState
+    ) -> some View {
+        DailyUsagePlanningWorkspacePanelView(
+            accounts: accounts,
+            analyticsState: analyticsState
+        )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsWorkspacePanelView(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        onClearIdleDelay: @escaping (String?) -> Void = { _ in }
+    ) -> some View {
+        UsageAnalyticsWorkspacePanelView(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            onClearIdleDelay: onClearIdleDelay
+        )
+    }
+
+    static func debugDesktopNotifierThrottleSequence(
+        minInterval: TimeInterval
+    ) -> (first: Bool, second: Bool, afterReset: Bool) {
+        DesktopNotifier.debugThrottleSequence(minInterval: minInterval)
     }
 }
 #endif

@@ -807,6 +807,171 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func workspacePanelsRenderForEmptyAndPopulatedStates() {
+        let now = Date()
+        let paid = AgentAccount(
+            id: UUID(),
+            name: "plan-paid@example.com",
+            usedUnits: 42,
+            quota: 100,
+            apiToken: "token-paid",
+            email: "plan-paid@example.com",
+            chatGPTAccountID: "acct-plan-paid",
+            primaryUsagePercent: 38,
+            primaryUsageResetAt: now.addingTimeInterval(5_400),
+            secondaryUsagePercent: 42,
+            secondaryUsageResetAt: now.addingTimeInterval(86_400),
+            isPaid: true
+        )
+        let free = AgentAccount(
+            id: UUID(),
+            name: "plan-free@example.com",
+            usedUnits: 18,
+            quota: 100,
+            apiToken: "token-free",
+            email: "plan-free@example.com",
+            chatGPTAccountID: "acct-plan-free",
+            primaryUsagePercent: nil,
+            primaryUsageResetAt: nil,
+            secondaryUsagePercent: 18,
+            secondaryUsageResetAt: now.addingTimeInterval(43_200),
+            isPaid: false
+        )
+
+        let emptyState = UsageAnalyticsState(
+            records: [],
+            snapshots: [],
+            thresholdEvents: [],
+            switchEvents: [],
+            lastActiveAccountKey: nil,
+            lastUpdatedAt: nil
+        )
+
+        let scheduleEmpty = PoolDashboardView.debugScheduleWorkspacePanelView(accounts: [])
+        renderInHostingView(scheduleEmpty, size: CGSize(width: 1500, height: 900))
+
+        let schedulePopulated = PoolDashboardView.debugScheduleWorkspacePanelView(accounts: [paid, free])
+        renderInHostingView(schedulePopulated, size: CGSize(width: 1600, height: 1100))
+
+        let weekday = DailyUsagePlanEvaluator.weekdayKey(for: now)
+        let budgetMap = [
+            weekday: [
+                paid.deduplicationKey: 35,
+                free.deduplicationKey: 20
+            ]
+        ]
+        let budgetJSON = String(data: try! JSONEncoder().encode(budgetMap), encoding: .utf8)!
+        let defaults = UserDefaults.standard
+        let storageKeys = [
+            "pool_dashboard.schedule.weekly_account_limits",
+            "pool_dashboard.schedule.selected_weekday",
+            "pool_dashboard.schedule.daily_plan_enabled",
+            "pool_dashboard.schedule.daily_plan_notify_enabled",
+            "pool_dashboard.schedule.daily_plan_warning_threshold_percent",
+            "pool_dashboard.schedule.daily_plan_notified_days"
+        ]
+        let backupValues = Dictionary(uniqueKeysWithValues: storageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in storageKeys {
+                if let original = backupValues[key] {
+                    defaults.set(original, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+        defaults.set(budgetJSON, forKey: "pool_dashboard.schedule.weekly_account_limits")
+        defaults.set(weekday, forKey: "pool_dashboard.schedule.selected_weekday")
+        defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_enabled")
+        defaults.set(false, forKey: "pool_dashboard.schedule.daily_plan_notify_enabled")
+        defaults.set(75, forKey: "pool_dashboard.schedule.daily_plan_warning_threshold_percent")
+        defaults.set("{}", forKey: "pool_dashboard.schedule.daily_plan_notified_days")
+
+        let recordPaid = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-900),
+            accountKey: paid.deduplicationKey,
+            weeklyDeltaPercent: 11,
+            fiveHourDeltaPercent: 9,
+            weeklyAbsolutePercent: 42,
+            fiveHourAbsolutePercent: 38,
+            weeklyRemainingPercent: 58,
+            fiveHourRemainingPercent: 62,
+            weeklyWastedPercent: 2,
+            fiveHourWastedPercent: 1,
+            weeklyIdleDelayMinutes: 0,
+            weeklyResetAt: paid.secondaryUsageResetAt,
+            fiveHourResetAt: paid.primaryUsageResetAt,
+            activeAccountKeyAtSync: paid.deduplicationKey
+        )
+        let recordFree = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-600),
+            accountKey: free.deduplicationKey,
+            weeklyDeltaPercent: 6,
+            fiveHourDeltaPercent: 0,
+            weeklyAbsolutePercent: 18,
+            fiveHourAbsolutePercent: 0,
+            weeklyRemainingPercent: 82,
+            fiveHourRemainingPercent: 100,
+            weeklyWastedPercent: 0,
+            fiveHourWastedPercent: 0,
+            weeklyIdleDelayMinutes: 0,
+            weeklyResetAt: free.secondaryUsageResetAt,
+            fiveHourResetAt: nil,
+            activeAccountKeyAtSync: paid.deduplicationKey
+        )
+        let snapshotPaid = UsageAnalyticsAccountSnapshot(
+            accountKey: paid.deduplicationKey,
+            lastWeeklyPercent: 42,
+            lastFiveHourPercent: 38,
+            lastWeeklyResetAt: paid.secondaryUsageResetAt,
+            lastFiveHourResetAt: paid.primaryUsageResetAt,
+            lastSeenAt: now.addingTimeInterval(-300)
+        )
+        let snapshotFree = UsageAnalyticsAccountSnapshot(
+            accountKey: free.deduplicationKey,
+            lastWeeklyPercent: 18,
+            lastFiveHourPercent: 0,
+            lastWeeklyResetAt: free.secondaryUsageResetAt,
+            lastFiveHourResetAt: nil,
+            lastSeenAt: now.addingTimeInterval(-240)
+        )
+        let populatedState = UsageAnalyticsState(
+            records: [recordPaid, recordFree],
+            snapshots: [snapshotPaid, snapshotFree],
+            thresholdEvents: [],
+            switchEvents: [],
+            lastActiveAccountKey: paid.deduplicationKey,
+            lastUpdatedAt: now
+        )
+
+        let dailyPlanView = PoolDashboardView.debugDailyUsagePlanningWorkspacePanelView(
+            accounts: [paid, free],
+            analyticsState: populatedState
+        )
+        renderInHostingView(dailyPlanView, size: CGSize(width: 1650, height: 1200))
+
+        var clearIdleDelayCalls = 0
+        let analyticsEmpty = PoolDashboardView.debugUsageAnalyticsWorkspacePanelView(
+            analyticsState: emptyState,
+            accounts: [],
+            onClearIdleDelay: { _ in clearIdleDelayCalls += 1 }
+        )
+        renderInHostingView(analyticsEmpty, size: CGSize(width: 1600, height: 1200))
+
+        let analyticsPopulated = PoolDashboardView.debugUsageAnalyticsWorkspacePanelView(
+            analyticsState: populatedState,
+            accounts: [paid, free],
+            onClearIdleDelay: { _ in clearIdleDelayCalls += 1 }
+        )
+        renderInHostingView(analyticsPopulated, size: CGSize(width: 1800, height: 1300))
+
+        #expect(clearIdleDelayCalls == 0)
+    }
+
+    @Test
+    @MainActor
     func poolDashboardViewCanRenderWithSeededSnapshot() {
         var state = AccountPoolState(
             accounts: [
