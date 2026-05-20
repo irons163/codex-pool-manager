@@ -668,6 +668,145 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func usageAnalyticsStableDetailSectionsViewRendersEmptyAndPopulatedStates() {
+        let now = Date()
+        let accountA = AgentAccount(
+            id: UUID(),
+            name: "alpha@example.com",
+            usedUnits: 35,
+            quota: 100,
+            apiToken: "token-a",
+            email: "alpha@example.com",
+            chatGPTAccountID: "acct-alpha",
+            primaryUsagePercent: 42,
+            primaryUsageResetAt: now.addingTimeInterval(3_600),
+            secondaryUsagePercent: 35,
+            secondaryUsageResetAt: now.addingTimeInterval(86_400),
+            isPaid: true
+        )
+        let accountB = AgentAccount(
+            id: UUID(),
+            name: "beta@example.com",
+            usedUnits: 74,
+            quota: 100,
+            apiToken: "token-b",
+            email: "beta@example.com",
+            chatGPTAccountID: "acct-beta",
+            primaryUsagePercent: 80,
+            primaryUsageResetAt: now.addingTimeInterval(7_200),
+            secondaryUsagePercent: 74,
+            secondaryUsageResetAt: now.addingTimeInterval(120_000),
+            isPaid: true
+        )
+
+        let emptyState = UsageAnalyticsState(
+            records: [],
+            snapshots: [],
+            thresholdEvents: [],
+            switchEvents: [],
+            lastActiveAccountKey: nil,
+            lastUpdatedAt: nil
+        )
+        let emptyView = PoolDashboardView.debugUsageAnalyticsStableDetailSectionsView(
+            analyticsState: emptyState,
+            accounts: [],
+            selectedAccountKey: nil
+        )
+        renderInHostingView(emptyView, size: CGSize(width: 1400, height: 1200))
+
+        let recordA = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-1_200),
+            accountKey: accountA.deduplicationKey,
+            weeklyDeltaPercent: 8,
+            fiveHourDeltaPercent: 6,
+            weeklyAbsolutePercent: 35,
+            fiveHourAbsolutePercent: 42,
+            weeklyRemainingPercent: 65,
+            fiveHourRemainingPercent: 58,
+            weeklyWastedPercent: 3,
+            fiveHourWastedPercent: 2,
+            weeklyIdleDelayMinutes: 4,
+            weeklyResetAt: accountA.secondaryUsageResetAt,
+            fiveHourResetAt: accountA.primaryUsageResetAt,
+            activeAccountKeyAtSync: accountA.deduplicationKey
+        )
+        let recordB = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-600),
+            accountKey: accountB.deduplicationKey,
+            weeklyDeltaPercent: 12,
+            fiveHourDeltaPercent: 10,
+            weeklyAbsolutePercent: 74,
+            fiveHourAbsolutePercent: 80,
+            weeklyRemainingPercent: 26,
+            fiveHourRemainingPercent: 20,
+            weeklyWastedPercent: 7,
+            fiveHourWastedPercent: 5,
+            weeklyIdleDelayMinutes: 9,
+            weeklyResetAt: accountB.secondaryUsageResetAt,
+            fiveHourResetAt: accountB.primaryUsageResetAt,
+            activeAccountKeyAtSync: accountB.deduplicationKey
+        )
+
+        let snapshotA = UsageAnalyticsAccountSnapshot(
+            accountKey: accountA.deduplicationKey,
+            lastWeeklyPercent: 35,
+            lastFiveHourPercent: 42,
+            lastWeeklyResetAt: accountA.secondaryUsageResetAt,
+            lastFiveHourResetAt: accountA.primaryUsageResetAt,
+            lastSeenAt: now.addingTimeInterval(-500)
+        )
+        let snapshotB = UsageAnalyticsAccountSnapshot(
+            accountKey: accountB.deduplicationKey,
+            lastWeeklyPercent: 74,
+            lastFiveHourPercent: 80,
+            lastWeeklyResetAt: accountB.secondaryUsageResetAt,
+            lastFiveHourResetAt: accountB.primaryUsageResetAt,
+            lastSeenAt: now.addingTimeInterval(-400)
+        )
+
+        let thresholdWeekly = UsageAnalyticsThresholdEvent(
+            timestamp: now.addingTimeInterval(-300),
+            accountKey: accountB.deduplicationKey,
+            kind: .weekly,
+            thresholdPercent: 30,
+            previousRemainingPercent: 35,
+            currentRemainingPercent: 26
+        )
+        let thresholdFiveHour = UsageAnalyticsThresholdEvent(
+            timestamp: now.addingTimeInterval(-200),
+            accountKey: accountB.deduplicationKey,
+            kind: .fiveHour,
+            thresholdPercent: 20,
+            previousRemainingPercent: 28,
+            currentRemainingPercent: 20
+        )
+        let switchEvent = UsageAnalyticsSwitchEvent(
+            timestamp: now.addingTimeInterval(-180),
+            fromAccountKey: accountA.deduplicationKey,
+            toAccountKey: accountB.deduplicationKey,
+            fromRemainingPercent: 65,
+            toRemainingPercent: 26,
+            trigger: "sync"
+        )
+
+        let populatedState = UsageAnalyticsState(
+            records: [recordA, recordB],
+            snapshots: [snapshotA, snapshotB],
+            thresholdEvents: [thresholdWeekly, thresholdFiveHour],
+            switchEvents: [switchEvent],
+            lastActiveAccountKey: accountB.deduplicationKey,
+            lastUpdatedAt: now
+        )
+        let populatedView = PoolDashboardView.debugUsageAnalyticsStableDetailSectionsView(
+            analyticsState: populatedState,
+            accounts: [accountA, accountB],
+            selectedAccountKey: nil
+        )
+        renderInHostingView(populatedView, size: CGSize(width: 1500, height: 1300))
+    }
+
+    @Test
+    @MainActor
     func poolDashboardViewCanRenderWithSeededSnapshot() {
         var state = AccountPoolState(
             accounts: [

@@ -63,6 +63,7 @@ struct CodexAuthSwitchServiceCoverageTests {
     func codexLaunchTargetMetadataCoversAllCases() {
         for target in CodexLaunchTarget.allCases {
             #expect(!target.title.isEmpty)
+            #expect(target.id == target.rawValue)
             _ = target.bundleIdentifiers
             _ = target.appURLs
         }
@@ -808,6 +809,30 @@ struct OAuthSupportCoverageBoostTests {
 
         await #expect(throws: OAuthLoginError.invalidRedirectURI) {
             _ = try await service.signIn(configuration: config)
+        }
+    }
+
+    @Test
+    func oauthLoginServiceSignInSupportsCancellationForCustomSchemeFlow() async {
+        let service = OAuthLoginService(session: .shared)
+        let config = OAuthClientConfiguration(
+            issuer: URL(string: "https://auth.example.com")!,
+            scopes: "openid profile email",
+            redirectURI: "aiaagentpool://oauth/callback"
+        )
+
+        let task = Task {
+            try await service.signIn(configuration: config)
+        }
+
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            Issue.record("Expected sign-in task to fail or cancel")
+        } catch {
+            #expect(task.isCancelled)
         }
     }
 }

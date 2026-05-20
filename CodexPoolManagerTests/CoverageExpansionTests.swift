@@ -614,6 +614,14 @@ struct LocalhostOAuthCallbackServerCoverageExpansionTests {
 
 struct L10nCoverageExpansionTests {
     @Test
+    func languageOptionsExposeStableIDs() {
+        let ids = L10n.languageOptions.map(\.id)
+        #expect(ids.first == L10n.systemLanguageCode)
+        #expect(Set(ids).count == ids.count)
+        #expect(ids.contains("en"))
+    }
+
+    @Test
     func normalizedLanguageOverrideCodeCoversAliasesAndFallbacks() {
         #expect(L10n.normalizedLanguageOverrideCode("") == L10n.systemLanguageCode)
         #expect(L10n.normalizedLanguageOverrideCode(" system ") == L10n.systemLanguageCode)

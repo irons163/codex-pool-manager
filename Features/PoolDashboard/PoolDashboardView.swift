@@ -6632,6 +6632,19 @@ extension PoolDashboardView {
             release: release
         ).id
     }
+
+    @MainActor
+    static func debugUsageAnalyticsStableDetailSectionsView(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?
+    ) -> some View {
+        UsageAnalyticsStableDetailSectionsView(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey
+        )
+    }
 }
 #endif
 
