@@ -1020,5 +1020,26 @@ struct CodexAuthFilePanelServiceDebugOverrideTests {
         #expect(overrideCalled)
         #expect(selectedURL == nil)
     }
+
+    @Test
+    func explicitRunModalClosureTakesPrecedenceOverOverride() {
+        let panel = NSOpenPanel()
+        var overrideCalled = false
+        var explicitCalled = false
+
+        CodexAuthFilePanelService.runModalOverride = { _ in
+            overrideCalled = true
+            return .cancel
+        }
+        defer { CodexAuthFilePanelService.runModalOverride = nil }
+
+        _ = CodexAuthFilePanelService.pickURLFromPanel(panel) { _ in
+            explicitCalled = true
+            return .OK
+        }
+
+        #expect(explicitCalled)
+        #expect(!overrideCalled)
+    }
 }
 #endif
