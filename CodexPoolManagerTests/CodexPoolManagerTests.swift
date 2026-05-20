@@ -1264,6 +1264,122 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsRecordDecodeFallbacksAndClampsInvalidValues() throws {
+        let json = """
+        {
+          "timestamp": "2026-01-01T00:00:00Z",
+          "accountKey": "account:test",
+          "weeklyDeltaPercent": 12,
+          "weeklyWastedPercent": -9,
+          "fiveHourWastedPercent": -1,
+          "weeklyIdleDelayMinutes": -4
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let record = try decoder.decode(UsageAnalyticsRecord.self, from: Data(json.utf8))
+
+        #expect(record.weeklyDeltaPercent == 12)
+        #expect(record.fiveHourDeltaPercent == 0)
+        #expect(record.weeklyAbsolutePercent == 12)
+        #expect(record.weeklyRemainingPercent == 88)
+        #expect(record.fiveHourAbsolutePercent == nil)
+        #expect(record.fiveHourRemainingPercent == nil)
+        #expect(record.weeklyWastedPercent == 0)
+        #expect(record.fiveHourWastedPercent == 0)
+        #expect(record.weeklyIdleDelayMinutes == 0)
+    }
+
+    @Test
+    func usageAnalyticsSnapshotDecodeFallbacks() throws {
+        let json = """
+        {
+          "accountKey": "account:seed"
+        }
+        """
+        let decoder = JSONDecoder()
+        let snapshot = try decoder.decode(UsageAnalyticsAccountSnapshot.self, from: Data(json.utf8))
+
+        #expect(snapshot.accountKey == "account:seed")
+        #expect(snapshot.lastWeeklyPercent == 0)
+        #expect(snapshot.lastFiveHourPercent == nil)
+        #expect(snapshot.lastWeeklyResetAt == nil)
+        #expect(snapshot.lastFiveHourResetAt == nil)
+        #expect(snapshot.lastSeenAt == .distantPast)
+    }
+
+    @Test
+    func usageAnalyticsStateDecodeFallbacks() throws {
+        let decoder = JSONDecoder()
+        let state = try decoder.decode(UsageAnalyticsState.self, from: Data("{}".utf8))
+
+        #expect(state.records.isEmpty)
+        #expect(state.snapshots.isEmpty)
+        #expect(state.thresholdEvents.isEmpty)
+        #expect(state.switchEvents.isEmpty)
+        #expect(state.lastActiveAccountKey == nil)
+        #expect(state.lastUpdatedAt == nil)
+    }
+
+    @Test
+    func usageAnalyticsCsvReportEscapesSpecialCharactersAndOrdersByTimestamp() {
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Alpha, \"Beta\"\nLine",
+            usedUnits: 40,
+            quota: 100,
+            chatGPTAccountID: "user-alpha"
+        )
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let older = now.addingTimeInterval(-120)
+        let state = UsageAnalyticsState(
+            records: [
+                UsageAnalyticsRecord(
+                    timestamp: now,
+                    accountKey: account.deduplicationKey,
+                    weeklyDeltaPercent: 8,
+                    fiveHourDeltaPercent: 2
+                ),
+                UsageAnalyticsRecord(
+                    timestamp: older,
+                    accountKey: "account,\"raw\"\nkey",
+                    weeklyDeltaPercent: 3,
+                    fiveHourDeltaPercent: 0
+                )
+            ]
+        )
+
+        let csv = UsageAnalyticsEngine.csvReport(state: state, accounts: [account])
+        #expect(csv.contains("timestamp,account_key,account_name"))
+        #expect(csv.contains("\"account,\"\"raw\"\"\nkey\""))
+        #expect(csv.contains("\"Alpha, \"\"Beta\"\"\nLine\""))
+
+        let olderKeyRange = csv.range(of: "\"account,\"\"raw\"\"\nkey\"")
+        let newerKeyRange = csv.range(of: "account:user-alpha")
+        #expect(olderKeyRange != nil)
+        #expect(newerKeyRange != nil)
+        if let olderKeyRange, let newerKeyRange {
+            #expect(olderKeyRange.lowerBound < newerKeyRange.lowerBound)
+        }
+    }
+
+    @Test
+    func usageAnalyticsRecommendationAndSwitchEffectivenessHandleEmptyState() {
+        let recommendation = UsageAnalyticsEngine.recommendation(
+            accounts: [],
+            activeAccountKey: nil,
+            etasByAccountKey: [:]
+        )
+        #expect(recommendation.targetAccountKey == nil)
+        #expect(recommendation.reason == "No accounts available.")
+
+        let switchSummary = UsageAnalyticsEngine.switchEffectiveness(for: UsageAnalyticsState())
+        #expect(switchSummary.switchCount == 0)
+        #expect(switchSummary.averageRemainingGain == 0)
+        #expect(switchSummary.improvedRate == 0)
+    }
+
+    @Test
     func removeActiveAccountFallsBackToRemainingAccount() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
