@@ -4242,7 +4242,7 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
             } else {
                 LazyVGrid(
                     columns: [
-                        GridItem(.adaptive(minimum: 100, maximum: 130), spacing: 10, alignment: .top)
+                        GridItem(.adaptive(minimum: 150, maximum: 190), spacing: 10, alignment: .top)
                     ],
                     alignment: .leading,
                     spacing: 10
