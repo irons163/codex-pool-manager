@@ -299,6 +299,7 @@ struct PKCECodes {
 final class OAuthLoginService: NSObject {
     private let session: URLSession
     private var webAuthenticationSession: ASWebAuthenticationSession?
+    private var webAuthenticationContinuation: ((Result<URL, Error>) -> Void)?
     private let localhostCallbackServer = LocalhostOAuthCallbackServer()
     private let presentationContextProvider = OAuthPresentationContextProvider()
 
@@ -379,6 +380,7 @@ final class OAuthLoginService: NSObject {
     private func cancelPendingSignIn() {
         webAuthenticationSession?.cancel()
         webAuthenticationSession = nil
+        webAuthenticationContinuation?(.failure(CancellationError()))
         localhostCallbackServer.cancelPendingWait()
     }
 
@@ -391,22 +393,28 @@ final class OAuthLoginService: NSObject {
                 continuation.resume(with: result)
             }
 
+            webAuthenticationContinuation = { [weak self] result in
+                self?.webAuthenticationContinuation = nil
+                resumeOnce(result)
+            }
+
             let authSession = ASWebAuthenticationSession(
                 url: authorizeURL,
                 callbackURLScheme: callbackScheme
             ) { callbackURL, error in
-                if let error {
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
                     self.webAuthenticationSession = nil
-                    resumeOnce(.failure(error))
-                    return
+                    if let error {
+                        self.webAuthenticationContinuation?(.failure(error))
+                        return
+                    }
+                    guard let callbackURL else {
+                        self.webAuthenticationContinuation?(.failure(OAuthLoginError.invalidCallback))
+                        return
+                    }
+                    self.webAuthenticationContinuation?(.success(callbackURL))
                 }
-                guard let callbackURL else {
-                    self.webAuthenticationSession = nil
-                    resumeOnce(.failure(OAuthLoginError.invalidCallback))
-                    return
-                }
-                self.webAuthenticationSession = nil
-                resumeOnce(.success(callbackURL))
             }
 
             authSession.prefersEphemeralWebBrowserSession = false
