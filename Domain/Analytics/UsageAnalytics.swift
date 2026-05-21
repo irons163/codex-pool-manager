@@ -416,19 +416,25 @@ enum UsageAnalyticsEngine {
         calendar: Calendar = .autoupdatingCurrent,
         maxStoredRecords: Int = defaultMaxStoredRecords
     ) -> UsageAnalyticsState {
-        let trimmedRecords = trim(records: state.records, now: now, calendar: calendar, maxStoredRecords: maxStoredRecords)
-        let snapshotsByKey = state.snapshots.reduce(into: [String: UsageAnalyticsAccountSnapshot]()) { partial, snapshot in
+        let canonicalState = canonicalizedState(state, using: accounts)
+        let trimmedRecords = trim(
+            records: canonicalState.records,
+            now: now,
+            calendar: calendar,
+            maxStoredRecords: maxStoredRecords
+        )
+        let snapshotsByKey = canonicalState.snapshots.reduce(into: [String: UsageAnalyticsAccountSnapshot]()) { partial, snapshot in
             partial[snapshot.accountKey] = snapshot
         }
         let deduplicatedAccounts = deduplicatedAccountsByKey(accounts)
-        let accountByKey = Dictionary(uniqueKeysWithValues: deduplicatedAccounts.map { ($0.deduplicationKey, $0) })
+        let accountByKey = Dictionary(uniqueKeysWithValues: deduplicatedAccounts.map { ($0.usageAnalyticsAccountKey, $0) })
 
         var updatedSnapshots: [UsageAnalyticsAccountSnapshot] = []
         var newRecords: [UsageAnalyticsRecord] = []
         var newThresholdEvents: [UsageAnalyticsThresholdEvent] = []
 
         for account in deduplicatedAccounts {
-            let accountKey = account.deduplicationKey
+            let accountKey = account.usageAnalyticsAccountKey
             let weeklyAbsolute = percentUsage(for: account)
             let weeklyRemaining = max(0, 100 - weeklyAbsolute)
             let fiveHourAbsolute = account.primaryUsagePercent
@@ -525,12 +531,12 @@ enum UsageAnalyticsEngine {
         var mergedRecords = trimmedRecords + newRecords
         mergedRecords.sort { $0.timestamp > $1.timestamp }
 
-        var mergedThresholdEvents = trim(events: state.thresholdEvents, now: now, calendar: calendar)
+        var mergedThresholdEvents = trim(events: canonicalState.thresholdEvents, now: now, calendar: calendar)
         mergedThresholdEvents = Array((newThresholdEvents + mergedThresholdEvents).prefix(300))
 
-        var mergedSwitchEvents = trim(events: state.switchEvents, now: now, calendar: calendar)
+        var mergedSwitchEvents = trim(events: canonicalState.switchEvents, now: now, calendar: calendar)
         if let activeAccountKey,
-           let previousActiveKey = state.lastActiveAccountKey,
+           let previousActiveKey = canonicalState.lastActiveAccountKey,
            previousActiveKey != activeAccountKey {
             let fromRemaining = accountByKey[previousActiveKey]?.smartSwitchRemainingPercent
             let toRemaining = accountByKey[activeAccountKey]?.smartSwitchRemainingPercent
@@ -553,7 +559,7 @@ enum UsageAnalyticsEngine {
             snapshots: updatedSnapshots,
             thresholdEvents: mergedThresholdEvents,
             switchEvents: mergedSwitchEvents,
-            lastActiveAccountKey: activeAccountKey ?? state.lastActiveAccountKey,
+            lastActiveAccountKey: activeAccountKey ?? canonicalState.lastActiveAccountKey,
             lastUpdatedAt: now
         )
         updatedState.records = trim(records: updatedState.records, now: now, calendar: calendar, maxStoredRecords: maxStoredRecords)
@@ -562,17 +568,19 @@ enum UsageAnalyticsEngine {
 
     static func normalized(
         state: UsageAnalyticsState,
+        accounts: [AgentAccount] = [],
         now: Date,
         calendar: Calendar = .autoupdatingCurrent,
         maxStoredRecords: Int = defaultMaxStoredRecords
     ) -> UsageAnalyticsState {
-        UsageAnalyticsState(
-            records: trim(records: state.records, now: now, calendar: calendar, maxStoredRecords: maxStoredRecords),
-            snapshots: deduplicatedSnapshots(state.snapshots),
-            thresholdEvents: Array(trim(events: state.thresholdEvents, now: now, calendar: calendar).prefix(300)),
-            switchEvents: Array(trim(events: state.switchEvents, now: now, calendar: calendar).prefix(200)),
-            lastActiveAccountKey: state.lastActiveAccountKey,
-            lastUpdatedAt: state.lastUpdatedAt
+        let canonicalState = canonicalizedState(state, using: accounts)
+        return UsageAnalyticsState(
+            records: trim(records: canonicalState.records, now: now, calendar: calendar, maxStoredRecords: maxStoredRecords),
+            snapshots: deduplicatedSnapshots(canonicalState.snapshots),
+            thresholdEvents: Array(trim(events: canonicalState.thresholdEvents, now: now, calendar: calendar).prefix(300)),
+            switchEvents: Array(trim(events: canonicalState.switchEvents, now: now, calendar: calendar).prefix(200)),
+            lastActiveAccountKey: canonicalState.lastActiveAccountKey,
+            lastUpdatedAt: canonicalState.lastUpdatedAt
         )
     }
 
@@ -587,7 +595,7 @@ enum UsageAnalyticsEngine {
             records: state.records,
             snapshots: deduplicatedAccounts.map { account in
                 UsageAnalyticsAccountSnapshot(
-                    accountKey: account.deduplicationKey,
+                    accountKey: account.usageAnalyticsAccountKey,
                     lastWeeklyPercent: percentUsage(for: account),
                     lastFiveHourPercent: account.primaryUsagePercent,
                     lastWeeklyResetAt: account.usageWindowResetAt,
@@ -890,7 +898,7 @@ enum UsageAnalyticsEngine {
         let windowStart = now.addingTimeInterval(-windowHours * 3600)
 
         return deduplicated.reduce(into: [String: UsageAnalyticsETA]()) { partial, account in
-            let key = account.deduplicationKey
+            let key = account.usageAnalyticsAccountKey
             let consumed = state.records
                 .filter { $0.accountKey == key && $0.timestamp >= windowStart }
                 .reduce(0) { $0 + max(0, $1.weeklyDeltaPercent) }
@@ -942,7 +950,7 @@ enum UsageAnalyticsEngine {
         }
 
         for account in deduplicatedAccountsByKey(accounts) {
-            let key = account.deduplicationKey
+            let key = account.usageAnalyticsAccountKey
             let recentRecords = state.records
                 .filter { $0.accountKey == key && $0.timestamp >= lastDayStart }
             if recentRecords.isEmpty {
@@ -990,8 +998,8 @@ enum UsageAnalyticsEngine {
             if lhs.smartSwitchRemainingPercent != rhs.smartSwitchRemainingPercent {
                 return lhs.smartSwitchRemainingPercent > rhs.smartSwitchRemainingPercent
             }
-            let lhsETA = etasByAccountKey[lhs.deduplicationKey]?.etaHours ?? -1
-            let rhsETA = etasByAccountKey[rhs.deduplicationKey]?.etaHours ?? -1
+            let lhsETA = etasByAccountKey[lhs.usageAnalyticsAccountKey]?.etaHours ?? -1
+            let rhsETA = etasByAccountKey[rhs.usageAnalyticsAccountKey]?.etaHours ?? -1
             return lhsETA > rhsETA
         }
 
@@ -999,22 +1007,22 @@ enum UsageAnalyticsEngine {
             return UsageAnalyticsRecommendation(targetAccountKey: nil, reason: "No recommendation available.")
         }
 
-        if activeAccountKey == best.deduplicationKey {
+        if activeAccountKey == best.usageAnalyticsAccountKey {
             return UsageAnalyticsRecommendation(
-                targetAccountKey: best.deduplicationKey,
+                targetAccountKey: best.usageAnalyticsAccountKey,
                 reason: "Current account already has the strongest remaining capacity."
             )
         }
 
-        let currentRemaining = ranked.first(where: { $0.deduplicationKey == activeAccountKey })?.smartSwitchRemainingPercent ?? 0
+        let currentRemaining = ranked.first(where: { $0.usageAnalyticsAccountKey == activeAccountKey })?.smartSwitchRemainingPercent ?? 0
         let gain = best.smartSwitchRemainingPercent - currentRemaining
         let reason = "Switch to \(best.name): remaining improves by \(gain)% (\(currentRemaining)% -> \(best.smartSwitchRemainingPercent)%)."
 
-        return UsageAnalyticsRecommendation(targetAccountKey: best.deduplicationKey, reason: reason)
+        return UsageAnalyticsRecommendation(targetAccountKey: best.usageAnalyticsAccountKey, reason: reason)
     }
 
     static func csvReport(state: UsageAnalyticsState, accounts: [AgentAccount]) -> String {
-        let accountNameByKey = Dictionary(uniqueKeysWithValues: deduplicatedAccountsByKey(accounts).map { ($0.deduplicationKey, $0.name) })
+        let accountNameByKey = Dictionary(uniqueKeysWithValues: deduplicatedAccountsByKey(accounts).map { ($0.usageAnalyticsAccountKey, $0.name) })
 
         var lines: [String] = [
             "timestamp,account_key,account_name,weekly_delta_percent,five_hour_delta_percent,weekly_abs_percent,five_hour_abs_percent,weekly_remaining_percent,five_hour_remaining_percent,weekly_wasted_percent,five_hour_wasted_percent,weekly_idle_delay_minutes"
@@ -1203,13 +1211,167 @@ enum UsageAnalyticsEngine {
         result.reserveCapacity(accounts.count)
 
         for account in accounts {
-            let key = account.deduplicationKey
+            let key = account.usageAnalyticsAccountKey
             if seen.insert(key).inserted {
                 result.append(account)
             }
         }
 
         return result
+    }
+
+    private static func canonicalizedState(_ state: UsageAnalyticsState, using accounts: [AgentAccount]) -> UsageAnalyticsState {
+        let aliases = accountKeyAliases(accounts)
+        guard !aliases.isEmpty else { return state }
+
+        func canonical(_ key: String?) -> String? {
+            guard let key else { return nil }
+            let normalized = normalizedAnalyticsAccountKey(key)
+            return aliases[normalized] ?? key
+        }
+
+        let mappedRecords = state.records.map { record in
+            let mappedAccountKey = canonical(record.accountKey) ?? record.accountKey
+            let mappedActiveKey = canonical(record.activeAccountKeyAtSync)
+            guard mappedAccountKey != record.accountKey || mappedActiveKey != record.activeAccountKeyAtSync else {
+                return record
+            }
+            return UsageAnalyticsRecord(
+                id: record.id,
+                timestamp: record.timestamp,
+                accountKey: mappedAccountKey,
+                weeklyDeltaPercent: record.weeklyDeltaPercent,
+                fiveHourDeltaPercent: record.fiveHourDeltaPercent,
+                weeklyAbsolutePercent: record.weeklyAbsolutePercent,
+                fiveHourAbsolutePercent: record.fiveHourAbsolutePercent,
+                weeklyRemainingPercent: record.weeklyRemainingPercent,
+                fiveHourRemainingPercent: record.fiveHourRemainingPercent,
+                weeklyWastedPercent: record.weeklyWastedPercent,
+                fiveHourWastedPercent: record.fiveHourWastedPercent,
+                weeklyIdleDelayMinutes: record.weeklyIdleDelayMinutes,
+                weeklyResetAt: record.weeklyResetAt,
+                fiveHourResetAt: record.fiveHourResetAt,
+                activeAccountKeyAtSync: mappedActiveKey
+            )
+        }
+
+        let mappedSnapshots = state.snapshots.map { snapshot in
+            let mappedAccountKey = canonical(snapshot.accountKey) ?? snapshot.accountKey
+            guard mappedAccountKey != snapshot.accountKey else { return snapshot }
+            return UsageAnalyticsAccountSnapshot(
+                id: snapshot.id,
+                accountKey: mappedAccountKey,
+                lastWeeklyPercent: snapshot.lastWeeklyPercent,
+                lastFiveHourPercent: snapshot.lastFiveHourPercent,
+                lastWeeklyResetAt: snapshot.lastWeeklyResetAt,
+                lastFiveHourResetAt: snapshot.lastFiveHourResetAt,
+                lastSeenAt: snapshot.lastSeenAt
+            )
+        }
+
+        let mappedThresholdEvents = state.thresholdEvents.map { event in
+            let mappedAccountKey = canonical(event.accountKey) ?? event.accountKey
+            guard mappedAccountKey != event.accountKey else { return event }
+            return UsageAnalyticsThresholdEvent(
+                id: event.id,
+                timestamp: event.timestamp,
+                accountKey: mappedAccountKey,
+                kind: event.kind,
+                thresholdPercent: event.thresholdPercent,
+                previousRemainingPercent: event.previousRemainingPercent,
+                currentRemainingPercent: event.currentRemainingPercent
+            )
+        }
+
+        let mappedSwitchEvents = state.switchEvents.map { event in
+            let mappedFrom = canonical(event.fromAccountKey)
+            let mappedTo = canonical(event.toAccountKey) ?? event.toAccountKey
+            guard mappedFrom != event.fromAccountKey || mappedTo != event.toAccountKey else { return event }
+            return UsageAnalyticsSwitchEvent(
+                id: event.id,
+                timestamp: event.timestamp,
+                fromAccountKey: mappedFrom,
+                toAccountKey: mappedTo,
+                fromRemainingPercent: event.fromRemainingPercent,
+                toRemainingPercent: event.toRemainingPercent,
+                trigger: event.trigger
+            )
+        }
+
+        return UsageAnalyticsState(
+            records: mappedRecords,
+            snapshots: mappedSnapshots,
+            thresholdEvents: mappedThresholdEvents,
+            switchEvents: mappedSwitchEvents,
+            lastActiveAccountKey: canonical(state.lastActiveAccountKey),
+            lastUpdatedAt: state.lastUpdatedAt
+        )
+    }
+
+    private static func accountKeyAliases(_ accounts: [AgentAccount]) -> [String: String] {
+        var aliases: [String: String] = [:]
+
+        for account in deduplicatedAccountsByKey(accounts) {
+            let canonical = normalizedAnalyticsAccountKey(account.usageAnalyticsAccountKey)
+            aliases[canonical] = canonical
+            aliases[normalizedAnalyticsAccountKey(account.deduplicationKey)] = canonical
+
+            if let accountID = normalizedIdentityComponent(account.chatGPTAccountID) {
+                let scope = normalizedIdentityScopeComponent(account.identityScope)
+                aliases["account:\(accountID)|scope:\(scope)"] = canonical
+                aliases["account:\(accountID)"] = canonical
+            }
+            if let email = normalizedIdentityComponent(account.email) {
+                aliases["email:\(email)"] = canonical
+            }
+            if let token = normalizedTokenComponent(account.apiToken) {
+                aliases["token:\(token)"] = canonical
+            }
+            aliases["id:\(account.id.uuidString.lowercased())"] = canonical
+        }
+
+        return aliases
+    }
+
+    private static func normalizedAnalyticsAccountKey(_ key: String) -> String {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.hasPrefix("account:") {
+            let payload = String(trimmed.dropFirst("account:".count))
+            if let scopeRange = payload.range(of: "|scope:") {
+                let idPart = String(payload[..<scopeRange.lowerBound]).lowercased()
+                let scopePart = String(payload[scopeRange.upperBound...]).lowercased()
+                return "account:\(idPart)|scope:\(scopePart)"
+            }
+            return "account:\(payload.lowercased())"
+        }
+        if trimmed.hasPrefix("email:") {
+            return "email:\(String(trimmed.dropFirst("email:".count)).lowercased())"
+        }
+        if trimmed.hasPrefix("token:") {
+            return "token:\(String(trimmed.dropFirst("token:".count)))"
+        }
+        if trimmed.hasPrefix("id:") {
+            return "id:\(String(trimmed.dropFirst("id:".count)).lowercased())"
+        }
+
+        return trimmed
+    }
+
+    private static func normalizedIdentityComponent(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized.isEmpty ? nil : normalized
+    }
+
+    private static func normalizedIdentityScopeComponent(_ value: String) -> String {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized.isEmpty ? AgentAccount.personalIdentityScope : normalized
+    }
+
+    private static func normalizedTokenComponent(_ value: String) -> String? {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalized.isEmpty ? nil : normalized
     }
 
     private static func deltaPercent(current: Int, previous: Int) -> Int {

@@ -159,6 +159,23 @@ extension AgentAccount {
         return "id:\(id.uuidString.lowercased())"
     }
 
+    // Usage analytics should merge the same identity across groups/scopes.
+    var usageAnalyticsAccountKey: String {
+        if let chatGPTAccountID = normalizedIdentityComponent(chatGPTAccountID) {
+            return "account:\(chatGPTAccountID)"
+        }
+
+        if let email = normalizedIdentityComponent(email) {
+            return "email:\(email)"
+        }
+
+        if let token = normalizedTokenComponent(apiToken) {
+            return "token:\(token)"
+        }
+
+        return "id:\(id.uuidString.lowercased())"
+    }
+
     // Paid accounts use 5-hour remaining by default, but when weekly remaining is exhausted,
     // weekly remaining becomes the source of truth for smart switching.
     var smartSwitchRemainingRatio: Double {

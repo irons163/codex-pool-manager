@@ -2721,6 +2721,7 @@ struct PoolDashboardView: View {
         }
         let normalized = UsageAnalyticsEngine.normalized(
             state: decoded,
+            accounts: state.accounts,
             now: .now,
             maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
         )
@@ -2734,6 +2735,7 @@ struct PoolDashboardView: View {
     private func persistUsageAnalyticsState() {
         usageAnalyticsState = UsageAnalyticsEngine.normalized(
             state: usageAnalyticsState,
+            accounts: state.accounts,
             now: .now,
             maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
         )
@@ -2758,6 +2760,7 @@ struct PoolDashboardView: View {
         }
         let normalized = UsageAnalyticsEngine.normalized(
             state: decoded,
+            accounts: state.accounts,
             now: .now,
             maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
         )
@@ -2810,7 +2813,7 @@ struct PoolDashboardView: View {
         usageAnalyticsState = UsageAnalyticsEngine.seed(
             state: usageAnalyticsState,
             accounts: state.accounts,
-            activeAccountKey: state.activeAccount?.deduplicationKey,
+            activeAccountKey: state.activeAccount?.usageAnalyticsAccountKey,
             now: now
         )
         persistUsageAnalyticsState()
@@ -2823,7 +2826,7 @@ struct PoolDashboardView: View {
         usageAnalyticsState = UsageAnalyticsEngine.update(
             state: usageAnalyticsState,
             accounts: state.accounts,
-            activeAccountKey: state.activeAccount?.deduplicationKey,
+            activeAccountKey: state.activeAccount?.usageAnalyticsAccountKey,
             now: now,
             maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
         )
@@ -4615,6 +4618,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     private struct AccountAnalyticsMetrics {
         let name: String
+        let isPaid: Bool
         let weeklyUsage: Int
         let fiveHourUsage: Int
         let weeklyRemaining: Int
@@ -4710,12 +4714,20 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     private var accountNameByKey: [String: String] {
         var mapping: [String: String] = [:]
         for account in accounts {
-            let key = account.deduplicationKey
+            let key = account.usageAnalyticsAccountKey
             if mapping[key] == nil {
                 mapping[key] = account.name
             }
         }
         return mapping
+    }
+
+    private func accountPickerTitle(for key: String) -> String {
+        let name = accountNameByKey[key] ?? key
+        guard deduplicatedAccountsByKey[key]?.isPaid == true else {
+            return name
+        }
+        return "👑 \(name)"
     }
 
     private var selectableAccountKeys: [String] {
@@ -4807,6 +4819,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             let fiveHourRemaining = account.primaryUsagePercent.map { max(0, 100 - min(max($0, 0), 100)) } ?? -1
             return AccountAnalyticsMetrics(
                 name: name,
+                isPaid: account.isPaid,
                 weeklyUsage: weeklyUsage,
                 fiveHourUsage: fiveHourUsage,
                 weeklyRemaining: weeklyRemaining,
@@ -4821,6 +4834,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             let fiveHourRemaining = fiveHourUsage >= 0 ? max(0, 100 - fiveHourUsage) : -1
             return AccountAnalyticsMetrics(
                 name: name,
+                isPaid: false,
                 weeklyUsage: weeklyUsage,
                 fiveHourUsage: fiveHourUsage,
                 weeklyRemaining: weeklyRemaining,
@@ -4835,6 +4849,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
             let fiveHourRemaining = record.fiveHourRemainingPercent.map { max(0, min(100, $0)) } ?? -1
             return AccountAnalyticsMetrics(
                 name: name,
+                isPaid: false,
                 weeklyUsage: weeklyUsage,
                 fiveHourUsage: fiveHourUsage,
                 weeklyRemaining: weeklyRemaining,
@@ -4844,6 +4859,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
         return AccountAnalyticsMetrics(
             name: name,
+            isPaid: false,
             weeklyUsage: 0,
             fiveHourUsage: -1,
             weeklyRemaining: 0,
@@ -4866,6 +4882,10 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     ) -> Bool {
         guard let left = metricsByKey[lhs], let right = metricsByKey[rhs] else {
             return lhs < rhs
+        }
+
+        if left.isPaid != right.isPaid {
+            return left.isPaid && !right.isPaid
         }
 
         func compareDescending(_ leftValue: Int, _ rightValue: Int) -> Bool? {
@@ -4947,8 +4967,8 @@ private struct UsageAnalyticsWorkspacePanelView: View {
     private var deduplicatedAccountsByKey: [String: AgentAccount] {
         var mapping: [String: AgentAccount] = [:]
         for account in accounts {
-            if mapping[account.deduplicationKey] == nil {
-                mapping[account.deduplicationKey] = account
+            if mapping[account.usageAnalyticsAccountKey] == nil {
+                mapping[account.usageAnalyticsAccountKey] = account
             }
         }
         return mapping
@@ -5314,7 +5334,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
                     Text(L10n.text("usage_analytics.chart.all_accounts"))
                         .tag(Optional<String>.none)
                     ForEach(selectableAccountKeys, id: \.self) { key in
-                        Text(accountNameByKey[key] ?? key)
+                        Text(accountPickerTitle(for: key))
                             .tag(Optional(key))
                     }
                 }
@@ -5706,7 +5726,7 @@ private struct UsageAnalyticsWorkspacePanelView: View {
 
     private func topAccountText(key: String?, weeklyPercent: Int) -> String {
         guard let key else { return L10n.text("usage_analytics.not_available") }
-        let name = accounts.first(where: { $0.deduplicationKey == key })?.name ?? key
+        let name = accounts.first(where: { $0.usageAnalyticsAccountKey == key })?.name ?? key
         return L10n.text("usage_analytics.top_account_format", name, weeklyPercent)
     }
 
@@ -6119,7 +6139,7 @@ private struct UsageAnalyticsStableDetailSectionsView: View, Equatable {
     private var accountRenderIdentity: String {
         accounts
             .map { account in
-                "\(account.deduplicationKey)=\(account.name)"
+                "\(account.usageAnalyticsAccountKey)=\(account.name)"
             }
             .joined(separator: "|")
     }
@@ -6134,8 +6154,8 @@ private struct UsageAnalyticsStableDetailSectionsView: View, Equatable {
 
     private var accountNameByKey: [String: String] {
         var mapping: [String: String] = [:]
-        for account in accounts where mapping[account.deduplicationKey] == nil {
-            mapping[account.deduplicationKey] = account.name
+        for account in accounts where mapping[account.usageAnalyticsAccountKey] == nil {
+            mapping[account.usageAnalyticsAccountKey] = account.name
         }
         return mapping
     }
