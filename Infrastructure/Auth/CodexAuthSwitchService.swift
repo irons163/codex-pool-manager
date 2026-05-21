@@ -67,9 +67,6 @@ enum CodexLaunchTarget: String, CaseIterable, Identifiable, Codable {
         else {
             return defaultPickerTarget.rawValue
         }
-        if value == .auto {
-            return defaultPickerTarget.rawValue
-        }
         return value.rawValue
     }
 

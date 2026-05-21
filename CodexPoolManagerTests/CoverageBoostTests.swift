@@ -986,6 +986,7 @@ struct PoolDashboardDebugCoverageHookTests {
     }
 }
 
+@Suite(.serialized)
 @MainActor
 struct WidgetBridgePublisherCoverageBoostTests {
     private func makeAccount(
@@ -1011,6 +1012,32 @@ struct WidgetBridgePublisherCoverageBoostTests {
             isPaid: isPaid,
             isUsageSyncExcluded: isExcluded
         )
+    }
+
+    private func fetchBridgeResponse() async throws -> (statusCode: Int, data: Data) {
+        let url = try #require(URL(string: WidgetBridgePublisher.debugBridgeEndpoint()))
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 2
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let http = try #require(response as? HTTPURLResponse)
+        return (http.statusCode, data)
+    }
+
+    private func withIsolatedBridgePort(_ body: () async throws -> Void) async throws {
+        let key = "WIDGET_BRIDGE_PORT"
+        let original = ProcessInfo.processInfo.environment[key]
+        let port = 39000 + Int(getpid() % 1000)
+        setenv(key, String(port), 1)
+        defer {
+            if let original {
+                setenv(key, original, 1)
+            } else {
+                unsetenv(key)
+            }
+        }
+
+        try await body()
     }
 
     @Test
@@ -1127,6 +1154,78 @@ struct WidgetBridgePublisherCoverageBoostTests {
         #expect(keys.count == 2)
         #expect(keys[0] == first.deduplicationKey)
         #expect(keys[1] == third.deduplicationKey)
+    }
+
+    @Test
+    func localBridgeServerReturnsNoContentBeforePublishAndJSONAfterPublish() async throws {
+        try await withIsolatedBridgePort {
+            WidgetBridgePublisher.debugResetPublishState()
+            WidgetBridgePublisher.configureBridge()
+            try await Task.sleep(nanoseconds: 200_000_000)
+
+            let expectedStatus = "Active: bridge-\(UUID().uuidString)"
+            WidgetBridgePublisher.publishFromMainApp(status: expectedStatus)
+            try await Task.sleep(nanoseconds: 200_000_000)
+
+            let populatedResponse = try await fetchBridgeResponse()
+            #expect(populatedResponse.statusCode == 200)
+            #expect(!populatedResponse.data.isEmpty)
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let snapshot = try decoder.decode(WidgetBridgePublisher.Snapshot.self, from: populatedResponse.data)
+            #expect(snapshot.status == expectedStatus)
+            #expect(snapshot.source == "CodexPoolManager")
+        }
+    }
+
+    @Test
+    func bridgeResponseEncodingCoversNoContentAndContentPaths() throws {
+        let emptyResponse = WidgetBridgePublisher.debugHTTPBridgeResponse(payload: Data())
+        let emptyText = try #require(String(data: emptyResponse, encoding: .utf8))
+        #expect(emptyText.contains("HTTP/1.1 204 No Content"))
+        #expect(emptyText.contains("Content-Length: 0"))
+
+        let payload = Data("{\"status\":\"ok\"}".utf8)
+        let populatedResponse = WidgetBridgePublisher.debugHTTPBridgeResponse(payload: payload)
+        let populatedPrefix = try #require(String(data: populatedResponse.prefix(80), encoding: .utf8))
+        #expect(populatedPrefix.contains("HTTP/1.1 200 OK"))
+        #expect(populatedPrefix.contains("Content-Type: application/json"))
+        #expect(populatedResponse.suffix(payload.count) == payload)
+    }
+
+    @Test
+    func previewModeSkipsPublishingToBridgeServer() async throws {
+        WidgetBridgePublisher.debugResetPublishState()
+
+        let baseline = Date()
+        let expectedSignature = WidgetBridgePublisher.debugSnapshotSignature(
+            for: WidgetBridgePublisher.Snapshot(
+                updatedAt: baseline,
+                status: "should-not-publish",
+                source: "CodexPoolManager",
+                mode: nil,
+                totalAccounts: nil,
+                availableAccounts: nil,
+                overallUsagePercent: nil,
+                activeAccountName: nil,
+                activeIsPaid: nil,
+                activeRemainingUnits: nil,
+                activeQuota: nil,
+                activeFiveHourRemainingPercent: nil,
+                activeWeeklyResetAt: nil,
+                activeFiveHourResetAt: nil
+            )
+        )
+
+        #expect(!WidgetBridgePublisher.debugShouldThrottle(signature: expectedSignature, now: baseline))
+
+        WidgetBridgePublisher.debugPublishFromMainApp(
+            status: "should-not-publish",
+            environment: ["XCODE_RUNNING_FOR_PREVIEWS": "1"]
+        )
+
+        #expect(!WidgetBridgePublisher.debugShouldThrottle(signature: expectedSignature, now: baseline))
     }
 }
 

@@ -97,8 +97,11 @@ enum WidgetBridgePublisher {
         )
     }
 
-    private static func publish(_ snapshot: Snapshot) {
-        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+    private static func publish(
+        _ snapshot: Snapshot,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
+        if environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             return
         }
 
@@ -219,15 +222,55 @@ extension WidgetBridgePublisher {
         lastPublishedAt = .distantPast
         stateLock.unlock()
     }
+
+    static func debugBridgeEndpoint() -> String {
+        WidgetBridgeLocalServer.debugEndpoint()
+    }
+
+    static func debugResetBridgeServerState() {
+        WidgetBridgeLocalServer.shared.debugResetForTests()
+    }
+
+    static func debugPublishFromMainApp(status: String, environment: [String: String]) {
+        let snapshot = Snapshot(
+            updatedAt: Date(),
+            status: status,
+            source: "CodexPoolManager",
+            mode: nil,
+            totalAccounts: nil,
+            availableAccounts: nil,
+            overallUsagePercent: nil,
+            activeAccountName: nil,
+            activeIsPaid: nil,
+            activeRemainingUnits: nil,
+            activeQuota: nil,
+            activeFiveHourRemainingPercent: nil,
+            activeWeeklyResetAt: nil,
+            activeFiveHourResetAt: nil
+        )
+        publish(snapshot, environment: environment)
+    }
+
+    static func debugHTTPBridgeResponse(payload: Data) -> Data {
+        WidgetBridgeLocalServer.debugResponseData(payload: payload)
+    }
 }
 #endif
 
 private final class WidgetBridgeLocalServer {
     static let shared = WidgetBridgeLocalServer()
 
-    private static let port: NWEndpoint.Port = 38477
+    private static var port: NWEndpoint.Port {
+        if let configured = ProcessInfo.processInfo.environment["WIDGET_BRIDGE_PORT"],
+           let rawValue = UInt16(configured),
+           let port = NWEndpoint.Port(rawValue: rawValue)
+        {
+            return port
+        }
+        return NWEndpoint.Port(rawValue: 38477)!
+    }
     private static let listenerQueue = DispatchQueue(label: "WidgetBridgeLocalServer.queue")
-    private static let endpoint = "http://127.0.0.1:\(port.rawValue)/widget-snapshot"
+    private static var endpoint: String { "http://127.0.0.1:\(port.rawValue)/widget-snapshot" }
 
     private var listener: NWListener?
     private var latestSnapshotData = Data()
@@ -282,18 +325,39 @@ private final class WidgetBridgeLocalServer {
             }
 
             let payload = self.latestSnapshotData
-            let statusLine = payload.isEmpty ? "HTTP/1.1 204 No Content\r\n" : "HTTP/1.1 200 OK\r\n"
-            var headers = statusLine
-            headers += "Content-Type: application/json\r\n"
-            headers += "Content-Length: \(payload.count)\r\n"
-            headers += "Connection: close\r\n\r\n"
-
-            var response = Data(headers.utf8)
-            response.append(payload)
+            let response = Self.responseData(payload: payload)
 
             connection.send(content: response, completion: .contentProcessed { _ in
                 connection.cancel()
             })
         }
     }
+
+    private static func responseData(payload: Data) -> Data {
+        let statusLine = payload.isEmpty ? "HTTP/1.1 204 No Content\r\n" : "HTTP/1.1 200 OK\r\n"
+        var headers = statusLine
+        headers += "Content-Type: application/json\r\n"
+        headers += "Content-Length: \(payload.count)\r\n"
+        headers += "Connection: close\r\n\r\n"
+
+        var response = Data(headers.utf8)
+        response.append(payload)
+        return response
+    }
 }
+
+#if DEBUG
+extension WidgetBridgeLocalServer {
+    static func debugEndpoint() -> String { endpoint }
+    static func debugResponseData(payload: Data) -> Data { responseData(payload: payload) }
+
+    func debugResetForTests() {
+        Self.listenerQueue.sync {
+            listener?.cancel()
+            listener = nil
+            latestSnapshotData = Data()
+            hasStarted = false
+        }
+    }
+}
+#endif
