@@ -913,7 +913,7 @@ struct CodexPoolManagerTests {
         )
 
         #expect(seeded.snapshots.count == 1)
-        #expect(seeded.snapshots[0].accountKey == first.deduplicationKey)
+        #expect(seeded.snapshots[0].accountKey == first.usageAnalyticsAccountKey)
     }
 
     @Test
@@ -1019,7 +1019,7 @@ struct CodexPoolManagerTests {
     @Test
     func usageAnalyticsUpdateHandlesDuplicateAccountKeysWithoutCrash() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let duplicateKey = "account:user-duplicate|scope:personal"
+        let duplicateKey = "account:user-duplicate"
         let state = UsageAnalyticsState(
             records: [],
             snapshots: [
@@ -1203,11 +1203,11 @@ struct CodexPoolManagerTests {
 
         let recommendation = UsageAnalyticsEngine.recommendation(
             accounts: [accountA, accountB],
-            activeAccountKey: accountA.deduplicationKey,
+            activeAccountKey: accountA.usageAnalyticsAccountKey,
             etasByAccountKey: [:]
         )
 
-        #expect(recommendation.targetAccountKey == accountB.deduplicationKey)
+        #expect(recommendation.targetAccountKey == accountB.usageAnalyticsAccountKey)
         #expect(!recommendation.reason.isEmpty)
     }
 
@@ -1336,7 +1336,7 @@ struct CodexPoolManagerTests {
             records: [
                 UsageAnalyticsRecord(
                     timestamp: now,
-                    accountKey: account.deduplicationKey,
+                    accountKey: account.usageAnalyticsAccountKey,
                     weeklyDeltaPercent: 8,
                     fiveHourDeltaPercent: 2
                 ),

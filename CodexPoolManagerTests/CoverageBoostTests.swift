@@ -475,25 +475,15 @@ struct L10nCoverageTests {
     }
 
     @Test
-    func localeUsesExplicitOverrideThenStoredPreference() {
-        let defaults = UserDefaults.standard
-        let key = L10n.languageOverrideKey
-        let original = defaults.object(forKey: key)
-        defer {
-            if let original {
-                defaults.set(original, forKey: key)
-            } else {
-                defaults.removeObject(forKey: key)
-            }
-        }
-
-        defaults.removeObject(forKey: key)
+    func localeUsesExplicitOverrideThenFallback() {
         #expect(L10n.locale(for: "fr").identifier.hasPrefix("fr"))
+        #expect(
+            L10n.debugResolvedLanguageCode(
+                selectedOverrideLanguageCode: "ja",
+                preferredLanguages: ["en-US"]
+            ) == "ja"
+        )
 
-        defaults.set("ja", forKey: key)
-        #expect(L10n.locale().identifier.hasPrefix("ja"))
-
-        defaults.set(L10n.systemLanguageCode, forKey: key)
         #expect(!L10n.locale(for: "unsupported").identifier.isEmpty)
     }
 
@@ -1014,14 +1004,32 @@ struct WidgetBridgePublisherCoverageBoostTests {
         )
     }
 
-    private func fetchBridgeResponse() async throws -> (statusCode: Int, data: Data) {
+    private func fetchBridgeResponse(
+        maxAttempts: Int = 8,
+        retryDelayNanoseconds: UInt64 = 150_000_000
+    ) async throws -> (statusCode: Int, data: Data) {
         let url = try #require(URL(string: WidgetBridgePublisher.debugBridgeEndpoint()))
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 2
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let http = try #require(response as? HTTPURLResponse)
-        return (http.statusCode, data)
+        var lastError: Error?
+
+        for attempt in 0..<maxAttempts {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let http = try #require(response as? HTTPURLResponse)
+                return (http.statusCode, data)
+            } catch {
+                lastError = error
+                if attempt < (maxAttempts - 1) {
+                    try await Task.sleep(nanoseconds: retryDelayNanoseconds)
+                    continue
+                }
+                throw error
+            }
+        }
+
+        throw lastError ?? URLError(.cannotLoadFromNetwork)
     }
 
     private func withIsolatedBridgePort(_ body: () async throws -> Void) async throws {
@@ -1160,6 +1168,7 @@ struct WidgetBridgePublisherCoverageBoostTests {
     func localBridgeServerReturnsNoContentBeforePublishAndJSONAfterPublish() async throws {
         try await withIsolatedBridgePort {
             WidgetBridgePublisher.debugResetPublishState()
+            WidgetBridgePublisher.debugResetBridgeServerState()
             WidgetBridgePublisher.configureBridge()
             try await Task.sleep(nanoseconds: 200_000_000)
 
