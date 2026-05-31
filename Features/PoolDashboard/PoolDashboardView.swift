@@ -130,6 +130,11 @@ struct PoolDashboardView: View {
         static let timeoutNanoseconds: UInt64 = 45_000_000_000
         static let stuckRecoveryNanoseconds: UInt64 = 70_000_000_000
     }
+    private enum ResponsiveLayout {
+        static let contentHorizontalPadding: CGFloat = 16
+        static let dashboardChromeStackBreakpoint: CGFloat = 1_000
+        static let workspaceContentStackBreakpoint: CGFloat = 1_000
+    }
     private enum WorkspaceDrawerState {
         case collapsed
         case partial
@@ -601,56 +606,10 @@ struct PoolDashboardView: View {
                 .frame(maxHeight: .infinity)
 
             GeometryReader { contentGeometry in
-                VStack(spacing: 0) {
-                    ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                            ViewThatFits(in: .horizontal) {
-                                HStack(alignment: .top, spacing: 12) {
-                                    DashboardHeaderSectionView(
-                                        accountCount: state.uniqueAccountsCount,
-                                        availableCount: state.availableAccountsCount,
-                                        overallUsagePercent: Int(state.overallUsageRatio * 100),
-                                        modeTitle: state.mode.rawValue
-                                    )
-
-                                    syncToolbarPanel
-                                }
-
-                                VStack(alignment: .leading, spacing: 10) {
-                                    DashboardHeaderSectionView(
-                                        accountCount: state.uniqueAccountsCount,
-                                        availableCount: state.availableAccountsCount,
-                                        overallUsagePercent: Int(state.overallUsageRatio * 100),
-                                        modeTitle: state.mode.rawValue
-                                    )
-
-                                    syncToolbarPanel
-                                }
-                            }
-
-                            accountUsagePanel
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 10)
-                    }
-
-                    workspaceCollapseToggle()
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 10)
-                        .background(
-                            PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeFooterOpacity)
-                                .overlay(alignment: .top) {
-                                    Rectangle()
-                                        .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
-                                        .frame(height: 1)
-                                }
-                        )
-
-                    if workspaceDrawerState.isVisible {
-                        workspaceDrawerPanel(height: workspaceDrawerHeight(for: contentGeometry.size.height))
-                    }
-                }
+                dashboardMainColumn(
+                    viewportWidth: contentGeometry.size.width,
+                    viewportHeight: contentGeometry.size.height
+                )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -664,6 +623,92 @@ struct PoolDashboardView: View {
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showUsageRawJSON)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: viewState.showSwitchLaunchLog)
         .animation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration), value: selectedWorkspace)
+    }
+
+    private func dashboardMainColumn(
+        viewportWidth: CGFloat,
+        viewportHeight: CGFloat
+    ) -> some View {
+        let safeViewportWidth = max(0, viewportWidth)
+        let contentWidth = Self.contentWidth(for: safeViewportWidth)
+
+        return VStack(alignment: .leading, spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                dashboardScrollableContent(availableWidth: contentWidth)
+                    .frame(width: contentWidth, alignment: .leading)
+                    .padding(.horizontal, ResponsiveLayout.contentHorizontalPadding)
+                    .padding(.top, 14)
+                    .padding(.bottom, 10)
+                    .frame(width: safeViewportWidth, alignment: .leading)
+            }
+            .frame(width: safeViewportWidth, alignment: .leading)
+
+            workspaceCollapseToggle()
+                .padding(.horizontal, ResponsiveLayout.contentHorizontalPadding)
+                .padding(.bottom, 10)
+                .background(
+                    PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeFooterOpacity)
+                        .overlay(alignment: .top) {
+                            Rectangle()
+                                .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
+                                .frame(height: 1)
+                        }
+                )
+                .frame(width: safeViewportWidth, alignment: .leading)
+
+            if workspaceDrawerState.isVisible {
+                workspaceDrawerPanel(
+                    height: workspaceDrawerHeight(for: viewportHeight),
+                    viewportWidth: safeViewportWidth
+                )
+            }
+        }
+        .frame(width: safeViewportWidth, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func dashboardScrollableContent(availableWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+            dashboardHeaderChrome(availableWidth: availableWidth)
+            accountUsagePanel(availableWidth: availableWidth)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func dashboardHeaderChrome(availableWidth: CGFloat) -> some View {
+        if Self.usesStackedDashboardChrome(availableWidth: availableWidth) {
+            VStack(alignment: .leading, spacing: 10) {
+                dashboardHeaderSection
+                syncToolbarPanel
+            }
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                dashboardHeaderSection
+                syncToolbarPanel
+            }
+        }
+    }
+
+    private var dashboardHeaderSection: some View {
+        DashboardHeaderSectionView(
+            accountCount: state.uniqueAccountsCount,
+            availableCount: state.availableAccountsCount,
+            overallUsagePercent: Int(state.overallUsageRatio * 100),
+            modeTitle: state.mode.rawValue
+        )
+    }
+
+    private static func contentWidth(for viewportWidth: CGFloat) -> CGFloat {
+        max(0, viewportWidth - ResponsiveLayout.contentHorizontalPadding * 2)
+    }
+
+    private static func usesStackedDashboardChrome(availableWidth: CGFloat) -> Bool {
+        availableWidth < ResponsiveLayout.dashboardChromeStackBreakpoint
+    }
+
+    private static func usesStackedWorkspaceContent(availableWidth: CGFloat) -> Bool {
+        availableWidth < ResponsiveLayout.workspaceContentStackBreakpoint
     }
 
     private var collapsedSidebarHandle: some View {
@@ -707,21 +752,27 @@ struct PoolDashboardView: View {
         }
     }
 
-    private func workspaceDrawerPanel(height: CGFloat) -> some View {
-        VStack(spacing: 0) {
+    private func workspaceDrawerPanel(height: CGFloat, viewportWidth: CGFloat) -> some View {
+        let safeViewportWidth = max(0, viewportWidth)
+        let contentWidth = Self.contentWidth(for: safeViewportWidth)
+
+        return VStack(alignment: .leading, spacing: 0) {
             Rectangle()
                 .fill(PoolDashboardTheme.panelInnerStroke.opacity(0.75))
                 .frame(height: 1)
 
             ScrollView(showsIndicators: false) {
-                workspaceContent
+                workspaceContent(availableWidth: contentWidth)
                     .id(selectedWorkspace.id)
-                    .padding(.horizontal, 16)
+                    .frame(width: contentWidth, alignment: .leading)
+                    .padding(.horizontal, ResponsiveLayout.contentHorizontalPadding)
                     .padding(.vertical, 12)
+                    .frame(width: safeViewportWidth, alignment: .leading)
             }
-            .frame(height: height, alignment: .topLeading)
+            .frame(width: safeViewportWidth, height: height, alignment: .topLeading)
             .background(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeStrongOpacity))
         }
+        .frame(width: safeViewportWidth, alignment: .topLeading)
     }
 
     private func workspaceCollapseToggle() -> some View {
@@ -816,7 +867,7 @@ struct PoolDashboardView: View {
         return workspaces
     }
 
-    private var workspaceContent: some View {
+    private func workspaceContent(availableWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
             PanelSectionHeaderView(
                 title: selectedWorkspace.title,
@@ -825,11 +876,20 @@ struct PoolDashboardView: View {
             )
 
             if hasWorkspaceContextPanel {
-                HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
-                    workspaceMainPanel
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                    workspaceContextPanel
-                        .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
+                if Self.usesStackedWorkspaceContent(availableWidth: availableWidth) {
+                    VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                        workspaceMainPanel
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        workspaceContextPanel
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: PoolDashboardTheme.sectionSpacing) {
+                        workspaceMainPanel
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        workspaceContextPanel
+                            .frame(width: PoolDashboardTheme.workspaceContextWidth, alignment: .topLeading)
+                    }
                 }
             } else {
                 workspaceMainPanel
@@ -1323,11 +1383,12 @@ struct PoolDashboardView: View {
         )
     }
 
-    private var accountUsagePanel: some View {
+    private func accountUsagePanel(availableWidth: CGFloat) -> some View {
         AccountUsagePanelView(
             newAccountName: $formState.newAccountName,
             newAccountQuota: $formState.newAccountQuota,
             selectedGroupName: $selectedGroupName,
+            availableWidth: availableWidth,
             accounts: state.accounts,
             groups: state.groups,
             activeAccountID: state.activeAccountID,
@@ -6672,6 +6733,14 @@ extension PoolDashboardView {
             latestVersion: latestVersion,
             release: release
         ).id
+    }
+
+    static func debugUsesStackedDashboardChrome(availableWidth: CGFloat) -> Bool {
+        usesStackedDashboardChrome(availableWidth: availableWidth)
+    }
+
+    static func debugUsesStackedWorkspaceContent(availableWidth: CGFloat) -> Bool {
+        usesStackedWorkspaceContent(availableWidth: availableWidth)
     }
 
     @MainActor

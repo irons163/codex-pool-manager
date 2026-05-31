@@ -7,23 +7,16 @@ struct DashboardHeaderSectionView: View {
     let modeTitle: String
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                ForEach(tiles) { tile in
-                    dashboardTile(tile)
-                }
-            }
-
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 130), spacing: 8)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                ForEach(tiles) { tile in
-                    dashboardTile(tile)
-                }
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 130), spacing: 8)],
+            alignment: .leading,
+            spacing: 8
+        ) {
+            ForEach(tiles) { tile in
+                dashboardTile(tile)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var tiles: [DashboardHeaderTile] {
