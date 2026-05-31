@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct AccountUsagePanelView: View {
+    private enum ResponsiveLayout {
+        static let headerControlsStackBreakpoint: CGFloat = 1_050
+        static let sortAndLayoutStackBreakpoint: CGFloat = 760
+    }
+
     private enum DeleteConfirmationTarget: Identifiable {
         case group(name: String)
         case account(id: UUID, name: String)
@@ -78,6 +83,7 @@ struct AccountUsagePanelView: View {
     @State private var isGroupRenameEditorVisible = false
     @State private var deleteConfirmationTarget: DeleteConfirmationTarget?
     @State private var draftAccountNames: [UUID: String] = [:]
+    @State private var panelWidth: CGFloat = 0
     @State private var gridContainerWidth: CGFloat = 0
     @FocusState private var focusedAccountNameID: UUID?
     @FocusState private var isRenameGroupNameFocused: Bool
@@ -92,6 +98,7 @@ struct AccountUsagePanelView: View {
     @Binding var newAccountQuota: Int
     @Binding var selectedGroupName: String
 
+    let availableWidth: CGFloat?
     let accounts: [AgentAccount]
     let groups: [String]
     let activeAccountID: UUID?
@@ -144,6 +151,41 @@ struct AccountUsagePanelView: View {
         groupContainsCurrentAccount(named: selectedGroupName)
     }
 
+    private var measuredGridWidth: CGFloat? {
+        let width = effectiveGridWidth
+        return width > 0 ? width : nil
+    }
+
+    private var effectiveGridWidth: CGFloat {
+        if let availableWidth {
+            let safeAvailableWidth = max(0, availableWidth)
+            if gridContainerWidth > 0 {
+                return min(safeAvailableWidth, gridContainerWidth)
+            }
+            return safeAvailableWidth
+        }
+        return gridContainerWidth
+    }
+
+    private var effectivePanelWidth: CGFloat {
+        if let availableWidth {
+            let safeAvailableWidth = max(0, availableWidth)
+            if panelWidth > 0 {
+                return min(safeAvailableWidth, panelWidth)
+            }
+            return safeAvailableWidth
+        }
+        return panelWidth
+    }
+
+    private var usesStackedHeaderControls: Bool {
+        Self.usesStackedHeaderControls(availableWidth: effectivePanelWidth)
+    }
+
+    private var usesStackedSortAndLayoutControls: Bool {
+        Self.usesStackedSortAndLayoutControls(availableWidth: effectivePanelWidth)
+    }
+
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 12) {
@@ -173,13 +215,14 @@ struct AccountUsagePanelView: View {
                 }
 
                 ScrollView {
-                    LazyVGrid(columns: gridColumns(for: gridContainerWidth), alignment: .leading, spacing: accountGridSpacing) {
+                    LazyVGrid(columns: gridColumns(for: effectiveGridWidth), alignment: .leading, spacing: accountGridSpacing) {
                         ForEach(sortedAccounts) { account in
                             accountCard(account)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(width: measuredGridWidth, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(minHeight: PoolDashboardTheme.usageListMinHeight)
                 .background {
                     GeometryReader { proxy in
@@ -189,8 +232,19 @@ struct AccountUsagePanelView: View {
                             }
                             .onChange(of: proxy.size.width) { _, newWidth in
                                 gridContainerWidth = max(0, newWidth)
-                            }
+                        }
                     }
+                }
+            }
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear {
+                            panelWidth = max(0, proxy.size.width)
+                        }
+                        .onChange(of: proxy.size.width) { _, newWidth in
+                            panelWidth = max(0, newWidth)
+                        }
                 }
             }
         }
@@ -224,36 +278,43 @@ struct AccountUsagePanelView: View {
         }
     }
 
+    @ViewBuilder
     private var headerRow: some View {
-        ViewThatFits(in: .horizontal) {
+        if usesStackedHeaderControls {
+            VStack(alignment: .leading, spacing: 8) {
+                accountUsageTitle
+
+                sortingLayoutControls
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
             HStack(alignment: .center, spacing: 10) {
-                Text(L10n.text("account_usage.title"))
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+                accountUsageTitle
 
                 Spacer(minLength: 0)
 
                 sortingLayoutControls
             }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.text("account_usage.title"))
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
-
-                sortingLayoutControls
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
+    private var accountUsageTitle: some View {
+        Text(L10n.text("account_usage.title"))
+            .font(.system(size: 15, weight: .semibold, design: .rounded))
+            .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+    }
+
+    @ViewBuilder
     private var sortingLayoutControls: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) {
+        if usesStackedHeaderControls {
+            VStack(alignment: .leading, spacing: 8) {
                 sortPriorityToggles
                 sortAndLayoutControls
             }
-            VStack(alignment: .trailing, spacing: 8) {
+        } else {
+            HStack(spacing: 10) {
                 sortPriorityToggles
                 sortAndLayoutControls
             }
@@ -282,17 +343,27 @@ struct AccountUsagePanelView: View {
         }
     }
 
+    @ViewBuilder
     private var sortAndLayoutControls: some View {
-        ViewThatFits(in: .horizontal) {
+        if usesStackedSortAndLayoutControls {
+            VStack(alignment: .leading, spacing: 8) {
+                sortMenuControl
+                layoutModePicker
+            }
+        } else {
             HStack(spacing: 10) {
                 sortMenuControl
                 layoutModePicker
             }
-            VStack(alignment: .trailing, spacing: 8) {
-                sortMenuControl
-                layoutModePicker
-            }
         }
+    }
+
+    private static func usesStackedHeaderControls(availableWidth: CGFloat) -> Bool {
+        availableWidth > 0 && availableWidth < ResponsiveLayout.headerControlsStackBreakpoint
+    }
+
+    private static func usesStackedSortAndLayoutControls(availableWidth: CGFloat) -> Bool {
+        availableWidth > 0 && availableWidth < ResponsiveLayout.sortAndLayoutStackBreakpoint
     }
 
     private var sortMenuControl: some View {
@@ -1176,6 +1247,14 @@ struct AccountUsagePanelView: View {
         }
     }
 }
+
+#if DEBUG
+extension AccountUsagePanelView {
+    static func debugUsesStackedHeaderControls(availableWidth: CGFloat) -> Bool {
+        usesStackedHeaderControls(availableWidth: availableWidth)
+    }
+}
+#endif
 
 private extension Array {
     func stablePartitioned(by predicate: (Element) -> Bool) -> [Element] {

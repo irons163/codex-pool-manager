@@ -545,6 +545,7 @@ struct ViewSmokeCoverageTests {
                 newAccountName: binding(nameBox),
                 newAccountQuota: binding(quotaBox),
                 selectedGroupName: binding(groupBox),
+                availableWidth: nil,
                 accounts: accounts,
                 groups: [AgentAccount.defaultGroupName, "Ops"],
                 activeAccountID: activeID,
@@ -1053,6 +1054,16 @@ struct ViewSmokeCoverageTests {
         if let persisted = store.saved.last {
             #expect(persisted.accounts.count == state.accounts.count)
         }
+    }
+
+    @Test
+    func poolDashboardResponsiveLayoutBreakpointsPreferStackingBeforeClipping() {
+        #expect(PoolDashboardView.debugUsesStackedDashboardChrome(availableWidth: 940))
+        #expect(!PoolDashboardView.debugUsesStackedDashboardChrome(availableWidth: 1120))
+        #expect(PoolDashboardView.debugUsesStackedWorkspaceContent(availableWidth: 940))
+        #expect(!PoolDashboardView.debugUsesStackedWorkspaceContent(availableWidth: 1120))
+        #expect(AccountUsagePanelView.debugUsesStackedHeaderControls(availableWidth: 940))
+        #expect(!AccountUsagePanelView.debugUsesStackedHeaderControls(availableWidth: 1120))
     }
 
     @Test
