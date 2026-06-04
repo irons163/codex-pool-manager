@@ -206,6 +206,12 @@ Focus 模式不進行智慧自動切換。
 
 預設支援公開 client 流程，也可改用你自己的 OAuth client 參數。
 
+### API Key 中轉 Provider
+
+Codex Pool Manager 可以新增 API Key / 中轉帳號，供 Codex CLI custom provider 使用。中轉帳號會寫入 `~/.codex/config.toml` 的 provider 區塊，並透過 `codex login --with-api-key` 讓 Codex 使用該 API key。
+
+中轉帳號不支援 ChatGPT/Codex 訂閱用量同步。它可以手動切換，但在尚未支援中轉用量來源前，不會納入自動智慧/專注切換候選。
+
 ### 手動 callback 流程
 
 若瀏覽器 callback 無法在 App 內直接完成：
@@ -224,6 +230,7 @@ Focus 模式不進行智慧自動切換。
 - OAuth 登入面板
 - 進階 OAuth 參數
 - 本機 OAuth 帳號掃描/匯入
+- API Key 中轉 Provider 設定
 
 ### Runtime Strategy
 

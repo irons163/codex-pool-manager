@@ -205,6 +205,12 @@ The app scans local auth JSON from common locations:
 
 By default, the app supports public client flow and also allows your own OAuth client parameters.
 
+### API Key Relay Providers
+
+Codex Pool Manager can add an API Key / Relay account for Codex CLI custom providers. Relay accounts write a provider block to `~/.codex/config.toml` and authenticate Codex through `codex login --with-api-key`.
+
+Relay accounts do not support ChatGPT/Codex subscription usage sync. They are available for manual switching, but are excluded from automatic intelligent/focus switching until a relay-specific usage source is configured.
+
 ### Manual callback flow
 
 If browser callback cannot complete directly in-app:
@@ -223,6 +229,7 @@ The UI is organized into workspaces for clearer operational boundaries.
 - OAuth sign-in panel
 - Advanced OAuth parameters
 - Local OAuth account scanning/import
+- API Key Relay provider setup
 
 ### Runtime Strategy
 
