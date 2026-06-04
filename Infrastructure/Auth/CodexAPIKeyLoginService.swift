@@ -1,0 +1,91 @@
+import Foundation
+
+enum CodexAPIKeyLoginError: Error, LocalizedError, Equatable {
+    case missingCodexCLI
+    case loginFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missingCodexCLI:
+            return L10n.text("relay.error.codex_cli_missing")
+        case let .loginFailed(message):
+            return L10n.text("relay.error.login_failed_format", message)
+        }
+    }
+}
+
+private final class CodexAPIKeyLoginContinuationBox: @unchecked Sendable {
+    private let lock = NSLock()
+    nonisolated(unsafe) private var didComplete = false
+    private let continuation: CheckedContinuation<(terminationStatus: Int32, output: String), Error>
+
+    init(_ continuation: CheckedContinuation<(terminationStatus: Int32, output: String), Error>) {
+        self.continuation = continuation
+    }
+
+    nonisolated func finish(_ result: Result<(terminationStatus: Int32, output: String), Error>) {
+        lock.lock()
+        if didComplete {
+            lock.unlock()
+            return
+        }
+        didComplete = true
+        lock.unlock()
+
+        continuation.resume(with: result)
+    }
+}
+
+struct CodexAPIKeyLoginService {
+    var executableURLProvider: () -> URL? = {
+        ["/opt/homebrew/bin/codex", "/usr/local/bin/codex", "/usr/bin/codex"]
+            .map(URL.init(fileURLWithPath:))
+            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+    }
+
+    var processRunner: (URL, [String], Data) async throws -> (terminationStatus: Int32, output: String) = { executableURL, arguments, input in
+        try await withCheckedThrowingContinuation { continuation in
+            let continuationBox = CodexAPIKeyLoginContinuationBox(continuation)
+            let process = Process()
+            let stdout = Pipe()
+            let stdin = Pipe()
+            process.executableURL = executableURL
+            process.arguments = arguments
+            process.standardOutput = stdout
+            process.standardError = stdout
+            process.standardInput = stdin
+            process.terminationHandler = { process in
+                let data = stdout.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? ""
+                continuationBox.finish(.success((process.terminationStatus, output)))
+            }
+
+            do {
+                try process.run()
+                stdin.fileHandleForWriting.write(input)
+                try stdin.fileHandleForWriting.close()
+            } catch {
+                if process.isRunning {
+                    process.terminate()
+                }
+                continuationBox.finish(.failure(error))
+            }
+        }
+    }
+
+    func login(apiKey: String) async throws {
+        guard let executableURL = executableURLProvider() else {
+            throw CodexAPIKeyLoginError.missingCodexCLI
+        }
+
+        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = try await processRunner(
+            executableURL,
+            ["login", "--with-api-key"],
+            Data(trimmed.utf8)
+        )
+        guard result.terminationStatus == 0 else {
+            throw CodexAPIKeyLoginError.loginFailed(result.output)
+        }
+    }
+}

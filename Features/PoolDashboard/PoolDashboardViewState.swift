@@ -16,6 +16,8 @@ struct PoolDashboardViewState {
 
     var oauthError: String?
     var oauthSuccessMessage: String?
+    var relayError: String?
+    var relaySuccessMessage: String?
 
     var lastSwitchLaunchLog = ""
     var showSwitchLaunchLog = false

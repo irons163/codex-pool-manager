@@ -385,3 +385,64 @@ struct PoolDashboardViewMutationCoordinatorTests {
         #expect(formState.oauthAccountName == "new-name")
     }
 }
+
+struct RelayAccountCoordinatorTests {
+    @Test
+    func relayCoordinatorAddsRelayAccountAndMarksUsageSyncUnavailable() async {
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLogin: { _ in }
+        )
+        var state = AccountPoolState(accounts: [], mode: .manual)
+        var viewState = PoolDashboardViewState()
+
+        let output = await coordinator.addRelayAccount(
+            to: state,
+            viewState: viewState,
+            name: "Mirror",
+            providerID: "mirror",
+            providerName: "mirror",
+            baseURL: "https://ai.liaryai.com/api/codex",
+            wireAPI: "responses",
+            apiKey: "sk-relay"
+        )
+        state = output.state
+        viewState = output.viewState
+
+        #expect(state.accounts.count == 1)
+        #expect(state.accounts[0].credentialType == .relayAPIKey)
+        #expect(state.accounts[0].apiToken == "sk-relay")
+        #expect(state.accounts[0].relayProviderID == "mirror")
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == AgentAccount.relayUsageSyncUnavailableReason)
+        #expect(viewState.relaySuccessMessage == L10n.text("relay.status.added"))
+    }
+
+    @Test
+    func relayCoordinatorSwitchesByApplyingConfigThenLoggingIn() async {
+        let events = LockedValue<[String]>([])
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
+            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(account, viewState: PoolDashboardViewState())
+
+        #expect(events.value == ["config:mirror", "login:sk-relay"])
+        #expect(output.viewState.switchLaunchError == nil)
+        #expect(output.viewState.lastSwitchLaunchLog.contains("mirror"))
+    }
+}

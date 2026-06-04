@@ -566,3 +566,11 @@
 "relay.error.invalid_provider_id" = "Provider ID 只能包含英文字母、數字與底線。";
 "relay.error.invalid_base_url" = "中轉 Base URL 必須是有效的 http 或 https URL。";
 "relay.error.config_write_failed_format" = "無法更新 Codex config：%@";
+"relay.status.added" = "已新增中轉帳號。";
+"relay.error.codex_cli_missing" = "找不到 Codex CLI。";
+"relay.error.login_failed_format" = "Codex API key 登入失敗：%@";
+"relay.error.missing_api_key" = "需要 API key。";
+"relay.switch.start_format" = "正在切換 Codex provider 至 %@";
+"relay.switch.config_updated_format" = "已更新 Codex config provider：%@";
+"relay.switch.login_completed" = "Codex API key 登入完成。";
+"relay.switch.failed_format" = "中轉切換失敗：%@";

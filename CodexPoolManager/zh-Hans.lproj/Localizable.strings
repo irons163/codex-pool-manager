@@ -566,3 +566,11 @@
 "relay.error.invalid_provider_id" = "Provider ID may contain only letters, numbers, and underscores.";
 "relay.error.invalid_base_url" = "Relay base URL must be a valid http or https URL.";
 "relay.error.config_write_failed_format" = "Unable to update Codex config: %@";
+"relay.status.added" = "Relay account added.";
+"relay.error.codex_cli_missing" = "Codex CLI was not found.";
+"relay.error.login_failed_format" = "Codex API key login failed: %@";
+"relay.error.missing_api_key" = "API key is required.";
+"relay.switch.start_format" = "Switching Codex provider to %@";
+"relay.switch.config_updated_format" = "Updated Codex config provider: %@";
+"relay.switch.login_completed" = "Codex API key login completed.";
+"relay.switch.failed_format" = "Relay switch failed: %@";
