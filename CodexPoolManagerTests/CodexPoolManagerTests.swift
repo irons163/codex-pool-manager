@@ -2304,7 +2304,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func snapshotExportOmitsUsageFieldsForRefetchableAccounts() throws {
+    func snapshotExportKeepsUsageFieldsForRefetchableAccountsUntilRefetchSucceeds() throws {
         let snapshot = AccountPoolSnapshot(
             accounts: [
                 AgentAccount(
@@ -2332,14 +2332,14 @@ struct CodexPoolManagerTests {
 
         let json = try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
 
-        #expect(!json.contains("\"usedUnits\""))
-        #expect(!json.contains("\"quota\""))
-        #expect(!json.contains("\"usageWindowName\""))
-        #expect(!json.contains("\"usageWindowResetAt\""))
+        #expect(json.contains("\"usedUnits\""))
+        #expect(json.contains("\"quota\""))
+        #expect(json.contains("\"usageWindowName\""))
+        #expect(json.contains("\"usageWindowResetAt\""))
     }
 
     @Test
-    func snapshotImportResetsUsageForAccountsThatCanRefetch() throws {
+    func snapshotImportKeepsKnownUsageForAccountsThatCanRefetch() throws {
         let accountID = UUID()
         let snapshot = AccountPoolSnapshot(
             accounts: [
@@ -2376,10 +2376,10 @@ struct CodexPoolManagerTests {
 
         let normalized = AccountPoolSnapshotCodec.prepareForUsageRefetch(snapshot)
 
-        #expect(normalized.accounts[0].usedUnits == 0)
-        #expect(normalized.accounts[0].quota == 100)
-        #expect(normalized.accounts[0].usageWindowName == nil)
-        #expect(normalized.accounts[0].usageWindowResetAt == nil)
+        #expect(normalized.accounts[0].usedUnits == 77)
+        #expect(normalized.accounts[0].quota == 999)
+        #expect(normalized.accounts[0].usageWindowName == "primary_window")
+        #expect(normalized.accounts[0].usageWindowResetAt == Date(timeIntervalSince1970: 1_700_000_000))
         #expect(normalized.accounts[1].usedUnits == 20)
         #expect(normalized.accounts[1].quota == 300)
     }
@@ -3726,7 +3726,7 @@ extension CodexPoolManagerTests {
     }
 
     @Test
-    func poolDashboardBackupCoordinatorExportRefetchableKeepsTokenAndDropsUsageFields() throws {
+    func poolDashboardBackupCoordinatorExportRefetchableKeepsTokenAndUsageFields() throws {
         let coordinator = PoolDashboardBackupCoordinator()
         let accountID = UUID()
         let snapshot = AccountPoolSnapshot(
@@ -3759,14 +3759,14 @@ extension CodexPoolManagerTests {
         let first = try #require(accounts.first)
 
         #expect(first["apiToken"] as? String == "token-keep")
-        #expect(first["quota"] == nil)
-        #expect(first["usedUnits"] == nil)
-        #expect(first["usageWindowName"] == nil)
-        #expect(first["usageWindowResetAt"] == nil)
+        #expect(first["quota"] as? Int == 100)
+        #expect(first["usedUnits"] as? Int == 88)
+        #expect(first["usageWindowName"] as? String == "primary_window")
+        #expect(first["usageWindowResetAt"] as? String == "2023-11-14T22:13:20Z")
     }
 
     @Test
-    func poolDashboardBackupCoordinatorImportNormalizesRefetchableUsage() throws {
+    func poolDashboardBackupCoordinatorImportKeepsRefetchableUsageUntilRefetchSucceeds() throws {
         let coordinator = PoolDashboardBackupCoordinator()
         let accountID = UUID()
         let snapshot = AccountPoolSnapshot(
@@ -3797,11 +3797,12 @@ extension CodexPoolManagerTests {
         let importedState = try #require(coordinator.importSnapshotState(from: json).state)
         let importedAccount = try #require(importedState.accounts.first)
 
-        #expect(importedAccount.usedUnits == 0)
-        #expect(importedAccount.quota == 100)
+        #expect(importedAccount.usedUnits == 99)
+        #expect(importedAccount.quota == 1000)
         #expect(importedAccount.apiToken == "token-import")
         #expect(importedAccount.chatGPTAccountID == "acct-import")
-        #expect(importedAccount.usageWindowName == nil)
+        #expect(importedAccount.usageWindowName == "primary_window")
+        #expect(importedAccount.usageWindowResetAt == Date(timeIntervalSince1970: 1_700_000_000))
     }
 
     @Test
@@ -5175,6 +5176,49 @@ extension CodexPoolManagerTests {
         #expect(state.accounts[0].chatGPTAccountID == "acct-1")
         #expect(state.accounts[0].quota == 1000)
         #expect(state.accounts[0].usedUnits == 0)
+    }
+
+    @Test
+    func poolAccountUpsertOAuthSignInPreservesExistingUsageWhenUsageFetchFails() {
+        let accountID = UUID()
+        let resetAt = Date(timeIntervalSince1970: 1_700_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "old@example.com",
+                    usedUnits: 100,
+                    quota: 100,
+                    apiToken: "token-old",
+                    email: "old@example.com",
+                    chatGPTAccountID: "acct-1",
+                    usageWindowName: "weekly_window",
+                    usageWindowResetAt: resetAt
+                )
+            ],
+            mode: .manual
+        )
+        let coordinator = PoolAccountUpsertCoordinator()
+        let tokens = OAuthTokens(accessToken: "token-new", refreshToken: nil, idToken: nil)
+        let claims = OAuthIDTokenClaims(subject: "user-1", accountID: "acct-1", email: "new@example.com")
+
+        _ = coordinator.applyOAuthSignIn(
+            state: &state,
+            tokens: tokens,
+            claims: claims,
+            usage: nil,
+            identityScope: AgentAccount.personalIdentityScope,
+            accountNameInput: "",
+            fallbackQuota: 1000
+        )
+
+        #expect(state.accounts[0].id == accountID)
+        #expect(state.accounts[0].apiToken == "token-new")
+        #expect(state.accounts[0].usedUnits == 100)
+        #expect(state.accounts[0].quota == 100)
+        #expect(state.accounts[0].remainingUnits == 0)
+        #expect(state.accounts[0].usageWindowName == "weekly_window")
+        #expect(state.accounts[0].usageWindowResetAt == resetAt)
     }
 
     @Test
