@@ -61,6 +61,7 @@
 		4AB61EE52F73EB04001AC4CB /* ActivityLogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */; };
 		4AB61EE72F73ECBA001AC4CB /* OAuthLoginPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE62F73ECBA001AC4CB /* OAuthLoginPanelView.swift */; };
 		4AB61EE92F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE82F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift */; };
+		4B73A0082F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */; };
 		4AB61EEB2F73ED9E001AC4CB /* StrategySettingsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EEA2F73ED9E001AC4CB /* StrategySettingsPanelView.swift */; };
 		4AB61EED2F73ED9E001AC4CB /* OverallUsagePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EEC2F73ED9E001AC4CB /* OverallUsagePanelView.swift */; };
 		4AB61EEF2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EEE2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift */; };
@@ -176,6 +177,7 @@
 		4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogPanelView.swift; sourceTree = "<group>"; };
 		4AB61EE62F73ECBA001AC4CB /* OAuthLoginPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthLoginPanelView.swift; sourceTree = "<group>"; };
 		4AB61EE82F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOAuthAccountsPanelView.swift; sourceTree = "<group>"; };
+		4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAPIKeyPanelView.swift; sourceTree = "<group>"; };
 		4AB61EEA2F73ED9E001AC4CB /* StrategySettingsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategySettingsPanelView.swift; sourceTree = "<group>"; };
 		4AB61EEC2F73ED9E001AC4CB /* OverallUsagePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverallUsagePanelView.swift; sourceTree = "<group>"; };
 		4AB61EEE2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolAccountUsagePresenter.swift; sourceTree = "<group>"; };
@@ -387,6 +389,7 @@
 				4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */,
 				4AB61EE62F73ECBA001AC4CB /* OAuthLoginPanelView.swift */,
 				4AB61EE82F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift */,
+				4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */,
 				4AB61EEA2F73ED9E001AC4CB /* StrategySettingsPanelView.swift */,
 				4AB61EEC2F73ED9E001AC4CB /* OverallUsagePanelView.swift */,
 				4A6D1B832F7628D200C06009 /* PanelSectionHeaderView.swift */,
@@ -720,6 +723,7 @@
 				4A5ECC8A2F74485000194C45 /* PoolDashboardBackupFlowCoordinator.swift in Sources */,
 				4AB61ED92F73E2DE001AC4CB /* CodexAuthSwitchService.swift in Sources */,
 				4B73A0062F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift in Sources */,
+				4B73A0082F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift in Sources */,
 				4AB61EF72F73F51E001AC4CB /* PoolDashboardLocalAccountsCoordinator.swift in Sources */,
 				4A9D86682F768B3500157EC1 /* PanelCodeEditorView.swift in Sources */,
 				4AB61E9E2F738FCF001AC4CB /* LocalOAuthImportViewModel.swift in Sources */,

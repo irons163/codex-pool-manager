@@ -1782,6 +1782,32 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func relayFormStateDefaultsAndReset() {
+        var formState = PoolDashboardFormState()
+
+        #expect(formState.relayProviderID == "mirror")
+        #expect(formState.relayProviderName == "mirror")
+        #expect(formState.relayBaseURL == "https://ai.liaryai.com/api/codex")
+        #expect(formState.relayWireAPI == "responses")
+
+        formState.relayAccountName = "Custom"
+        formState.relayAPIKey = "sk-test"
+        formState.relayProviderID = "custom"
+        formState.relayProviderName = "custom"
+        formState.relayBaseURL = "https://example.test/api/codex"
+        formState.relayWireAPI = "chat"
+
+        formState.resetRelayInput()
+
+        #expect(formState.relayAccountName.isEmpty)
+        #expect(formState.relayAPIKey.isEmpty)
+        #expect(formState.relayProviderID == "mirror")
+        #expect(formState.relayProviderName == "mirror")
+        #expect(formState.relayBaseURL == "https://ai.liaryai.com/api/codex")
+        #expect(formState.relayWireAPI == "responses")
+    }
+
+    @Test
     func intelligentModeReportsSwitchCooldownAfterRecentSwitch() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!

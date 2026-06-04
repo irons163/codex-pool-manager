@@ -670,6 +670,46 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func relayAPIKeyPanelViewRendersEmptySuccessAndErrorStates() {
+        let accountNameBox = BindingBox("")
+        let providerIDBox = BindingBox("mirror")
+        let providerNameBox = BindingBox("mirror")
+        let baseURLBox = BindingBox("https://ai.liaryai.com/api/codex")
+        let wireAPIBox = BindingBox("responses")
+        let apiKeyBox = BindingBox("sk-relay")
+        var addCount = 0
+
+        let empty = RelayAPIKeyPanelView(
+            accountName: binding(accountNameBox),
+            providerID: binding(providerIDBox),
+            providerName: binding(providerNameBox),
+            baseURL: binding(baseURLBox),
+            wireAPI: binding(wireAPIBox),
+            apiKey: binding(apiKeyBox),
+            successMessage: nil,
+            errorMessage: nil,
+            onAddRelayAccount: { addCount += 1 }
+        )
+        renderInHostingView(empty, size: CGSize(width: 1200, height: 780))
+
+        let withStatus = RelayAPIKeyPanelView(
+            accountName: binding(accountNameBox),
+            providerID: binding(providerIDBox),
+            providerName: binding(providerNameBox),
+            baseURL: binding(baseURLBox),
+            wireAPI: binding(wireAPIBox),
+            apiKey: binding(apiKeyBox),
+            successMessage: "Relay account added.",
+            errorMessage: "Relay failed.",
+            onAddRelayAccount: { addCount += 1 }
+        )
+        renderInHostingView(withStatus, size: CGSize(width: 1200, height: 860))
+
+        #expect(addCount == 0)
+    }
+
+    @Test
+    @MainActor
     func localOAuthAccountsPanelViewRendersEmptyErrorSuccessAndJWTFallbackRows() {
         let tokenWithEmail = makeJWTLikeToken(
             payload: ["https://api.openai.com/profile": ["email": "jwt@example.com"]]

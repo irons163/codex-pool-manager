@@ -317,6 +317,7 @@ struct PoolDashboardView: View {
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
     private let oauthSignInFlowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
+    private let relayAccountCoordinator = PoolDashboardRelayAccountCoordinator()
     private let lifecycleFlowCoordinator = PoolDashboardLifecycleFlowCoordinator()
     private let quickActionsFlowCoordinator = PoolDashboardQuickActionsFlowCoordinator()
     private let localAccountsFlowCoordinator = PoolDashboardLocalAccountsFlowCoordinator()
@@ -912,7 +913,10 @@ struct PoolDashboardView: View {
     private var workspaceMainPanel: some View {
         switch selectedWorkspace {
         case .authentication:
-            oauthLoginPanel
+            VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+                oauthLoginPanel
+                relayAPIKeyPanel
+            }
         case .runtime:
             strategySettingsPanel
         case .schedule:
@@ -1164,6 +1168,22 @@ struct PoolDashboardView: View {
             },
             onCancelSignIn: {
                 cancelOAuthSignIn()
+            }
+        )
+    }
+
+    private var relayAPIKeyPanel: some View {
+        RelayAPIKeyPanelView(
+            accountName: $formState.relayAccountName,
+            providerID: $formState.relayProviderID,
+            providerName: $formState.relayProviderName,
+            baseURL: $formState.relayBaseURL,
+            wireAPI: $formState.relayWireAPI,
+            apiKey: $formState.relayAPIKey,
+            successMessage: viewState.relaySuccessMessage,
+            errorMessage: viewState.relayError,
+            onAddRelayAccount: {
+                addRelayAccount()
             }
         )
     }
@@ -2115,6 +2135,27 @@ struct PoolDashboardView: View {
         oauthSignInTask?.cancel()
         oauthSignInTask = nil
         viewState.isSigningInOAuth = false
+    }
+
+    @MainActor
+    private func addRelayAccount() {
+        Task { @MainActor in
+            let output = await relayAccountCoordinator.addRelayAccount(
+                to: state,
+                viewState: viewState,
+                name: formState.relayAccountName,
+                providerID: formState.relayProviderID,
+                providerName: formState.relayProviderName,
+                baseURL: formState.relayBaseURL,
+                wireAPI: formState.relayWireAPI,
+                apiKey: formState.relayAPIKey
+            )
+            state = output.state
+            viewState = output.viewState
+            if viewState.relayError == nil {
+                formState.resetRelayInput()
+            }
+        }
     }
 
     private func copyTextToClipboard(_ text: String) {
