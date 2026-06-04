@@ -27,7 +27,18 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
         }
         for index in snapshot.accounts.indices {
             let accountID = snapshot.accounts[index].id
-            snapshot.accounts[index].apiToken = tokenVault.token(for: accountID) ?? ""
+            let snapshotToken = snapshot.accounts[index].apiToken
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let vaultToken = tokenVault.token(for: accountID)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !vaultToken.isEmpty {
+                snapshot.accounts[index].apiToken = vaultToken
+            } else if !snapshotToken.isEmpty {
+                snapshot.accounts[index].apiToken = snapshotToken
+                tokenVault.setToken(snapshotToken, for: accountID)
+            } else {
+                snapshot.accounts[index].apiToken = ""
+            }
         }
         return snapshot
     }

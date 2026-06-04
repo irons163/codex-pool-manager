@@ -2642,6 +2642,49 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func userDefaultsStoreMigratesLegacySnapshotTokenIntoVaultOnLoad() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let legacyToken = "legacy-token"
+        let legacySnapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Legacy",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: legacyToken,
+                    chatGPTAccountID: "acct-legacy"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+        let legacyData = try JSONEncoder().encode(legacySnapshot)
+        defaults.set(legacyData, forKey: "snapshot")
+
+        let loaded = try #require(store.load())
+
+        #expect(loaded.accounts.first?.apiToken == legacyToken)
+        #expect(vault.token(for: accountID) == legacyToken)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
     func codexSyncRetriesAfterTransientFailure() async throws {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         var state = AccountPoolState(
