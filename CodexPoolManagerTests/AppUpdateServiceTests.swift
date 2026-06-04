@@ -8,6 +8,7 @@ struct AppUpdateServiceTests {
     func appUpdateErrorDescriptionsAreNonEmptyAndSpecific() {
         #expect(AppUpdateError.invalidResponse.errorDescription == "Invalid update response.")
         #expect(AppUpdateError.decodingFailed.errorDescription == "Failed to decode update metadata.")
+        #expect(AppUpdateError.noPrereleaseAvailable.errorDescription == "No prerelease update is available.")
     }
 
     @Test
@@ -167,6 +168,94 @@ struct AppUpdateServiceTests {
         #expect(headers["method"] == "GET")
         #expect(headers["accept"] == "application/vnd.github+json")
         #expect(headers["userAgent"] == "CodexPoolManager/1.0")
+    }
+
+    @Test
+    func fetchLatestReleaseCanOptIntoPrereleaseChannel() async throws {
+        let endpoint = URL(string: "https://example.com/prerelease-opt-in/releases/latest")!
+        let prereleaseEndpoint = URL(string: "https://example.com/prerelease-opt-in/releases?per_page=20")!
+        let payload = """
+        [
+          {
+            "tag_name": "v1.9.0",
+            "name": "Stable 1.9.0",
+            "html_url": "https://example.com/releases/v1.9.0",
+            "published_at": "2026-04-18T08:30:45Z",
+            "draft": false,
+            "prerelease": false,
+            "assets": []
+          },
+          {
+            "tag_name": "v1.10.0-beta.1",
+            "name": "Beta 1.10.0",
+            "html_url": "https://example.com/releases/v1.10.0-beta.1",
+            "published_at": "2026-04-19T08:30:45Z",
+            "draft": false,
+            "prerelease": true,
+            "assets": [
+              {
+                "name": "CodexPoolManager-1.10.0-beta.1-apple-silicon.dmg",
+                "browser_download_url": "https://example.com/download/beta-apple.dmg"
+              }
+            ]
+          }
+        ]
+        """
+        let observedURL = LockedValue<String?>(nil)
+        let session = makeMockedURLSession(
+            endpoint: prereleaseEndpoint,
+            statusCode: 200,
+            data: Data(payload.utf8),
+            requestObserver: { request in
+                observedURL.withLock { value in
+                    value = request.url?.absoluteString
+                }
+            }
+        )
+        let service = AppUpdateService(endpoint: endpoint, session: session)
+
+        let release = try await service.fetchLatestRelease(includePrerelease: true)
+
+        #expect(observedURL.value == prereleaseEndpoint.absoluteString)
+        #expect(release.tagName == "v1.10.0-beta.1")
+        #expect(release.normalizedVersion == "1.10.0-beta.1")
+        #expect(release.preferredInstallerURL(for: .appleSilicon)?.absoluteString == "https://example.com/download/beta-apple.dmg")
+    }
+
+    @Test
+    func fetchLatestReleaseThrowsWhenPrereleaseChannelHasNoVisibleRelease() async {
+        let endpoint = URL(string: "https://example.com/prerelease-empty/releases/latest")!
+        let prereleaseEndpoint = URL(string: "https://example.com/prerelease-empty/releases?per_page=20")!
+        let payload = """
+        [
+          {
+            "tag_name": "v1.9.0",
+            "name": "Stable 1.9.0",
+            "html_url": "https://example.com/releases/v1.9.0",
+            "draft": false,
+            "prerelease": false,
+            "assets": []
+          },
+          {
+            "tag_name": "v1.10.0-beta.1",
+            "name": "Draft beta",
+            "html_url": "https://example.com/releases/v1.10.0-beta.1",
+            "draft": true,
+            "prerelease": true,
+            "assets": []
+          }
+        ]
+        """
+        let session = makeMockedURLSession(
+            endpoint: prereleaseEndpoint,
+            statusCode: 200,
+            data: Data(payload.utf8)
+        )
+        let service = AppUpdateService(endpoint: endpoint, session: session)
+
+        await #expect(throws: AppUpdateError.noPrereleaseAvailable) {
+            _ = try await service.fetchLatestRelease(includePrerelease: true)
+        }
     }
 
     @Test

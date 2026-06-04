@@ -2552,7 +2552,8 @@ struct PoolDashboardView: View {
 
         do {
             let release = try await appUpdateService.fetchLatestRelease(
-                languageOverrideCode: appLanguageOverride
+                languageOverrideCode: appLanguageOverride,
+                includePrerelease: isPrereleaseUpdateChannelEnabled
             )
             let currentVersion = appVersionText()
             let latestVersion = release.normalizedVersion
@@ -2596,6 +2597,10 @@ struct PoolDashboardView: View {
     private func appVersionText() -> String {
         let shortVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "0"
         return AppUpdateVersioning.normalizedVersion(from: shortVersion)
+    }
+
+    private var isPrereleaseUpdateChannelEnabled: Bool {
+        AppUpdateChannel.isPrereleaseEnabled
     }
 
     private func appUpdatePublishedText(_ date: Date?) -> String {
@@ -2956,6 +2961,7 @@ struct PoolDashboardView: View {
 enum AppUpdateError: LocalizedError, Equatable {
     case invalidResponse
     case decodingFailed
+    case noPrereleaseAvailable
 
     var errorDescription: String? {
         switch self {
@@ -2963,6 +2969,28 @@ enum AppUpdateError: LocalizedError, Equatable {
             return "Invalid update response."
         case .decodingFailed:
             return "Failed to decode update metadata."
+        case .noPrereleaseAvailable:
+            return "No prerelease update is available."
+        }
+    }
+}
+
+enum AppUpdateChannel {
+    static let prereleaseUpdatesEnabledKey = "pool_dashboard.prerelease_updates_enabled"
+
+    static var isPrereleaseEnabled: Bool {
+        UserDefaults.standard.bool(forKey: prereleaseUpdatesEnabledKey)
+    }
+
+    static func sparkleFeedAssetName(for architecture: AppUpdateArchitecture) -> String {
+        let prefix = isPrereleaseEnabled ? "appcast-dev" : "appcast"
+        switch architecture {
+        case .appleSilicon:
+            return "\(prefix)-arm64.xml"
+        case .intel:
+            return "\(prefix)-x86_64.xml"
+        case .unknown:
+            return "\(prefix)-arm64.xml"
         }
     }
 }
@@ -3159,8 +3187,14 @@ struct AppUpdateService {
     var endpoint = URL(string: "https://api.github.com/repos/irons163/codex-pool-manager/releases/latest")!
     var session: URLSession = .shared
 
-    func fetchLatestRelease(languageOverrideCode: String = "system") async throws -> AppUpdateRelease {
-        var request = URLRequest(url: endpoint)
+    func fetchLatestRelease(
+        languageOverrideCode: String = "system",
+        includePrerelease: Bool = false
+    ) async throws -> AppUpdateRelease {
+        let requestURL = includePrerelease
+            ? releasesListEndpoint(from: endpoint)
+            : endpoint
+        var request = URLRequest(url: requestURL)
         request.httpMethod = "GET"
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("CodexPoolManager/1.0", forHTTPHeaderField: "User-Agent")
@@ -3172,7 +3206,17 @@ struct AppUpdateService {
 
         let decoder = JSONDecoder()
         do {
-            let payload = try decoder.decode(AppUpdateReleasePayload.self, from: data)
+            let payload: AppUpdateReleasePayload
+            if includePrerelease {
+                guard let prerelease = try decoder.decode([AppUpdateReleasePayload].self, from: data)
+                    .first(where: { $0.isVisiblePrerelease })
+                else {
+                    throw AppUpdateError.noPrereleaseAvailable
+                }
+                payload = prerelease
+            } else {
+                payload = try decoder.decode(AppUpdateReleasePayload.self, from: data)
+            }
             let release = payload.release
             if let localizedNotes = try await fetchLocalizedReleaseNotes(
                 for: release,
@@ -3182,8 +3226,21 @@ struct AppUpdateService {
             }
             return release
         } catch {
+            if let updateError = error as? AppUpdateError {
+                throw updateError
+            }
             throw AppUpdateError.decodingFailed
         }
+    }
+
+    private func releasesListEndpoint(from latestEndpoint: URL) -> URL {
+        guard var components = URLComponents(url: latestEndpoint, resolvingAgainstBaseURL: false) else {
+            return latestEndpoint
+        }
+
+        components.path = components.path.replacingOccurrences(of: "/releases/latest", with: "/releases")
+        components.queryItems = [URLQueryItem(name: "per_page", value: "20")]
+        return components.url ?? latestEndpoint
     }
 
     private func fetchLocalizedReleaseNotes(
@@ -3295,14 +3352,8 @@ final class SparkleUpdateDriver: NSObject {
 #if canImport(Sparkle)
 extension SparkleUpdateDriver: SPUUpdaterDelegate {
     func feedURLString(for updater: SPUUpdater) -> String? {
-        switch AppUpdateArchitecture.current {
-        case .appleSilicon:
-            return "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml"
-        case .intel:
-            return "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-x86_64.xml"
-        case .unknown:
-            return "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml"
-        }
+        let assetName = AppUpdateChannel.sparkleFeedAssetName(for: AppUpdateArchitecture.current)
+        return "https://github.com/irons163/codex-pool-manager/releases/latest/download/\(assetName)"
     }
 }
 #endif
@@ -3323,6 +3374,8 @@ private struct AppUpdateReleasePayload: Decodable {
     let htmlURL: URL
     let publishedAtRaw: String?
     let body: String?
+    let draft: Bool?
+    let prerelease: Bool?
     let assets: [AssetPayload]
 
     enum CodingKeys: String, CodingKey {
@@ -3331,7 +3384,13 @@ private struct AppUpdateReleasePayload: Decodable {
         case htmlURL = "html_url"
         case publishedAtRaw = "published_at"
         case body
+        case draft
+        case prerelease
         case assets
+    }
+
+    var isVisiblePrerelease: Bool {
+        prerelease == true && draft != true
     }
 
     var release: AppUpdateRelease {

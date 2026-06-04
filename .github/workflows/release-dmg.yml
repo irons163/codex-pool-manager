@@ -126,6 +126,8 @@ jobs:
 
       - name: Resolve and validate release version
         shell: bash
+        env:
+          RELEASE_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || 'false' }}
         run: |
           set -euo pipefail
 
@@ -149,7 +151,13 @@ jobs:
             exit 1
           fi
 
-          if [[ -n "$TAG_VERSION" && "$TAG_VERSION" != "$MARKETING_VERSION" ]]; then
+          TAG_BASE_VERSION="${TAG_VERSION%%[-+]*}"
+          if [[ -n "$TAG_VERSION" && "$RELEASE_PRERELEASE" == "true" && "$TAG_BASE_VERSION" != "$MARKETING_VERSION" ]]; then
+            echo "Version mismatch: prerelease tag base ($TAG_BASE_VERSION) != MARKETING_VERSION ($MARKETING_VERSION)." >&2
+            echo "Please bump MARKETING_VERSION before creating the prerelease tag." >&2
+            exit 1
+          fi
+          if [[ -n "$TAG_VERSION" && "$RELEASE_PRERELEASE" != "true" && "$TAG_VERSION" != "$MARKETING_VERSION" ]]; then
             echo "Version mismatch: release tag ($TAG_VERSION) != MARKETING_VERSION ($MARKETING_VERSION)." >&2
             echo "Please bump MARKETING_VERSION before creating the release tag." >&2
             exit 1
@@ -169,13 +177,21 @@ jobs:
           ARCH_LABEL: ${{ matrix.arch.label }}
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
           RELEASE_CHANNEL: ${{ github.event.inputs.release_channel }}
+          RELEASE_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || 'false' }}
         run: |
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           chmod +x scripts/build_and_notarize_dmg.sh
 
-          CHANNEL="${RELEASE_CHANNEL:-stable}"
+          CHANNEL="${RELEASE_CHANNEL:-}"
+          if [[ -z "$CHANNEL" ]]; then
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              CHANNEL="dev"
+            else
+              CHANNEL="stable"
+            fi
+          fi
           if [[ "$CHANNEL" != "stable" && "$CHANNEL" != "dev" ]]; then
             echo "Unsupported release channel: $CHANNEL" >&2
             exit 1
@@ -186,7 +202,7 @@ jobs:
             echo "Failed to resolve app version." >&2
             exit 1
           fi
-          if [[ "$CHANNEL" == "dev" ]]; then
+          if [[ "$CHANNEL" == "dev" && "$VERSION" != *-* ]]; then
             VERSION="${VERSION}-dev"
           fi
 
@@ -236,6 +252,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          RELEASE_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || 'false' }}
         run: |
           set -euo pipefail
           chmod +x scripts/generate_sparkle_appcast.sh
@@ -266,11 +283,30 @@ jobs:
           X86_64_SIZE="$X86_64_SIZE" \
           scripts/generate_sparkle_appcast.sh
 
+          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+            mv dist/appcast-arm64.xml dist/appcast-dev-arm64.xml
+            mv dist/appcast-x86_64.xml dist/appcast-dev-x86_64.xml
+          else
+            cp dist/appcast-arm64.xml dist/appcast-dev-arm64.xml
+            cp dist/appcast-x86_64.xml dist/appcast-dev-x86_64.xml
+          fi
+
       - name: Upload Sparkle appcast to GitHub Release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          RELEASE_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || 'false' }}
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" dist/appcast-*.xml --clobber
+          if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+            STABLE_TAG="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name')"
+            if [[ -z "${STABLE_TAG:-}" ]]; then
+              echo "Unable to resolve latest stable release for prerelease appcast upload." >&2
+              exit 1
+            fi
+            gh release upload "$STABLE_TAG" dist/appcast-dev-*.xml --clobber
+          else
+            gh release upload "$RELEASE_TAG" dist/appcast-*.xml --clobber
+          fi
