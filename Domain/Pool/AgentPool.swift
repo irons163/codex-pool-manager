@@ -1,8 +1,15 @@
 import Foundation
 
+enum AgentAccountCredentialType: String, Codable, Equatable {
+    case chatGPTOAuth = "chatgpt_oauth"
+    case relayAPIKey = "relay_api_key"
+}
+
 struct AgentAccount: Identifiable, Equatable, Codable {
     static let defaultGroupName = "Default"
     static let personalIdentityScope = "personal"
+    static let defaultRelayWireAPI = "responses"
+    static let relayUsageSyncUnavailableReason = "API key relay account: usage sync unavailable"
 
     let id: UUID
     var createdAt: Date
@@ -11,6 +18,12 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var usedUnits: Int
     var quota: Int
     var apiToken: String
+    var credentialType: AgentAccountCredentialType
+    var relayProviderID: String?
+    var relayProviderName: String?
+    var relayBaseURL: String?
+    var relayWireAPI: String?
+    var relayRequiresOpenAIAuth: Bool
     var email: String?
     var chatGPTAccountID: String?
     var identityScope: String
@@ -32,6 +45,12 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         usedUnits: Int,
         quota: Int,
         apiToken: String = "",
+        credentialType: AgentAccountCredentialType = .chatGPTOAuth,
+        relayProviderID: String? = nil,
+        relayProviderName: String? = nil,
+        relayBaseURL: String? = nil,
+        relayWireAPI: String? = nil,
+        relayRequiresOpenAIAuth: Bool = true,
         email: String? = nil,
         chatGPTAccountID: String? = nil,
         identityScope: String = AgentAccount.personalIdentityScope,
@@ -52,6 +71,13 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.usedUnits = usedUnits
         self.quota = quota
         self.apiToken = apiToken
+        self.credentialType = credentialType
+        self.relayProviderID = relayProviderID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.relayProviderName = relayProviderName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.relayBaseURL = relayBaseURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedRelayWireAPI = relayWireAPI?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.relayWireAPI = normalizedRelayWireAPI?.isEmpty == false ? normalizedRelayWireAPI : Self.defaultRelayWireAPI
+        self.relayRequiresOpenAIAuth = relayRequiresOpenAIAuth
         self.email = email
         self.chatGPTAccountID = chatGPTAccountID
         self.identityScope = AgentAccount.normalizedIdentityScope(identityScope)
@@ -77,6 +103,15 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         usedUnits = try container.decodeIfPresent(Int.self, forKey: .usedUnits) ?? 0
         quota = try container.decodeIfPresent(Int.self, forKey: .quota) ?? 100
         apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
+        credentialType = try container.decodeIfPresent(AgentAccountCredentialType.self, forKey: .credentialType) ?? .chatGPTOAuth
+        relayProviderID = try container.decodeIfPresent(String.self, forKey: .relayProviderID)
+        relayProviderName = try container.decodeIfPresent(String.self, forKey: .relayProviderName)
+        relayBaseURL = try container.decodeIfPresent(String.self, forKey: .relayBaseURL)
+        let decodedRelayWireAPI = try container.decodeIfPresent(String.self, forKey: .relayWireAPI)
+        relayWireAPI = decodedRelayWireAPI?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? decodedRelayWireAPI?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : AgentAccount.defaultRelayWireAPI
+        relayRequiresOpenAIAuth = try container.decodeIfPresent(Bool.self, forKey: .relayRequiresOpenAIAuth) ?? true
         email = try container.decodeIfPresent(String.self, forKey: .email)
         chatGPTAccountID = try container.decodeIfPresent(String.self, forKey: .chatGPTAccountID)
         identityScope = AgentAccount.normalizedIdentityScope(
@@ -107,6 +142,14 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         return Double(remainingUnits) / Double(quota)
     }
 
+    var isRelayAPIKeyAccount: Bool {
+        credentialType == .relayAPIKey
+    }
+
+    var supportsCodexUsageSync: Bool {
+        credentialType == .chatGPTOAuth
+    }
+
     func redactingAPIToken() -> AgentAccount {
         AgentAccount(
             id: id,
@@ -116,6 +159,12 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             usedUnits: usedUnits,
             quota: quota,
             apiToken: "",
+            credentialType: credentialType,
+            relayProviderID: relayProviderID,
+            relayProviderName: relayProviderName,
+            relayBaseURL: relayBaseURL,
+            relayWireAPI: relayWireAPI,
+            relayRequiresOpenAIAuth: relayRequiresOpenAIAuth,
             email: email,
             chatGPTAccountID: chatGPTAccountID,
             identityScope: identityScope,
@@ -698,6 +747,13 @@ struct AccountPoolState {
         groupName: String = AgentAccount.defaultGroupName,
         quota: Int,
         usedUnits: Int = 0,
+        apiToken: String = "",
+        credentialType: AgentAccountCredentialType = .chatGPTOAuth,
+        relayProviderID: String? = nil,
+        relayProviderName: String? = nil,
+        relayBaseURL: String? = nil,
+        relayWireAPI: String? = nil,
+        relayRequiresOpenAIAuth: Bool = true,
         email: String? = nil,
         chatGPTAccountID: String? = nil,
         identityScope: String = AgentAccount.personalIdentityScope,
@@ -714,6 +770,13 @@ struct AccountPoolState {
             groupName: normalizedGroupName,
             usedUnits: normalizedUsedUnits,
             quota: normalizedQuota,
+            apiToken: apiToken,
+            credentialType: credentialType,
+            relayProviderID: relayProviderID,
+            relayProviderName: relayProviderName,
+            relayBaseURL: relayBaseURL,
+            relayWireAPI: relayWireAPI,
+            relayRequiresOpenAIAuth: relayRequiresOpenAIAuth,
             email: email,
             chatGPTAccountID: chatGPTAccountID,
             identityScope: identityScope,
@@ -755,6 +818,12 @@ struct AccountPoolState {
         quota: Int? = nil,
         usedUnits: Int? = nil,
         apiToken: String? = nil,
+        credentialType: AgentAccountCredentialType? = nil,
+        relayProviderID: String? = nil,
+        relayProviderName: String? = nil,
+        relayBaseURL: String? = nil,
+        relayWireAPI: String? = nil,
+        relayRequiresOpenAIAuth: Bool? = nil,
         email: String? = nil,
         chatGPTAccountID: String? = nil,
         identityScope: String? = nil,
@@ -784,6 +853,25 @@ struct AccountPoolState {
         }
         if let apiToken {
             accounts[index].apiToken = apiToken
+        }
+        if let credentialType {
+            accounts[index].credentialType = credentialType
+        }
+        if let relayProviderID {
+            accounts[index].relayProviderID = relayProviderID.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let relayProviderName {
+            accounts[index].relayProviderName = relayProviderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let relayBaseURL {
+            accounts[index].relayBaseURL = relayBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let relayWireAPI {
+            let normalized = relayWireAPI.trimmingCharacters(in: .whitespacesAndNewlines)
+            accounts[index].relayWireAPI = normalized.isEmpty ? AgentAccount.defaultRelayWireAPI : normalized
+        }
+        if let relayRequiresOpenAIAuth {
+            accounts[index].relayRequiresOpenAIAuth = relayRequiresOpenAIAuth
         }
         if let email {
             accounts[index].email = email
@@ -838,6 +926,12 @@ struct AccountPoolState {
             usedUnits: source.usedUnits,
             quota: source.quota,
             apiToken: source.apiToken,
+            credentialType: source.credentialType,
+            relayProviderID: source.relayProviderID,
+            relayProviderName: source.relayProviderName,
+            relayBaseURL: source.relayBaseURL,
+            relayWireAPI: source.relayWireAPI,
+            relayRequiresOpenAIAuth: source.relayRequiresOpenAIAuth,
             email: source.email,
             chatGPTAccountID: source.chatGPTAccountID,
             identityScope: source.identityScope,
@@ -1032,7 +1126,7 @@ struct AccountPoolState {
     }
 
     private var syncIncludedAccounts: [AgentAccount] {
-        accounts.filter { !$0.isUsageSyncExcluded }
+        accounts.filter { !$0.isUsageSyncExcluded && $0.supportsCodexUsageSync }
     }
 
     private var syncIncludedUniqueAccounts: [AgentAccount] {

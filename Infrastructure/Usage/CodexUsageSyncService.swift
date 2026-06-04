@@ -83,6 +83,15 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         for account in state.accounts {
             try Task.checkCancellation()
 
+            guard account.supportsCodexUsageSync else {
+                state.setUsageSyncExclusion(
+                    for: account.id,
+                    reason: AgentAccount.relayUsageSyncUnavailableReason,
+                    now: now,
+                    shouldEvaluate: false
+                )
+                continue
+            }
             guard !account.apiToken.isEmpty else {
                 state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now, shouldEvaluate: false)
                 continue

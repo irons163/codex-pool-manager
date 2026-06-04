@@ -2483,6 +2483,60 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func agentAccountDecodesMissingCredentialTypeAsChatGPTOAuth() throws {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000111")!
+        let json = """
+        {
+          "id": "\(id.uuidString)",
+          "createdAt": "2026-06-04T00:00:00Z",
+          "name": "legacy@example.com",
+          "groupName": "Default",
+          "usedUnits": 1,
+          "quota": 100,
+          "apiToken": "oauth-token",
+          "chatGPTAccountID": "acct-legacy"
+        }
+        """
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let account = try decoder.decode(AgentAccount.self, from: Data(json.utf8))
+
+        #expect(account.credentialType == .chatGPTOAuth)
+        #expect(!account.isRelayAPIKeyAccount)
+        #expect(account.apiToken == "oauth-token")
+        #expect(account.chatGPTAccountID == "acct-legacy")
+    }
+
+    @Test
+    func relayAPIKeyAccountKeepsProviderMetadataAndRedactsKey() {
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay-secret",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true,
+            isUsageSyncExcluded: true,
+            usageSyncError: AgentAccount.relayUsageSyncUnavailableReason
+        )
+
+        let redacted = account.redactingAPIToken()
+
+        #expect(account.isRelayAPIKeyAccount)
+        #expect(account.relayProviderID == "mirror")
+        #expect(account.relayBaseURL == "https://ai.liaryai.com/api/codex")
+        #expect(redacted.apiToken == "")
+        #expect(redacted.credentialType == .relayAPIKey)
+        #expect(redacted.relayProviderID == "mirror")
+    }
+
+    @Test
     func codexSyncUpdatesAccountsWithApiToken() async throws {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
@@ -2609,6 +2663,47 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].usedUnits == 10)
         #expect(state.accounts[0].quota == 1000)
+    }
+
+    @Test
+    func codexSyncSkipsRelayAPIKeyAccountsWithoutCallingClient() async throws {
+        let relayID = UUID(uuidString: "00000000-0000-0000-0000-000000000222")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: relayID,
+                    name: "Mirror",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "sk-relay",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex",
+                    relayWireAPI: "responses",
+                    relayRequiresOpenAIAuth: true
+                )
+            ],
+            mode: .intelligent
+        )
+
+        let requests = LockedValue<[(token: String, accountID: String)]>([])
+        struct CapturingClient: CodexUsageClient {
+            let requests: LockedValue<[(token: String, accountID: String)]>
+
+            func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
+                requests.withLock { $0.append((accessToken, accountID)) }
+                return CodexUsage(usedUnits: 99, quota: 100)
+            }
+        }
+
+        let sync = CodexUsageSyncService(client: CapturingClient(requests: requests))
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(requests.value.isEmpty)
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == AgentAccount.relayUsageSyncUnavailableReason)
+        #expect(state.activeAccountID == nil)
     }
 
     @Test
