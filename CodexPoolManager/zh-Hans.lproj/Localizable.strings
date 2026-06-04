@@ -563,3 +563,6 @@
 "settings.usage_analytics_history_limit_format" = "用量分析历史上限：%d 条";
 "settings.usage_analytics_history_limit_hint" = "上限越高会保留更多同步历史供图表分析，但会使用更多内存与存储空间。";
 "drawer.expand_full" = "全开";
+"relay.error.invalid_provider_id" = "Provider ID may contain only letters, numbers, and underscores.";
+"relay.error.invalid_base_url" = "Relay base URL must be a valid http or https URL.";
+"relay.error.config_write_failed_format" = "Unable to update Codex config: %@";

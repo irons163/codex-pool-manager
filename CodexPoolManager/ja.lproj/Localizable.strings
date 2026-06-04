@@ -562,3 +562,6 @@
 "settings.usage_analytics_history_limit_format" = "使用分析の履歴上限: %d 件";
 "settings.usage_analytics_history_limit_hint" = "上限を高くするとグラフ用の同期履歴を多く保持できますが、メモリとストレージ使用量が増えます。";
 "drawer.expand_full" = "全開";
+"relay.error.invalid_provider_id" = "Provider ID may contain only letters, numbers, and underscores.";
+"relay.error.invalid_base_url" = "Relay base URL must be a valid http or https URL.";
+"relay.error.config_write_failed_format" = "Unable to update Codex config: %@";

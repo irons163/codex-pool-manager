@@ -562,3 +562,6 @@
 "settings.usage_analytics_history_limit_format" = "사용량 분석 기록 한도: %d개";
 "settings.usage_analytics_history_limit_hint" = "한도를 높이면 차트용 동기화 기록을 더 많이 보관하지만 메모리와 저장 공간을 더 사용합니다.";
 "drawer.expand_full" = "전체 열기";
+"relay.error.invalid_provider_id" = "Provider ID may contain only letters, numbers, and underscores.";
+"relay.error.invalid_base_url" = "Relay base URL must be a valid http or https URL.";
+"relay.error.config_write_failed_format" = "Unable to update Codex config: %@";

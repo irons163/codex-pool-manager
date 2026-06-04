@@ -562,3 +562,6 @@
 "settings.usage_analytics_history_limit_format" = "Límite de historial de analítica: %d registros";
 "settings.usage_analytics_history_limit_hint" = "Un límite más alto conserva más historial para los gráficos, pero usa más memoria y almacenamiento.";
 "drawer.expand_full" = "Abrir completo";
+"relay.error.invalid_provider_id" = "Provider ID may contain only letters, numbers, and underscores.";
+"relay.error.invalid_base_url" = "Relay base URL must be a valid http or https URL.";
+"relay.error.config_write_failed_format" = "Unable to update Codex config: %@";
