@@ -386,6 +386,7 @@ struct PoolDashboardViewMutationCoordinatorTests {
     }
 }
 
+@MainActor
 struct RelayAccountCoordinatorTests {
     @Test
     func relayCoordinatorAddsRelayAccountAndMarksUsageSyncUnavailable() async {
@@ -444,5 +445,32 @@ struct RelayAccountCoordinatorTests {
         #expect(events.value == ["config:mirror", "login:sk-relay"])
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains("mirror"))
+    }
+
+    @Test
+    func relaySwitchDoesNotRequireAuthJSONFields() async {
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLogin: { _ in }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(account, viewState: PoolDashboardViewState())
+
+        #expect(account.chatGPTAccountID == nil)
+        #expect(output.viewState.switchLaunchError == nil)
+        #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("relay.switch.login_completed")))
     }
 }

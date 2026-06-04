@@ -589,3 +589,4 @@
 "relay.advanced.title" = "進階中轉設定";
 "relay.usage_sync_unavailable.title" = "僅支援手動切換";
 "relay.usage_sync_unavailable.hint" = "中轉 API key 帳號不會提供 ChatGPT 訂閱用量，因此不會納入自動切換。";
+"relay.card.badge" = "中轉";

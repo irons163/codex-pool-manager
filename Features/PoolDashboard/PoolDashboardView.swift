@@ -2296,6 +2296,11 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func switchAndLaunchCodex(using account: AgentAccount) async {
+        if account.isRelayAPIKeyAccount {
+            await switchToRelayProvider(using: account)
+            return
+        }
+
         let output = await switchLaunchFlowCoordinator.switchAndLaunch(
             using: account,
             switchWithoutLaunching: state.switchWithoutLaunching,
@@ -2326,6 +2331,35 @@ struct PoolDashboardView: View {
             )
         }
         applySwitchLaunchOutput(output)
+    }
+
+    @MainActor
+    private func switchToRelayProvider(using account: AgentAccount) async {
+        let output = await relayAccountCoordinator.switchToRelayAccount(
+            account,
+            viewState: viewState
+        )
+        viewState = output.viewState
+
+        if viewState.switchLaunchError == nil {
+            suppressNextSnapshotDrivenSwitch = true
+            state.markActiveAccountForSwitchLaunch(account.id)
+            DesktopNotifier.post(
+                key: "manual-relay-switch-\(account.id.uuidString)",
+                title: "Codex Pool 已切換中轉帳號",
+                body: notificationUsageSummary(
+                    for: state.accounts.first(where: { $0.id == account.id }) ?? account
+                ),
+                minInterval: 5
+            )
+        } else if let errorMessage = viewState.switchLaunchError, !errorMessage.isEmpty {
+            DesktopNotifier.post(
+                key: "manual-relay-switch-failed",
+                title: "Codex Pool 中轉切換失敗",
+                body: errorMessage,
+                minInterval: 120
+            )
+        }
     }
 
     // MARK: - Special Reset Watch

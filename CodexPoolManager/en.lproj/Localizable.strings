@@ -597,3 +597,4 @@
 "relay.advanced.title" = "Advanced Relay Settings";
 "relay.usage_sync_unavailable.title" = "Manual switching only";
 "relay.usage_sync_unavailable.hint" = "Relay API key accounts do not expose ChatGPT subscription usage, so they are excluded from automatic switching.";
+"relay.card.badge" = "Relay";

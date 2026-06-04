@@ -841,6 +841,10 @@ struct AccountUsagePanelView: View {
                         )
                 }
 
+                if account.isRelayAPIKeyAccount {
+                    relayBadge
+                }
+
                 compactAccountActionButtons(account)
             }
             .frame(maxWidth: .infinity, alignment: .center)
@@ -1004,6 +1008,10 @@ struct AccountUsagePanelView: View {
                             Capsule(style: .continuous)
                                 .stroke(Color.orange.opacity(0.6), lineWidth: 0.8)
                         )
+                }
+
+                if account.isRelayAPIKeyAccount {
+                    relayBadge
                 }
             }
 
@@ -1198,13 +1206,37 @@ struct AccountUsagePanelView: View {
     @ViewBuilder
     private func syncExcludedWarning(_ account: AgentAccount) -> some View {
         if account.isUsageSyncExcluded {
+            let message = account.isRelayAPIKeyAccount
+                ? L10n.text("relay.usage_sync_unavailable.hint")
+                : (account.usageSyncError ?? L10n.text("sync.excluded.default_message"))
+            let title = account.isRelayAPIKeyAccount
+                ? L10n.text("relay.usage_sync_unavailable.title")
+                : L10n.text("sync.excluded.title")
+            let tone: PanelStatusCalloutView.Tone = account.isRelayAPIKeyAccount ? .info : .warning
+
             PanelStatusCalloutView(
-                message: account.usageSyncError ?? L10n.text("sync.excluded.default_message"),
-                title: L10n.text("sync.excluded.title"),
-                tone: .warning
+                message: message,
+                title: title,
+                tone: tone
             )
             .frame(maxWidth: 440, alignment: .leading)
         }
+    }
+
+    private var relayBadge: some View {
+        Text(L10n.text("relay.card.badge"))
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(PoolDashboardTheme.textPrimary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(PoolDashboardTheme.glowB.opacity(0.30))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(PoolDashboardTheme.glowB.opacity(0.56), lineWidth: 0.8)
+            )
     }
 
     private func accountActionButtons(_ account: AgentAccount) -> some View {
