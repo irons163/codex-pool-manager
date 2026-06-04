@@ -281,6 +281,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var minSwitchInterval: TimeInterval
     var lowUsageThresholdRatio: Double
     var lowUsageAlertThresholdRatio: Double
+    var lowUsageAlertsEnabled: Bool
     var minUsageRatioDeltaToSwitch: Double
     var lastSwitchAt: Date?
     var lastUsageSyncAt: Date?
@@ -299,6 +300,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
         lowUsageAlertThresholdRatio: Double? = nil,
+        lowUsageAlertsEnabled: Bool = true,
         minUsageRatioDeltaToSwitch: Double,
         lastSwitchAt: Date?,
         lastUsageSyncAt: Date? = nil,
@@ -316,6 +318,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.lowUsageAlertThresholdRatio = lowUsageAlertThresholdRatio ?? lowUsageThresholdRatio
+        self.lowUsageAlertsEnabled = lowUsageAlertsEnabled
         self.minUsageRatioDeltaToSwitch = minUsageRatioDeltaToSwitch
         self.lastSwitchAt = lastSwitchAt
         self.lastUsageSyncAt = lastUsageSyncAt
@@ -336,6 +339,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
         minSwitchInterval = try container.decode(TimeInterval.self, forKey: .minSwitchInterval)
         lowUsageThresholdRatio = try container.decode(Double.self, forKey: .lowUsageThresholdRatio)
         lowUsageAlertThresholdRatio = try container.decodeIfPresent(Double.self, forKey: .lowUsageAlertThresholdRatio) ?? lowUsageThresholdRatio
+        lowUsageAlertsEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowUsageAlertsEnabled) ?? true
         minUsageRatioDeltaToSwitch = try container.decodeIfPresent(Double.self, forKey: .minUsageRatioDeltaToSwitch) ?? 0
         lastSwitchAt = try container.decodeIfPresent(Date.self, forKey: .lastSwitchAt)
         lastUsageSyncAt = try container.decodeIfPresent(Date.self, forKey: .lastUsageSyncAt)
@@ -356,6 +360,7 @@ struct AccountPoolSnapshot: Codable, Equatable {
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
+            lowUsageAlertsEnabled: lowUsageAlertsEnabled,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
@@ -381,6 +386,7 @@ struct AccountPoolState {
     private(set) var minSwitchInterval: TimeInterval
     private(set) var lowUsageThresholdRatio: Double
     private(set) var lowUsageAlertThresholdRatio: Double
+    private(set) var lowUsageAlertsEnabled: Bool
     private(set) var minUsageRatioDeltaToSwitch: Double
     private(set) var switchWithoutLaunching: Bool
     private(set) var autoSyncEnabled: Bool
@@ -392,6 +398,7 @@ struct AccountPoolState {
         minSwitchInterval: TimeInterval = 300,
         lowUsageThresholdRatio: Double = 0.15,
         lowUsageAlertThresholdRatio: Double? = nil,
+        lowUsageAlertsEnabled: Bool = true,
         minUsageRatioDeltaToSwitch: Double = 0,
         switchWithoutLaunching: Bool = false,
         autoSyncEnabled: Bool = true,
@@ -409,6 +416,7 @@ struct AccountPoolState {
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.lowUsageAlertThresholdRatio = lowUsageAlertThresholdRatio ?? lowUsageThresholdRatio
+        self.lowUsageAlertsEnabled = lowUsageAlertsEnabled
         self.minUsageRatioDeltaToSwitch = max(0, min(0.5, minUsageRatioDeltaToSwitch))
         self.switchWithoutLaunching = switchWithoutLaunching
         self.autoSyncEnabled = autoSyncEnabled
@@ -432,6 +440,7 @@ struct AccountPoolState {
         self.minSwitchInterval = max(30, snapshot.minSwitchInterval)
         self.lowUsageThresholdRatio = min(0.9, max(0, snapshot.lowUsageThresholdRatio))
         self.lowUsageAlertThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageAlertThresholdRatio))
+        self.lowUsageAlertsEnabled = snapshot.lowUsageAlertsEnabled
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
         rebuildGroups()
         evaluate(now: .now)
@@ -443,6 +452,7 @@ struct AccountPoolState {
     }
 
     var hasLowUsageWarning: Bool {
+        guard lowUsageAlertsEnabled else { return false }
         guard let activeAccount else { return false }
         return intelligentRemainingRatio(for: activeAccount) <= lowUsageAlertThresholdRatio
     }
@@ -496,6 +506,7 @@ struct AccountPoolState {
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
+            lowUsageAlertsEnabled: lowUsageAlertsEnabled,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
@@ -534,6 +545,11 @@ struct AccountPoolState {
 
     mutating func setAutoSyncEnabled(_ value: Bool, now: Date = .now) {
         autoSyncEnabled = value
+        evaluate(now: now)
+    }
+
+    mutating func setLowUsageAlertsEnabled(_ value: Bool, now: Date = .now) {
+        lowUsageAlertsEnabled = value
         evaluate(now: now)
     }
 
@@ -749,7 +765,8 @@ struct AccountPoolState {
         secondaryUsagePercent: Int? = nil,
         secondaryUsageResetAt: Date? = nil,
         isPaid: Bool? = nil,
-        now: Date = .now
+        now: Date = .now,
+        shouldEvaluate: Bool = true
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
 
@@ -800,7 +817,9 @@ struct AccountPoolState {
         }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)
-        evaluate(now: now)
+        if shouldEvaluate {
+            evaluate(now: now)
+        }
     }
 
     @discardableResult
@@ -900,12 +919,15 @@ struct AccountPoolState {
     mutating func setUsageSyncExclusion(
         for accountID: UUID,
         reason: String?,
-        now: Date = .now
+        now: Date = .now,
+        shouldEvaluate: Bool = true
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
         accounts[index].isUsageSyncExcluded = (reason != nil)
         accounts[index].usageSyncError = reason
-        evaluate(now: now)
+        if shouldEvaluate {
+            evaluate(now: now)
+        }
     }
 
     mutating func evaluate(now: Date = .now) {

@@ -426,6 +426,7 @@
 "strategy.launch_target.section.advanced" = "고급";
 "strategy.launch_target.section.supported" = "지원됨";
 "strategy.low_usage_alert_threshold_format" = "낮은 잔여 사용량 알림 임계값: %d%%";
+"strategy.low_usage_alert_enabled" = "낮은 잔여 사용량 알림";
 "strategy.low_usage_state_low_format" = "현재 잔여량은 %d%%이며, 임계값 %d%%보다 낮습니다.";
 "strategy.low_usage_state_safe_format" = "현재 잔여량은 %d%%이며, 임계값 %d%%보다 높습니다.";
 "strategy.switch_without_launch" = "전환 후 실행";

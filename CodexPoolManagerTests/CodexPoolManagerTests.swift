@@ -13,6 +13,7 @@ private extension AccountPoolSnapshot {
         focusLockedAccountID: UUID?,
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
+        lowUsageAlertsEnabled: Bool = true,
         minUsageRatioDeltaToSwitch: Double,
         lastSwitchAt: Date?,
         lastUsageSyncAt: Date? = nil,
@@ -30,6 +31,7 @@ private extension AccountPoolSnapshot {
             focusLockedAccountID: focusLockedAccountID,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
+            lowUsageAlertsEnabled: lowUsageAlertsEnabled,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
@@ -1436,6 +1438,7 @@ struct CodexPoolManagerTests {
         #expect(restored.activeAccount?.id == state.activeAccount?.id)
         #expect(restored.minSwitchInterval == state.minSwitchInterval)
         #expect(restored.lowUsageThresholdRatio == state.lowUsageThresholdRatio)
+        #expect(restored.lowUsageAlertsEnabled == state.lowUsageAlertsEnabled)
         #expect(restored.minUsageRatioDeltaToSwitch == state.minUsageRatioDeltaToSwitch)
     }
 
@@ -1662,6 +1665,62 @@ struct CodexPoolManagerTests {
 
         state.updateSwitchSettings(lowUsageAlertThresholdRatio: 0.16, now: Date(timeIntervalSince1970: 1))
         #expect(state.hasLowUsageWarning)
+    }
+
+    @Test
+    func lowUsageWarningCanBeDisabledWithoutChangingSwitchThresholds() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: accountID, name: "A", usedUnits: 95, quota: 100)
+            ],
+            mode: .intelligent,
+            lowUsageThresholdRatio: 0.2,
+            lowUsageAlertThresholdRatio: 0.2
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        #expect(state.hasLowUsageWarning)
+
+        state.setLowUsageAlertsEnabled(false, now: Date(timeIntervalSince1970: 1))
+
+        #expect(!state.lowUsageAlertsEnabled)
+        #expect(!state.hasLowUsageWarning)
+        #expect(state.lowUsageThresholdRatio == 0.2)
+        #expect(state.lowUsageAlertThresholdRatio == 0.2)
+    }
+
+    @Test
+    func lowUsageAlertsEnabledPersistsThroughSnapshotAndDefaultsToOn() throws {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: accountID, name: "A", usedUnits: 95, quota: 100)
+            ],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.2
+        )
+        state.setLowUsageAlertsEnabled(false)
+
+        let restored = AccountPoolState(snapshot: state.snapshot)
+
+        #expect(!restored.lowUsageAlertsEnabled)
+
+        let legacyJSON = """
+        {
+          "accounts": [],
+          "activities": [],
+          "mode": "intelligent",
+          "activeAccountID": null,
+          "manualAccountID": null,
+          "focusLockedAccountID": null,
+          "minSwitchInterval": 300,
+          "lowUsageThresholdRatio": 0.15,
+          "minUsageRatioDeltaToSwitch": 0
+        }
+        """
+        let decodedLegacy = try JSONDecoder().decode(AccountPoolSnapshot.self, from: Data(legacyJSON.utf8))
+        #expect(decodedLegacy.lowUsageAlertsEnabled)
     }
 
     @Test
@@ -2304,7 +2363,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func snapshotExportOmitsUsageFieldsForRefetchableAccounts() throws {
+    func snapshotExportKeepsUsageFieldsForRefetchableAccountsUntilRefetchSucceeds() throws {
         let snapshot = AccountPoolSnapshot(
             accounts: [
                 AgentAccount(
@@ -2332,14 +2391,14 @@ struct CodexPoolManagerTests {
 
         let json = try AccountPoolSnapshotCodec.exportJSON(snapshot, redactSensitive: false)
 
-        #expect(!json.contains("\"usedUnits\""))
-        #expect(!json.contains("\"quota\""))
-        #expect(!json.contains("\"usageWindowName\""))
-        #expect(!json.contains("\"usageWindowResetAt\""))
+        #expect(json.contains("\"usedUnits\""))
+        #expect(json.contains("\"quota\""))
+        #expect(json.contains("\"usageWindowName\""))
+        #expect(json.contains("\"usageWindowResetAt\""))
     }
 
     @Test
-    func snapshotImportResetsUsageForAccountsThatCanRefetch() throws {
+    func snapshotImportKeepsKnownUsageForAccountsThatCanRefetch() throws {
         let accountID = UUID()
         let snapshot = AccountPoolSnapshot(
             accounts: [
@@ -2376,10 +2435,10 @@ struct CodexPoolManagerTests {
 
         let normalized = AccountPoolSnapshotCodec.prepareForUsageRefetch(snapshot)
 
-        #expect(normalized.accounts[0].usedUnits == 0)
-        #expect(normalized.accounts[0].quota == 100)
-        #expect(normalized.accounts[0].usageWindowName == nil)
-        #expect(normalized.accounts[0].usageWindowResetAt == nil)
+        #expect(normalized.accounts[0].usedUnits == 77)
+        #expect(normalized.accounts[0].quota == 999)
+        #expect(normalized.accounts[0].usageWindowName == "primary_window")
+        #expect(normalized.accounts[0].usageWindowResetAt == Date(timeIntervalSince1970: 1_700_000_000))
         #expect(normalized.accounts[1].usedUnits == 20)
         #expect(normalized.accounts[1].quota == 300)
     }
@@ -2448,6 +2507,37 @@ struct CodexPoolManagerTests {
         #expect(state.accounts.first(where: { $0.id == a })?.quota == 1200)
         #expect(state.accounts.first(where: { $0.id == a })?.usageWindowName == nil)
         #expect(state.accounts.first(where: { $0.id == b })?.usedUnits == 100)
+    }
+
+    @Test
+    func codexSyncKeepsActiveAccountWhenAllIntelligentAccountsBecomeExhausted() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 10, quota: 100, apiToken: "token-a"),
+                AgentAccount(id: b, name: "B", usedUnits: 20, quota: 100, apiToken: "token-b")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+        state.updateAccount(b, chatGPTAccountID: "acct-b")
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 1))
+        #expect(state.activeAccount?.id == a)
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(usedUnits: 100, quota: 100),
+                "token-b": CodexUsage(usedUnits: 100, quota: 100)
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.intelligentCandidateID == nil)
+        #expect(state.isPoolExhausted)
+        #expect(state.activeAccount?.id == a)
     }
 
     @Test
@@ -2638,6 +2728,49 @@ struct CodexPoolManagerTests {
         #expect(loaded.accounts.first?.apiToken == token)
         #expect(loaded.accounts.first?.chatGPTAccountID == chatGPTAccountID)
         #expect(loaded.accounts.first?.usageWindowName == "primary_window")
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
+    func userDefaultsStoreMigratesLegacySnapshotTokenIntoVaultOnLoad() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let legacyToken = "legacy-token"
+        let legacySnapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Legacy",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: legacyToken,
+                    chatGPTAccountID: "acct-legacy"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+        let legacyData = try JSONEncoder().encode(legacySnapshot)
+        defaults.set(legacyData, forKey: "snapshot")
+
+        let loaded = try #require(store.load())
+
+        #expect(loaded.accounts.first?.apiToken == legacyToken)
+        #expect(vault.token(for: accountID) == legacyToken)
         defaults.removePersistentDomain(forName: suiteName)
     }
 
@@ -3652,7 +3785,7 @@ extension CodexPoolManagerTests {
     }
 
     @Test
-    func poolDashboardBackupCoordinatorExportRefetchableKeepsTokenAndDropsUsageFields() throws {
+    func poolDashboardBackupCoordinatorExportRefetchableKeepsTokenAndUsageFields() throws {
         let coordinator = PoolDashboardBackupCoordinator()
         let accountID = UUID()
         let snapshot = AccountPoolSnapshot(
@@ -3685,14 +3818,14 @@ extension CodexPoolManagerTests {
         let first = try #require(accounts.first)
 
         #expect(first["apiToken"] as? String == "token-keep")
-        #expect(first["quota"] == nil)
-        #expect(first["usedUnits"] == nil)
-        #expect(first["usageWindowName"] == nil)
-        #expect(first["usageWindowResetAt"] == nil)
+        #expect(first["quota"] as? Int == 100)
+        #expect(first["usedUnits"] as? Int == 88)
+        #expect(first["usageWindowName"] as? String == "primary_window")
+        #expect(first["usageWindowResetAt"] as? String == "2023-11-14T22:13:20Z")
     }
 
     @Test
-    func poolDashboardBackupCoordinatorImportNormalizesRefetchableUsage() throws {
+    func poolDashboardBackupCoordinatorImportKeepsRefetchableUsageUntilRefetchSucceeds() throws {
         let coordinator = PoolDashboardBackupCoordinator()
         let accountID = UUID()
         let snapshot = AccountPoolSnapshot(
@@ -3723,11 +3856,12 @@ extension CodexPoolManagerTests {
         let importedState = try #require(coordinator.importSnapshotState(from: json).state)
         let importedAccount = try #require(importedState.accounts.first)
 
-        #expect(importedAccount.usedUnits == 0)
-        #expect(importedAccount.quota == 100)
+        #expect(importedAccount.usedUnits == 99)
+        #expect(importedAccount.quota == 1000)
         #expect(importedAccount.apiToken == "token-import")
         #expect(importedAccount.chatGPTAccountID == "acct-import")
-        #expect(importedAccount.usageWindowName == nil)
+        #expect(importedAccount.usageWindowName == "primary_window")
+        #expect(importedAccount.usageWindowResetAt == Date(timeIntervalSince1970: 1_700_000_000))
     }
 
     @Test
@@ -3846,6 +3980,7 @@ extension CodexPoolManagerTests {
         adapter.minSwitchInterval.wrappedValue = 420
         adapter.lowThreshold.wrappedValue = 0.2
         adapter.lowUsageAlertThreshold.wrappedValue = 0.25
+        adapter.lowUsageAlertsEnabled.wrappedValue = false
         adapter.minUsageDelta.wrappedValue = 0.1
 
         #expect(state.mode == .focus)
@@ -3853,6 +3988,7 @@ extension CodexPoolManagerTests {
         #expect(state.minSwitchInterval == 420)
         #expect(state.lowUsageThresholdRatio == 0.2)
         #expect(state.lowUsageAlertThresholdRatio == 0.25)
+        #expect(!state.lowUsageAlertsEnabled)
         #expect(state.minUsageRatioDeltaToSwitch == 0.1)
     }
 
@@ -5101,6 +5237,49 @@ extension CodexPoolManagerTests {
         #expect(state.accounts[0].chatGPTAccountID == "acct-1")
         #expect(state.accounts[0].quota == 1000)
         #expect(state.accounts[0].usedUnits == 0)
+    }
+
+    @Test
+    func poolAccountUpsertOAuthSignInPreservesExistingUsageWhenUsageFetchFails() {
+        let accountID = UUID()
+        let resetAt = Date(timeIntervalSince1970: 1_700_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "old@example.com",
+                    usedUnits: 100,
+                    quota: 100,
+                    apiToken: "token-old",
+                    email: "old@example.com",
+                    chatGPTAccountID: "acct-1",
+                    usageWindowName: "weekly_window",
+                    usageWindowResetAt: resetAt
+                )
+            ],
+            mode: .manual
+        )
+        let coordinator = PoolAccountUpsertCoordinator()
+        let tokens = OAuthTokens(accessToken: "token-new", refreshToken: nil, idToken: nil)
+        let claims = OAuthIDTokenClaims(subject: "user-1", accountID: "acct-1", email: "new@example.com")
+
+        _ = coordinator.applyOAuthSignIn(
+            state: &state,
+            tokens: tokens,
+            claims: claims,
+            usage: nil,
+            identityScope: AgentAccount.personalIdentityScope,
+            accountNameInput: "",
+            fallbackQuota: 1000
+        )
+
+        #expect(state.accounts[0].id == accountID)
+        #expect(state.accounts[0].apiToken == "token-new")
+        #expect(state.accounts[0].usedUnits == 100)
+        #expect(state.accounts[0].quota == 100)
+        #expect(state.accounts[0].remainingUnits == 0)
+        #expect(state.accounts[0].usageWindowName == "weekly_window")
+        #expect(state.accounts[0].usageWindowResetAt == resetAt)
     }
 
     @Test

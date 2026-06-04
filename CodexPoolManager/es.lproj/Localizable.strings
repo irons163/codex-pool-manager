@@ -426,6 +426,7 @@
 "strategy.launch_target.section.advanced" = "Avanzado";
 "strategy.launch_target.section.supported" = "Compatible";
 "strategy.low_usage_alert_threshold_format" = "Umbral de alerta por bajo uso restante: %d%%";
+"strategy.low_usage_alert_enabled" = "Alerta de bajo uso restante";
 "strategy.low_usage_state_low_format" = "El restante actual es %d%%, por debajo del umbral de %d%%.";
 "strategy.low_usage_state_safe_format" = "El restante actual es %d%%, por encima del umbral de %d%%.";
 "strategy.switch_without_launch" = "Cambiar e iniciar";

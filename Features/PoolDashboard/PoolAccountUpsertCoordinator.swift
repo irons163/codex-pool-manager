@@ -13,19 +13,15 @@ struct PoolAccountUpsertCoordinator {
     ) -> String {
         var resolvedAccountID = claims?.accountID ?? claims?.subject
         var resolvedEmail = claims?.email
-        var resolvedQuota = fallbackQuota
-        var resolvedUsedUnits = 0
-        var resolvedWindowName: String?
-        var resolvedWindowResetAt: Date?
+        let resolvedQuota = usage?.quota
+        let resolvedUsedUnits = usage?.usedUnits
+        let resolvedWindowName = usage?.usageWindowName
+        let resolvedWindowResetAt = usage?.usageWindowResetAt
         let resolvedIdentityScope = AgentAccount.normalizedIdentityScope(identityScope)
 
         if let usage {
             resolvedAccountID = usage.accountID ?? resolvedAccountID
             resolvedEmail = usage.accountEmail ?? resolvedEmail
-            resolvedQuota = usage.quota
-            resolvedUsedUnits = usage.usedUnits
-            resolvedWindowName = usage.usageWindowName
-            resolvedWindowResetAt = usage.usageWindowResetAt
         }
 
         let trimmedInput = accountNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -70,10 +66,12 @@ struct PoolAccountUpsertCoordinator {
             return L10n.text("auth.sign_in_success_updated")
         }
 
+        let newQuota = resolvedQuota ?? fallbackQuota
+        let newUsedUnits = resolvedUsedUnits ?? 0
         let newAccountID = state.addAccount(
             name: resolvedAccountName,
-            quota: resolvedQuota,
-            usedUnits: resolvedUsedUnits,
+            quota: newQuota,
+            usedUnits: newUsedUnits,
             email: resolvedEmail,
             chatGPTAccountID: resolvedAccountID,
             identityScope: resolvedIdentityScope,

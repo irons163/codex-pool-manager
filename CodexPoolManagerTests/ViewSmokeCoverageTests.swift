@@ -224,6 +224,7 @@ struct ViewSmokeCoverageTests {
         let minIntervalBox = BindingBox<Double>(60)
         let switchThresholdBox = BindingBox<Double>(0.2)
         let lowUsageThresholdBox = BindingBox<Double>(0.15)
+        let lowUsageAlertsEnabledBox = BindingBox(true)
 
         let intelligent = StrategySettingsPanelView(
             mode: .intelligent,
@@ -237,11 +238,13 @@ struct ViewSmokeCoverageTests {
             manualSelectionBinding: binding(manualSelectionBox),
             minSwitchIntervalBinding: binding(minIntervalBox),
             switchThresholdBinding: binding(switchThresholdBox),
-            lowUsageAlertThresholdBinding: binding(lowUsageThresholdBox)
+            lowUsageAlertThresholdBinding: binding(lowUsageThresholdBox),
+            lowUsageAlertsEnabledBinding: binding(lowUsageAlertsEnabledBox)
         )
         let _ = intelligent.body
 
         modeBox.value = .focus
+        lowUsageAlertsEnabledBox.value = false
         let focus = StrategySettingsPanelView(
             mode: .focus,
             accounts: [account],
@@ -254,7 +257,8 @@ struct ViewSmokeCoverageTests {
             manualSelectionBinding: binding(manualSelectionBox),
             minSwitchIntervalBinding: binding(minIntervalBox),
             switchThresholdBinding: binding(switchThresholdBox),
-            lowUsageAlertThresholdBinding: binding(lowUsageThresholdBox)
+            lowUsageAlertThresholdBinding: binding(lowUsageThresholdBox),
+            lowUsageAlertsEnabledBinding: binding(lowUsageAlertsEnabledBox)
         )
         let _ = focus.body
     }

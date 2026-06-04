@@ -1199,7 +1199,8 @@ struct PoolDashboardView: View {
             manualSelectionBinding: strategyBindings.manualSelection,
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,
             switchThresholdBinding: strategyBindings.lowThreshold,
-            lowUsageAlertThresholdBinding: strategyBindings.lowUsageAlertThreshold
+            lowUsageAlertThresholdBinding: strategyBindings.lowUsageAlertThreshold,
+            lowUsageAlertsEnabledBinding: strategyBindings.lowUsageAlertsEnabled
         )
     }
 
@@ -1694,6 +1695,7 @@ struct PoolDashboardView: View {
         previousSnapshot: AccountPoolSnapshot,
         currentSnapshot: AccountPoolSnapshot
     ) {
+        guard previousSnapshot.lowUsageAlertsEnabled else { return }
         guard previousSnapshot.mode == .intelligent, currentSnapshot.mode == .intelligent else { return }
         guard previousSnapshot.activeAccountID != currentSnapshot.activeAccountID else { return }
         guard let previousAccountID = previousSnapshot.activeAccountID,
@@ -1715,6 +1717,7 @@ struct PoolDashboardView: View {
     private func postLowUsageDesktopNotificationIfNeeded(
         wasShowingLowUsageAlert: Bool
     ) {
+        guard state.lowUsageAlertsEnabled else { return }
         guard !wasShowingLowUsageAlert, viewState.showLowUsageAlert else { return }
 
         let message = viewState.lowUsageAlertMessage

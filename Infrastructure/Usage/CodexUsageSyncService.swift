@@ -84,11 +84,11 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
             try Task.checkCancellation()
 
             guard !account.apiToken.isEmpty else {
-                state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now)
+                state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now, shouldEvaluate: false)
                 continue
             }
             guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
-                state.setUsageSyncExclusion(for: account.id, reason: missingAccountIDMessage, now: now)
+                state.setUsageSyncExclusion(for: account.id, reason: missingAccountIDMessage, now: now, shouldEvaluate: false)
                 continue
             }
 
@@ -108,9 +108,10 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     secondaryUsagePercent: usage.secondaryUsagePercent,
                     secondaryUsageResetAt: usage.secondaryUsageResetAt,
                     isPaid: usage.isPaid,
-                    now: now
+                    now: now,
+                    shouldEvaluate: false
                 )
-                state.setUsageSyncExclusion(for: account.id, reason: nil, now: now)
+                state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
@@ -118,12 +119,14 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 state.setUsageSyncExclusion(
                     for: account.id,
                     reason: mapped.localizedDescription,
-                    now: now
+                    now: now,
+                    shouldEvaluate: false
                 )
             }
         }
 
         try Task.checkCancellation()
+        state.evaluate(now: now)
         state.markUsageSynced(at: now)
     }
 

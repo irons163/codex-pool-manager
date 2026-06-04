@@ -134,6 +134,7 @@
 "strategy.parameters" = "策略参数";
 "strategy.general_settings" = "一般设置";
 "strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";
+"strategy.low_usage_alert_enabled" = "低剩余用量提醒";
 "strategy.low_usage_alert_threshold_format" = "低剩余用量提醒阈值：%d%%";
 "strategy.low_usage_state_safe_format" = "当前剩余 %d%%，尚未低于 %d%% 阈值。";
 "strategy.low_usage_state_low_format" = "当前剩余 %d%%，已低于 %d%% 阈值。";

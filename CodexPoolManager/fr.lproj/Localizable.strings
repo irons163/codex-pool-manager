@@ -426,6 +426,7 @@
 "strategy.launch_target.section.advanced" = "Avancé";
 "strategy.launch_target.section.supported" = "Pris en charge";
 "strategy.low_usage_alert_threshold_format" = "Seuil d’alerte de faible usage restant : %d%%";
+"strategy.low_usage_alert_enabled" = "Alerte de faible usage restant";
 "strategy.low_usage_state_low_format" = "Le restant actuel est de %d%%, en dessous du seuil de %d%%.";
 "strategy.low_usage_state_safe_format" = "Le restant actuel est de %d%%, au-dessus du seuil de %d%%.";
 "strategy.switch_without_launch" = "Basculer et lancer";

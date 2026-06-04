@@ -426,6 +426,7 @@
 "strategy.launch_target.section.advanced" = "詳細";
 "strategy.launch_target.section.supported" = "対応";
 "strategy.low_usage_alert_threshold_format" = "残量低下アラートしきい値: %d%%";
+"strategy.low_usage_alert_enabled" = "残り使用量低下の通知";
 "strategy.low_usage_state_low_format" = "現在の残量は %d%% で、しきい値 %d%% を下回っています。";
 "strategy.low_usage_state_safe_format" = "現在の残量は %d%% で、しきい値 %d%% を上回っています。";
 "strategy.switch_without_launch" = "切替して起動";
