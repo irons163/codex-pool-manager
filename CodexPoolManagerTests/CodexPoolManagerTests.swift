@@ -2451,6 +2451,37 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncKeepsActiveAccountWhenAllIntelligentAccountsBecomeExhausted() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 10, quota: 100, apiToken: "token-a"),
+                AgentAccount(id: b, name: "B", usedUnits: 20, quota: 100, apiToken: "token-b")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+        state.updateAccount(b, chatGPTAccountID: "acct-b")
+        state.selectManualAccount(a, now: Date(timeIntervalSince1970: 0))
+        state.setMode(.intelligent, now: Date(timeIntervalSince1970: 1))
+        #expect(state.activeAccount?.id == a)
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(usedUnits: 100, quota: 100),
+                "token-b": CodexUsage(usedUnits: 100, quota: 100)
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.intelligentCandidateID == nil)
+        #expect(state.isPoolExhausted)
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
     func codexSyncStoresUsageWindowMetadata() async throws {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         var state = AccountPoolState(

@@ -749,7 +749,8 @@ struct AccountPoolState {
         secondaryUsagePercent: Int? = nil,
         secondaryUsageResetAt: Date? = nil,
         isPaid: Bool? = nil,
-        now: Date = .now
+        now: Date = .now,
+        shouldEvaluate: Bool = true
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
 
@@ -800,7 +801,9 @@ struct AccountPoolState {
         }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)
-        evaluate(now: now)
+        if shouldEvaluate {
+            evaluate(now: now)
+        }
     }
 
     @discardableResult
@@ -900,12 +903,15 @@ struct AccountPoolState {
     mutating func setUsageSyncExclusion(
         for accountID: UUID,
         reason: String?,
-        now: Date = .now
+        now: Date = .now,
+        shouldEvaluate: Bool = true
     ) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
         accounts[index].isUsageSyncExcluded = (reason != nil)
         accounts[index].usageSyncError = reason
-        evaluate(now: now)
+        if shouldEvaluate {
+            evaluate(now: now)
+        }
     }
 
     mutating func evaluate(now: Date = .now) {
