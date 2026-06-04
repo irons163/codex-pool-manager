@@ -56,6 +56,15 @@ struct PoolDashboardStrategyBindingAdapter {
         )
     }
 
+    var lowUsageAlertsEnabled: Binding<Bool> {
+        Binding(
+            get: { state.wrappedValue.lowUsageAlertsEnabled },
+            set: { newValue in
+                state.wrappedValue.setLowUsageAlertsEnabled(newValue)
+            }
+        )
+    }
+
     var minUsageDelta: Binding<Double> {
         Binding(
             get: { state.wrappedValue.minUsageRatioDeltaToSwitch },

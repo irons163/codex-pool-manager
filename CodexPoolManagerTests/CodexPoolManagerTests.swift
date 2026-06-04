@@ -13,6 +13,7 @@ private extension AccountPoolSnapshot {
         focusLockedAccountID: UUID?,
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
+        lowUsageAlertsEnabled: Bool = true,
         minUsageRatioDeltaToSwitch: Double,
         lastSwitchAt: Date?,
         lastUsageSyncAt: Date? = nil,
@@ -30,6 +31,7 @@ private extension AccountPoolSnapshot {
             focusLockedAccountID: focusLockedAccountID,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
+            lowUsageAlertsEnabled: lowUsageAlertsEnabled,
             minUsageRatioDeltaToSwitch: minUsageRatioDeltaToSwitch,
             lastSwitchAt: lastSwitchAt,
             lastUsageSyncAt: lastUsageSyncAt,
@@ -1436,6 +1438,7 @@ struct CodexPoolManagerTests {
         #expect(restored.activeAccount?.id == state.activeAccount?.id)
         #expect(restored.minSwitchInterval == state.minSwitchInterval)
         #expect(restored.lowUsageThresholdRatio == state.lowUsageThresholdRatio)
+        #expect(restored.lowUsageAlertsEnabled == state.lowUsageAlertsEnabled)
         #expect(restored.minUsageRatioDeltaToSwitch == state.minUsageRatioDeltaToSwitch)
     }
 
@@ -1662,6 +1665,62 @@ struct CodexPoolManagerTests {
 
         state.updateSwitchSettings(lowUsageAlertThresholdRatio: 0.16, now: Date(timeIntervalSince1970: 1))
         #expect(state.hasLowUsageWarning)
+    }
+
+    @Test
+    func lowUsageWarningCanBeDisabledWithoutChangingSwitchThresholds() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: accountID, name: "A", usedUnits: 95, quota: 100)
+            ],
+            mode: .intelligent,
+            lowUsageThresholdRatio: 0.2,
+            lowUsageAlertThresholdRatio: 0.2
+        )
+
+        state.evaluate(now: Date(timeIntervalSince1970: 0))
+        #expect(state.hasLowUsageWarning)
+
+        state.setLowUsageAlertsEnabled(false, now: Date(timeIntervalSince1970: 1))
+
+        #expect(!state.lowUsageAlertsEnabled)
+        #expect(!state.hasLowUsageWarning)
+        #expect(state.lowUsageThresholdRatio == 0.2)
+        #expect(state.lowUsageAlertThresholdRatio == 0.2)
+    }
+
+    @Test
+    func lowUsageAlertsEnabledPersistsThroughSnapshotAndDefaultsToOn() throws {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: accountID, name: "A", usedUnits: 95, quota: 100)
+            ],
+            mode: .focus,
+            lowUsageThresholdRatio: 0.2
+        )
+        state.setLowUsageAlertsEnabled(false)
+
+        let restored = AccountPoolState(snapshot: state.snapshot)
+
+        #expect(!restored.lowUsageAlertsEnabled)
+
+        let legacyJSON = """
+        {
+          "accounts": [],
+          "activities": [],
+          "mode": "intelligent",
+          "activeAccountID": null,
+          "manualAccountID": null,
+          "focusLockedAccountID": null,
+          "minSwitchInterval": 300,
+          "lowUsageThresholdRatio": 0.15,
+          "minUsageRatioDeltaToSwitch": 0
+        }
+        """
+        let decodedLegacy = try JSONDecoder().decode(AccountPoolSnapshot.self, from: Data(legacyJSON.utf8))
+        #expect(decodedLegacy.lowUsageAlertsEnabled)
     }
 
     @Test
@@ -3921,6 +3980,7 @@ extension CodexPoolManagerTests {
         adapter.minSwitchInterval.wrappedValue = 420
         adapter.lowThreshold.wrappedValue = 0.2
         adapter.lowUsageAlertThreshold.wrappedValue = 0.25
+        adapter.lowUsageAlertsEnabled.wrappedValue = false
         adapter.minUsageDelta.wrappedValue = 0.1
 
         #expect(state.mode == .focus)
@@ -3928,6 +3988,7 @@ extension CodexPoolManagerTests {
         #expect(state.minSwitchInterval == 420)
         #expect(state.lowUsageThresholdRatio == 0.2)
         #expect(state.lowUsageAlertThresholdRatio == 0.25)
+        #expect(!state.lowUsageAlertsEnabled)
         #expect(state.minUsageRatioDeltaToSwitch == 0.1)
     }
 

@@ -14,6 +14,7 @@ struct StrategySettingsPanelView: View {
     let minSwitchIntervalBinding: Binding<Double>
     let switchThresholdBinding: Binding<Double>
     let lowUsageAlertThresholdBinding: Binding<Double>
+    let lowUsageAlertsEnabledBinding: Binding<Bool>
     private var visibleModes: [SwitchMode] {
         [.intelligent, .focus]
     }
@@ -39,6 +40,9 @@ struct StrategySettingsPanelView: View {
         GroupBox(L10n.text("strategy.parameters")) {
             VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
                 VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
+                    Toggle(L10n.text("strategy.low_usage_alert_enabled"), isOn: lowUsageAlertsEnabledBinding)
+                        .toggleStyle(.switch)
+
                     Text(
                         L10n.text(
                             "strategy.low_usage_alert_threshold_format",
@@ -48,8 +52,10 @@ struct StrategySettingsPanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textSecondary)
                     Slider(value: lowUsageAlertThresholdBinding, in: 0.05...0.5, step: 0.01)
                         .tint(PoolDashboardTheme.glowA)
+                        .disabled(!lowUsageAlertsEnabledBinding.wrappedValue)
                 }
                 .dashboardInfoCard()
+                .opacity(lowUsageAlertsEnabledBinding.wrappedValue ? 1 : 0.65)
 
                 if mode == .intelligent {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
