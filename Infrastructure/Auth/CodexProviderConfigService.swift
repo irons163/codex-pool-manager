@@ -82,6 +82,14 @@ enum CodexProviderConfigMerger {
         return lines.joined(separator: "\n") + "\n"
     }
 
+    static func resetModelProvider(existing: String) -> String {
+        var lines = existing.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        removeTopLevelModelProvider(from: &lines)
+        trimTrailingBlankLines(&lines)
+        guard !lines.isEmpty else { return "" }
+        return lines.joined(separator: "\n") + "\n"
+    }
+
     private static func replaceTopLevelModelProvider(in lines: inout [String], providerID: String) {
         var insideTable = false
         for index in lines.indices {
@@ -89,12 +97,30 @@ enum CodexProviderConfigMerger {
             if trimmed.hasPrefix("[") {
                 insideTable = true
             }
-            if !insideTable && trimmed.hasPrefix("model_provider") {
+            if !insideTable && isModelProviderAssignment(trimmed) {
                 lines[index] = "model_provider = \"\(providerID)\""
                 return
             }
         }
         lines.insert("model_provider = \"\(providerID)\"", at: 0)
+    }
+
+    private static func removeTopLevelModelProvider(from lines: inout [String]) {
+        var insideTable = false
+        var indexesToRemove: [Int] = []
+        for index in lines.indices {
+            let trimmed = lines[index].trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("[") {
+                insideTable = true
+            }
+            if !insideTable && isModelProviderAssignment(trimmed) {
+                indexesToRemove.append(index)
+            }
+        }
+
+        for index in indexesToRemove.reversed() {
+            lines.remove(at: index)
+        }
     }
 
     private static func removeProviderTable(_ providerID: String, from lines: inout [String]) {
@@ -119,6 +145,10 @@ enum CodexProviderConfigMerger {
             lines.removeLast()
         }
     }
+
+    private static func isModelProviderAssignment(_ trimmedLine: String) -> Bool {
+        trimmedLine.range(of: #"^model_provider\s*="#, options: .regularExpression) != nil
+    }
 }
 
 struct CodexProviderConfigService {
@@ -137,6 +167,27 @@ struct CodexProviderConfigService {
                 withIntermediateDirectories: true
             )
             try merged.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            throw CodexProviderConfigError.writeFailed(error.localizedDescription)
+        }
+    }
+
+    func resetToDefaultModelProvider() throws {
+        let url = configURLProvider()
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+        let existing: String
+        do {
+            existing = try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            throw CodexProviderConfigError.writeFailed(error.localizedDescription)
+        }
+
+        let reset = CodexProviderConfigMerger.resetModelProvider(existing: existing)
+        guard reset != existing else { return }
+
+        do {
+            try reset.write(to: url, atomically: true, encoding: .utf8)
         } catch {
             throw CodexProviderConfigError.writeFailed(error.localizedDescription)
         }

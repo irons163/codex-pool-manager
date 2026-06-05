@@ -98,7 +98,7 @@ struct CodexAuthSwitchServiceCoverageTests {
     @Test
     @MainActor
     func codexAuthSwitchServicePerformSwitchOnlyRewritesAuthFile() throws {
-        let service = CodexAuthSwitchService()
+        let service = CodexAuthSwitchService(providerConfigResetter: { _ in })
         let account = AgentAccount(
             id: UUID(),
             name: "new-user@example.com",
@@ -136,8 +136,91 @@ struct CodexAuthSwitchServiceCoverageTests {
 
     @Test
     @MainActor
-    func codexAuthSwitchServicePerformSwitchOnlyThrowsOnInvalidJSON() throws {
+    func codexAuthSwitchServicePerformSwitchOnlyResetsProviderConfig() throws {
+        let didResetProviderConfig = LockedValue(false)
+        let resetAuthFileURL = LockedValue<URL?>(nil)
+        let service = CodexAuthSwitchService(
+            providerConfigResetter: { authFileURL in
+                didResetProviderConfig.withLock { $0 = true }
+                resetAuthFileURL.withLock { $0 = authFileURL }
+            }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "new-user@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "new-token"
+        )
+        let sourceJSON = """
+        {
+          "auth_mode": "apikey",
+          "OPENAI_API_KEY": "sk-old-api-key"
+        }
+        """
+
+        try withTemporaryAuthFile(json: sourceJSON) { authURL in
+            try service.performSwitchOnly(
+                authFileURL: authURL,
+                account: account,
+                chatGPTAccountID: "new-account"
+            )
+
+            #expect(didResetProviderConfig.value)
+            #expect(resetAuthFileURL.value == authURL)
+        }
+    }
+
+    @Test
+    @MainActor
+    func codexAuthSwitchServiceDefaultResetterUsesAuthFileDirectoryConfig() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-auth-config-switch-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        let configURL = directory.appendingPathComponent("config.toml")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try """
+        {
+          "auth_mode": "apikey",
+          "OPENAI_API_KEY": "sk-old-api-key"
+        }
+        """.write(to: authURL, atomically: true, encoding: .utf8)
+        try """
+        model = "gpt-5.1-codex"
+        model_provider = "mirror"
+
+        [model_providers.mirror]
+        name = "mirror"
+        base_url = "https://ai.liaryai.com/api/codex"
+        wire_api = "responses"
+        requires_openai_auth = true
+        """.write(to: configURL, atomically: true, encoding: .utf8)
+
         let service = CodexAuthSwitchService()
+        let account = AgentAccount(
+            id: UUID(),
+            name: "new-user@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "new-token"
+        )
+
+        try service.performSwitchOnly(
+            authFileURL: authURL,
+            account: account,
+            chatGPTAccountID: "new-account"
+        )
+
+        let resetConfig = try String(contentsOf: configURL, encoding: .utf8)
+        #expect(!resetConfig.contains("\nmodel_provider = \"mirror\""))
+        #expect(resetConfig.contains("[model_providers.mirror]"))
+    }
+
+    @Test
+    @MainActor
+    func codexAuthSwitchServicePerformSwitchOnlyThrowsOnInvalidJSON() throws {
+        let service = CodexAuthSwitchService(providerConfigResetter: { _ in })
         let account = AgentAccount(
             id: UUID(),
             name: "demo@example.com",
@@ -160,7 +243,7 @@ struct CodexAuthSwitchServiceCoverageTests {
     @Test
     @MainActor
     func codexAuthSwitchServicePerformSwitchAndLaunchRewritesAuthFileBeforeLaunch() async throws {
-        let service = CodexAuthSwitchService()
+        let service = CodexAuthSwitchService(providerConfigResetter: { _ in })
         let account = AgentAccount(
             id: UUID(),
             name: "display-name-only",

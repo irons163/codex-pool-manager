@@ -177,6 +177,7 @@ enum CodexLaunchTarget: String, CaseIterable, Identifiable, Codable {
 
 struct CodexAuthSwitchService {
     var logger: @Sendable (String) -> Void = { _ in }
+    private let providerConfigResetter: (URL) throws -> Void
 
     private let autoLaunchOrder: [CodexLaunchTarget] = [
         .chatgpt,
@@ -199,6 +200,17 @@ struct CodexAuthSwitchService {
         ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }
 
+    init(
+        logger: @escaping @Sendable (String) -> Void = { _ in },
+        providerConfigResetter: @escaping (URL) throws -> Void = { authFileURL in
+            let configURL = authFileURL.deletingLastPathComponent().appendingPathComponent("config.toml")
+            try CodexProviderConfigService(configURLProvider: { configURL }).resetToDefaultModelProvider()
+        }
+    ) {
+        self.logger = logger
+        self.providerConfigResetter = providerConfigResetter
+    }
+
     @MainActor
     func performSwitchOnly(
         authFileURL: URL,
@@ -218,6 +230,7 @@ struct CodexAuthSwitchService {
             account: account,
             chatGPTAccountID: chatGPTAccountID
         )
+        try resetProviderConfigForChatGPTAuth(authFileURL: authFileURL)
         logger(L10n.text("switch.service.log.launch_skipped_by_setting"))
     }
 
@@ -241,6 +254,7 @@ struct CodexAuthSwitchService {
             account: account,
             chatGPTAccountID: chatGPTAccountID
         )
+        try resetProviderConfigForChatGPTAuth(authFileURL: authFileURL)
 
         do {
             let launchedImmediately = try await relaunchCodexApp(launchTarget: launchTarget)
@@ -284,6 +298,11 @@ struct CodexAuthSwitchService {
         )
         try rewrittenData.write(to: authFileURL, options: .atomic)
         logger(L10n.text("switch.service.log.auth_file_rewritten"))
+    }
+
+    private func resetProviderConfigForChatGPTAuth(authFileURL: URL) throws {
+        try providerConfigResetter(authFileURL)
+        logger("Codex provider config reset to default model provider.")
     }
 
     private func relaunchCodexApp(launchTarget: CodexLaunchTarget) async throws -> Bool {
@@ -466,8 +485,8 @@ struct CodexAuthSwitchService {
 #if canImport(AppKit)
         let pollInterval = appExitPollIntervalNanoseconds
         let timeout = deferredLaunchMonitorTimeoutNanoseconds
-        let logger = logger
-        Task.detached(priority: .background) {
+        let logger: @Sendable (String) -> Void = logger
+        Task { @MainActor in
             logger("Deferred launch monitor started for \(bundleIdentifier).")
             var waited: UInt64 = 0
             while waited < timeout {

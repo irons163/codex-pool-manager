@@ -75,6 +75,59 @@ struct CodexProviderConfigServiceTests {
     }
 
     @Test
+    func configResetRemovesOnlyTopLevelModelProvider() {
+        let existing = """
+        model = "gpt-5.1-codex"
+        model_provider = "mirror"
+
+        [model_providers.mirror]
+        name = "mirror"
+        base_url = "https://ai.liaryai.com/api/codex"
+        wire_api = "responses"
+        requires_openai_auth = true
+
+        [profiles.testing]
+        model_provider = "keep-profile-provider"
+        """
+
+        let reset = CodexProviderConfigMerger.resetModelProvider(existing: existing)
+
+        #expect(reset.contains("model = \"gpt-5.1-codex\""))
+        #expect(!reset.contains("\nmodel_provider = \"mirror\""))
+        #expect(reset.hasPrefix("model = \"gpt-5.1-codex\""))
+        #expect(reset.contains("[model_providers.mirror]"))
+        #expect(reset.contains("base_url = \"https://ai.liaryai.com/api/codex\""))
+        #expect(reset.contains("model_provider = \"keep-profile-provider\""))
+    }
+
+    @Test
+    func configServiceResetWritesDefaultProviderConfigToDisk() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-provider-reset-\(UUID().uuidString)", isDirectory: true)
+        let configURL = directory.appendingPathComponent("config.toml")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try """
+        model = "gpt-5.1-codex"
+        model_provider = "mirror"
+
+        [model_providers.mirror]
+        name = "mirror"
+        base_url = "https://ai.liaryai.com/api/codex"
+        wire_api = "responses"
+        requires_openai_auth = true
+        """.write(to: configURL, atomically: true, encoding: .utf8)
+
+        let service = CodexProviderConfigService(configURLProvider: { configURL })
+        try service.resetToDefaultModelProvider()
+
+        let reset = try String(contentsOf: configURL, encoding: .utf8)
+        #expect(!reset.contains("\nmodel_provider = \"mirror\""))
+        #expect(reset.contains("model = \"gpt-5.1-codex\""))
+        #expect(reset.contains("[model_providers.mirror]"))
+    }
+
+    @Test
     func providerConfigRejectsInvalidProviderID() {
         #expect(throws: CodexProviderConfigError.invalidProviderID) {
             _ = try CodexProviderConfig(
