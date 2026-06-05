@@ -82,7 +82,6 @@ struct AccountUsagePanelView: View {
     @State private var renameGroupName = ""
     @State private var isGroupRenameEditorVisible = false
     @State private var deleteConfirmationTarget: DeleteConfirmationTarget?
-    @State private var relayUsageInfoAccountID: UUID?
     @State private var draftAccountNames: [UUID: String] = [:]
     @State private var panelWidth: CGFloat = 0
     @State private var gridContainerWidth: CGFloat = 0
@@ -368,7 +367,11 @@ struct AccountUsagePanelView: View {
     }
 
     private static func usesRelayUsageInfoButton(for account: AgentAccount) -> Bool {
-        account.isRelayAPIKeyAccount && account.isUsageSyncExcluded
+        false
+    }
+
+    private static func showsUsageMeters(for account: AgentAccount) -> Bool {
+        !account.isRelayAPIKeyAccount
     }
 
     private var sortMenuControl: some View {
@@ -761,13 +764,6 @@ struct AccountUsagePanelView: View {
                     )
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if Self.usesRelayUsageInfoButton(for: account) {
-                relayUsageInfoButton(account)
-                    .padding(.top, 8)
-                    .padding(.trailing, 8)
-            }
-        }
         .shadow(
             color: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? PoolDashboardTheme.glowA.opacity(0.35) : .clear,
             radius: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? 12 : 0
@@ -780,54 +776,56 @@ struct AccountUsagePanelView: View {
         accountNameRow(account)
         accountActionAndWarningRow(account)
 
-        if paidAccount {
-            if let fiveHourPercent = account.primaryUsagePercent {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 12) {
-                        paidWeeklyUsageSection(for: account)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+        if Self.showsUsageMeters(for: account) {
+            if paidAccount {
+                if let fiveHourPercent = account.primaryUsagePercent {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 12) {
+                            paidWeeklyUsageSection(for: account)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                        VStack(alignment: .leading, spacing: 10) {
+                            paidWeeklyUsageSection(for: account)
+                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 10) {
-                        paidWeeklyUsageSection(for: account)
-                        paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                    }
+                } else {
+                    paidWeeklyUsageSection(for: account)
                 }
             } else {
-                paidWeeklyUsageSection(for: account)
-            }
-        } else {
-            if isPercentUsageAccount(account) {
-                HStack {
-                    Text(L10n.text("usage.used_percent_format", account.usedUnits))
-                        .font(.subheadline)
-                    Spacer()
-                    Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
-                        .font(.subheadline)
+                if isPercentUsageAccount(account) {
+                    HStack {
+                        Text(L10n.text("usage.used_percent_format", account.usedUnits))
+                            .font(.subheadline)
+                        Spacer()
+                        Text(L10n.text("usage.remaining_percent_format", account.remainingUnits))
+                            .font(.subheadline)
+                    }
+                } else {
+                    HStack {
+                        Stepper(
+                            L10n.text("usage.used_units_format", account.usedUnits),
+                            value: accountUsedBinding(account.id),
+                            in: 0...account.quota,
+                            step: 50
+                        )
+                        Stepper(
+                            L10n.text("usage.quota_units_format", account.quota),
+                            value: accountQuotaBinding(account.id),
+                            in: 100...20_000,
+                            step: 100
+                        )
+                    }
                 }
-            } else {
-                HStack {
-                    Stepper(
-                        L10n.text("usage.used_units_format", account.usedUnits),
-                        value: accountUsedBinding(account.id),
-                        in: 0...account.quota,
-                        step: 50
-                    )
-                    Stepper(
-                        L10n.text("usage.quota_units_format", account.quota),
-                        value: accountQuotaBinding(account.id),
-                        in: 100...20_000,
-                        step: 100
-                    )
-                }
-            }
 
-            ProgressView(value: account.usageRatio)
-                .tint(usageProgressColor(account))
-            Text(resetRecordText(for: account))
-                .font(.footnote)
-                .foregroundStyle(PoolDashboardTheme.textMuted)
+                ProgressView(value: account.usageRatio)
+                    .tint(usageProgressColor(account))
+                Text(resetRecordText(for: account))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+            }
         }
     }
 
@@ -861,24 +859,26 @@ struct AccountUsagePanelView: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            HStack(alignment: .top, spacing: 10) {
-                circularUsageIndicator(
-                    title: L10n.text("usage.weekly_short"),
-                    usedPercent: weeklyUsagePercent(for: account),
-                    color: usageProgressColor(account),
-                    resetText: shortResetDateText(account.usageWindowResetAt)
-                )
-
-                if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+            if Self.showsUsageMeters(for: account) {
+                HStack(alignment: .top, spacing: 10) {
                     circularUsageIndicator(
-                        title: L10n.text("usage.five_hour_short"),
-                        usedPercent: max(0, min(100, fiveHourPercent)),
-                        color: usageColor(forPercent: fiveHourPercent),
-                        resetText: shortResetDateText(account.primaryUsageResetAt)
+                        title: L10n.text("usage.weekly_short"),
+                        usedPercent: weeklyUsagePercent(for: account),
+                        color: usageProgressColor(account),
+                        resetText: shortResetDateText(account.usageWindowResetAt)
                     )
+
+                    if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+                        circularUsageIndicator(
+                            title: L10n.text("usage.five_hour_short"),
+                            usedPercent: max(0, min(100, fiveHourPercent)),
+                            color: usageColor(forPercent: fiveHourPercent),
+                            resetText: shortResetDateText(account.primaryUsageResetAt)
+                        )
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
         }
 
         if account.isUsageSyncExcluded {
@@ -1217,61 +1217,28 @@ struct AccountUsagePanelView: View {
 
     @ViewBuilder
     private func syncExcludedWarning(_ account: AgentAccount) -> some View {
-        if account.isUsageSyncExcluded && !Self.usesRelayUsageInfoButton(for: account) {
+        if account.isUsageSyncExcluded {
             PanelStatusCalloutView(
-                message: account.usageSyncError ?? L10n.text("sync.excluded.default_message"),
-                title: L10n.text("sync.excluded.title"),
+                message: usageSyncWarningMessage(for: account),
+                title: usageSyncWarningTitle(for: account),
                 tone: .warning
             )
             .frame(maxWidth: 440, alignment: .leading)
         }
     }
 
-    private func relayUsageInfoButton(_ account: AgentAccount) -> some View {
-        Button {
-            relayUsageInfoAccountID = account.id
-        } label: {
-            Image(systemName: "exclamationmark.circle.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(PoolDashboardTheme.textMuted)
-                .frame(width: 28, height: 28)
-                .contentShape(Circle())
+    private func usageSyncWarningTitle(for account: AgentAccount) -> String {
+        if account.isRelayAPIKeyAccount {
+            return L10n.text("relay.usage_sync_unavailable.title")
         }
-        .buttonStyle(.plain)
-        .help(L10n.text("relay.usage_sync_unavailable.title"))
-        .accessibilityLabel(L10n.text("relay.usage_sync_unavailable.title"))
-        .popover(isPresented: relayUsageInfoPresentationBinding(for: account), arrowEdge: .top) {
-            relayUsageInfoPopover
-        }
+        return L10n.text("sync.excluded.title")
     }
 
-    private func relayUsageInfoPresentationBinding(for account: AgentAccount) -> Binding<Bool> {
-        Binding(
-            get: { relayUsageInfoAccountID == account.id },
-            set: { isPresented in
-                relayUsageInfoAccountID = isPresented ? account.id : nil
-            }
-        )
-    }
-
-    private var relayUsageInfoPopover: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label {
-                Text(L10n.text("relay.usage_sync_unavailable.title"))
-                    .font(.headline.weight(.semibold))
-            } icon: {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundStyle(PoolDashboardTheme.glowB)
-            }
-
-            Text(L10n.text("relay.usage_sync_unavailable.hint"))
-                .font(.callout)
-                .foregroundStyle(PoolDashboardTheme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private func usageSyncWarningMessage(for account: AgentAccount) -> String {
+        if account.isRelayAPIKeyAccount {
+            return L10n.text("relay.usage_sync_unavailable.hint")
         }
-        .padding(14)
-        .frame(width: 280, alignment: .leading)
+        return account.usageSyncError ?? L10n.text("sync.excluded.default_message")
     }
 
     private var relayBadge: some View {
@@ -1339,6 +1306,10 @@ extension AccountUsagePanelView {
 
     static func debugUsesRelayUsageInfoButton(for account: AgentAccount) -> Bool {
         usesRelayUsageInfoButton(for: account)
+    }
+
+    static func debugShowsUsageMeters(for account: AgentAccount) -> Bool {
+        showsUsageMeters(for: account)
     }
 }
 #endif

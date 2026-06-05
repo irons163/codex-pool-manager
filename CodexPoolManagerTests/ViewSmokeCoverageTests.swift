@@ -1111,7 +1111,7 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
-    func accountUsageRelayInfoPresentationUsesDisclosureButton() {
+    func accountUsageRelayInfoPresentationUsesInlineCalloutWithoutUsageMeters() {
         let relayAccount = AgentAccount(
             id: UUID(),
             name: "relay@example.com",
@@ -1145,9 +1145,12 @@ struct ViewSmokeCoverageTests {
             usageSyncError: "auth failed"
         )
 
-        #expect(AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: relayAccount))
+        #expect(!AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: relayAccount))
+        #expect(!AccountUsagePanelView.debugShowsUsageMeters(for: relayAccount))
         #expect(!AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: oauthExcludedAccount))
+        #expect(AccountUsagePanelView.debugShowsUsageMeters(for: oauthExcludedAccount))
         #expect(!AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: makeSmokeAccount()))
+        #expect(AccountUsagePanelView.debugShowsUsageMeters(for: makeSmokeAccount()))
     }
 
     @Test
