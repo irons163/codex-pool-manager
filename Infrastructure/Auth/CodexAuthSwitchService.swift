@@ -254,6 +254,22 @@ struct CodexAuthSwitchService {
         }
     }
 
+    @MainActor
+    @discardableResult
+    func performLaunchAfterExternalAuthSwitch(launchTarget: CodexLaunchTarget = .auto) async throws -> Bool {
+        do {
+            let launchedImmediately = try await relaunchCodexApp(launchTarget: launchTarget)
+            if launchedImmediately {
+                logger(L10n.text("switch.service.log.launch_completed"))
+            } else {
+                logger("Launch is deferred. Waiting for app to close, then will relaunch automatically.")
+            }
+            return launchedImmediately
+        } catch {
+            throw CodexAuthSwitchError.launchFailedAfterSwitch(reason: error.localizedDescription)
+        }
+    }
+
     private func rewriteAuthFile(
         authFileURL: URL,
         account: AgentAccount,

@@ -1111,6 +1111,46 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func accountUsageRelayInfoPresentationUsesDisclosureButton() {
+        let relayAccount = AgentAccount(
+            id: UUID(),
+            name: "relay@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "relay-key",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.example.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true,
+            email: "relay@example.com",
+            chatGPTAccountID: nil,
+            primaryUsagePercent: nil,
+            isPaid: true,
+            isUsageSyncExcluded: true,
+            usageSyncError: AgentAccount.relayUsageSyncUnavailableReason
+        )
+        let oauthExcludedAccount = AgentAccount(
+            id: UUID(),
+            name: "oauth@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "oauth-token",
+            email: "oauth@example.com",
+            chatGPTAccountID: "acct-oauth",
+            primaryUsagePercent: nil,
+            isPaid: true,
+            isUsageSyncExcluded: true,
+            usageSyncError: "auth failed"
+        )
+
+        #expect(AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: relayAccount))
+        #expect(!AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: oauthExcludedAccount))
+        #expect(!AccountUsagePanelView.debugUsesRelayUsageInfoButton(for: makeSmokeAccount()))
+    }
+
+    @Test
     @MainActor
     func poolDashboardViewDebugCoreCoverageSnapshotCoversPrivateBindingsAndDefaults() {
         let account = makeSmokeAccount(name: "core-coverage@example.com", usedUnits: 10, quota: 200, isPaid: true)

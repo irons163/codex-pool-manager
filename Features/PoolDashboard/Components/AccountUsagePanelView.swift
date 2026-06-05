@@ -82,6 +82,7 @@ struct AccountUsagePanelView: View {
     @State private var renameGroupName = ""
     @State private var isGroupRenameEditorVisible = false
     @State private var deleteConfirmationTarget: DeleteConfirmationTarget?
+    @State private var relayUsageInfoAccountID: UUID?
     @State private var draftAccountNames: [UUID: String] = [:]
     @State private var panelWidth: CGFloat = 0
     @State private var gridContainerWidth: CGFloat = 0
@@ -364,6 +365,10 @@ struct AccountUsagePanelView: View {
 
     private static func usesStackedSortAndLayoutControls(availableWidth: CGFloat) -> Bool {
         availableWidth > 0 && availableWidth < ResponsiveLayout.sortAndLayoutStackBreakpoint
+    }
+
+    private static func usesRelayUsageInfoButton(for account: AgentAccount) -> Bool {
+        account.isRelayAPIKeyAccount && account.isUsageSyncExcluded
     }
 
     private var sortMenuControl: some View {
@@ -754,6 +759,13 @@ struct AccountUsagePanelView: View {
                             .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
                             .padding(1)
                     )
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if Self.usesRelayUsageInfoButton(for: account) {
+                relayUsageInfoButton(account)
+                    .padding(.top, 8)
+                    .padding(.trailing, 8)
             }
         }
         .shadow(
@@ -1205,22 +1217,61 @@ struct AccountUsagePanelView: View {
 
     @ViewBuilder
     private func syncExcludedWarning(_ account: AgentAccount) -> some View {
-        if account.isUsageSyncExcluded {
-            let message = account.isRelayAPIKeyAccount
-                ? L10n.text("relay.usage_sync_unavailable.hint")
-                : (account.usageSyncError ?? L10n.text("sync.excluded.default_message"))
-            let title = account.isRelayAPIKeyAccount
-                ? L10n.text("relay.usage_sync_unavailable.title")
-                : L10n.text("sync.excluded.title")
-            let tone: PanelStatusCalloutView.Tone = account.isRelayAPIKeyAccount ? .info : .warning
-
+        if account.isUsageSyncExcluded && !Self.usesRelayUsageInfoButton(for: account) {
             PanelStatusCalloutView(
-                message: message,
-                title: title,
-                tone: tone
+                message: account.usageSyncError ?? L10n.text("sync.excluded.default_message"),
+                title: L10n.text("sync.excluded.title"),
+                tone: .warning
             )
             .frame(maxWidth: 440, alignment: .leading)
         }
+    }
+
+    private func relayUsageInfoButton(_ account: AgentAccount) -> some View {
+        Button {
+            relayUsageInfoAccountID = account.id
+        } label: {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(L10n.text("relay.usage_sync_unavailable.title"))
+        .accessibilityLabel(L10n.text("relay.usage_sync_unavailable.title"))
+        .popover(isPresented: relayUsageInfoPresentationBinding(for: account), arrowEdge: .top) {
+            relayUsageInfoPopover
+        }
+    }
+
+    private func relayUsageInfoPresentationBinding(for account: AgentAccount) -> Binding<Bool> {
+        Binding(
+            get: { relayUsageInfoAccountID == account.id },
+            set: { isPresented in
+                relayUsageInfoAccountID = isPresented ? account.id : nil
+            }
+        )
+    }
+
+    private var relayUsageInfoPopover: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(L10n.text("relay.usage_sync_unavailable.title"))
+                    .font(.headline.weight(.semibold))
+            } icon: {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(PoolDashboardTheme.glowB)
+            }
+
+            Text(L10n.text("relay.usage_sync_unavailable.hint"))
+                .font(.callout)
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(width: 280, alignment: .leading)
     }
 
     private var relayBadge: some View {
@@ -1284,6 +1335,10 @@ struct AccountUsagePanelView: View {
 extension AccountUsagePanelView {
     static func debugUsesStackedHeaderControls(availableWidth: CGFloat) -> Bool {
         usesStackedHeaderControls(availableWidth: availableWidth)
+    }
+
+    static func debugUsesRelayUsageInfoButton(for account: AgentAccount) -> Bool {
+        usesRelayUsageInfoButton(for: account)
     }
 }
 #endif

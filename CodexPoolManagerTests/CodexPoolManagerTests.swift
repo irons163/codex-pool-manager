@@ -151,6 +151,42 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func manualModeSwitchLaunchCanSelectRelayAPIKeyAccount() {
+        let oauthID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let relayID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: oauthID, name: "OAuth", usedUnits: 100, quota: 1000),
+                AgentAccount(
+                    id: relayID,
+                    name: "Relay",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "sk-relay",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex",
+                    relayWireAPI: "responses",
+                    relayRequiresOpenAIAuth: true,
+                    isUsageSyncExcluded: true,
+                    usageSyncError: AgentAccount.relayUsageSyncUnavailableReason
+                )
+            ],
+            mode: .manual
+        )
+
+        state.selectManualAccount(oauthID, now: Date(timeIntervalSince1970: 0))
+        state.markActiveAccountForSwitchLaunch(relayID, now: Date(timeIntervalSince1970: 5))
+
+        #expect(state.activeAccount?.id == relayID)
+        #expect(state.manualAccountID == relayID)
+
+        state.evaluate(now: Date(timeIntervalSince1970: 10))
+        #expect(state.activeAccount?.id == relayID)
+    }
+
+    @Test
     func enteringFocusModeKeepsCurrentActiveAccount() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!

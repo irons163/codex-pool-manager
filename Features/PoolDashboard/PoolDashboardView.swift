@@ -2337,11 +2337,13 @@ struct PoolDashboardView: View {
     private func switchToRelayProvider(using account: AgentAccount) async {
         let output = await relayAccountCoordinator.switchToRelayAccount(
             account,
+            switchWithoutLaunching: state.switchWithoutLaunching,
+            launchTarget: selectedLaunchTarget,
             viewState: viewState
         )
         viewState = output.viewState
 
-        if viewState.switchLaunchError == nil {
+        if output.didSwitchAuth {
             suppressNextSnapshotDrivenSwitch = true
             state.markActiveAccountForSwitchLaunch(account.id)
             DesktopNotifier.post(

@@ -87,3 +87,25 @@ struct CodexProviderConfigServiceTests {
         }
     }
 }
+
+struct CodexAPIKeyLoginServiceTests {
+    @Test
+    func loginAddsHomebrewNodePathsToProcessEnvironment() async throws {
+        var receivedEnvironment: [String: String]?
+        let service = CodexAPIKeyLoginService(
+            executableURLProvider: { URL(fileURLWithPath: "/tmp/codex") },
+            processRunner: { _, _, _, environment in
+                receivedEnvironment = environment
+                return (0, "")
+            }
+        )
+
+        try await service.login(apiKey: "sk-test")
+
+        let path = try #require(receivedEnvironment?["PATH"])
+        let entries = path.split(separator: ":").map(String.init)
+        #expect(entries.contains("/opt/homebrew/bin"))
+        #expect(entries.contains("/usr/local/bin"))
+        #expect(entries.contains("/usr/bin"))
+    }
+}

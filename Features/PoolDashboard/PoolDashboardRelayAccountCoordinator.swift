@@ -1,6 +1,10 @@
 import Foundation
 
 struct PoolDashboardRelayAccountCoordinator {
+    typealias AppRelauncher = @MainActor (
+        _ launchTarget: CodexLaunchTarget
+    ) async throws -> Bool
+
     struct AddOutput {
         let state: AccountPoolState
         let viewState: PoolDashboardViewState
@@ -8,17 +12,21 @@ struct PoolDashboardRelayAccountCoordinator {
 
     struct SwitchOutput {
         let viewState: PoolDashboardViewState
+        let didSwitchAuth: Bool
     }
 
     private let configApplier: (CodexProviderConfig) throws -> Void
     private let apiKeyLogin: (String) async throws -> Void
+    private let appRelauncher: AppRelauncher
 
     init(
         configApplier: @escaping (CodexProviderConfig) throws -> Void = { try CodexProviderConfigService().apply($0) },
-        apiKeyLogin: @escaping (String) async throws -> Void = { try await CodexAPIKeyLoginService().login(apiKey: $0) }
+        apiKeyLogin: @escaping (String) async throws -> Void = { try await CodexAPIKeyLoginService().login(apiKey: $0) },
+        appRelauncher: @escaping AppRelauncher = Self.defaultAppRelauncher
     ) {
         self.configApplier = configApplier
         self.apiKeyLogin = apiKeyLogin
+        self.appRelauncher = appRelauncher
     }
 
     func addRelayAccount(
@@ -68,7 +76,13 @@ struct PoolDashboardRelayAccountCoordinator {
         return AddOutput(state: nextState, viewState: nextViewState)
     }
 
-    func switchToRelayAccount(_ account: AgentAccount, viewState: PoolDashboardViewState) async -> SwitchOutput {
+    @MainActor
+    func switchToRelayAccount(
+        _ account: AgentAccount,
+        switchWithoutLaunching: Bool = false,
+        launchTarget: CodexLaunchTarget = .auto,
+        viewState: PoolDashboardViewState
+    ) async -> SwitchOutput {
         var nextViewState = viewState
         var logLines = [L10n.text("relay.switch.start_format", account.name)]
 
@@ -97,9 +111,36 @@ struct PoolDashboardRelayAccountCoordinator {
         } catch {
             logLines.append(L10n.text("relay.switch.failed_format", error.localizedDescription))
             nextViewState.switchLaunchError = error.localizedDescription
+            nextViewState.switchLaunchWarning = nil
+            nextViewState.lastSwitchLaunchLog = logLines.joined(separator: "\n")
+            return SwitchOutput(viewState: nextViewState, didSwitchAuth: false)
+        }
+
+        if switchWithoutLaunching {
+            logLines.append(L10n.text("switch.service.log.launch_skipped_by_setting"))
+        } else {
+            do {
+                let launchedImmediately = try await appRelauncher(launchTarget)
+                if launchedImmediately {
+                    logLines.append(L10n.text("switch.service.log.launch_completed"))
+                } else {
+                    logLines.append("Launch is deferred. Waiting for app to close, then will relaunch automatically.")
+                }
+            } catch {
+                logLines.append(L10n.text("relay.switch.failed_format", error.localizedDescription))
+                nextViewState.switchLaunchError = nil
+                nextViewState.switchLaunchWarning = L10n.text("switch.warning.launch_failed_but_switched")
+            }
         }
 
         nextViewState.lastSwitchLaunchLog = logLines.joined(separator: "\n")
-        return SwitchOutput(viewState: nextViewState)
+        return SwitchOutput(viewState: nextViewState, didSwitchAuth: true)
+    }
+
+    @MainActor
+    private static func defaultAppRelauncher(
+        launchTarget: CodexLaunchTarget
+    ) async throws -> Bool {
+        try await CodexAuthSwitchService().performLaunchAfterExternalAuthSwitch(launchTarget: launchTarget)
     }
 }

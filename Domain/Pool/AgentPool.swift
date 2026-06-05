@@ -421,6 +421,11 @@ struct AccountPoolSnapshot: Codable, Equatable {
 }
 
 struct AccountPoolState {
+    private enum AccountSelectionScope {
+        case allAccounts
+        case syncIncludedAccounts
+    }
+
     private(set) var accounts: [AgentAccount]
     private(set) var groups: [String]
     private(set) var activities: [PoolActivity]
@@ -719,7 +724,7 @@ struct AccountPoolState {
     mutating func selectManualAccount(_ accountID: UUID, now: Date = .now) {
         manualAccountID = accountID
         if mode == .manual {
-            switchActive(to: accountID, now: now)
+            switchActive(to: accountID, now: now, scope: .allAccounts)
         }
     }
 
@@ -729,7 +734,7 @@ struct AccountPoolState {
         } else if mode == .focus {
             focusLockedAccountID = accountID
         }
-        switchActive(to: accountID, now: now)
+        switchActive(to: accountID, now: now, scope: .allAccounts)
     }
 
     mutating func recordUsage(units: Int, now: Date = .now) {
@@ -1033,14 +1038,14 @@ struct AccountPoolState {
         switch mode {
         case .manual:
             let fallbackID = accounts[0].id
-            switchActive(to: manualAccountID ?? fallbackID, now: now)
+            switchActive(to: manualAccountID ?? fallbackID, now: now, scope: .allAccounts)
 
         case .focus:
             if focusLockedAccountID == nil {
                 focusLockedAccountID = bestRemainingAccountID()
             }
             if let focusLockedAccountID {
-                switchActive(to: focusLockedAccountID, now: now)
+                switchActive(to: focusLockedAccountID, now: now, scope: .allAccounts)
             }
 
         case .intelligent:
@@ -1059,7 +1064,7 @@ struct AccountPoolState {
             }
 
             guard let current = activeAccount else {
-                switchActive(to: candidate.id, now: now)
+                switchActive(to: candidate.id, now: now, scope: .syncIncludedAccounts)
                 return
             }
 
@@ -1067,7 +1072,7 @@ struct AccountPoolState {
             let candidateRemainingRatio = intelligentRemainingRatio(for: candidate)
 
             if currentRemainingRatio <= 0 {
-                switchActive(to: candidate.id, now: now)
+                switchActive(to: candidate.id, now: now, scope: .syncIncludedAccounts)
                 return
             }
 
@@ -1087,7 +1092,7 @@ struct AccountPoolState {
                 return
             }
 
-            switchActive(to: candidate.id, now: now)
+            switchActive(to: candidate.id, now: now, scope: .syncIncludedAccounts)
         }
     }
 
@@ -1155,13 +1160,18 @@ struct AccountPoolState {
         return Int(ceil(remaining))
     }
 
-    private mutating func switchActive(to accountID: UUID, now: Date) {
-        let availableIDs = Set(syncIncludedAccounts.map(\.id))
+    private mutating func switchActive(
+        to accountID: UUID,
+        now: Date,
+        scope: AccountSelectionScope = .syncIncludedAccounts
+    ) {
+        let candidates = selectableAccounts(for: scope)
+        let availableIDs = Set(candidates.map(\.id))
         guard !availableIDs.isEmpty else {
             activeAccountID = nil
             return
         }
-        let fallbackID = syncIncludedAccounts[0].id
+        let fallbackID = candidates[0].id
         let validID = availableIDs.contains(accountID) ? accountID : fallbackID
         if activeAccountID != validID {
             let previousName = accounts.first(where: { $0.id == activeAccountID })?.name
@@ -1180,6 +1190,15 @@ struct AccountPoolState {
             } else {
                 appendActivity(String(format: L10n.text("activity.switch_account_to_format"), targetName), now: now)
             }
+        }
+    }
+
+    private func selectableAccounts(for scope: AccountSelectionScope) -> [AgentAccount] {
+        switch scope {
+        case .allAccounts:
+            return accounts
+        case .syncIncludedAccounts:
+            return syncIncludedAccounts
         }
     }
 

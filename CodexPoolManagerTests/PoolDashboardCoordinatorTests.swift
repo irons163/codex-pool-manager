@@ -424,7 +424,11 @@ struct RelayAccountCoordinatorTests {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
-            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } }
+            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
+            appRelauncher: { launchTarget in
+                events.withLock { $0.append("launch:\(launchTarget.rawValue)") }
+                return true
+            }
         )
         let account = AgentAccount(
             id: UUID(),
@@ -440,18 +444,99 @@ struct RelayAccountCoordinatorTests {
             relayRequiresOpenAIAuth: true
         )
 
-        let output = await coordinator.switchToRelayAccount(account, viewState: PoolDashboardViewState())
+        let output = await coordinator.switchToRelayAccount(
+            account,
+            switchWithoutLaunching: false,
+            launchTarget: .codex,
+            viewState: PoolDashboardViewState()
+        )
 
-        #expect(events.value == ["config:mirror", "login:sk-relay"])
+        #expect(events.value == ["config:mirror", "login:sk-relay", "launch:codex"])
+        #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains("mirror"))
+    }
+
+    @Test
+    func relayCoordinatorSkipsRelaunchWhenSwitchWithoutLaunchingIsEnabled() async {
+        let events = LockedValue<[String]>([])
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
+            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
+            appRelauncher: { _ in
+                events.withLock { $0.append("launch") }
+                return true
+            }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(
+            account,
+            switchWithoutLaunching: true,
+            launchTarget: .codex,
+            viewState: PoolDashboardViewState()
+        )
+
+        #expect(events.value == ["config:mirror", "login:sk-relay"])
+        #expect(output.didSwitchAuth)
+        #expect(output.viewState.switchLaunchError == nil)
+        #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("switch.service.log.launch_skipped_by_setting")))
+    }
+
+    @Test
+    func relayCoordinatorKeepsSwitchSuccessfulWhenRelaunchFails() async {
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLogin: { _ in },
+            appRelauncher: { _ in
+                throw CodexAuthSwitchError.launchFailedAfterSwitch(reason: "Codex still running")
+            }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(
+            account,
+            switchWithoutLaunching: false,
+            launchTarget: .codex,
+            viewState: PoolDashboardViewState()
+        )
+
+        #expect(output.didSwitchAuth)
+        #expect(output.viewState.switchLaunchError == nil)
+        #expect(output.viewState.switchLaunchWarning == L10n.text("switch.warning.launch_failed_but_switched"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains("Codex still running"))
     }
 
     @Test
     func relaySwitchDoesNotRequireAuthJSONFields() async {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
-            apiKeyLogin: { _ in }
+            apiKeyLogin: { _ in },
+            appRelauncher: { _ in true }
         )
         let account = AgentAccount(
             id: UUID(),
