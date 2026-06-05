@@ -3549,6 +3549,67 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexAuthFileSwitcherConvertsAPIKeyAuthBackToChatGPTAuth() throws {
+        let json = """
+        {
+          "auth_mode": "apikey",
+          "OPENAI_API_KEY": "sk-old-api-key",
+          "CODEX_API_KEY": "sk-old-codex-key"
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "oauth-access-token",
+            accountID: "user-oauth-account",
+            email: "oauth@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+
+        #expect(object["auth_mode"] as? String == "chatgpt")
+        #expect(object["OPENAI_API_KEY"] == nil)
+        #expect(object["CODEX_API_KEY"] == nil)
+        #expect(object["access_token"] == nil)
+        #expect(object["account_id"] == nil)
+        #expect(object["email"] as? String == "oauth@example.com")
+        let tokens = try #require(object["tokens"] as? [String: Any])
+        #expect(tokens["access_token"] as? String == "oauth-access-token")
+        #expect(tokens["account_id"] as? String == "user-oauth-account")
+    }
+
+    @Test
+    func codexAuthFileSwitcherPreservesModernRefreshTokensWhenSwitchingOAuthAccounts() throws {
+        let json = """
+        {
+          "auth_mode": "chatgpt",
+          "email": "old@example.com",
+          "tokens": {
+            "access_token": "old-access-token",
+            "account_id": "old-account",
+            "refresh_token": "kept-refresh-token",
+            "id_token": "kept-id-token"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "new-access-token",
+            accountID: "new-account",
+            email: "new@example.com"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let tokens = try #require(object["tokens"] as? [String: Any])
+
+        #expect(object["auth_mode"] as? String == "chatgpt")
+        #expect(object["email"] as? String == "new@example.com")
+        #expect(tokens["access_token"] as? String == "new-access-token")
+        #expect(tokens["account_id"] as? String == "new-account")
+        #expect(tokens["refresh_token"] as? String == "kept-refresh-token")
+        #expect(tokens["id_token"] as? String == "kept-id-token")
+    }
+
+    @Test
     func codexAuthFileSwitcherThrowsOnInvalidJSON() {
         let invalidData = Data("not-json".utf8)
 

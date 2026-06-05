@@ -8,6 +8,10 @@ enum CodexAuthFileSwitcher {
     private static let tokenKeys = ["access_token", "accessToken", "token"]
     private static let accountIDKeys = ["account_id", "accountId", "chatgpt_account_id", "chatgptAccountId"]
     private static let emailKeys = ["email", "user_email", "account_email", "emailAddress", "email_address"]
+    private static let authModeKey = "auth_mode"
+    private static let chatGPTAuthMode = "chatgpt"
+    private static let tokenContainerKey = "tokens"
+    private static let apiKeyCredentialKeys = ["OPENAI_API_KEY", "CODEX_API_KEY"]
 
     static func rewriteAuthJSON(
         _ data: Data,
@@ -29,15 +33,13 @@ enum CodexAuthFileSwitcher {
         )
 
         if var root = rewritten as? [String: Any] {
-            if !stats.replacedToken {
-                root["access_token"] = accessToken
-            }
-            if !stats.replacedAccountID {
-                root["account_id"] = accountID
-            }
-            if let email, !email.isEmpty, !stats.replacedEmail {
-                root["email"] = email
-            }
+            normalizeRootAuthCache(
+                &root,
+                accessToken: accessToken,
+                accountID: accountID,
+                email: email,
+                stats: stats
+            )
             rewritten = root
         }
 
@@ -100,5 +102,48 @@ enum CodexAuthFileSwitcher {
         }
 
         return node
+    }
+
+    private static func normalizeRootAuthCache(
+        _ root: inout [String: Any],
+        accessToken: String,
+        accountID: String,
+        email: String?,
+        stats: RewriteStats
+    ) {
+        let usesModernAuthCache = root[authModeKey] != nil || root[tokenContainerKey] != nil
+
+        guard usesModernAuthCache else {
+            if !stats.replacedToken {
+                root["access_token"] = accessToken
+            }
+            if !stats.replacedAccountID {
+                root["account_id"] = accountID
+            }
+            if let email, !email.isEmpty, !stats.replacedEmail {
+                root["email"] = email
+            }
+            return
+        }
+
+        root[authModeKey] = chatGPTAuthMode
+        for key in apiKeyCredentialKeys {
+            root.removeValue(forKey: key)
+        }
+
+        var tokens = root[tokenContainerKey] as? [String: Any] ?? [:]
+        tokens["access_token"] = accessToken
+        tokens["account_id"] = accountID
+        root[tokenContainerKey] = tokens
+
+        for key in tokenKeys {
+            root.removeValue(forKey: key)
+        }
+        for key in accountIDKeys {
+            root.removeValue(forKey: key)
+        }
+        if let email, !email.isEmpty, !stats.replacedEmail {
+            root["email"] = email
+        }
     }
 }
