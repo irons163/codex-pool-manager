@@ -13,6 +13,7 @@ enum CodexAuthFileSwitcher {
     private static let tokenContainerKey = "tokens"
     private static let openAIAPIKey = "OPENAI_API_KEY"
     private static let codexAPIKey = "CODEX_API_KEY"
+    private static let refreshTokenKey = "refresh_token"
     private static let idTokenKey = "id_token"
     private static let lastRefreshKey = "last_refresh"
 
@@ -21,6 +22,7 @@ enum CodexAuthFileSwitcher {
         accessToken: String,
         accountID: String,
         email: String?,
+        refreshToken: String? = nil,
         idToken: String? = nil,
         lastRefresh: String? = nil
     ) throws -> Data {
@@ -43,6 +45,7 @@ enum CodexAuthFileSwitcher {
                 accessToken: accessToken,
                 accountID: accountID,
                 email: email,
+                refreshToken: refreshToken,
                 idToken: idToken,
                 lastRefresh: lastRefresh,
                 stats: stats
@@ -116,6 +119,7 @@ enum CodexAuthFileSwitcher {
         accessToken: String,
         accountID: String,
         email: String?,
+        refreshToken: String?,
         idToken: String?,
         lastRefresh: String?,
         stats: RewriteStats
@@ -142,6 +146,9 @@ enum CodexAuthFileSwitcher {
         var tokens = root[tokenContainerKey] as? [String: Any] ?? [:]
         tokens["access_token"] = accessToken
         tokens["account_id"] = accountID
+        if let refreshToken = nonEmptyString(refreshToken) {
+            tokens[refreshTokenKey] = refreshToken
+        }
         if let idToken = nonEmptyString(idToken) {
             tokens[idTokenKey] = idToken
         }

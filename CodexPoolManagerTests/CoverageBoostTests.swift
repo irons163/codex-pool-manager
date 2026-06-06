@@ -197,6 +197,7 @@ struct CodexAuthSwitchServiceCoverageTests {
           "tokens": {
             "access_token": "old-oauth-access-token",
             "account_id": "user-oauth-account",
+            "refresh_token": "stored-refresh-token",
             "id_token": "stored-id-token"
           }
         }
@@ -228,6 +229,7 @@ struct CodexAuthSwitchServiceCoverageTests {
         #expect(apiKeyValue is NSNull)
         #expect(tokens["access_token"] as? String == "new-oauth-access-token")
         #expect(tokens["account_id"] as? String == "user-oauth-account")
+        #expect(tokens["refresh_token"] as? String == "stored-refresh-token")
         #expect(tokens["id_token"] as? String == "stored-id-token")
     }
 

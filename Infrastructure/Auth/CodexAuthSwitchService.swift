@@ -303,6 +303,7 @@ struct CodexAuthSwitchService {
             accessToken: account.apiToken,
             accountID: chatGPTAccountID,
             email: accountEmail,
+            refreshToken: metadata.refreshToken,
             idToken: metadata.idToken,
             lastRefresh: metadata.lastRefresh
         )
@@ -311,14 +312,18 @@ struct CodexAuthSwitchService {
     }
 
     private struct OAuthAuthCacheMetadata {
+        var refreshToken: String? = nil
         var idToken: String? = nil
         var lastRefresh: String? = nil
 
         var isComplete: Bool {
-            idToken != nil && lastRefresh != nil
+            refreshToken != nil && idToken != nil && lastRefresh != nil
         }
 
         mutating func fillMissing(from other: OAuthAuthCacheMetadata) {
+            if refreshToken == nil {
+                refreshToken = other.refreshToken
+            }
             if idToken == nil {
                 idToken = other.idToken
             }
@@ -394,6 +399,7 @@ struct CodexAuthSwitchService {
         }
 
         return OAuthAuthCacheMetadata(
+            refreshToken: firstString(in: object, forKeys: ["refresh_token", "refreshToken"]),
             idToken: firstString(in: object, forKeys: ["id_token", "idToken"]),
             lastRefresh: firstString(in: object, forKeys: ["last_refresh", "lastRefresh"])
         )
