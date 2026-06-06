@@ -75,6 +75,37 @@ struct CodexProviderConfigServiceTests {
     }
 
     @Test
+    func enhancedConfigMergeWritesProviderScopedBearerToken() throws {
+        let existing = """
+        model = "gpt-5.1-codex"
+        model_provider = "openai"
+
+        [model_providers.other]
+        name = "other"
+        experimental_bearer_token = "sk-other"
+        """
+        let config = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://ai.liaryai.com/api/codex",
+            wireAPI: "responses",
+            requiresOpenAIAuth: true
+        )
+
+        let merged = CodexProviderConfigMerger.mergePreservingOfficialAuth(
+            existing: existing,
+            provider: config,
+            apiKey: "sk-relay"
+        )
+
+        #expect(merged.contains("model_provider = \"mirror\""))
+        #expect(merged.contains("[model_providers.mirror]"))
+        #expect(merged.contains("experimental_bearer_token = \"sk-relay\""))
+        #expect(merged.contains("[model_providers.other]"))
+        #expect(merged.contains("experimental_bearer_token = \"sk-other\""))
+    }
+
+    @Test
     func configResetRemovesOnlyTopLevelModelProvider() {
         let existing = """
         model = "gpt-5.1-codex"
@@ -98,6 +129,29 @@ struct CodexProviderConfigServiceTests {
         #expect(reset.contains("[model_providers.mirror]"))
         #expect(reset.contains("base_url = \"https://ai.liaryai.com/api/codex\""))
         #expect(reset.contains("model_provider = \"keep-profile-provider\""))
+    }
+
+    @Test
+    func configResetRemovesOnlyActiveEnhancedBearerToken() {
+        let existing = """
+        model = "gpt-5.1-codex"
+        model_provider = "mirror"
+
+        [model_providers.mirror]
+        name = "mirror"
+        base_url = "https://ai.liaryai.com/api/codex"
+        experimental_bearer_token = "sk-relay"
+
+        [model_providers.other]
+        name = "other"
+        experimental_bearer_token = "sk-other"
+        """
+
+        let reset = CodexProviderConfigMerger.resetModelProvider(existing: existing)
+
+        #expect(!reset.contains("\nmodel_provider = \"mirror\""))
+        #expect(!reset.contains("experimental_bearer_token = \"sk-relay\""))
+        #expect(reset.contains("experimental_bearer_token = \"sk-other\""))
     }
 
     @Test

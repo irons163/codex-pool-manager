@@ -221,6 +221,7 @@ struct PoolDashboardView: View {
     private static let appUpdateSkippedVersionKey = "pool_dashboard.app_update.skipped_version"
     private static let appUpdateLastCheckedAtKey = "pool_dashboard.app_update.last_checked_at"
     private static let authenticationMethodKey = "pool_dashboard.authentication.method"
+    private static let relayPreserveOfficialAuthKey = "pool_dashboard.relay.preserve_official_auth"
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
@@ -315,6 +316,7 @@ struct PoolDashboardView: View {
     @AppStorage(Self.appUpdateSkippedVersionKey) private var appUpdateSkippedVersion = ""
     @AppStorage(Self.appUpdateLastCheckedAtKey) private var appUpdateLastCheckedAt = 0.0
     @AppStorage(Self.authenticationMethodKey) private var selectedAuthMethodRaw = AuthMethod.oauth.rawValue
+    @AppStorage(Self.relayPreserveOfficialAuthKey) private var relayPreserveOfficialAuth = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
@@ -1264,6 +1266,7 @@ struct PoolDashboardView: View {
             baseURL: $formState.relayBaseURL,
             wireAPI: $formState.relayWireAPI,
             apiKey: $formState.relayAPIKey,
+            preserveOfficialAuth: $relayPreserveOfficialAuth,
             successMessage: viewState.relaySuccessMessage,
             errorMessage: viewState.relayError,
             onAddRelayAccount: {
@@ -2422,6 +2425,7 @@ struct PoolDashboardView: View {
         let output = await relayAccountCoordinator.switchToRelayAccount(
             account,
             switchWithoutLaunching: state.switchWithoutLaunching,
+            preserveOfficialAuth: relayPreserveOfficialAuth,
             launchTarget: selectedLaunchTarget,
             viewState: viewState
         )

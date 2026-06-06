@@ -7,6 +7,7 @@ struct RelayAPIKeyPanelView: View {
     @Binding var baseURL: String
     @Binding var wireAPI: String
     @Binding var apiKey: String
+    @Binding var preserveOfficialAuth: Bool
     @State private var isWireAPIHelpPresented = false
 
     let successMessage: String?
@@ -66,6 +67,20 @@ struct RelayAPIKeyPanelView: View {
                 }
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
+
+                Toggle(isOn: $preserveOfficialAuth) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L10n.text("relay.preserve_official_auth.toggle"))
+                            .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        Text(L10n.text("relay.preserve_official_auth.hint"))
+                            .font(.footnote)
+                            .foregroundStyle(PoolDashboardTheme.textMuted)
+                    }
+                }
+                .toggleStyle(.switch)
+                .dashboardInfoCard()
+                .accessibilityIdentifier("auth.relay.preserveOfficialAuth")
 
                 PanelStatusCalloutView(
                     message: L10n.text("relay.usage_sync_unavailable.hint"),

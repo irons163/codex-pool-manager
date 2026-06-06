@@ -458,6 +458,48 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
+    func relayCoordinatorEnhancedModeAppliesConfigAndSkipsAPIKeyLogin() async {
+        let events = LockedValue<[String]>([])
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { provider in events.withLock { $0.append("legacy:\(provider.providerID)") } },
+            enhancedConfigApplier: { provider, apiKey in
+                events.withLock { $0.append("enhanced:\(provider.providerID):\(apiKey)") }
+            },
+            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
+            appRelauncher: { launchTarget in
+                events.withLock { $0.append("launch:\(launchTarget.rawValue)") }
+                return true
+            }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(
+            account,
+            switchWithoutLaunching: false,
+            preserveOfficialAuth: true,
+            launchTarget: .codex,
+            viewState: PoolDashboardViewState()
+        )
+
+        #expect(events.value == ["enhanced:mirror:sk-relay", "launch:codex"])
+        #expect(output.didSwitchAuth)
+        #expect(output.viewState.switchLaunchError == nil)
+        #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("relay.switch.preserve_official_auth_enabled")))
+    }
+
+    @Test
     func relayCoordinatorSkipsRelaunchWhenSwitchWithoutLaunchingIsEnabled() async {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(

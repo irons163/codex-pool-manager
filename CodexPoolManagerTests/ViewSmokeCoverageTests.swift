@@ -715,6 +715,7 @@ struct ViewSmokeCoverageTests {
         let baseURLBox = BindingBox("https://ai.liaryai.com/api/codex")
         let wireAPIBox = BindingBox("responses")
         let apiKeyBox = BindingBox("sk-relay")
+        let preserveOfficialAuthBox = BindingBox(false)
         var addCount = 0
 
         let empty = RelayAPIKeyPanelView(
@@ -724,6 +725,7 @@ struct ViewSmokeCoverageTests {
             baseURL: binding(baseURLBox),
             wireAPI: binding(wireAPIBox),
             apiKey: binding(apiKeyBox),
+            preserveOfficialAuth: binding(preserveOfficialAuthBox),
             successMessage: nil,
             errorMessage: nil,
             onAddRelayAccount: { addCount += 1 }
@@ -737,6 +739,7 @@ struct ViewSmokeCoverageTests {
             baseURL: binding(baseURLBox),
             wireAPI: binding(wireAPIBox),
             apiKey: binding(apiKeyBox),
+            preserveOfficialAuth: binding(preserveOfficialAuthBox),
             successMessage: "Relay account added.",
             errorMessage: "Relay failed.",
             onAddRelayAccount: { addCount += 1 }

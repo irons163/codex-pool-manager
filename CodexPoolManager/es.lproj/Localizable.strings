@@ -579,6 +579,7 @@
 "relay.switch.start_format" = "Cambiando el provider de Codex a %@";
 "relay.switch.config_updated_format" = "Provider de Codex actualizado en config: %@";
 "relay.switch.login_completed" = "Inicio de sesión con API key de Codex completado.";
+"relay.switch.preserve_official_auth_enabled" = "Conservación del inicio de sesión OAuth oficial activada; auth.json no se modificó.";
 "relay.switch.failed_format" = "Error al cambiar al relay: %@";
 "relay.title" = "Relay con API Key";
 "relay.subtitle" = "Añade un provider relay compatible con OpenAI para Codex CLI. La sincronización de uso no está disponible para cuentas relay.";
@@ -592,6 +593,8 @@
 "relay.wire_api.help_message" = "Esto sigue escribiendo el campo wire_api en config.toml. Mantén responses para la mayoría de proveedores relay de Codex; usa chat solo si el proveedor exige Chat Completions.";
 "relay.api_key.label" = "API Key";
 "relay.api_key.placeholder" = "OpenAI API key";
+"relay.preserve_official_auth.toggle" = "Conservar inicio de sesión OAuth oficial";
+"relay.preserve_official_auth.hint" = "Si se activa, la API key del relay solo se escribe en config.toml y se omite codex login --with-api-key.";
 "relay.add_button" = "Añadir cuenta relay";
 "relay.status.title" = "Cuenta relay";
 "relay.error.title" = "Error de relay";

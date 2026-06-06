@@ -579,6 +579,7 @@
 "relay.switch.start_format" = "Codex provider を %@ に切り替えています";
 "relay.switch.config_updated_format" = "Codex config provider を更新しました: %@";
 "relay.switch.login_completed" = "Codex API key のログインが完了しました。";
+"relay.switch.preserve_official_auth_enabled" = "公式 OAuth ログイン保持が有効です。auth.json は変更していません。";
 "relay.switch.failed_format" = "中継への切り替えに失敗しました: %@";
 "relay.title" = "APIキー中継";
 "relay.subtitle" = "Codex CLI で使用する OpenAI 互換の中継 provider を追加します。中継アカウントでは使用量同期は利用できません。";
@@ -592,6 +593,8 @@
 "relay.wire_api.help_message" = "config.toml には引き続き wire_api として書き込まれます。ほとんどのCodex中継providerでは responses のままにし、providerがChat Completionsを明示的に要求する場合だけ chat に変更してください。";
 "relay.api_key.label" = "API Key";
 "relay.api_key.placeholder" = "OpenAI API key";
+"relay.preserve_official_auth.toggle" = "公式 OAuth ログインを保持";
+"relay.preserve_official_auth.hint" = "有効にすると、中継 API key は config.toml のみに書き込み、codex login --with-api-key は実行しません。";
 "relay.add_button" = "中継アカウントを追加";
 "relay.status.title" = "中継アカウント";
 "relay.error.title" = "中継エラー";

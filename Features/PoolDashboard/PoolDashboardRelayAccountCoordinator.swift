@@ -4,6 +4,10 @@ struct PoolDashboardRelayAccountCoordinator {
     typealias AppRelauncher = @MainActor (
         _ launchTarget: CodexLaunchTarget
     ) async throws -> Bool
+    typealias EnhancedConfigApplier = (
+        _ provider: CodexProviderConfig,
+        _ apiKey: String
+    ) throws -> Void
 
     struct AddOutput {
         let state: AccountPoolState
@@ -16,15 +20,20 @@ struct PoolDashboardRelayAccountCoordinator {
     }
 
     private let configApplier: (CodexProviderConfig) throws -> Void
+    private let enhancedConfigApplier: EnhancedConfigApplier
     private let apiKeyLogin: (String) async throws -> Void
     private let appRelauncher: AppRelauncher
 
     init(
         configApplier: @escaping (CodexProviderConfig) throws -> Void = { try CodexProviderConfigService().apply($0) },
+        enhancedConfigApplier: @escaping EnhancedConfigApplier = { provider, apiKey in
+            try CodexProviderConfigService().applyPreservingOfficialAuth(provider, apiKey: apiKey)
+        },
         apiKeyLogin: @escaping (String) async throws -> Void = { try await CodexAPIKeyLoginService().login(apiKey: $0) },
         appRelauncher: @escaping AppRelauncher = Self.defaultAppRelauncher
     ) {
         self.configApplier = configApplier
+        self.enhancedConfigApplier = enhancedConfigApplier
         self.apiKeyLogin = apiKeyLogin
         self.appRelauncher = appRelauncher
     }
@@ -80,6 +89,7 @@ struct PoolDashboardRelayAccountCoordinator {
     func switchToRelayAccount(
         _ account: AgentAccount,
         switchWithoutLaunching: Bool = false,
+        preserveOfficialAuth: Bool = false,
         launchTarget: CodexLaunchTarget = .auto,
         viewState: PoolDashboardViewState
     ) async -> SwitchOutput {
@@ -102,10 +112,18 @@ struct PoolDashboardRelayAccountCoordinator {
                 requiresOpenAIAuth: account.relayRequiresOpenAIAuth
             )
 
-            try configApplier(provider)
+            if preserveOfficialAuth {
+                try enhancedConfigApplier(provider, apiKey)
+            } else {
+                try configApplier(provider)
+            }
             logLines.append(L10n.text("relay.switch.config_updated_format", provider.providerID))
-            try await apiKeyLogin(apiKey)
-            logLines.append(L10n.text("relay.switch.login_completed"))
+            if preserveOfficialAuth {
+                logLines.append(L10n.text("relay.switch.preserve_official_auth_enabled"))
+            } else {
+                try await apiKeyLogin(apiKey)
+                logLines.append(L10n.text("relay.switch.login_completed"))
+            }
             nextViewState.switchLaunchError = nil
             nextViewState.switchLaunchWarning = nil
         } catch {
