@@ -3567,7 +3567,8 @@ struct CodexPoolManagerTests {
         let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
 
         #expect(object["auth_mode"] as? String == "chatgpt")
-        #expect(object["OPENAI_API_KEY"] == nil)
+        let apiKeyValue = try #require(object["OPENAI_API_KEY"])
+        #expect(apiKeyValue is NSNull)
         #expect(object["CODEX_API_KEY"] == nil)
         #expect(object["access_token"] == nil)
         #expect(object["account_id"] == nil)

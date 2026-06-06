@@ -173,6 +173,66 @@ struct CodexAuthSwitchServiceCoverageTests {
 
     @Test
     @MainActor
+    func codexAuthSwitchServiceRestoresOAuthMetadataFromSiblingAuthAccounts() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-auth-metadata-switch-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        let accountsDirectory = directory.appendingPathComponent("auth_accounts", isDirectory: true)
+        let storedAccountURL = accountsDirectory.appendingPathComponent("account.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: accountsDirectory, withIntermediateDirectories: true)
+        try """
+        {
+          "auth_mode": "apikey",
+          "email": "oauth@example.com",
+          "OPENAI_API_KEY": "sk-old-api-key"
+        }
+        """.write(to: authURL, atomically: true, encoding: .utf8)
+        try """
+        {
+          "auth_mode": "chatgpt",
+          "email": "oauth@example.com",
+          "last_refresh": "2026-05-10T02:33:21.730788Z",
+          "OPENAI_API_KEY": null,
+          "tokens": {
+            "access_token": "old-oauth-access-token",
+            "account_id": "user-oauth-account",
+            "id_token": "stored-id-token"
+          }
+        }
+        """.write(to: storedAccountURL, atomically: true, encoding: .utf8)
+
+        let service = CodexAuthSwitchService(providerConfigResetter: { _ in })
+        let account = AgentAccount(
+            id: UUID(),
+            name: "oauth@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "new-oauth-access-token"
+        )
+
+        try service.performSwitchOnly(
+            authFileURL: authURL,
+            account: account,
+            chatGPTAccountID: "user-oauth-account"
+        )
+
+        let rewritten = try Data(contentsOf: authURL)
+        let root = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let tokens = try #require(root["tokens"] as? [String: Any])
+        let apiKeyValue = try #require(root["OPENAI_API_KEY"])
+
+        #expect(root["auth_mode"] as? String == "chatgpt")
+        #expect(root["email"] as? String == "oauth@example.com")
+        #expect(root["last_refresh"] as? String == "2026-05-10T02:33:21.730788Z")
+        #expect(apiKeyValue is NSNull)
+        #expect(tokens["access_token"] as? String == "new-oauth-access-token")
+        #expect(tokens["account_id"] as? String == "user-oauth-account")
+        #expect(tokens["id_token"] as? String == "stored-id-token")
+    }
+
+    @Test
+    @MainActor
     func codexAuthSwitchServiceDefaultResetterUsesAuthFileDirectoryConfig() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-auth-config-switch-\(UUID().uuidString)", isDirectory: true)

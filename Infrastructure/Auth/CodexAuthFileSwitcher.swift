@@ -11,13 +11,18 @@ enum CodexAuthFileSwitcher {
     private static let authModeKey = "auth_mode"
     private static let chatGPTAuthMode = "chatgpt"
     private static let tokenContainerKey = "tokens"
-    private static let apiKeyCredentialKeys = ["OPENAI_API_KEY", "CODEX_API_KEY"]
+    private static let openAIAPIKey = "OPENAI_API_KEY"
+    private static let codexAPIKey = "CODEX_API_KEY"
+    private static let idTokenKey = "id_token"
+    private static let lastRefreshKey = "last_refresh"
 
     static func rewriteAuthJSON(
         _ data: Data,
         accessToken: String,
         accountID: String,
-        email: String?
+        email: String?,
+        idToken: String? = nil,
+        lastRefresh: String? = nil
     ) throws -> Data {
         guard let jsonObject = try? JSONSerialization.jsonObject(with: data) else {
             throw SwitchError.invalidJSON
@@ -38,6 +43,8 @@ enum CodexAuthFileSwitcher {
                 accessToken: accessToken,
                 accountID: accountID,
                 email: email,
+                idToken: idToken,
+                lastRefresh: lastRefresh,
                 stats: stats
             )
             rewritten = root
@@ -109,6 +116,8 @@ enum CodexAuthFileSwitcher {
         accessToken: String,
         accountID: String,
         email: String?,
+        idToken: String?,
+        lastRefresh: String?,
         stats: RewriteStats
     ) {
         let usesModernAuthCache = root[authModeKey] != nil || root[tokenContainerKey] != nil
@@ -127,14 +136,19 @@ enum CodexAuthFileSwitcher {
         }
 
         root[authModeKey] = chatGPTAuthMode
-        for key in apiKeyCredentialKeys {
-            root.removeValue(forKey: key)
-        }
+        root[openAIAPIKey] = NSNull()
+        root.removeValue(forKey: codexAPIKey)
 
         var tokens = root[tokenContainerKey] as? [String: Any] ?? [:]
         tokens["access_token"] = accessToken
         tokens["account_id"] = accountID
+        if let idToken = nonEmptyString(idToken) {
+            tokens[idTokenKey] = idToken
+        }
         root[tokenContainerKey] = tokens
+        if let lastRefresh = nonEmptyString(lastRefresh) {
+            root[lastRefreshKey] = lastRefresh
+        }
 
         for key in tokenKeys {
             root.removeValue(forKey: key)
@@ -145,5 +159,14 @@ enum CodexAuthFileSwitcher {
         if let email, !email.isEmpty, !stats.replacedEmail {
             root["email"] = email
         }
+    }
+
+    private static func nonEmptyString(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else {
+            return nil
+        }
+        return trimmed
     }
 }

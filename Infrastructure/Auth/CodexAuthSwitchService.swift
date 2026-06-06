@@ -290,14 +290,167 @@ struct CodexAuthSwitchService {
         chatGPTAccountID: String
     ) throws {
         let originalData = try Data(contentsOf: authFileURL)
+        let accountEmail = account.name.contains("@") ? account.name : nil
+        let metadata = recoverOAuthAuthCacheMetadata(
+            authFileURL: authFileURL,
+            originalData: originalData,
+            account: account,
+            chatGPTAccountID: chatGPTAccountID,
+            email: accountEmail
+        )
         let rewrittenData = try CodexAuthFileSwitcher.rewriteAuthJSON(
             originalData,
             accessToken: account.apiToken,
             accountID: chatGPTAccountID,
-            email: account.name.contains("@") ? account.name : nil
+            email: accountEmail,
+            idToken: metadata.idToken,
+            lastRefresh: metadata.lastRefresh
         )
         try rewrittenData.write(to: authFileURL, options: .atomic)
         logger(L10n.text("switch.service.log.auth_file_rewritten"))
+    }
+
+    private struct OAuthAuthCacheMetadata {
+        var idToken: String? = nil
+        var lastRefresh: String? = nil
+
+        var isComplete: Bool {
+            idToken != nil && lastRefresh != nil
+        }
+
+        mutating func fillMissing(from other: OAuthAuthCacheMetadata) {
+            if idToken == nil {
+                idToken = other.idToken
+            }
+            if lastRefresh == nil {
+                lastRefresh = other.lastRefresh
+            }
+        }
+    }
+
+    private func recoverOAuthAuthCacheMetadata(
+        authFileURL: URL,
+        originalData: Data,
+        account: AgentAccount,
+        chatGPTAccountID: String,
+        email: String?
+    ) -> OAuthAuthCacheMetadata {
+        var metadata = Self.authCacheMetadata(
+            from: originalData,
+            matchingAccountID: chatGPTAccountID,
+            email: email,
+            accessToken: account.apiToken
+        ) ?? OAuthAuthCacheMetadata()
+
+        guard !metadata.isComplete else {
+            return metadata
+        }
+
+        for url in Self.siblingAuthAccountJSONURLs(for: authFileURL) {
+            guard let data = try? Data(contentsOf: url),
+                  let candidate = Self.authCacheMetadata(
+                    from: data,
+                    matchingAccountID: chatGPTAccountID,
+                    email: email,
+                    accessToken: account.apiToken
+                  )
+            else {
+                continue
+            }
+
+            metadata.fillMissing(from: candidate)
+            if metadata.isComplete {
+                break
+            }
+        }
+
+        return metadata
+    }
+
+    private static func siblingAuthAccountJSONURLs(for authFileURL: URL) -> [URL] {
+        let accountsDirectory = authFileURL.deletingLastPathComponent()
+            .appendingPathComponent("auth_accounts", isDirectory: true)
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: accountsDirectory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { $0.pathExtension.lowercased() == "json" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    private static func authCacheMetadata(
+        from data: Data,
+        matchingAccountID accountID: String,
+        email: String?,
+        accessToken: String
+    ) -> OAuthAuthCacheMetadata? {
+        guard let object = try? JSONSerialization.jsonObject(with: data),
+              authCacheMatches(object, accountID: accountID, email: email, accessToken: accessToken)
+        else {
+            return nil
+        }
+
+        return OAuthAuthCacheMetadata(
+            idToken: firstString(in: object, forKeys: ["id_token", "idToken"]),
+            lastRefresh: firstString(in: object, forKeys: ["last_refresh", "lastRefresh"])
+        )
+    }
+
+    private static func authCacheMatches(
+        _ object: Any,
+        accountID: String,
+        email: String?,
+        accessToken: String
+    ) -> Bool {
+        let accountIDs = strings(in: object, forKeys: ["account_id", "accountId", "chatgpt_account_id", "chatgptAccountId"])
+        if !accountID.isEmpty, !accountIDs.isEmpty {
+            return accountIDs.contains(accountID)
+        }
+
+        let emails = strings(in: object, forKeys: ["email", "user_email", "account_email", "emailAddress", "email_address"])
+            .map { $0.lowercased() }
+        if let email = email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           !email.isEmpty,
+           !emails.isEmpty
+        {
+            return emails.contains(email)
+        }
+
+        let accessTokens = strings(in: object, forKeys: ["access_token", "accessToken", "token"])
+        if !accessToken.isEmpty, !accessTokens.isEmpty {
+            return accessTokens.contains(accessToken)
+        }
+
+        return false
+    }
+
+    private static func firstString(in object: Any, forKeys keys: Set<String>) -> String? {
+        strings(in: object, forKeys: keys).first
+    }
+
+    private static func strings(in object: Any, forKeys keys: Set<String>) -> [String] {
+        if let dictionary = object as? [String: Any] {
+            return dictionary.flatMap { key, value -> [String] in
+                var output: [String] = []
+                if keys.contains(key),
+                   let string = value as? String,
+                   !string.isEmpty
+                {
+                    output.append(string)
+                }
+                output.append(contentsOf: strings(in: value, forKeys: keys))
+                return output
+            }
+        }
+
+        if let array = object as? [Any] {
+            return array.flatMap { strings(in: $0, forKeys: keys) }
+        }
+
+        return []
     }
 
     private func resetProviderConfigForChatGPTAuth(authFileURL: URL) throws {
