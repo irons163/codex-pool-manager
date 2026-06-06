@@ -50,9 +50,6 @@
 		4AB61EC22F73A0BB001AC4CB /* BackupRestorePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EC12F73A0BB001AC4CB /* BackupRestorePanelView.swift */; };
 		4AB61ED72F73A98B001AC4CB /* PoolAccountUpsertCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61ED62F73A98B001AC4CB /* PoolAccountUpsertCoordinator.swift */; };
 		4AB61ED92F73E2DE001AC4CB /* CodexAuthSwitchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61ED82F73E2DE001AC4CB /* CodexAuthSwitchService.swift */; };
-		4B73A0022F916A2200C0D3E1 /* CodexProviderConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0012F916A2200C0D3E1 /* CodexProviderConfigService.swift */; };
-		4B73A0042F916B7900C0D3E1 /* CodexAPIKeyLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0032F916B7900C0D3E1 /* CodexAPIKeyLoginService.swift */; };
-		4B73A0062F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0052F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift */; };
 		4AB61EDB2F73E46A001AC4CB /* PoolDashboardAuthFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EDA2F73E46A001AC4CB /* PoolDashboardAuthFlowCoordinator.swift */; };
 		4AB61EDD2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EDC2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift */; };
 		4AB61EDF2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EDE2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift */; };
@@ -61,7 +58,6 @@
 		4AB61EE52F73EB04001AC4CB /* ActivityLogPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */; };
 		4AB61EE72F73ECBA001AC4CB /* OAuthLoginPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE62F73ECBA001AC4CB /* OAuthLoginPanelView.swift */; };
 		4AB61EE92F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EE82F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift */; };
-		4B73A0082F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */; };
 		4AB61EEB2F73ED9E001AC4CB /* StrategySettingsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EEA2F73ED9E001AC4CB /* StrategySettingsPanelView.swift */; };
 		4AB61EED2F73ED9E001AC4CB /* OverallUsagePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EEC2F73ED9E001AC4CB /* OverallUsagePanelView.swift */; };
 		4AB61EEF2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61EEE2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift */; };
@@ -75,6 +71,10 @@
 		4AB61F012F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F002F73FB2D001AC4CB /* PoolDashboardBackupCoordinator.swift */; };
 		4AB61F132F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F122F73FE99001AC4CB /* PoolDashboardLifecycleCoordinator.swift */; };
 		4AB61F152F741395001AC4CB /* PoolDashboardMutationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB61F142F741395001AC4CB /* PoolDashboardMutationCoordinator.swift */; };
+		4B73A0022F916A2200C0D3E1 /* CodexProviderConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0012F916A2200C0D3E1 /* CodexProviderConfigService.swift */; };
+		4B73A0042F916B7900C0D3E1 /* CodexAPIKeyLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0032F916B7900C0D3E1 /* CodexAPIKeyLoginService.swift */; };
+		4B73A0062F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0052F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift */; };
+		4B73A0082F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */; };
 		5CFAC1AA2984CFCE58D19E86 /* CodexPoolWidgetHostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA89599DF68730D5F45600B /* CodexPoolWidgetHostApp.swift */; };
 		67456F3EC374EED207565FB6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */; };
 		7A1B2C3D4E5F60718293A4B5 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1B2C3D4E5F60718293A4B6 /* Sparkle */; };
@@ -166,9 +166,6 @@
 		4AB61EC12F73A0BB001AC4CB /* BackupRestorePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupRestorePanelView.swift; sourceTree = "<group>"; };
 		4AB61ED62F73A98B001AC4CB /* PoolAccountUpsertCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolAccountUpsertCoordinator.swift; sourceTree = "<group>"; };
 		4AB61ED82F73E2DE001AC4CB /* CodexAuthSwitchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthSwitchService.swift; sourceTree = "<group>"; };
-		4B73A0012F916A2200C0D3E1 /* CodexProviderConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexProviderConfigService.swift; sourceTree = "<group>"; };
-		4B73A0032F916B7900C0D3E1 /* CodexAPIKeyLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAPIKeyLoginService.swift; sourceTree = "<group>"; };
-		4B73A0052F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardRelayAccountCoordinator.swift; sourceTree = "<group>"; };
 		4AB61EDA2F73E46A001AC4CB /* PoolDashboardAuthFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardAuthFlowCoordinator.swift; sourceTree = "<group>"; };
 		4AB61EDC2F73E598001AC4CB /* PoolDashboardDataFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardDataFlowCoordinator.swift; sourceTree = "<group>"; };
 		4AB61EDE2F73E7CA001AC4CB /* CodexAuthFileAccessService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthFileAccessService.swift; sourceTree = "<group>"; };
@@ -177,7 +174,6 @@
 		4AB61EE42F73EB04001AC4CB /* ActivityLogPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogPanelView.swift; sourceTree = "<group>"; };
 		4AB61EE62F73ECBA001AC4CB /* OAuthLoginPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthLoginPanelView.swift; sourceTree = "<group>"; };
 		4AB61EE82F73ECCC001AC4CB /* LocalOAuthAccountsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOAuthAccountsPanelView.swift; sourceTree = "<group>"; };
-		4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAPIKeyPanelView.swift; sourceTree = "<group>"; };
 		4AB61EEA2F73ED9E001AC4CB /* StrategySettingsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrategySettingsPanelView.swift; sourceTree = "<group>"; };
 		4AB61EEC2F73ED9E001AC4CB /* OverallUsagePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverallUsagePanelView.swift; sourceTree = "<group>"; };
 		4AB61EEE2F73EE17001AC4CB /* PoolAccountUsagePresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolAccountUsagePresenter.swift; sourceTree = "<group>"; };
@@ -194,6 +190,10 @@
 		4AFBA5822F72203A008D97C1 /* CodexPoolManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AFBA59B2F72203C008D97C1 /* CodexPoolManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexPoolManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B73A0012F916A2200C0D3E1 /* CodexProviderConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexProviderConfigService.swift; sourceTree = "<group>"; };
+		4B73A0032F916B7900C0D3E1 /* CodexAPIKeyLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAPIKeyLoginService.swift; sourceTree = "<group>"; };
+		4B73A0052F916B7900C0D3E1 /* PoolDashboardRelayAccountCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolDashboardRelayAccountCoordinator.swift; sourceTree = "<group>"; };
+		4B73A0072F916F2B00C0D3E1 /* RelayAPIKeyPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAPIKeyPanelView.swift; sourceTree = "<group>"; };
 		5734B7C13FBACC72A34A4D77 /* CodexPoolWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CodexPoolWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6959EA954386004CC3A082DE /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8A27F9F823256B600C0700FF /* CodexPoolWidgetHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexPoolWidgetHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
