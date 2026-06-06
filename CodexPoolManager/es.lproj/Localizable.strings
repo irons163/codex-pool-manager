@@ -17,6 +17,7 @@
 "sort.title" = "Ordenar";
 "sort.active_first" = "Mantener la cuenta actual arriba";
 "sort.paid_first" = "Mantener cuentas de pago arriba";
+"sort.api_key_last" = "Mantener cuentas con API key al final";
 "sort.joined_at" = "Fecha de alta";
 "sort.name" = "Nombre";
 "sort.remaining_high" = "Restante (de mayor a menor)";

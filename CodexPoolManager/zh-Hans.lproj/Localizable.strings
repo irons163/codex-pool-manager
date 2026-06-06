@@ -17,6 +17,7 @@
 "sort.title" = "排序";
 "sort.active_first" = "当前使用账号排在第一位";
 "sort.paid_first" = "付费账号排在前面";
+"sort.api_key_last" = "API Key 账号排在最后";
 "sort.joined_at" = "加入时间";
 "sort.name" = "名称";
 "sort.remaining_high" = "剩余用量高到低";

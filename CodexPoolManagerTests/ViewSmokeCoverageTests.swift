@@ -434,22 +434,26 @@ struct ViewSmokeCoverageTests {
         let sortModeKey = "pool_dashboard.account_usage.sort_mode"
         let activeFirstKey = "pool_dashboard.account_usage.active_first"
         let paidFirstKey = "pool_dashboard.account_usage.paid_first"
+        let apiKeyLastKey = "pool_dashboard.account_usage.api_key_last"
         let layoutModeKey = "pool_dashboard.account_usage.layout_mode"
 
         let oldSort = defaults.object(forKey: sortModeKey)
         let oldActiveFirst = defaults.object(forKey: activeFirstKey)
         let oldPaidFirst = defaults.object(forKey: paidFirstKey)
+        let oldAPIKeyLast = defaults.object(forKey: apiKeyLastKey)
         let oldLayout = defaults.object(forKey: layoutModeKey)
         defer {
             if let oldSort { defaults.set(oldSort, forKey: sortModeKey) } else { defaults.removeObject(forKey: sortModeKey) }
             if let oldActiveFirst { defaults.set(oldActiveFirst, forKey: activeFirstKey) } else { defaults.removeObject(forKey: activeFirstKey) }
             if let oldPaidFirst { defaults.set(oldPaidFirst, forKey: paidFirstKey) } else { defaults.removeObject(forKey: paidFirstKey) }
+            if let oldAPIKeyLast { defaults.set(oldAPIKeyLast, forKey: apiKeyLastKey) } else { defaults.removeObject(forKey: apiKeyLastKey) }
             if let oldLayout { defaults.set(oldLayout, forKey: layoutModeKey) } else { defaults.removeObject(forKey: layoutModeKey) }
         }
 
         defaults.set("remainingHigh", forKey: sortModeKey)
         defaults.set(true, forKey: activeFirstKey)
         defaults.set(true, forKey: paidFirstKey)
+        defaults.set(true, forKey: apiKeyLastKey)
 
         let baseDate = Date(timeIntervalSince1970: 1_750_000_000)
         let activeID = UUID()
@@ -597,6 +601,40 @@ struct ViewSmokeCoverageTests {
         #expect(renameGroupCount == 0)
         #expect(deleteGroupCount == 0)
         #expect(switchCount == 0)
+    }
+
+    @Test
+    func accountUsagePanelSortHelperMovesAPIKeyAccountsLast() {
+        let baseDate = Date(timeIntervalSince1970: 1_750_000_000)
+        let oauthA = makeSmokeAccount(name: "oauth-a@example.com", usedUnits: 10, quota: 100)
+        let relayA = AgentAccount(
+            id: UUID(),
+            createdAt: baseDate.addingTimeInterval(1),
+            name: "relay-a@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay-a",
+            credentialType: .relayAPIKey
+        )
+        let oauthB = makeSmokeAccount(name: "oauth-b@example.com", usedUnits: 20, quota: 100)
+        let relayB = AgentAccount(
+            id: UUID(),
+            createdAt: baseDate.addingTimeInterval(2),
+            name: "relay-b@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay-b",
+            credentialType: .relayAPIKey
+        )
+
+        let sorted = AccountUsagePanelView.debugAccountsWithAPIKeyLast([oauthA, relayA, oauthB, relayB])
+
+        #expect(sorted.map(\.name) == [
+            "oauth-a@example.com",
+            "oauth-b@example.com",
+            "relay-a@example.com",
+            "relay-b@example.com"
+        ])
     }
 
     @Test

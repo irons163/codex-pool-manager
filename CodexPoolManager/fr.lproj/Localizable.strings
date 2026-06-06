@@ -17,6 +17,7 @@
 "sort.title" = "Tri";
 "sort.active_first" = "Garder le compte actif en premier";
 "sort.paid_first" = "Garder les comptes payants en premier";
+"sort.api_key_last" = "Garder les comptes à clé API à la fin";
 "sort.joined_at" = "Date d'ajout";
 "sort.name" = "Nom";
 "sort.remaining_high" = "Restant (décroissant)";

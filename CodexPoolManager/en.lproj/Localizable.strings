@@ -17,6 +17,7 @@
 "sort.title" = "Sort";
 "sort.active_first" = "Keep current account first";
 "sort.paid_first" = "Keep paid accounts first";
+"sort.api_key_last" = "Keep API key accounts last";
 "sort.joined_at" = "Joined Time";
 "sort.name" = "Name";
 "sort.remaining_high" = "Remaining (High to Low)";

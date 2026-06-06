@@ -76,6 +76,8 @@ struct AccountUsagePanelView: View {
     private var persistedActiveAccountFirst: Bool = true
     @AppStorage("pool_dashboard.account_usage.paid_first")
     private var persistedPaidAccountFirst: Bool = false
+    @AppStorage("pool_dashboard.account_usage.api_key_last")
+    private var persistedAPIKeyAccountLast: Bool = true
     @AppStorage("pool_dashboard.account_usage.layout_mode")
     private var persistedLayoutModeRawValue: String = LayoutMode.single.rawValue
     @State private var newGroupName = ""
@@ -322,25 +324,50 @@ struct AccountUsagePanelView: View {
     }
 
     private var sortPriorityToggles: some View {
-        HStack(spacing: 10) {
-            Toggle(isOn: $persistedActiveAccountFirst) {
-                Text(L10n.text("sort.active_first"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .lineLimit(1)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                activeAccountFirstToggle
+                paidAccountFirstToggle
+                apiKeyAccountLastToggle
             }
-            .toggleStyle(.checkbox)
-            .fixedSize(horizontal: true, vertical: false)
 
-            Toggle(isOn: $persistedPaidAccountFirst) {
-                Text(L10n.text("sort.paid_first"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PoolDashboardTheme.textSecondary)
-                    .lineLimit(1)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 10) {
+                    activeAccountFirstToggle
+                    paidAccountFirstToggle
+                }
+                apiKeyAccountLastToggle
             }
-            .toggleStyle(.checkbox)
-            .fixedSize(horizontal: true, vertical: false)
+
+            VStack(alignment: .leading, spacing: 6) {
+                activeAccountFirstToggle
+                paidAccountFirstToggle
+                apiKeyAccountLastToggle
+            }
         }
+    }
+
+    private var activeAccountFirstToggle: some View {
+        sortPriorityToggle(isOn: $persistedActiveAccountFirst, titleKey: "sort.active_first")
+    }
+
+    private var paidAccountFirstToggle: some View {
+        sortPriorityToggle(isOn: $persistedPaidAccountFirst, titleKey: "sort.paid_first")
+    }
+
+    private var apiKeyAccountLastToggle: some View {
+        sortPriorityToggle(isOn: $persistedAPIKeyAccountLast, titleKey: "sort.api_key_last")
+    }
+
+    private func sortPriorityToggle(isOn: Binding<Bool>, titleKey: String) -> some View {
+        Toggle(isOn: isOn) {
+            Text(L10n.text(titleKey))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                .lineLimit(1)
+        }
+        .toggleStyle(.checkbox)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder
@@ -723,6 +750,10 @@ struct AccountUsagePanelView: View {
             reordered = reordered.stablePartitioned { $0.isPaid }
         }
 
+        if persistedAPIKeyAccountLast {
+            reordered = Self.accountsWithAPIKeyLast(reordered)
+        }
+
         if persistedActiveAccountFirst,
            let activeIndex = reordered.firstIndex(where: isCurrentEquivalentAccount) {
             let activeAccount = reordered.remove(at: activeIndex)
@@ -1084,6 +1115,10 @@ struct AccountUsagePanelView: View {
         account.isPaid
     }
 
+    private static func accountsWithAPIKeyLast(_ accounts: [AgentAccount]) -> [AgentAccount] {
+        accounts.stablePartitioned { !$0.isRelayAPIKeyAccount }
+    }
+
     private func requestDeleteSelectedGroup() {
         guard canDeleteSelectedGroup else { return }
         deleteConfirmationTarget = .group(name: selectedGroupName)
@@ -1310,6 +1345,10 @@ extension AccountUsagePanelView {
 
     static func debugShowsUsageMeters(for account: AgentAccount) -> Bool {
         showsUsageMeters(for: account)
+    }
+
+    static func debugAccountsWithAPIKeyLast(_ accounts: [AgentAccount]) -> [AgentAccount] {
+        accountsWithAPIKeyLast(accounts)
     }
 }
 #endif
