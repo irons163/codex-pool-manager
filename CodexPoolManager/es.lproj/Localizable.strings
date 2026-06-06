@@ -586,7 +586,10 @@
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Provider Name";
 "relay.base_url.label" = "Base URL";
-"relay.wire_api.label" = "Wire API";
+"relay.wire_api.label" = "Formato API";
+"relay.wire_api.help_button" = "Explicar formato API";
+"relay.wire_api.help_title" = "¿Qué es el formato API?";
+"relay.wire_api.help_message" = "Esto sigue escribiendo el campo wire_api en config.toml. Mantén responses para la mayoría de proveedores relay de Codex; usa chat solo si el proveedor exige Chat Completions.";
 "relay.api_key.label" = "API Key";
 "relay.api_key.placeholder" = "OpenAI API key";
 "relay.add_button" = "Add Relay Account";

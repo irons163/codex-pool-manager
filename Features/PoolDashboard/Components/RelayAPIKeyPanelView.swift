@@ -7,6 +7,7 @@ struct RelayAPIKeyPanelView: View {
     @Binding var baseURL: String
     @Binding var wireAPI: String
     @Binding var apiKey: String
+    @State private var isWireAPIHelpPresented = false
 
     let successMessage: String?
     let errorMessage: String?
@@ -58,11 +59,7 @@ struct RelayAPIKeyPanelView: View {
                             placeholder: PoolDashboardFormState.defaultRelayBaseURL,
                             text: $baseURL
                         )
-                        advancedField(
-                            L10n.text("relay.wire_api.label"),
-                            placeholder: AgentAccount.defaultRelayWireAPI,
-                            text: $wireAPI
-                        )
+                        wireAPIField
                     }
                     .padding(.top, 8)
                     .dashboardInfoCard()
@@ -127,5 +124,46 @@ struct RelayAPIKeyPanelView: View {
             TextField(placeholder, text: text)
                 .dashboardInputFieldStyle()
         }
+    }
+
+    private var wireAPIField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Text(L10n.text("relay.wire_api.label"))
+                    .font(PoolDashboardTheme.metadataFont.weight(.semibold))
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                Button {
+                    isWireAPIHelpPresented.toggle()
+                } label: {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoolDashboardTheme.warning)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L10n.text("relay.wire_api.help_button"))
+                .popover(isPresented: $isWireAPIHelpPresented, arrowEdge: .bottom) {
+                    wireAPIHelpPopover
+                }
+            }
+
+            TextField(AgentAccount.defaultRelayWireAPI, text: $wireAPI)
+                .dashboardInputFieldStyle()
+        }
+    }
+
+    private var wireAPIHelpPopover: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("relay.wire_api.help_title"))
+                .font(.headline)
+                .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+            Text(L10n.text("relay.wire_api.help_message"))
+                .font(.footnote)
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(width: 360, alignment: .leading)
     }
 }

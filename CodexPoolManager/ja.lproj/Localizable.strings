@@ -586,7 +586,10 @@
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Provider Name";
 "relay.base_url.label" = "Base URL";
-"relay.wire_api.label" = "Wire API";
+"relay.wire_api.label" = "API形式";
+"relay.wire_api.help_button" = "API形式の説明";
+"relay.wire_api.help_title" = "API形式とは？";
+"relay.wire_api.help_message" = "config.toml には引き続き wire_api として書き込まれます。ほとんどのCodex中継providerでは responses のままにし、providerがChat Completionsを明示的に要求する場合だけ chat に変更してください。";
 "relay.api_key.label" = "API Key";
 "relay.api_key.placeholder" = "OpenAI API key";
 "relay.add_button" = "Add Relay Account";

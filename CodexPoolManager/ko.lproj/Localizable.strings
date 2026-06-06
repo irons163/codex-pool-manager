@@ -586,7 +586,10 @@
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Provider Name";
 "relay.base_url.label" = "Base URL";
-"relay.wire_api.label" = "Wire API";
+"relay.wire_api.label" = "API 형식";
+"relay.wire_api.help_button" = "API 형식 설명";
+"relay.wire_api.help_title" = "API 형식이란?";
+"relay.wire_api.help_message" = "config.toml에는 여전히 wire_api 필드로 저장됩니다. 대부분의 Codex 릴레이 provider는 responses를 유지하고, provider가 Chat Completions를 명시적으로 요구할 때만 chat을 사용하세요.";
 "relay.api_key.label" = "API Key";
 "relay.api_key.placeholder" = "OpenAI API key";
 "relay.add_button" = "Add Relay Account";
