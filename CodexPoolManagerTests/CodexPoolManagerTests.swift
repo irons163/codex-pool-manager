@@ -1823,7 +1823,7 @@ struct CodexPoolManagerTests {
 
         #expect(formState.relayProviderID == "mirror")
         #expect(formState.relayProviderName == "mirror")
-        #expect(formState.relayBaseURL == "https://ai.liaryai.com/api/codex")
+        #expect(formState.relayBaseURL.isEmpty)
         #expect(formState.relayWireAPI == "responses")
 
         formState.relayAccountName = "Custom"
@@ -1839,7 +1839,7 @@ struct CodexPoolManagerTests {
         #expect(formState.relayAPIKey.isEmpty)
         #expect(formState.relayProviderID == "mirror")
         #expect(formState.relayProviderName == "mirror")
-        #expect(formState.relayBaseURL == "https://ai.liaryai.com/api/codex")
+        #expect(formState.relayBaseURL.isEmpty)
         #expect(formState.relayWireAPI == "responses")
     }
 

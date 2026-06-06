@@ -3,7 +3,7 @@ import Foundation
 struct PoolDashboardFormState {
     static let defaultQuota = 1000
     static let defaultRelayProviderID = "mirror"
-    static let defaultRelayBaseURL = "https://ai.liaryai.com/api/codex"
+    static let defaultRelayBaseURL = ""
 
     var newAccountName = ""
     var newAccountQuota = Self.defaultQuota
