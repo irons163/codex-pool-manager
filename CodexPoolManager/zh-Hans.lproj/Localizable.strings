@@ -74,6 +74,12 @@
 "duplicate.button" = "复制";
 "delete.button" = "删除";
 
+"auth.method.title" = "验证路线";
+"auth.method.oauth" = "OAuth / 订阅";
+"auth.method.relay_api_key" = "API Key 中转";
+"auth.method.oauth_hint" = "使用 ChatGPT/OAuth 登录，导入订阅账号并同步用量。";
+"auth.method.relay_api_key_hint" = "新增 OpenAI 兼容 API key provider 供手动切换使用。中转账号不支持用量同步。";
+
 "oauth.sign_in.title" = "OAuth 登录";
 "oauth.sign_in.subtitle" = "使用你的 OAuth Client 登录，并将结果账号导入池中。";
 "oauth.import_target.title" = "导入目标";

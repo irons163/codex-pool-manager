@@ -70,6 +70,12 @@
 "duplicate.button" = "複製";
 "delete.button" = "削除";
 
+"auth.method.title" = "認証ルート";
+"auth.method.oauth" = "OAuth / サブスク";
+"auth.method.relay_api_key" = "APIキー中継";
+"auth.method.oauth_hint" = "ChatGPT/OAuthでサインインし、サブスクアカウントをインポートして使用量を同期します。";
+"auth.method.relay_api_key_hint" = "手動切り替え用にOpenAI互換APIキーproviderを追加します。中継アカウントは使用量同期に対応していません。";
+
 "oauth.sign_in.title" = "OAuth サインイン";
 "oauth.sign_in.subtitle" = "Use a public OAuth client to sign in, then import the resulting account into the pool. You may also use your own OAuth client.";
 "oauth.import_target.title" = "インポート先";

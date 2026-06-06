@@ -74,6 +74,12 @@
 "duplicate.button" = "Duplicate";
 "delete.button" = "Delete";
 
+"auth.method.title" = "Authentication Route";
+"auth.method.oauth" = "OAuth / Subscription";
+"auth.method.relay_api_key" = "API Key Relay";
+"auth.method.oauth_hint" = "Sign in with ChatGPT/OAuth, then import subscription accounts and sync usage.";
+"auth.method.relay_api_key_hint" = "Add an OpenAI-compatible API key provider for manual switching. Relay accounts do not support usage sync.";
+
 "oauth.sign_in.title" = "OAuth Sign-In";
 "oauth.sign_in.subtitle" = "Use a public OAuth client to sign in, then import the resulting account into the pool. You may also use your own OAuth client.";
 "oauth.import_target.title" = "Import Target";

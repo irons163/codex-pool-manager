@@ -70,6 +70,12 @@
 "duplicate.button" = "복제";
 "delete.button" = "삭제";
 
+"auth.method.title" = "인증 경로";
+"auth.method.oauth" = "OAuth / 구독";
+"auth.method.relay_api_key" = "API 키 릴레이";
+"auth.method.oauth_hint" = "ChatGPT/OAuth로 로그인한 뒤 구독 계정을 가져오고 사용량을 동기화합니다.";
+"auth.method.relay_api_key_hint" = "수동 전환용 OpenAI 호환 API 키 provider를 추가합니다. 릴레이 계정은 사용량 동기화를 지원하지 않습니다.";
+
 "oauth.sign_in.title" = "OAuth 로그인";
 "oauth.sign_in.subtitle" = "자체 OAuth 클라이언트로 로그인한 뒤, 생성된 계정을 풀로 가져오세요.";
 "oauth.import_target.title" = "가져오기 대상";

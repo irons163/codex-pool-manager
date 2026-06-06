@@ -177,6 +177,33 @@ struct PoolDashboardView: View {
             }
         }
     }
+    private enum AuthMethod: String, CaseIterable, Identifiable {
+        case oauth
+        case relayAPIKey
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .oauth: L10n.text("auth.method.oauth")
+            case .relayAPIKey: L10n.text("auth.method.relay_api_key")
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .oauth: L10n.text("auth.method.oauth_hint")
+            case .relayAPIKey: L10n.text("auth.method.relay_api_key_hint")
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .oauth: "person.badge.key"
+            case .relayAPIKey: "key.horizontal"
+            }
+        }
+    }
 
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
     private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
@@ -193,6 +220,7 @@ struct PoolDashboardView: View {
     private static let appUpdateAutoCheckEnabledKey = "pool_dashboard.app_update.auto_check_enabled"
     private static let appUpdateSkippedVersionKey = "pool_dashboard.app_update.skipped_version"
     private static let appUpdateLastCheckedAtKey = "pool_dashboard.app_update.last_checked_at"
+    private static let authenticationMethodKey = "pool_dashboard.authentication.method"
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
@@ -286,6 +314,7 @@ struct PoolDashboardView: View {
     @AppStorage(Self.appUpdateAutoCheckEnabledKey) private var appUpdateAutoCheckEnabled = true
     @AppStorage(Self.appUpdateSkippedVersionKey) private var appUpdateSkippedVersion = ""
     @AppStorage(Self.appUpdateLastCheckedAtKey) private var appUpdateLastCheckedAt = 0.0
+    @AppStorage(Self.authenticationMethodKey) private var selectedAuthMethodRaw = AuthMethod.oauth.rawValue
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
@@ -337,6 +366,17 @@ struct PoolDashboardView: View {
     }
     private var strategyBindings: PoolDashboardStrategyBindingAdapter {
         PoolDashboardStrategyBindingAdapter(state: $state)
+    }
+
+    private var selectedAuthMethod: AuthMethod {
+        AuthMethod(rawValue: selectedAuthMethodRaw) ?? .oauth
+    }
+
+    private var authMethodBinding: Binding<AuthMethod> {
+        Binding(
+            get: { selectedAuthMethod },
+            set: { selectedAuthMethodRaw = $0.rawValue }
+        )
     }
 
     private var autoSyncTaskID: String {
@@ -902,6 +942,8 @@ struct PoolDashboardView: View {
 
     private var hasWorkspaceContextPanel: Bool {
         switch selectedWorkspace {
+        case .authentication:
+            return selectedAuthMethod == .oauth
         case .runtime, .schedule, .usageAnalytics, .openAIResetAlert, .settings, .safety:
             return false
         default:
@@ -913,10 +955,7 @@ struct PoolDashboardView: View {
     private var workspaceMainPanel: some View {
         switch selectedWorkspace {
         case .authentication:
-            VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
-                oauthLoginPanel
-                relayAPIKeyPanel
-            }
+            authenticationRoutePanel
         case .runtime:
             strategySettingsPanel
         case .schedule:
@@ -1134,6 +1173,51 @@ struct PoolDashboardView: View {
             Task { await retrySyncCodexUsage() }
         } onForceRetry: {
             Task { await forceRetrySyncCodexUsage() }
+        }
+    }
+
+    private var authenticationRoutePanel: some View {
+        VStack(alignment: .leading, spacing: PoolDashboardTheme.sectionSpacing) {
+            authMethodSelector
+            selectedAuthMethodPanel
+        }
+    }
+
+    private var authMethodSelector: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: selectedAuthMethod.symbolName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                Text(L10n.text("auth.method.title"))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+            }
+
+            Picker(L10n.text("auth.method.title"), selection: authMethodBinding) {
+                ForEach(AuthMethod.allCases) { method in
+                    Text(method.title).tag(method)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("auth.method.picker")
+
+            Text(selectedAuthMethod.subtitle)
+                .font(.footnote)
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .frame(maxWidth: PoolDashboardTheme.subtitleReadableWidth, alignment: .leading)
+        }
+        .dashboardInfoCard()
+    }
+
+    @ViewBuilder
+    private var selectedAuthMethodPanel: some View {
+        switch selectedAuthMethod {
+        case .oauth:
+            oauthLoginPanel
+        case .relayAPIKey:
+            relayAPIKeyPanel
         }
     }
 

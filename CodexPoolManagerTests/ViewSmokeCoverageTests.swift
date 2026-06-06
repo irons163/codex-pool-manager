@@ -1139,6 +1139,40 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    @MainActor
+    func poolDashboardAuthenticationRoutesRenderOAuthAndAPIKeyTabs() {
+        let defaults = UserDefaults.standard
+        let authMethodKey = "pool_dashboard.authentication.method"
+        let oldAuthMethod = defaults.object(forKey: authMethodKey)
+        defer {
+            if let oldAuthMethod {
+                defaults.set(oldAuthMethod, forKey: authMethodKey)
+            } else {
+                defaults.removeObject(forKey: authMethodKey)
+            }
+        }
+
+        let state = AccountPoolState(
+            accounts: [
+                makeSmokeAccount(name: "oauth-route@example.com", usedUnits: 12, quota: 100)
+            ],
+            mode: .intelligent
+        )
+
+        defaults.set("oauth", forKey: authMethodKey)
+        renderInHostingView(
+            PoolDashboardView(store: ViewSmokeStore(snapshot: state.snapshot)),
+            size: CGSize(width: 1500, height: 980)
+        )
+
+        defaults.set("relayAPIKey", forKey: authMethodKey)
+        renderInHostingView(
+            PoolDashboardView(store: ViewSmokeStore(snapshot: state.snapshot)),
+            size: CGSize(width: 1500, height: 980)
+        )
+    }
+
+    @Test
     func poolDashboardResponsiveLayoutBreakpointsPreferStackingBeforeClipping() {
         #expect(PoolDashboardView.debugUsesStackedDashboardChrome(availableWidth: 940))
         #expect(!PoolDashboardView.debugUsesStackedDashboardChrome(availableWidth: 1120))
