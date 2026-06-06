@@ -18,6 +18,8 @@ enum CodexProviderConfigError: Error, Equatable, LocalizedError {
 }
 
 struct CodexProviderConfig: Equatable {
+    nonisolated static let relayHistoryBucketProviderID = "custom"
+
     let providerID: String
     let name: String
     let baseURL: URL
@@ -52,9 +54,10 @@ struct CodexProviderConfig: Equatable {
         self.requiresOpenAIAuth = requiresOpenAIAuth
     }
 
-    func renderTOMLBlock(apiKey: String? = nil) -> String {
+    func renderTOMLBlock(providerID overrideProviderID: String? = nil, apiKey: String? = nil) -> String {
+        let tableProviderID = overrideProviderID ?? providerID
         var lines = [
-            "[model_providers.\(providerID)]",
+            "[model_providers.\(tableProviderID)]",
             "name = \"\(Self.escape(name))\"",
             "base_url = \"\(Self.escape(baseURL.absoluteString))\"",
             "wire_api = \"\(Self.escape(wireAPI))\"",
@@ -85,18 +88,32 @@ enum CodexProviderConfigMerger {
         provider: CodexProviderConfig,
         apiKey: String
     ) -> String {
-        merge(existing: existing, provider: provider, apiKey: apiKey)
+        merge(
+            existing: existing,
+            provider: provider,
+            modelProviderID: CodexProviderConfig.relayHistoryBucketProviderID,
+            apiKey: apiKey
+        )
     }
 
-    private static func merge(existing: String, provider: CodexProviderConfig, apiKey: String?) -> String {
+    private static func merge(
+        existing: String,
+        provider: CodexProviderConfig,
+        modelProviderID: String? = nil,
+        apiKey: String?
+    ) -> String {
+        let activeProviderID = modelProviderID ?? provider.providerID
         var lines = existing.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        replaceTopLevelModelProvider(in: &lines, providerID: provider.providerID)
-        removeProviderTable(provider.providerID, from: &lines)
+        replaceTopLevelModelProvider(in: &lines, providerID: activeProviderID)
+        let providerIDsToReplace = Set([provider.providerID, activeProviderID])
+        for providerID in providerIDsToReplace {
+            removeProviderTable(providerID, from: &lines)
+        }
         trimTrailingBlankLines(&lines)
         if !lines.isEmpty {
             lines.append("")
         }
-        lines.append(provider.renderTOMLBlock(apiKey: apiKey))
+        lines.append(provider.renderTOMLBlock(providerID: activeProviderID, apiKey: apiKey))
         return lines.joined(separator: "\n") + "\n"
     }
 
@@ -300,5 +317,298 @@ struct CodexProviderConfigService {
         } catch {
             throw CodexProviderConfigError.writeFailed(error.localizedDescription)
         }
+    }
+}
+
+struct CodexRelayHistoryBucketMigrationOutcome: Equatable {
+    var migratedSessionFiles: Int
+    var migratedThreadRows: Int
+
+    var didMigrate: Bool {
+        migratedSessionFiles > 0 || migratedThreadRows > 0
+    }
+}
+
+struct CodexRelayHistoryBucketMigrationService {
+    typealias SQLiteRunner = (_ databaseURL: URL, _ command: String) throws -> String
+
+    var codexDirectoryProvider: () -> URL = {
+        FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex", directoryHint: .isDirectory)
+    }
+    var backupDirectoryProvider: (_ codexDirectory: URL) -> URL = { codexDirectory in
+        let stamp = CodexRelayHistoryBucketMigrationService.backupTimestamp()
+        return codexDirectory
+            .appending(path: "codex-pool-manager-backups", directoryHint: .isDirectory)
+            .appending(path: "relay-history-bucket-\(stamp)", directoryHint: .isDirectory)
+    }
+    var sqliteRunner: SQLiteRunner = Self.defaultSQLiteRunner
+
+    func migrate(sourceProviderID: String) throws -> CodexRelayHistoryBucketMigrationOutcome {
+        try migrate(sourceProviderIDs: [sourceProviderID])
+    }
+
+    func migrate(sourceProviderIDs: Set<String>) throws -> CodexRelayHistoryBucketMigrationOutcome {
+        let sourceProviderIDs = Self.normalizedSourceProviderIDs(sourceProviderIDs)
+        guard !sourceProviderIDs.isEmpty else {
+            return CodexRelayHistoryBucketMigrationOutcome(migratedSessionFiles: 0, migratedThreadRows: 0)
+        }
+
+        let codexDirectory = codexDirectoryProvider()
+        let backupDirectory = backupDirectoryProvider(codexDirectory)
+        let migratedSessionFiles = try migrateJSONLSessions(
+            codexDirectory: codexDirectory,
+            backupDirectory: backupDirectory,
+            sourceProviderIDs: sourceProviderIDs
+        )
+        let migratedThreadRows = try migrateStateDatabase(
+            codexDirectory: codexDirectory,
+            backupDirectory: backupDirectory,
+            sourceProviderIDs: sourceProviderIDs
+        )
+        return CodexRelayHistoryBucketMigrationOutcome(
+            migratedSessionFiles: migratedSessionFiles,
+            migratedThreadRows: migratedThreadRows
+        )
+    }
+
+    private func migrateJSONLSessions(
+        codexDirectory: URL,
+        backupDirectory: URL,
+        sourceProviderIDs: Set<String>
+    ) throws -> Int {
+        let roots = [
+            codexDirectory.appending(path: "sessions", directoryHint: .isDirectory),
+            codexDirectory.appending(path: "archived_sessions", directoryHint: .isDirectory)
+        ]
+        var migratedFiles = 0
+        for root in roots {
+            for fileURL in jsonlFiles(in: root) {
+                if try rewriteSessionFileIfNeeded(
+                    fileURL,
+                    codexDirectory: codexDirectory,
+                    backupDirectory: backupDirectory,
+                    sourceProviderIDs: sourceProviderIDs
+                ) {
+                    migratedFiles += 1
+                }
+            }
+        }
+        return migratedFiles
+    }
+
+    private func jsonlFiles(in root: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        return enumerator.compactMap { item -> URL? in
+            guard let url = item as? URL, url.pathExtension == "jsonl" else { return nil }
+            return url
+        }
+    }
+
+    private func rewriteSessionFileIfNeeded(
+        _ fileURL: URL,
+        codexDirectory: URL,
+        backupDirectory: URL,
+        sourceProviderIDs: Set<String>
+    ) throws -> Bool {
+        let fingerprint = try fileFingerprint(fileURL)
+        let content = try String(contentsOf: fileURL, encoding: .utf8)
+        var rewritten = ""
+        rewritten.reserveCapacity(content.count)
+        var didChange = false
+
+        let segments = content.split(separator: "\n", omittingEmptySubsequences: false)
+        for (offset, segment) in segments.enumerated() {
+            let line = String(segment)
+            if let nextLine = Self.rewriteSessionMetaLine(line, sourceProviderIDs: sourceProviderIDs) {
+                rewritten += nextLine
+                didChange = true
+            } else {
+                rewritten += line
+            }
+            if offset < segments.count - 1 {
+                rewritten += "\n"
+            }
+        }
+
+        guard didChange else { return false }
+
+        try ensureFileUnchanged(fileURL, fingerprint: fingerprint)
+        try backupFile(fileURL, codexDirectory: codexDirectory, backupDirectory: backupDirectory, category: "jsonl")
+        try ensureFileUnchanged(fileURL, fingerprint: fingerprint)
+        try rewritten.write(to: fileURL, atomically: true, encoding: .utf8)
+        return true
+    }
+
+    nonisolated private static func rewriteSessionMetaLine(
+        _ line: String,
+        sourceProviderIDs: Set<String>
+    ) -> String? {
+        guard line.contains("\"session_meta\""), line.contains("\"model_provider\"") else {
+            return nil
+        }
+        guard let data = line.data(using: .utf8),
+              var root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              root["type"] as? String == "session_meta",
+              var payload = root["payload"] as? [String: Any],
+              let modelProvider = payload["model_provider"] as? String,
+              sourceProviderIDs.contains(modelProvider)
+        else {
+            return nil
+        }
+
+        payload["model_provider"] = CodexProviderConfig.relayHistoryBucketProviderID
+        root["payload"] = payload
+        guard let output = try? JSONSerialization.data(withJSONObject: root),
+              let rewritten = String(data: output, encoding: .utf8)
+        else {
+            return nil
+        }
+        return rewritten
+    }
+
+    private func migrateStateDatabase(
+        codexDirectory: URL,
+        backupDirectory: URL,
+        sourceProviderIDs: Set<String>
+    ) throws -> Int {
+        let databaseURL = codexDirectory.appending(path: "state_5.sqlite")
+        guard FileManager.default.fileExists(atPath: databaseURL.path) else { return 0 }
+        guard try sqliteScalar(databaseURL, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='threads';") != "0",
+              try sqliteScalar(databaseURL, "SELECT COUNT(*) FROM pragma_table_info('threads') WHERE name='model_provider';") != "0"
+        else {
+            return 0
+        }
+
+        let quotedSourceIDs = sourceProviderIDs
+            .sorted()
+            .map(Self.sqliteStringLiteral)
+            .joined(separator: ", ")
+        let count = Int(try sqliteScalar(
+            databaseURL,
+            "SELECT COUNT(*) FROM threads WHERE model_provider IN (\(quotedSourceIDs));"
+        )) ?? 0
+        guard count > 0 else { return 0 }
+
+        try backupStateDatabase(databaseURL, codexDirectory: codexDirectory, backupDirectory: backupDirectory)
+        let target = Self.sqliteStringLiteral(CodexProviderConfig.relayHistoryBucketProviderID)
+        _ = try sqliteRunner(
+            databaseURL,
+            "UPDATE threads SET model_provider = \(target) WHERE model_provider IN (\(quotedSourceIDs));"
+        )
+        return count
+    }
+
+    private func sqliteScalar(_ databaseURL: URL, _ command: String) throws -> String {
+        try sqliteRunner(databaseURL, command)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func backupStateDatabase(
+        _ databaseURL: URL,
+        codexDirectory: URL,
+        backupDirectory: URL
+    ) throws {
+        let backupURL = backupDirectory
+            .appending(path: "state", directoryHint: .isDirectory)
+            .appending(path: relativePath(for: databaseURL, from: codexDirectory))
+        try FileManager.default.createDirectory(
+            at: backupURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        _ = try sqliteRunner(databaseURL, ".backup \(Self.sqliteStringLiteral(backupURL.path))")
+    }
+
+    private func backupFile(
+        _ fileURL: URL,
+        codexDirectory: URL,
+        backupDirectory: URL,
+        category: String
+    ) throws {
+        let backupURL = backupDirectory
+            .appending(path: category, directoryHint: .isDirectory)
+            .appending(path: relativePath(for: fileURL, from: codexDirectory))
+        try FileManager.default.createDirectory(
+            at: backupURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        if FileManager.default.fileExists(atPath: backupURL.path) {
+            try FileManager.default.removeItem(at: backupURL)
+        }
+        try FileManager.default.copyItem(at: fileURL, to: backupURL)
+    }
+
+    private func relativePath(for fileURL: URL, from directoryURL: URL) -> String {
+        let basePath = directoryURL.standardizedFileURL.path
+        let filePath = fileURL.standardizedFileURL.path
+        if filePath == basePath {
+            return fileURL.lastPathComponent
+        }
+        if filePath.hasPrefix(basePath + "/") {
+            return String(filePath.dropFirst(basePath.count + 1))
+        }
+        return fileURL.lastPathComponent
+    }
+
+    private func fileFingerprint(_ fileURL: URL) throws -> (modified: Date?, size: UInt64?) {
+        let values = try fileURL.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        return (values.contentModificationDate, values.fileSize.map(UInt64.init))
+    }
+
+    private func ensureFileUnchanged(
+        _ fileURL: URL,
+        fingerprint: (modified: Date?, size: UInt64?)
+    ) throws {
+        let current = try fileFingerprint(fileURL)
+        guard current.modified == fingerprint.modified, current.size == fingerprint.size else {
+            throw CodexProviderConfigError.writeFailed("Codex session file changed during migration: \(fileURL.path)")
+        }
+    }
+
+    nonisolated private static func normalizedSourceProviderIDs(_ values: Set<String>) -> Set<String> {
+        Set(values.compactMap { value in
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  trimmed != CodexProviderConfig.relayHistoryBucketProviderID,
+                  trimmed != "openai"
+            else {
+                return nil
+            }
+            return trimmed
+        })
+    }
+
+    nonisolated private static func defaultSQLiteRunner(databaseURL: URL, command: String) throws -> String {
+        let process = Process()
+        let outputPipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+        process.arguments = [databaseURL.path, command]
+        process.standardOutput = outputPipe
+        process.standardError = outputPipe
+        try process.run()
+        process.waitUntilExit()
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: .utf8) ?? ""
+        guard process.terminationStatus == 0 else {
+            throw CodexProviderConfigError.writeFailed(output)
+        }
+        return output
+    }
+
+    nonisolated private static func sqliteStringLiteral(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "''"))'"
+    }
+
+    nonisolated private static func backupTimestamp(date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter.string(from: date)
     }
 }

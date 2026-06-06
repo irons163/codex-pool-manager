@@ -589,6 +589,8 @@
 "relay.switch.config_updated_format" = "Updated Codex config provider: %@";
 "relay.switch.login_completed" = "Codex API key login completed.";
 "relay.switch.preserve_official_auth_enabled" = "Official OAuth preservation enabled; auth.json was not modified.";
+"relay.switch.history_bucket_migrated_format" = "Relay history bucket normalized: %@ -> %@ (%d session files, %d threads).";
+"relay.switch.history_bucket_failed_format" = "Relay history bucket migration skipped: %@";
 "relay.switch.failed_format" = "Relay switch failed: %@";
 "relay.title" = "API Key Relay";
 "relay.subtitle" = "Add an OpenAI-compatible relay provider for Codex CLI. Usage sync is unavailable for relay accounts.";

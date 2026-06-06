@@ -580,6 +580,8 @@
 "relay.switch.config_updated_format" = "Codex config provider를 업데이트했습니다: %@";
 "relay.switch.login_completed" = "Codex API key 로그인이 완료되었습니다.";
 "relay.switch.preserve_official_auth_enabled" = "공식 OAuth 로그인 보존이 활성화되어 auth.json은 수정하지 않았습니다.";
+"relay.switch.history_bucket_migrated_format" = "릴레이 기록 bucket을 정규화했습니다: %@ -> %@ (%d개 session 파일, %d개 thread).";
+"relay.switch.history_bucket_failed_format" = "릴레이 기록 bucket 마이그레이션을 건너뛰었습니다: %@";
 "relay.switch.failed_format" = "릴레이 전환 실패: %@";
 "relay.title" = "API 키 릴레이";
 "relay.subtitle" = "Codex CLI에서 사용할 OpenAI 호환 릴레이 provider를 추가합니다. 릴레이 계정은 사용량 동기화를 지원하지 않습니다.";

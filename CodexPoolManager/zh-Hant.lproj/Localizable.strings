@@ -581,6 +581,8 @@
 "relay.switch.config_updated_format" = "已更新 Codex config provider：%@";
 "relay.switch.login_completed" = "Codex API key 登入完成。";
 "relay.switch.preserve_official_auth_enabled" = "已啟用官方 OAuth 登入保留；auth.json 未被修改。";
+"relay.switch.history_bucket_migrated_format" = "中轉歷史 bucket 已正規化：%@ -> %@（%d 個 session 檔、%d 筆 thread）。";
+"relay.switch.history_bucket_failed_format" = "中轉歷史 bucket 遷移已略過：%@";
 "relay.switch.failed_format" = "中轉切換失敗：%@";
 "relay.title" = "API Key 中轉";
 "relay.subtitle" = "新增 OpenAI 相容的中轉 provider 給 Codex CLI 使用。中轉帳號不支援用量同步。";

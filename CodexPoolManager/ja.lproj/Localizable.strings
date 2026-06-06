@@ -580,6 +580,8 @@
 "relay.switch.config_updated_format" = "Codex config provider を更新しました: %@";
 "relay.switch.login_completed" = "Codex API key のログインが完了しました。";
 "relay.switch.preserve_official_auth_enabled" = "公式 OAuth ログイン保持が有効です。auth.json は変更していません。";
+"relay.switch.history_bucket_migrated_format" = "リレー履歴 bucket を正規化しました：%@ -> %@（%d session ファイル、%d thread）。";
+"relay.switch.history_bucket_failed_format" = "リレー履歴 bucket の移行をスキップしました：%@";
 "relay.switch.failed_format" = "中継への切り替えに失敗しました: %@";
 "relay.title" = "APIキー中継";
 "relay.subtitle" = "Codex CLI で使用する OpenAI 互換の中継 provider を追加します。中継アカウントでは使用量同期は利用できません。";

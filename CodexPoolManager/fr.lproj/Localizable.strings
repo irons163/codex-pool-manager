@@ -580,6 +580,8 @@
 "relay.switch.config_updated_format" = "Provider Codex mis à jour dans la config : %@";
 "relay.switch.login_completed" = "Connexion avec la clé API Codex terminée.";
 "relay.switch.preserve_official_auth_enabled" = "Conservation de la connexion OAuth officielle activée ; auth.json n'a pas été modifié.";
+"relay.switch.history_bucket_migrated_format" = "Bucket d'historique relais normalisé : %@ -> %@ (%d fichiers de session, %d threads).";
+"relay.switch.history_bucket_failed_format" = "Migration du bucket d'historique relais ignorée : %@";
 "relay.switch.failed_format" = "Échec de la bascule relais : %@";
 "relay.title" = "Relais par clé API";
 "relay.subtitle" = "Ajoutez un provider relais compatible OpenAI pour Codex CLI. La synchronisation d’usage n’est pas disponible pour les comptes relais.";
