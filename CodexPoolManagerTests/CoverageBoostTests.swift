@@ -1327,11 +1327,15 @@ struct WidgetBridgePublisherCoverageBoostTests {
         try await withIsolatedBridgePort {
             WidgetBridgePublisher.debugResetPublishState()
             WidgetBridgePublisher.debugResetBridgeServerState()
-            WidgetBridgePublisher.configureBridge()
+            WidgetBridgePublisher.debugStartBridgeServer()
             try await Task.sleep(nanoseconds: 200_000_000)
 
+            let emptyResponse = try await fetchBridgeResponse()
+            #expect(emptyResponse.statusCode == 204)
+            #expect(emptyResponse.data.isEmpty)
+
             let expectedStatus = "Active: bridge-\(UUID().uuidString)"
-            WidgetBridgePublisher.publishFromMainApp(status: expectedStatus)
+            WidgetBridgePublisher.debugPublishFromMainApp(status: expectedStatus, environment: [:])
             try await Task.sleep(nanoseconds: 200_000_000)
 
             let populatedResponse = try await fetchBridgeResponse()

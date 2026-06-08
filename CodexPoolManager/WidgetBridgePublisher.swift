@@ -238,6 +238,10 @@ extension WidgetBridgePublisher {
         WidgetBridgeLocalServer.shared.debugResetForTests()
     }
 
+    static func debugStartBridgeServer() {
+        WidgetBridgeLocalServer.shared.startIfNeeded()
+    }
+
     static func debugPublishFromMainApp(status: String, environment: [String: String]) {
         let snapshot = Snapshot(
             updatedAt: Date(),
