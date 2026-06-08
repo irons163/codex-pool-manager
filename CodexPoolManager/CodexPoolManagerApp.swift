@@ -15,15 +15,18 @@ struct CodexPoolManagerApp: App {
     @StateObject private var menuBarModel = MenuBarSnapshotModel()
     
     init() {
-        LegacySandboxPreferencesMigrator.migrateIfNeeded()
-        PreferenceValueNormalizer.normalizeIfNeeded()
-        WidgetBridgePublisher.configureBridge()
-        WidgetBridgePublisher.publishFromMainApp(status: "Codex Pool Manager is running")
+        let defaults = AppRuntimeStorage.defaults
+        LegacySandboxPreferencesMigrator.migrateIfNeeded(defaults: defaults)
+        PreferenceValueNormalizer.normalizeIfNeeded(defaults: defaults)
+        if !AppRuntimeStorage.isRunningXCTest {
+            WidgetBridgePublisher.configureBridge()
+            WidgetBridgePublisher.publishFromMainApp(status: "Codex Pool Manager is running")
+        }
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(store: AppRuntimeStorage.accountPoolStore)
                 .id(appLanguageOverride)
                 .environment(\.locale, L10n.locale(for: appLanguageOverride))
         }
@@ -41,6 +44,28 @@ struct CodexPoolManagerApp: App {
         }
         .menuBarExtraStyle(.menu)
     }
+}
+
+enum AppRuntimeStorage {
+    static var isRunningXCTest: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    static var defaults: UserDefaults {
+        testingDefaults ?? .standard
+    }
+
+    static var accountPoolStore: AccountPoolStoring {
+        DeveloperAwareAccountPoolStore(defaults: defaults)
+    }
+
+    private static let testingDefaults: UserDefaults? = {
+        guard isRunningXCTest else { return nil }
+        let suiteName = "CodexPoolManager.AppHostTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }()
 }
 
 private enum LegacySandboxPreferencesMigrator {

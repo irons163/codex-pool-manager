@@ -590,6 +590,19 @@ struct CodexPoolManagerAppMigrationCoverageTests {
     }
 
     @Test
+    func appHostTestsUseIsolatedDefaults() {
+        #expect(AppRuntimeStorage.isRunningXCTest)
+
+        let probeKey = "codex_pool_app_host_test_defaults_probe"
+        UserDefaults.standard.removeObject(forKey: probeKey)
+
+        AppRuntimeStorage.defaults.set("isolated", forKey: probeKey)
+
+        #expect(UserDefaults.standard.string(forKey: probeKey) == nil)
+        AppRuntimeStorage.defaults.removeObject(forKey: probeKey)
+    }
+
+    @Test
     func preferenceNormalizerRewritesInvalidAppearanceAndLanguageValues() {
         let defaults = makeDefaults()
         defaults.set("bad-value", forKey: AppAppearancePreference.storageKey)

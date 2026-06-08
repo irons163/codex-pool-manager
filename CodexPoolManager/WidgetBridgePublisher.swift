@@ -29,6 +29,7 @@ enum WidgetBridgePublisher {
     }
 
     static func configureBridge() {
+        guard !isXCTestEnvironment() else { return }
         WidgetBridgeLocalServer.shared.startIfNeeded()
     }
 
@@ -101,7 +102,7 @@ enum WidgetBridgePublisher {
         _ snapshot: Snapshot,
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) {
-        if environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+        if environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" || isXCTestEnvironment(environment: environment) {
             return
         }
 
@@ -126,6 +127,12 @@ enum WidgetBridgePublisher {
         } catch {
             NSLog("WidgetBridgePublisher failed: \(error.localizedDescription)")
         }
+    }
+
+    private static func isXCTestEnvironment(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
+        environment["XCTestConfigurationFilePath"] != nil
     }
 
     private static func shouldThrottlePublish(
