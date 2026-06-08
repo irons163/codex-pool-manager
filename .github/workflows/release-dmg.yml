@@ -246,6 +246,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Upload localized release notes to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          TAG_VERSION="${RELEASE_TAG#v}"
+          TAG_VERSION="${TAG_VERSION#V}"
+          BASE_VERSION="${TAG_VERSION%%[-+]*}"
+
+          NOTES_DIR=""
+          for candidate in \
+            "docs/release-notes/${RELEASE_TAG}" \
+            "docs/release-notes/v${TAG_VERSION}" \
+            "docs/release-notes/${TAG_VERSION}" \
+            "docs/release-notes/v${BASE_VERSION}" \
+            "docs/release-notes/${BASE_VERSION}"; do
+            if [[ -d "$candidate" ]]; then
+              NOTES_DIR="$candidate"
+              break
+            fi
+          done
+
+          if [[ -z "$NOTES_DIR" ]]; then
+            echo "No localized release notes directory found for ${RELEASE_TAG}." >&2
+            echo "Expected files like docs/release-notes/v${BASE_VERSION}/release-notes.en.md." >&2
+            exit 1
+          fi
+
+          shopt -s nullglob
+          NOTE_ASSETS=("${NOTES_DIR}"/release-notes.*.md "${NOTES_DIR}"/release-notes.*.txt)
+          if (( ${#NOTE_ASSETS[@]} == 0 )); then
+            echo "No localized release note assets found in ${NOTES_DIR}." >&2
+            exit 1
+          fi
+
+          gh release upload "$RELEASE_TAG" "${NOTE_ASSETS[@]}" --clobber
+
       - name: Generate Sparkle appcast assets
         shell: bash
         env:

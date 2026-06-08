@@ -35,9 +35,21 @@ On success, it will:
 1. Archive the macOS app in `Release`
 2. Build a `.dmg`
 3. Notarize and staple the DMG
-4. Upload the DMG as:
+4. Upload localized release note assets from `docs/release-notes/v<version>/release-notes.<lang>.md`
+5. Upload the DMG as:
    - Workflow artifact
    - GitHub Release asset (for release events)
+6. Generate and upload Sparkle appcast XML assets
+
+Localized release note assets are required for release/tag builds. The currently supported files are:
+
+- `release-notes.en.md`
+- `release-notes.zh-Hant.md`
+- `release-notes.zh-Hans.md`
+- `release-notes.ja.md`
+- `release-notes.ko.md`
+- `release-notes.fr.md`
+- `release-notes.es.md`
 
 ## 4. Local Execution (optional)
 
