@@ -1,6 +1,15 @@
 import SwiftUI
 
 struct RelayAPIKeyPanelView: View {
+    enum FieldID: Equatable {
+        case accountName
+        case baseURL
+        case apiKey
+        case providerID
+        case providerName
+        case wireAPI
+    }
+
     @Binding var accountName: String
     @Binding var providerID: String
     @Binding var providerName: String
@@ -32,6 +41,11 @@ struct RelayAPIKeyPanelView: View {
                         placeholder: "Mirror",
                         text: $accountName
                     )
+                    advancedField(
+                        L10n.text("relay.base_url.label"),
+                        placeholder: PoolDashboardFormState.defaultRelayBaseURL,
+                        text: $baseURL
+                    )
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(L10n.text("relay.api_key.label"))
@@ -54,11 +68,6 @@ struct RelayAPIKeyPanelView: View {
                             L10n.text("relay.provider_name.label"),
                             placeholder: PoolDashboardFormState.defaultRelayProviderID,
                             text: $providerName
-                        )
-                        advancedField(
-                            L10n.text("relay.base_url.label"),
-                            placeholder: PoolDashboardFormState.defaultRelayBaseURL,
-                            text: $baseURL
                         )
                         wireAPIField
                     }
@@ -182,3 +191,10 @@ struct RelayAPIKeyPanelView: View {
         .frame(width: 360, alignment: .leading)
     }
 }
+
+#if DEBUG
+extension RelayAPIKeyPanelView {
+    static let debugPrimaryFieldIDs: [FieldID] = [.accountName, .baseURL, .apiKey]
+    static let debugAdvancedFieldIDs: [FieldID] = [.providerID, .providerName, .wireAPI]
+}
+#endif

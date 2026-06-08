@@ -750,6 +750,12 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func relayAPIKeyPanelKeepsRequiredBaseURLInPrimaryFields() {
+        #expect(RelayAPIKeyPanelView.debugPrimaryFieldIDs == [.accountName, .baseURL, .apiKey])
+        #expect(RelayAPIKeyPanelView.debugAdvancedFieldIDs == [.providerID, .providerName, .wireAPI])
+    }
+
+    @Test
     @MainActor
     func localOAuthAccountsPanelViewRendersEmptyErrorSuccessAndJWTFallbackRows() {
         let tokenWithEmail = makeJWTLikeToken(
