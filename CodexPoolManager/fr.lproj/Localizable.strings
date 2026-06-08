@@ -74,7 +74,7 @@
 "auth.method.oauth" = "OAuth / Abonnement";
 "auth.method.relay_api_key" = "Relais par clé API";
 "auth.method.oauth_hint" = "Connectez-vous avec ChatGPT/OAuth, puis importez les comptes d’abonnement et synchronisez l’usage.";
-"auth.method.relay_api_key_hint" = "Ajoutez un fournisseur compatible OpenAI avec une clé API pour le basculement manuel. Les comptes relais ne synchronisent pas l’usage.";
+"auth.method.relay_api_key_hint" = "Ajoutez un provider relais avec clé API pour le basculement manuel. Les comptes relais ne synchronisent pas l’usage.";
 
 "oauth.sign_in.title" = "Connexion OAuth";
 "oauth.sign_in.subtitle" = "Use a public OAuth client to sign in, then import the resulting account into the pool. You may also use your own OAuth client.";
@@ -576,15 +576,13 @@
 "relay.error.codex_cli_missing" = "Codex CLI est introuvable.";
 "relay.error.login_failed_format" = "Échec de connexion avec la clé API Codex : %@";
 "relay.error.missing_api_key" = "La clé API est requise.";
-"relay.switch.start_format" = "Bascule du provider Codex vers %@";
-"relay.switch.config_updated_format" = "Provider Codex mis à jour dans la config : %@";
+"relay.switch.start_format" = "Bascule du compte relais Codex vers %@";
+"relay.switch.config_updated_format" = "Configuration relais Codex mise à jour : %@";
 "relay.switch.login_completed" = "Connexion avec la clé API Codex terminée.";
-"relay.switch.preserve_official_auth_enabled" = "Conservation de la connexion OAuth officielle activée ; auth.json n'a pas été modifié.";
-"relay.switch.history_bucket_migrated_format" = "Bucket d'historique relais normalisé : %@ -> %@ (%d fichiers de session, %d threads).";
-"relay.switch.history_bucket_failed_format" = "Migration du bucket d'historique relais ignorée : %@";
+"relay.switch.preserve_official_auth_enabled" = "Mode de conservation de l'historique activé ; Codex garde l'historique existant visible et envoie les requêtes API vers la Base URL du relais.";
 "relay.switch.failed_format" = "Échec de la bascule relais : %@";
 "relay.title" = "Relais par clé API";
-"relay.subtitle" = "Ajoutez un provider relais compatible OpenAI pour Codex CLI. La synchronisation d’usage n’est pas disponible pour les comptes relais.";
+"relay.subtitle" = "Ajoutez un provider relais pour Codex CLI. La synchronisation d’usage n’est pas disponible pour les comptes relais.";
 "relay.account_name.label" = "Nom du compte";
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Nom du provider";
@@ -594,9 +592,9 @@
 "relay.wire_api.help_title" = "Qu’est-ce que le format API ?";
 "relay.wire_api.help_message" = "Cela écrit toujours le champ wire_api dans config.toml. Gardez responses pour la plupart des fournisseurs relais Codex ; utilisez chat uniquement si le fournisseur exige Chat Completions.";
 "relay.api_key.label" = "API Key";
-"relay.api_key.placeholder" = "OpenAI API key";
-"relay.preserve_official_auth.toggle" = "Conserver la connexion OAuth officielle";
-"relay.preserve_official_auth.hint" = "Si activé, la clé API relais est écrite uniquement dans config.toml et codex login --with-api-key est ignoré.";
+"relay.api_key.placeholder" = "API key";
+"relay.preserve_official_auth.toggle" = "Conserver l'historique existant";
+"relay.preserve_official_auth.hint" = "Conserve l'historique existant dans Codex tout en envoyant les requêtes API vers la Base URL du relais. Lors du basculement vers un compte relais, Codex se connecte toujours avec la clé API relais ; ce réglage prendra effet au prochain basculement.";
 "relay.add_button" = "Ajouter un compte relais";
 "relay.status.title" = "Compte relais";
 "relay.error.title" = "Erreur de relais";

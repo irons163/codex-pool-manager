@@ -458,19 +458,12 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relayCoordinatorEnhancedModeAppliesConfigAndSkipsAPIKeyLogin() async {
+    func relayCoordinatorEnhancedModeAppliesOpenAIHistoryConfigThenLogsInAPIKey() async {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("legacy:\(provider.providerID)") } },
             enhancedConfigApplier: { provider, apiKey in
                 events.withLock { $0.append("enhanced:\(provider.providerID):\(apiKey)") }
-            },
-            historyMigrator: { providerID in
-                events.withLock { $0.append("history:\(providerID)") }
-                return CodexRelayHistoryBucketMigrationOutcome(
-                    migratedSessionFiles: 1,
-                    migratedThreadRows: 2
-                )
             },
             apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
             appRelauncher: { launchTarget in
@@ -500,11 +493,10 @@ struct RelayAccountCoordinatorTests {
             viewState: PoolDashboardViewState()
         )
 
-        #expect(events.value == ["enhanced:mirror:sk-relay", "history:mirror", "launch:codex"])
+        #expect(events.value == ["enhanced:mirror:sk-relay", "login:sk-relay", "launch:codex"])
         #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("relay.switch.preserve_official_auth_enabled")))
-        #expect(output.viewState.lastSwitchLaunchLog.contains("mirror -> custom"))
     }
 
     @Test

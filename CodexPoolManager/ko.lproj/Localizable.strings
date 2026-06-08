@@ -74,7 +74,7 @@
 "auth.method.oauth" = "OAuth / 구독";
 "auth.method.relay_api_key" = "API 키 릴레이";
 "auth.method.oauth_hint" = "ChatGPT/OAuth로 로그인한 뒤 구독 계정을 가져오고 사용량을 동기화합니다.";
-"auth.method.relay_api_key_hint" = "수동 전환용 OpenAI 호환 API 키 provider를 추가합니다. 릴레이 계정은 사용량 동기화를 지원하지 않습니다.";
+"auth.method.relay_api_key_hint" = "수동 전환용 릴레이 API key provider를 추가합니다. 릴레이 계정은 사용량 동기화를 지원하지 않습니다.";
 
 "oauth.sign_in.title" = "OAuth 로그인";
 "oauth.sign_in.subtitle" = "자체 OAuth 클라이언트로 로그인한 뒤, 생성된 계정을 풀로 가져오세요.";
@@ -576,15 +576,13 @@
 "relay.error.codex_cli_missing" = "Codex CLI를 찾을 수 없습니다.";
 "relay.error.login_failed_format" = "Codex API key 로그인 실패: %@";
 "relay.error.missing_api_key" = "API key가 필요합니다.";
-"relay.switch.start_format" = "Codex provider를 %@로 전환하는 중";
-"relay.switch.config_updated_format" = "Codex config provider를 업데이트했습니다: %@";
+"relay.switch.start_format" = "Codex 릴레이 계정을 %@로 전환하는 중";
+"relay.switch.config_updated_format" = "Codex 릴레이 설정을 업데이트했습니다: %@";
 "relay.switch.login_completed" = "Codex API key 로그인이 완료되었습니다.";
-"relay.switch.preserve_official_auth_enabled" = "공식 OAuth 로그인 보존이 활성화되어 auth.json은 수정하지 않았습니다.";
-"relay.switch.history_bucket_migrated_format" = "릴레이 기록 bucket을 정규화했습니다: %@ -> %@ (%d개 session 파일, %d개 thread).";
-"relay.switch.history_bucket_failed_format" = "릴레이 기록 bucket 마이그레이션을 건너뛰었습니다: %@";
+"relay.switch.preserve_official_auth_enabled" = "기록 유지 모드가 활성화되었습니다. Codex는 기존 기록을 계속 표시하면서 API 요청을 릴레이 Base URL로 보냅니다.";
 "relay.switch.failed_format" = "릴레이 전환 실패: %@";
 "relay.title" = "API 키 릴레이";
-"relay.subtitle" = "Codex CLI에서 사용할 OpenAI 호환 릴레이 provider를 추가합니다. 릴레이 계정은 사용량 동기화를 지원하지 않습니다.";
+"relay.subtitle" = "Codex CLI에서 사용할 릴레이 provider를 추가합니다. 릴레이 계정은 사용량 동기화를 지원하지 않습니다.";
 "relay.account_name.label" = "계정 이름";
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Provider 이름";
@@ -594,9 +592,9 @@
 "relay.wire_api.help_title" = "API 형식이란?";
 "relay.wire_api.help_message" = "config.toml에는 여전히 wire_api 필드로 저장됩니다. 대부분의 Codex 릴레이 provider는 responses를 유지하고, provider가 Chat Completions를 명시적으로 요구할 때만 chat을 사용하세요.";
 "relay.api_key.label" = "API Key";
-"relay.api_key.placeholder" = "OpenAI API key";
-"relay.preserve_official_auth.toggle" = "공식 OAuth 로그인 유지";
-"relay.preserve_official_auth.hint" = "켜면 릴레이 API key를 config.toml에만 쓰고 codex login --with-api-key는 건너뜁니다.";
+"relay.api_key.placeholder" = "API key";
+"relay.preserve_official_auth.toggle" = "기존 기록 유지";
+"relay.preserve_official_auth.hint" = "Codex의 기존 기록을 계속 표시하면서 API 요청을 릴레이 Base URL로 보냅니다. 릴레이 계정으로 전환할 때도 릴레이 API key로 Codex에 로그인합니다. 이 설정은 다음 전환 시 적용됩니다.";
 "relay.add_button" = "릴레이 계정 추가";
 "relay.status.title" = "릴레이 계정";
 "relay.error.title" = "릴레이 오류";

@@ -78,7 +78,7 @@
 "auth.method.oauth" = "OAuth / Subscription";
 "auth.method.relay_api_key" = "API Key Relay";
 "auth.method.oauth_hint" = "Sign in with ChatGPT/OAuth, then import subscription accounts and sync usage.";
-"auth.method.relay_api_key_hint" = "Add an OpenAI-compatible API key provider for manual switching. Relay accounts do not support usage sync.";
+"auth.method.relay_api_key_hint" = "Add a relay API key provider for manual switching. Relay accounts do not support usage sync.";
 
 "oauth.sign_in.title" = "OAuth Sign-In";
 "oauth.sign_in.subtitle" = "Use a public OAuth client to sign in, then import the resulting account into the pool. You may also use your own OAuth client.";
@@ -585,15 +585,13 @@
 "relay.error.codex_cli_missing" = "Codex CLI was not found.";
 "relay.error.login_failed_format" = "Codex API key login failed: %@";
 "relay.error.missing_api_key" = "API key is required.";
-"relay.switch.start_format" = "Switching Codex provider to %@";
-"relay.switch.config_updated_format" = "Updated Codex config provider: %@";
+"relay.switch.start_format" = "Switching Codex relay account to %@";
+"relay.switch.config_updated_format" = "Updated Codex relay config: %@";
 "relay.switch.login_completed" = "Codex API key login completed.";
-"relay.switch.preserve_official_auth_enabled" = "Official OAuth preservation enabled; auth.json was not modified.";
-"relay.switch.history_bucket_migrated_format" = "Relay history bucket normalized: %@ -> %@ (%d session files, %d threads).";
-"relay.switch.history_bucket_failed_format" = "Relay history bucket migration skipped: %@";
+"relay.switch.preserve_official_auth_enabled" = "History-preserving mode enabled; Codex keeps existing history visible and routes API requests through the relay Base URL.";
 "relay.switch.failed_format" = "Relay switch failed: %@";
 "relay.title" = "API Key Relay";
-"relay.subtitle" = "Add an OpenAI-compatible relay provider for Codex CLI. Usage sync is unavailable for relay accounts.";
+"relay.subtitle" = "Add a relay provider for Codex CLI. Usage sync is unavailable for relay accounts.";
 "relay.account_name.label" = "Account Name";
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Provider Name";
@@ -603,9 +601,9 @@
 "relay.wire_api.help_title" = "What is API Format?";
 "relay.wire_api.help_message" = "This still writes the config.toml field wire_api. Keep responses for most Codex relay providers; use chat only when the provider explicitly requires Chat Completions.";
 "relay.api_key.label" = "API Key";
-"relay.api_key.placeholder" = "OpenAI API key";
-"relay.preserve_official_auth.toggle" = "Keep official OAuth login";
-"relay.preserve_official_auth.hint" = "When enabled, the relay API key is written only to config.toml and codex login --with-api-key is skipped.";
+"relay.api_key.placeholder" = "API key";
+"relay.preserve_official_auth.toggle" = "Preserve existing history";
+"relay.preserve_official_auth.hint" = "Keeps Codex's existing history visible while routing API requests through the relay Base URL. Switching to a relay account still signs Codex in with the relay API key; this setting takes effect on the next switch.";
 "relay.add_button" = "Add Relay Account";
 "relay.status.title" = "Relay Account";
 "relay.error.title" = "Relay Error";

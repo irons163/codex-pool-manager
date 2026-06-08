@@ -8,9 +8,6 @@ struct PoolDashboardRelayAccountCoordinator {
         _ provider: CodexProviderConfig,
         _ apiKey: String
     ) throws -> Void
-    typealias RelayHistoryMigrator = (
-        _ sourceProviderID: String
-    ) async throws -> CodexRelayHistoryBucketMigrationOutcome
 
     struct AddOutput {
         let state: AccountPoolState
@@ -24,7 +21,6 @@ struct PoolDashboardRelayAccountCoordinator {
 
     private let configApplier: (CodexProviderConfig) throws -> Void
     private let enhancedConfigApplier: EnhancedConfigApplier
-    private let historyMigrator: RelayHistoryMigrator
     private let apiKeyLogin: (String) async throws -> Void
     private let appRelauncher: AppRelauncher
 
@@ -33,17 +29,11 @@ struct PoolDashboardRelayAccountCoordinator {
         enhancedConfigApplier: @escaping EnhancedConfigApplier = { provider, apiKey in
             try CodexProviderConfigService().applyPreservingOfficialAuth(provider, apiKey: apiKey)
         },
-        historyMigrator: @escaping RelayHistoryMigrator = { sourceProviderID in
-            try await Task.detached(priority: .utility) {
-                try CodexRelayHistoryBucketMigrationService().migrate(sourceProviderID: sourceProviderID)
-            }.value
-        },
         apiKeyLogin: @escaping (String) async throws -> Void = { try await CodexAPIKeyLoginService().login(apiKey: $0) },
         appRelauncher: @escaping AppRelauncher = Self.defaultAppRelauncher
     ) {
         self.configApplier = configApplier
         self.enhancedConfigApplier = enhancedConfigApplier
-        self.historyMigrator = historyMigrator
         self.apiKeyLogin = apiKeyLogin
         self.appRelauncher = appRelauncher
     }
@@ -130,24 +120,8 @@ struct PoolDashboardRelayAccountCoordinator {
             logLines.append(L10n.text("relay.switch.config_updated_format", provider.providerID))
             if preserveOfficialAuth {
                 logLines.append(L10n.text("relay.switch.preserve_official_auth_enabled"))
-                do {
-                    let outcome = try await historyMigrator(provider.providerID)
-                    if outcome.didMigrate {
-                        logLines.append(
-                            L10n.text(
-                                "relay.switch.history_bucket_migrated_format",
-                                provider.providerID,
-                                CodexProviderConfig.relayHistoryBucketProviderID,
-                                outcome.migratedSessionFiles,
-                                outcome.migratedThreadRows
-                            )
-                        )
-                    }
-                } catch {
-                    logLines.append(
-                        L10n.text("relay.switch.history_bucket_failed_format", error.localizedDescription)
-                    )
-                }
+                try await apiKeyLogin(apiKey)
+                logLines.append(L10n.text("relay.switch.login_completed"))
             } else {
                 try await apiKeyLogin(apiKey)
                 logLines.append(L10n.text("relay.switch.login_completed"))

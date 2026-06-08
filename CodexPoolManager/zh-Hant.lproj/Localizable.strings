@@ -78,7 +78,7 @@
 "auth.method.oauth" = "OAuth / 訂閱";
 "auth.method.relay_api_key" = "API Key 中轉";
 "auth.method.oauth_hint" = "使用 ChatGPT/OAuth 登入，匯入訂閱帳號並同步用量。";
-"auth.method.relay_api_key_hint" = "新增 OpenAI 相容 API key provider 供手動切換使用。中轉帳號不支援用量同步。";
+"auth.method.relay_api_key_hint" = "新增中轉 API key provider 供手動切換使用。中轉帳號不支援用量同步。";
 
 "oauth.sign_in.title" = "OAuth 登入";
 "oauth.sign_in.subtitle" = "使用你的 OAuth Client 登入，並將結果帳號匯入池中。";
@@ -577,15 +577,13 @@
 "relay.error.codex_cli_missing" = "找不到 Codex CLI。";
 "relay.error.login_failed_format" = "Codex API key 登入失敗：%@";
 "relay.error.missing_api_key" = "需要 API key。";
-"relay.switch.start_format" = "正在切換 Codex provider 至 %@";
-"relay.switch.config_updated_format" = "已更新 Codex config provider：%@";
+"relay.switch.start_format" = "正在切換 Codex 中轉帳號至 %@";
+"relay.switch.config_updated_format" = "已更新 Codex 中轉設定：%@";
 "relay.switch.login_completed" = "Codex API key 登入完成。";
-"relay.switch.preserve_official_auth_enabled" = "已啟用官方 OAuth 登入保留；auth.json 未被修改。";
-"relay.switch.history_bucket_migrated_format" = "中轉歷史 bucket 已正規化：%@ -> %@（%d 個 session 檔、%d 筆 thread）。";
-"relay.switch.history_bucket_failed_format" = "中轉歷史 bucket 遷移已略過：%@";
+"relay.switch.preserve_official_auth_enabled" = "已啟用歷史紀錄保留模式；Codex 會保留既有歷史紀錄，並將 API 請求導向中轉 Base URL。";
 "relay.switch.failed_format" = "中轉切換失敗：%@";
 "relay.title" = "API Key 中轉";
-"relay.subtitle" = "新增 OpenAI 相容的中轉 provider 給 Codex CLI 使用。中轉帳號不支援用量同步。";
+"relay.subtitle" = "新增中轉 provider 給 Codex CLI 使用。中轉帳號不支援用量同步。";
 "relay.account_name.label" = "帳號名稱";
 "relay.provider_id.label" = "Provider ID";
 "relay.provider_name.label" = "Provider 名稱";
@@ -595,9 +593,9 @@
 "relay.wire_api.help_title" = "什麼是 API 格式？";
 "relay.wire_api.help_message" = "這裡實際仍會寫入 config.toml 的 wire_api 欄位。大多數 Codex 中轉 provider 請維持 responses；只有 provider 明確要求 Chat Completions 時才改成 chat。";
 "relay.api_key.label" = "API Key";
-"relay.api_key.placeholder" = "OpenAI API key";
-"relay.preserve_official_auth.toggle" = "保留官方 OAuth 登入狀態";
-"relay.preserve_official_auth.hint" = "開啟後，中轉 API key 只會寫入 config.toml，並跳過 codex login --with-api-key。";
+"relay.api_key.placeholder" = "API key";
+"relay.preserve_official_auth.toggle" = "保留既有歷史紀錄";
+"relay.preserve_official_auth.hint" = "保留 Codex 既有的歷史紀錄，並將 API 請求導向中轉 Base URL。切換中轉帳號時仍會以中轉 API key 登入 Codex；此設定會在下次切換時生效。";
 "relay.add_button" = "新增中轉帳號";
 "relay.status.title" = "中轉帳號";
 "relay.error.title" = "中轉錯誤";
