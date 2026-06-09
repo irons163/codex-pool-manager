@@ -343,7 +343,6 @@ struct PoolDashboardView: View {
     @State private var appUpdatePrompt: AppUpdatePrompt?
     @State private var isCheckingForAppUpdate = false
     @State private var appUpdateStatusMessage: String?
-    @State private var didRunInitialAppUpdateCheck = false
     private let store: AccountPoolStoring
     private let backupFlowCoordinator = PoolDashboardBackupFlowCoordinator()
     private let usageSyncFlowCoordinator = PoolDashboardUsageSyncFlowCoordinator()
@@ -383,6 +382,10 @@ struct PoolDashboardView: View {
 
     private var autoSyncTaskID: String {
         "\(state.autoSyncEnabled)-\(Int(state.autoSyncIntervalSeconds))"
+    }
+
+    private var appUpdateAutoCheckTaskID: String {
+        "\(appUpdateAutoCheckEnabled)-\(appLanguageOverride)-\(isPrereleaseUpdateChannelEnabled)"
     }
 
     private var selectedLaunchTarget: CodexLaunchTarget {
@@ -612,6 +615,15 @@ struct PoolDashboardView: View {
                 try? await Task.sleep(nanoseconds: UInt64(state.autoSyncIntervalSeconds * 1_000_000_000))
                 if Task.isCancelled { break }
                 await syncCodexUsage()
+            }
+        }
+        .task(id: appUpdateAutoCheckTaskID) {
+            guard appUpdateAutoCheckEnabled else { return }
+            await checkForAppUpdates(force: false, bypassCadence: true)
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: AppUpdateAutoCheckPolicy.intervalNanoseconds)
+                if Task.isCancelled { break }
+                await checkForAppUpdates(force: false)
             }
         }
         .alert(L10n.text("alert.low_usage.title"), isPresented: $viewState.showLowUsageAlert) {
@@ -1686,13 +1698,6 @@ struct PoolDashboardView: View {
         evaluateSpecialResetWatchAfterSync(now: .now)
         seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
-
-        if !didRunInitialAppUpdateCheck {
-            didRunInitialAppUpdateCheck = true
-            Task {
-                await checkForAppUpdates(force: false, bypassCadence: true)
-            }
-        }
     }
 
     // MARK: - Developer Data Mode
@@ -2754,9 +2759,7 @@ struct PoolDashboardView: View {
     }
 
     private func shouldRunAutomaticUpdateCheck(now: Date) -> Bool {
-        guard appUpdateLastCheckedAt > 0 else { return true }
-        let elapsed = now.timeIntervalSince1970 - appUpdateLastCheckedAt
-        return elapsed >= 6 * 3_600
+        AppUpdateAutoCheckPolicy.shouldRun(lastCheckedAt: appUpdateLastCheckedAt, now: now)
     }
 
     private func appVersionText() -> String {
@@ -3348,6 +3351,18 @@ enum AppUpdateVersioning {
     }
 }
 
+enum AppUpdateAutoCheckPolicy {
+    static let intervalSeconds: TimeInterval = 30 * 60
+    static var intervalNanoseconds: UInt64 {
+        UInt64(intervalSeconds * 1_000_000_000)
+    }
+
+    static func shouldRun(lastCheckedAt: TimeInterval, now: Date) -> Bool {
+        guard lastCheckedAt > 0 else { return true }
+        return now.timeIntervalSince1970 - lastCheckedAt >= intervalSeconds
+    }
+}
+
 struct AppUpdateService {
     var endpoint = URL(string: "https://api.github.com/repos/irons163/codex-pool-manager/releases/latest")!
     var session: URLSession = .shared
@@ -3373,12 +3388,12 @@ struct AppUpdateService {
         do {
             let payload: AppUpdateReleasePayload
             if includePrerelease {
-                guard let prerelease = try decoder.decode([AppUpdateReleasePayload].self, from: data)
-                    .first(where: { $0.isVisiblePrerelease })
+                guard let visibleRelease = try decoder.decode([AppUpdateReleasePayload].self, from: data)
+                    .first(where: { $0.isVisibleRelease })
                 else {
                     throw AppUpdateError.noPrereleaseAvailable
                 }
-                payload = prerelease
+                payload = visibleRelease
             } else {
                 payload = try decoder.decode(AppUpdateReleasePayload.self, from: data)
             }
@@ -3554,8 +3569,8 @@ private struct AppUpdateReleasePayload: Decodable {
         case assets
     }
 
-    var isVisiblePrerelease: Bool {
-        prerelease == true && draft != true
+    var isVisibleRelease: Bool {
+        draft != true
     }
 
     var release: AppUpdateRelease {

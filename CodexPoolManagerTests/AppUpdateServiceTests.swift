@@ -29,6 +29,34 @@ struct AppUpdateServiceTests {
     }
 
     @Test
+    func automaticUpdateCheckPolicyRunsInitially() {
+        let now = Date(timeIntervalSince1970: 1_000)
+
+        #expect(AppUpdateAutoCheckPolicy.shouldRun(lastCheckedAt: 0, now: now))
+    }
+
+    @Test
+    func automaticUpdateCheckPolicyUsesThirtyMinuteInterval() {
+        #expect(AppUpdateAutoCheckPolicy.intervalSeconds == 30 * 60)
+    }
+
+    @Test
+    func automaticUpdateCheckPolicyWaitsForInterval() {
+        let now = Date(timeIntervalSince1970: 10_000)
+        let lastCheckedAt = now.timeIntervalSince1970 - AppUpdateAutoCheckPolicy.intervalSeconds + 1
+
+        #expect(!AppUpdateAutoCheckPolicy.shouldRun(lastCheckedAt: lastCheckedAt, now: now))
+    }
+
+    @Test
+    func automaticUpdateCheckPolicyRunsAfterInterval() {
+        let now = Date(timeIntervalSince1970: 10_000)
+        let lastCheckedAt = now.timeIntervalSince1970 - AppUpdateAutoCheckPolicy.intervalSeconds
+
+        #expect(AppUpdateAutoCheckPolicy.shouldRun(lastCheckedAt: lastCheckedAt, now: now))
+    }
+
+    @Test
     func preferredInstallerSelectsArchitectureSpecificAsset() {
         let release = AppUpdateRelease(
             tagName: "v1.7.5",
@@ -177,15 +205,6 @@ struct AppUpdateServiceTests {
         let payload = """
         [
           {
-            "tag_name": "v1.9.0",
-            "name": "Stable 1.9.0",
-            "html_url": "https://example.com/releases/v1.9.0",
-            "published_at": "2026-04-18T08:30:45Z",
-            "draft": false,
-            "prerelease": false,
-            "assets": []
-          },
-          {
             "tag_name": "v1.10.0-beta.1",
             "name": "Beta 1.10.0",
             "html_url": "https://example.com/releases/v1.10.0-beta.1",
@@ -198,6 +217,15 @@ struct AppUpdateServiceTests {
                 "browser_download_url": "https://example.com/download/beta-apple.dmg"
               }
             ]
+          },
+          {
+            "tag_name": "v1.9.0",
+            "name": "Stable 1.9.0",
+            "html_url": "https://example.com/releases/v1.9.0",
+            "published_at": "2026-04-18T08:30:45Z",
+            "draft": false,
+            "prerelease": false,
+            "assets": []
           }
         ]
         """
@@ -223,6 +251,42 @@ struct AppUpdateServiceTests {
     }
 
     @Test
+    func fetchLatestReleaseUsesStableReleaseWhenPrereleaseChannelHasNoNewerBeta() async throws {
+        let endpoint = URL(string: "https://example.com/prerelease-stable/releases/latest")!
+        let prereleaseEndpoint = URL(string: "https://example.com/prerelease-stable/releases?per_page=20")!
+        let payload = """
+        [
+          {
+            "tag_name": "v1.9.0",
+            "name": "Stable 1.9.0",
+            "html_url": "https://example.com/releases/v1.9.0",
+            "published_at": "2026-04-18T08:30:45Z",
+            "draft": false,
+            "prerelease": false,
+            "assets": [
+              {
+                "name": "CodexPoolManager-1.9.0-apple-silicon.dmg",
+                "browser_download_url": "https://example.com/download/stable-apple.dmg"
+              }
+            ]
+          }
+        ]
+        """
+        let session = makeMockedURLSession(
+            endpoint: prereleaseEndpoint,
+            statusCode: 200,
+            data: Data(payload.utf8)
+        )
+        let service = AppUpdateService(endpoint: endpoint, session: session)
+
+        let release = try await service.fetchLatestRelease(includePrerelease: true)
+
+        #expect(release.tagName == "v1.9.0")
+        #expect(release.normalizedVersion == "1.9.0")
+        #expect(release.preferredInstallerURL(for: .appleSilicon)?.absoluteString == "https://example.com/download/stable-apple.dmg")
+    }
+
+    @Test
     func fetchLatestReleaseThrowsWhenPrereleaseChannelHasNoVisibleRelease() async {
         let endpoint = URL(string: "https://example.com/prerelease-empty/releases/latest")!
         let prereleaseEndpoint = URL(string: "https://example.com/prerelease-empty/releases?per_page=20")!
@@ -230,9 +294,9 @@ struct AppUpdateServiceTests {
         [
           {
             "tag_name": "v1.9.0",
-            "name": "Stable 1.9.0",
+            "name": "Draft stable",
             "html_url": "https://example.com/releases/v1.9.0",
-            "draft": false,
+            "draft": true,
             "prerelease": false,
             "assets": []
           },
