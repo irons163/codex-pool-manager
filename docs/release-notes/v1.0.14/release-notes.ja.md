@@ -1,0 +1,13 @@
+# CodexPoolManager v1.0.14
+
+リリース日：2026-06-09
+
+## 修正
+
+- リレー API key アカウントへの切り替えで、非同期の切り替え処理に入る前にアカウント、provider、API key のデータをスナップショット化するよう強化しました。v1.0.13 の release 版で確認されたクラッシュを対象にした修正です。
+- リレー API key フォームの追加可能状態の判定を SwiftUI body の描画処理から外し、画面更新時の不要な文字列 trim を避けるようにしました。
+
+## 注意事項
+
+- アカウント、API key、auth.json、config.toml の移行作業は不要です。
+- この prerelease は、stable 公開前にリレー API key 切り替え hotfix を検証するためのものです。
