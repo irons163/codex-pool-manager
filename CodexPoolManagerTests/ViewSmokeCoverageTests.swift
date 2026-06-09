@@ -545,7 +545,7 @@ struct ViewSmokeCoverageTests {
         var createGroupCount = 0
         var renameGroupCount = 0
         var deleteGroupCount = 0
-        var switchCount = 0
+        var switchedAccountIDs: [UUID] = []
 
         func makeView(layoutMode: String) -> AccountUsagePanelView {
             defaults.set(layoutMode, forKey: layoutModeKey)
@@ -561,7 +561,7 @@ struct ViewSmokeCoverageTests {
                 switchLaunchWarning: "switch warning",
                 showAddAccountControls: true,
                 onAddAccount: { _, _ in addCount += 1 },
-                onSwitchAndLaunch: { _ in switchCount += 1 },
+                onSwitchAndLaunch: { accountID in switchedAccountIDs.append(accountID) },
                 onRemoveAccount: { _ in removeCount += 1 },
                 onMoveAccountToGroup: { _, _ in moveCount += 1 },
                 onCreateGroup: { _ in createGroupCount += 1 },
@@ -600,7 +600,7 @@ struct ViewSmokeCoverageTests {
         #expect(createGroupCount == 0)
         #expect(renameGroupCount == 0)
         #expect(deleteGroupCount == 0)
-        #expect(switchCount == 0)
+        #expect(switchedAccountIDs.isEmpty)
     }
 
     @Test

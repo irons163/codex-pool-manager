@@ -1518,8 +1518,8 @@ struct PoolDashboardView: View {
             onAddAccount: { name, quota in
                 handleAddAccount(name: name, quota: quota)
             },
-            onSwitchAndLaunch: { account in
-                await switchAndLaunchCodex(using: account)
+            onSwitchAndLaunch: { accountID in
+                await switchAndLaunchCodex(using: accountID)
             },
             onRemoveAccount: { accountID in
                 handleRemoveAccount(accountID: accountID)
@@ -2387,7 +2387,8 @@ struct PoolDashboardView: View {
     // MARK: - Switch & Launch
 
     @MainActor
-    private func switchAndLaunchCodex(using account: AgentAccount) async {
+    private func switchAndLaunchCodex(using accountID: UUID) async {
+        guard let account = state.accounts.first(where: { $0.id == accountID }) else { return }
         if account.isRelayAPIKeyAccount {
             await switchToRelayProvider(using: account)
             return

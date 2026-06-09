@@ -108,7 +108,7 @@ struct AccountUsagePanelView: View {
     let switchLaunchWarning: String?
     let showAddAccountControls: Bool
     let onAddAccount: (String, Int) -> Void
-    let onSwitchAndLaunch: (AgentAccount) async -> Void
+    let onSwitchAndLaunch: @MainActor (UUID) async -> Void
     let onRemoveAccount: (UUID) -> Void
     let onMoveAccountToGroup: (UUID, String) -> Void
     let onCreateGroup: (String) -> Void
@@ -920,8 +920,9 @@ struct AccountUsagePanelView: View {
     private func compactAccountActionButtons(_ account: AgentAccount) -> some View {
         HStack(spacing: 6) {
             Button(L10n.text("switch.launch.button")) {
-                Task {
-                    await onSwitchAndLaunch(account)
+                let accountID = account.id
+                Task { @MainActor in
+                    await onSwitchAndLaunch(accountID)
                 }
             }
             .controlSize(.small)
@@ -1295,8 +1296,9 @@ struct AccountUsagePanelView: View {
     private func accountActionButtons(_ account: AgentAccount) -> some View {
         HStack(spacing: 8) {
             Button(L10n.text("switch.launch.button")) {
-                Task {
-                    await onSwitchAndLaunch(account)
+                let accountID = account.id
+                Task { @MainActor in
+                    await onSwitchAndLaunch(accountID)
                 }
             }
             .buttonStyle(DashboardPrimaryButtonStyle())
