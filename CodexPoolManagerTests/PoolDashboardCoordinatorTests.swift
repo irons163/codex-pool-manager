@@ -420,7 +420,36 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relayCoordinatorSwitchesByApplyingConfigThenLoggingIn() async {
+    func relaySwitchRequestSnapshotsAccountFields() throws {
+        let accountID = UUID()
+        let account = AgentAccount(
+            id: accountID,
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: " sk-relay ",
+            credentialType: .relayAPIKey,
+            relayProviderID: " mirror ",
+            relayProviderName: " Mirror Provider ",
+            relayBaseURL: " https://ai.liaryai.com/api/codex ",
+            relayWireAPI: " responses ",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account)
+
+        #expect(request.accountID == accountID)
+        #expect(request.accountName == "Mirror")
+        #expect(request.apiKey == "sk-relay")
+        #expect(request.provider.providerID == "mirror")
+        #expect(request.provider.name == "Mirror Provider")
+        #expect(request.provider.baseURL.absoluteString == "https://ai.liaryai.com/api/codex")
+        #expect(request.provider.wireAPI == "responses")
+        #expect(request.provider.requiresOpenAIAuth)
+    }
+
+    @Test
+    func relayCoordinatorSwitchesByApplyingConfigThenLoggingIn() async throws {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
@@ -445,7 +474,7 @@ struct RelayAccountCoordinatorTests {
         )
 
         let output = await coordinator.switchToRelayAccount(
-            account,
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
             switchWithoutLaunching: false,
             launchTarget: .codex,
             viewState: PoolDashboardViewState()
@@ -458,7 +487,7 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relayCoordinatorEnhancedModeAppliesOpenAIHistoryConfigThenLogsInAPIKey() async {
+    func relayCoordinatorEnhancedModeAppliesOpenAIHistoryConfigThenLogsInAPIKey() async throws {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("legacy:\(provider.providerID)") } },
@@ -486,7 +515,7 @@ struct RelayAccountCoordinatorTests {
         )
 
         let output = await coordinator.switchToRelayAccount(
-            account,
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
             switchWithoutLaunching: false,
             preserveOfficialAuth: true,
             launchTarget: .codex,
@@ -500,7 +529,7 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relayCoordinatorSkipsRelaunchWhenSwitchWithoutLaunchingIsEnabled() async {
+    func relayCoordinatorSkipsRelaunchWhenSwitchWithoutLaunchingIsEnabled() async throws {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
@@ -525,7 +554,7 @@ struct RelayAccountCoordinatorTests {
         )
 
         let output = await coordinator.switchToRelayAccount(
-            account,
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
             switchWithoutLaunching: true,
             launchTarget: .codex,
             viewState: PoolDashboardViewState()
@@ -538,7 +567,7 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relayCoordinatorKeepsSwitchSuccessfulWhenRelaunchFails() async {
+    func relayCoordinatorKeepsSwitchSuccessfulWhenRelaunchFails() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
             apiKeyLogin: { _ in },
@@ -561,7 +590,7 @@ struct RelayAccountCoordinatorTests {
         )
 
         let output = await coordinator.switchToRelayAccount(
-            account,
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
             switchWithoutLaunching: false,
             launchTarget: .codex,
             viewState: PoolDashboardViewState()
@@ -574,7 +603,7 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relaySwitchDoesNotRequireAuthJSONFields() async {
+    func relaySwitchDoesNotRequireAuthJSONFields() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
             apiKeyLogin: { _ in },
@@ -594,7 +623,10 @@ struct RelayAccountCoordinatorTests {
             relayRequiresOpenAIAuth: true
         )
 
-        let output = await coordinator.switchToRelayAccount(account, viewState: PoolDashboardViewState())
+        let output = await coordinator.switchToRelayAccount(
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
+            viewState: PoolDashboardViewState()
+        )
 
         #expect(account.chatGPTAccountID == nil)
         #expect(output.viewState.switchLaunchError == nil)

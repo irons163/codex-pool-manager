@@ -19,6 +19,43 @@ struct PoolDashboardRelayAccountCoordinator {
         let didSwitchAuth: Bool
     }
 
+    struct SwitchRequest {
+        let accountID: UUID
+        let accountName: String
+        let provider: CodexProviderConfig
+        let apiKey: String
+
+        init(account: AgentAccount) throws {
+            guard account.isRelayAPIKeyAccount else {
+                throw CodexProviderConfigError.invalidProviderID
+            }
+
+            let apiKey = Self.trimmedStableCopy(account.apiToken)
+            guard !apiKey.isEmpty else {
+                throw CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))
+            }
+
+            accountID = account.id
+            accountName = Self.stableCopy(account.name)
+            self.apiKey = apiKey
+            provider = try CodexProviderConfig(
+                providerID: Self.stableCopy(account.relayProviderID ?? ""),
+                name: Self.stableCopy(account.relayProviderName ?? account.relayProviderID ?? ""),
+                baseURL: Self.stableCopy(account.relayBaseURL ?? ""),
+                wireAPI: Self.stableCopy(account.relayWireAPI ?? AgentAccount.defaultRelayWireAPI),
+                requiresOpenAIAuth: account.relayRequiresOpenAIAuth
+            )
+        }
+
+        private static func trimmedStableCopy(_ value: String) -> String {
+            stableCopy(value).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        private static func stableCopy(_ value: String) -> String {
+            String(decoding: Array(value.utf8), as: UTF8.self)
+        }
+    }
+
     private let configApplier: (CodexProviderConfig) throws -> Void
     private let enhancedConfigApplier: EnhancedConfigApplier
     private let apiKeyLogin: (String) async throws -> Void
@@ -87,43 +124,30 @@ struct PoolDashboardRelayAccountCoordinator {
 
     @MainActor
     func switchToRelayAccount(
-        _ account: AgentAccount,
+        _ request: SwitchRequest,
         switchWithoutLaunching: Bool = false,
         preserveOfficialAuth: Bool = false,
         launchTarget: CodexLaunchTarget = .auto,
         viewState: PoolDashboardViewState
     ) async -> SwitchOutput {
         var nextViewState = viewState
-        var logLines = [L10n.text("relay.switch.start_format", account.name)]
+        var logLines = [L10n.text("relay.switch.start_format", request.accountName)]
 
         do {
-            guard account.isRelayAPIKeyAccount else {
-                throw CodexProviderConfigError.invalidProviderID
-            }
-            let apiKey = account.apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !apiKey.isEmpty else {
-                throw CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))
-            }
-            let provider = try CodexProviderConfig(
-                providerID: account.relayProviderID ?? "",
-                name: account.relayProviderName ?? account.relayProviderID ?? "",
-                baseURL: account.relayBaseURL ?? "",
-                wireAPI: account.relayWireAPI ?? AgentAccount.defaultRelayWireAPI,
-                requiresOpenAIAuth: account.relayRequiresOpenAIAuth
-            )
+            let provider = request.provider
 
             if preserveOfficialAuth {
-                try enhancedConfigApplier(provider, apiKey)
+                try enhancedConfigApplier(provider, request.apiKey)
             } else {
                 try configApplier(provider)
             }
             logLines.append(L10n.text("relay.switch.config_updated_format", provider.providerID))
             if preserveOfficialAuth {
                 logLines.append(L10n.text("relay.switch.preserve_official_auth_enabled"))
-                try await apiKeyLogin(apiKey)
+                try await apiKeyLogin(request.apiKey)
                 logLines.append(L10n.text("relay.switch.login_completed"))
             } else {
-                try await apiKeyLogin(apiKey)
+                try await apiKeyLogin(request.apiKey)
                 logLines.append(L10n.text("relay.switch.login_completed"))
             }
             nextViewState.switchLaunchError = nil

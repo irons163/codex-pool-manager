@@ -320,6 +320,7 @@ struct PoolDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
     @State private var formState = PoolDashboardFormState()
+    @State private var canAddRelayAccount = false
     @State private var resetAllLatch = DestructiveActionLatch()
     @State private var viewState = PoolDashboardViewState()
     @State private var lowUsageAlertPolicy = LowUsageAlertPolicy()
@@ -535,6 +536,7 @@ struct PoolDashboardView: View {
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
         .onAppear {
             syncThemePaletteIfNeeded()
+            refreshRelayAPIKeyReadiness()
             handleOnAppear()
         }
         .onChange(of: state.snapshot) { previousSnapshot, snapshot in
@@ -1273,17 +1275,56 @@ struct PoolDashboardView: View {
     private var relayAPIKeyPanel: some View {
         RelayAPIKeyPanelView(
             accountName: $formState.relayAccountName,
-            providerID: $formState.relayProviderID,
+            providerID: relayProviderIDBinding,
             providerName: $formState.relayProviderName,
-            baseURL: $formState.relayBaseURL,
+            baseURL: relayBaseURLBinding,
             wireAPI: $formState.relayWireAPI,
-            apiKey: $formState.relayAPIKey,
+            apiKey: relayAPIKeyBinding,
             preserveOfficialAuth: $relayPreserveOfficialAuth,
+            canAddRelayAccount: canAddRelayAccount,
             successMessage: viewState.relaySuccessMessage,
             errorMessage: viewState.relayError,
             onAddRelayAccount: {
                 addRelayAccount()
             }
+        )
+    }
+
+    private var relayProviderIDBinding: Binding<String> {
+        Binding(
+            get: { formState.relayProviderID },
+            set: {
+                formState.relayProviderID = $0
+                refreshRelayAPIKeyReadiness()
+            }
+        )
+    }
+
+    private var relayBaseURLBinding: Binding<String> {
+        Binding(
+            get: { formState.relayBaseURL },
+            set: {
+                formState.relayBaseURL = $0
+                refreshRelayAPIKeyReadiness()
+            }
+        )
+    }
+
+    private var relayAPIKeyBinding: Binding<String> {
+        Binding(
+            get: { formState.relayAPIKey },
+            set: {
+                formState.relayAPIKey = $0
+                refreshRelayAPIKeyReadiness()
+            }
+        )
+    }
+
+    private func refreshRelayAPIKeyReadiness() {
+        canAddRelayAccount = RelayAPIKeyFormReadiness.canAdd(
+            providerID: formState.relayProviderID,
+            baseURL: formState.relayBaseURL,
+            apiKey: formState.relayAPIKey
         )
     }
 
@@ -2246,6 +2287,7 @@ struct PoolDashboardView: View {
             viewState = output.viewState
             if viewState.relayError == nil {
                 formState.resetRelayInput()
+                refreshRelayAPIKeyReadiness()
             }
         }
     }
@@ -2388,12 +2430,12 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func switchAndLaunchCodex(using accountID: UUID) async {
-        guard let account = state.accounts.first(where: { $0.id == accountID }) else { return }
-        if account.isRelayAPIKeyAccount {
-            await switchToRelayProvider(using: account)
+        if state.accounts.first(where: { $0.id == accountID })?.isRelayAPIKeyAccount == true {
+            await switchToRelayProvider(using: accountID)
             return
         }
 
+        guard let account = state.accounts.first(where: { $0.id == accountID }) else { return }
         let output = await switchLaunchFlowCoordinator.switchAndLaunch(
             using: account,
             switchWithoutLaunching: state.switchWithoutLaunching,
@@ -2427,9 +2469,35 @@ struct PoolDashboardView: View {
     }
 
     @MainActor
-    private func switchToRelayProvider(using account: AgentAccount) async {
+    private func switchToRelayProvider(using accountID: UUID) async {
+        let request: PoolDashboardRelayAccountCoordinator.SwitchRequest
+        var requestAccountName = L10n.text("account.unknown")
+        do {
+            request = try {
+                guard let account = state.accounts.first(where: { $0.id == accountID }) else {
+                    throw CodexProviderConfigError.invalidProviderID
+                }
+                requestAccountName = account.name
+                return try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account)
+            }()
+        } catch {
+            viewState.switchLaunchError = error.localizedDescription
+            viewState.switchLaunchWarning = nil
+            viewState.lastSwitchLaunchLog = [
+                L10n.text("relay.switch.start_format", requestAccountName),
+                L10n.text("relay.switch.failed_format", error.localizedDescription)
+            ].joined(separator: "\n")
+            DesktopNotifier.post(
+                key: "manual-relay-switch-failed",
+                title: "Codex Pool 中轉切換失敗",
+                body: error.localizedDescription,
+                minInterval: 120
+            )
+            return
+        }
+
         let output = await relayAccountCoordinator.switchToRelayAccount(
-            account,
+            request,
             switchWithoutLaunching: state.switchWithoutLaunching,
             preserveOfficialAuth: relayPreserveOfficialAuth,
             launchTarget: selectedLaunchTarget,
@@ -2439,13 +2507,13 @@ struct PoolDashboardView: View {
 
         if output.didSwitchAuth {
             suppressNextSnapshotDrivenSwitch = true
-            state.markActiveAccountForSwitchLaunch(account.id)
+            state.markActiveAccountForSwitchLaunch(request.accountID)
             DesktopNotifier.post(
-                key: "manual-relay-switch-\(account.id.uuidString)",
+                key: "manual-relay-switch-\(request.accountID.uuidString)",
                 title: "Codex Pool 已切換中轉帳號",
-                body: notificationUsageSummary(
-                    for: state.accounts.first(where: { $0.id == account.id }) ?? account
-                ),
+                body: state.accounts
+                    .first(where: { $0.id == request.accountID })
+                    .map(notificationUsageSummary(for:)) ?? request.accountName,
                 minInterval: 5
             )
         } else if let errorMessage = viewState.switchLaunchError, !errorMessage.isEmpty {

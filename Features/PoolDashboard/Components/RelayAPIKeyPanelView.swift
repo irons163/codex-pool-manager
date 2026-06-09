@@ -1,5 +1,14 @@
 import SwiftUI
 
+enum RelayAPIKeyFormReadiness {
+    @inline(never)
+    static func canAdd(providerID: String, baseURL: String, apiKey: String) -> Bool {
+        !providerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
 struct RelayAPIKeyPanelView: View {
     enum FieldID: Equatable {
         case accountName
@@ -19,6 +28,7 @@ struct RelayAPIKeyPanelView: View {
     @Binding var preserveOfficialAuth: Bool
     @State private var isWireAPIHelpPresented = false
 
+    let canAddRelayAccount: Bool
     let successMessage: String?
     let errorMessage: String?
     let onAddRelayAccount: () -> Void
@@ -132,12 +142,6 @@ struct RelayAPIKeyPanelView: View {
             )
             .frame(maxWidth: 340, alignment: .leading)
         }
-    }
-
-    private var canAddRelayAccount: Bool {
-        !providerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func advancedField(_ title: String, placeholder: String, text: Binding<String>) -> some View {

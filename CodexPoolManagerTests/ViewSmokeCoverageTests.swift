@@ -726,6 +726,7 @@ struct ViewSmokeCoverageTests {
             wireAPI: binding(wireAPIBox),
             apiKey: binding(apiKeyBox),
             preserveOfficialAuth: binding(preserveOfficialAuthBox),
+            canAddRelayAccount: true,
             successMessage: nil,
             errorMessage: nil,
             onAddRelayAccount: { addCount += 1 }
@@ -740,6 +741,7 @@ struct ViewSmokeCoverageTests {
             wireAPI: binding(wireAPIBox),
             apiKey: binding(apiKeyBox),
             preserveOfficialAuth: binding(preserveOfficialAuthBox),
+            canAddRelayAccount: true,
             successMessage: "Relay account added.",
             errorMessage: "Relay failed.",
             onAddRelayAccount: { addCount += 1 }
@@ -753,6 +755,18 @@ struct ViewSmokeCoverageTests {
     func relayAPIKeyPanelKeepsRequiredBaseURLInPrimaryFields() {
         #expect(RelayAPIKeyPanelView.debugPrimaryFieldIDs == [.accountName, .baseURL, .apiKey])
         #expect(RelayAPIKeyPanelView.debugAdvancedFieldIDs == [.providerID, .providerName, .wireAPI])
+    }
+
+    @Test
+    func relayAPIKeyFormReadinessTrimsRequiredFields() {
+        #expect(RelayAPIKeyFormReadiness.canAdd(
+            providerID: " mirror ",
+            baseURL: " https://ai.liaryai.com/api/codex ",
+            apiKey: " sk-relay "
+        ))
+        #expect(!RelayAPIKeyFormReadiness.canAdd(providerID: "", baseURL: "https://example.com", apiKey: "sk"))
+        #expect(!RelayAPIKeyFormReadiness.canAdd(providerID: "mirror", baseURL: "   ", apiKey: "sk"))
+        #expect(!RelayAPIKeyFormReadiness.canAdd(providerID: "mirror", baseURL: "https://example.com", apiKey: "\n"))
     }
 
     @Test
