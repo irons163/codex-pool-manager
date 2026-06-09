@@ -4,6 +4,7 @@
 
 ## 修正
 
+- ダッシュボードのメモリ上の状態がマスク済みスナップショットだけを持っている場合、切り替え前に永続化された token vault からリレー API key を復元するようにしました。
 - `codex login --with-api-key` を呼び出す前に、リレー API key の stdin payload を正規化するようにしました。空の key は Codex CLI を起動する前に拒否し、有効な key は所有済み bytes と末尾の改行として送信します。
 - リレー API key アカウントへの切り替えで、非同期の切り替え処理に入る前にアカウント、provider、API key のデータをスナップショット化するよう強化しました。v1.0.13 の release 版で確認されたクラッシュを対象にした修正です。
 - release 版でリレーアカウントへ切り替える際に残っていたクラッシュ要因を回避しました。非同期ログイン closure 内で API key 文字列を再度 trim せず、準備済みの API key bytes を Codex CLI ログイン処理へ渡します。

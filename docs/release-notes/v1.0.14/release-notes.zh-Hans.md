@@ -4,6 +4,7 @@
 
 ## 修复
 
+- 当仪表板内存状态只剩已遮蔽的账号快照时，切换中转账号前会先从持久化 token vault 补回 relay API key。
 - 调用 `codex login --with-api-key` 前会先规范化中转 API key 的 stdin payload：空 key 会在启动 Codex CLI 前被挡下，有效 key 会以独立 bytes 加结尾换行传入。
 - 加强中转 API key 账号切换流程，会先快照账号、provider 与 API key 数据，再进入异步切换流程。此修复针对 v1.0.13 release 版观察到的 crash。
 - 修复 release 版切换中转账号时仍可能 crash 的问题；现在会把已准备好的 API key bytes 传入 Codex CLI 登录流程，不再于异步登录 closure 内重新 trim API key 字符串。

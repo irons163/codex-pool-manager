@@ -1015,6 +1015,29 @@ struct AccountPoolState {
         }
     }
 
+    @discardableResult
+    mutating func hydrateMissingAPITokens(from snapshot: AccountPoolSnapshot) -> Bool {
+        let loadedAccountsByID = Dictionary(uniqueKeysWithValues: snapshot.accounts.map { ($0.id, $0) })
+        var didHydrate = false
+
+        for index in accounts.indices {
+            let currentToken = accounts[index].apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard currentToken.isEmpty,
+                  let loaded = loadedAccountsByID[accounts[index].id]
+            else {
+                continue
+            }
+
+            let loadedToken = loaded.apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !loadedToken.isEmpty else { continue }
+
+            accounts[index].apiToken = loadedToken
+            didHydrate = true
+        }
+
+        return didHydrate
+    }
+
     mutating func setUsageSyncExclusion(
         for accountID: UUID,
         reason: String?,

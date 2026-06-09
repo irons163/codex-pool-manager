@@ -1479,6 +1479,56 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func hydrateMissingAPITokensRestoresTokenFromLoadedSnapshot() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Relay",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex"
+                )
+            ],
+            mode: .manual
+        )
+        let loadedSnapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Relay",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: " sk-relay ",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        let didHydrate = state.hydrateMissingAPITokens(from: loadedSnapshot)
+
+        #expect(didHydrate)
+        #expect(state.accounts[0].apiToken == "sk-relay")
+    }
+
+    @Test
     func createGroupAllowsCaseDistinctNames() {
         var state = AccountPoolState(
             accounts: [

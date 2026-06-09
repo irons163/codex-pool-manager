@@ -4,6 +4,7 @@ Fecha de publicación: 2026-06-10
 
 ## Correcciones
 
+- Se restauran las API key relay desde el token vault persistido antes de cambiar de cuenta cuando el estado en memoria del dashboard solo contiene el snapshot redactado.
 - Se normalizó el payload stdin de la API key relay antes de llamar a `codex login --with-api-key`: las keys vacías se rechazan antes de lanzar Codex CLI, y las keys válidas se envían como bytes propios con un salto de línea final.
 - Se reforzó el cambio a cuentas relay API key tomando una instantánea de los datos de la cuenta, el provider y la API key antes del flujo async. Esta corrección apunta al crash observado en la build release de v1.0.13.
 - Se evitó el crash de release al cambiar a una cuenta relay pasando bytes ya preparados de la API key al login de Codex CLI, en lugar de volver a hacer trim del string dentro del closure async de login.

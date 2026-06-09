@@ -4,6 +4,7 @@
 
 ## 수정 사항
 
+- 대시보드의 메모리 상태가 redacted 계정 스냅샷만 가지고 있을 때, 계정 전환 전에 저장된 token vault에서 relay API key를 복원합니다.
 - `codex login --with-api-key`를 호출하기 전에 relay API key stdin payload를 정규화했습니다. 빈 key는 Codex CLI를 실행하기 전에 거부하고, 유효한 key는 끝에 줄바꿈이 붙은 owned bytes로 전달합니다.
 - relay API key 계정 전환 시 비동기 전환 흐름에 들어가기 전에 계정, provider, API key 데이터를 스냅샷하도록 강화했습니다. v1.0.13 release 빌드에서 확인된 crash를 대상으로 한 수정입니다.
 - release 빌드에서 relay 계정 전환 시 남아 있던 crash 경로를 피하도록 수정했습니다. 이제 비동기 로그인 closure 안에서 API key 문자열을 다시 trim하지 않고, 준비된 API key bytes를 Codex CLI 로그인 흐름에 전달합니다.
