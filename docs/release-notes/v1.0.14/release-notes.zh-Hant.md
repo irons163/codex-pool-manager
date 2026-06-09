@@ -1,9 +1,10 @@
 # CodexPoolManager v1.0.14
 
-發布日期：2026-06-09
+發布日期：2026-06-10
 
 ## 修正
 
+- 呼叫 `codex login --with-api-key` 前會先正規化中轉 API key 的 stdin payload：空 key 會在啟動 Codex CLI 前被擋下，有效 key 會以獨立 bytes 加結尾換行傳入。
 - 加強中轉 API key 帳號切換流程，會先快照帳號、provider 與 API key 資料，再進入非同步切換流程。此修正針對 v1.0.13 release 版觀察到的 crash。
 - 修正 release 版切換中轉帳號時仍可能 crash 的問題；現在會把已準備好的 API key bytes 傳入 Codex CLI 登入流程，不再於非同步登入 closure 內重新 trim API key 字串。
 - 將中轉 API key 表單可新增狀態移出 SwiftUI body 計算，避免畫面更新時重複進行字串 trim。

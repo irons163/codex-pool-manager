@@ -40,7 +40,7 @@ struct PoolDashboardRelayAccountCoordinator {
             accountID = account.id
             accountName = Self.stableCopy(account.name)
             self.apiKey = apiKey
-            apiKeyData = Data(apiKey.utf8)
+            apiKeyData = Data(Array(apiKey.utf8))
             provider = try CodexProviderConfig(
                 providerID: Self.stableCopy(account.relayProviderID ?? ""),
                 name: Self.stableCopy(account.relayProviderName ?? account.relayProviderID ?? ""),

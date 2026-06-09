@@ -234,4 +234,37 @@ struct CodexAPIKeyLoginServiceTests {
         #expect(entries.contains("/usr/local/bin"))
         #expect(entries.contains("/usr/bin"))
     }
+
+    @Test
+    func loginWithPreparedAPIKeyDataAppendsTrailingNewlineToStdin() async throws {
+        var receivedInput = Data()
+        let service = CodexAPIKeyLoginService(
+            executableURLProvider: { URL(fileURLWithPath: "/tmp/codex") },
+            processRunner: { _, _, input, _ in
+                receivedInput = input
+                return (0, "")
+            }
+        )
+
+        try await service.login(trimmedAPIKeyData: Data("sk-test".utf8))
+
+        #expect(String(decoding: receivedInput, as: UTF8.self) == "sk-test\n")
+    }
+
+    @Test
+    func loginWithPreparedAPIKeyDataRejectsEmptyInputBeforeLaunchingCodex() async {
+        var didRunProcess = false
+        let service = CodexAPIKeyLoginService(
+            executableURLProvider: { URL(fileURLWithPath: "/tmp/codex") },
+            processRunner: { _, _, _, _ in
+                didRunProcess = true
+                return (0, "")
+            }
+        )
+
+        await #expect(throws: CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))) {
+            try await service.login(trimmedAPIKeyData: Data(" \n\t ".utf8))
+        }
+        #expect(!didRunProcess)
+    }
 }

@@ -85,10 +85,11 @@ struct CodexAPIKeyLoginService {
 
     func login(apiKey: String) async throws {
         let trimmed = Self.trimmedStableCopy(apiKey)
-        try await login(trimmedAPIKeyData: Data(trimmed.utf8))
+        try await login(trimmedAPIKeyData: Data(Array(trimmed.utf8)))
     }
 
     func login(trimmedAPIKeyData apiKeyData: Data) async throws {
+        let stdinPayload = try Self.stdinPayload(from: apiKeyData)
         guard let executableURL = executableURLProvider() else {
             throw CodexAPIKeyLoginError.missingCodexCLI
         }
@@ -96,7 +97,7 @@ struct CodexAPIKeyLoginService {
         let result = try await processRunner(
             executableURL,
             ["login", "--with-api-key"],
-            apiKeyData,
+            stdinPayload,
             Self.loginProcessEnvironment()
         )
         guard result.terminationStatus == 0 else {
@@ -107,6 +108,16 @@ struct CodexAPIKeyLoginService {
     private static func trimmedStableCopy(_ value: String) -> String {
         String(decoding: Array(value.utf8), as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func stdinPayload(from apiKeyData: Data) throws -> Data {
+        let trimmedAPIKey = String(decoding: Array(apiKeyData), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedAPIKey.isEmpty else {
+            throw CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))
+        }
+
+        return Data(Array((trimmedAPIKey + "\n").utf8))
     }
 
     static func loginProcessEnvironment(
