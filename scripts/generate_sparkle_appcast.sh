@@ -6,6 +6,7 @@ APP_NAME="${APP_NAME:-CodexPoolManager}"
 RELEASE_TAG="${RELEASE_TAG:-}"
 RELEASE_NAME="${RELEASE_NAME:-}"
 RELEASE_NOTES="${RELEASE_NOTES:-}"
+LOCALIZED_RELEASE_NOTES_LINKS="${LOCALIZED_RELEASE_NOTES_LINKS:-}"
 PUBLISHED_AT="${PUBLISHED_AT:-}"
 ARM64_URL="${ARM64_URL:-}"
 ARM64_SIZE="${ARM64_SIZE:-}"
@@ -74,6 +75,49 @@ sanitize_release_notes() {
   printf '%s' "$cleaned"
 }
 
+xml_escape() {
+  local value="$1"
+
+  value="${value//&/&amp;}"
+  value="${value//</&lt;}"
+  value="${value//>/&gt;}"
+  value="${value//\"/&quot;}"
+
+  printf '%s' "$value"
+}
+
+localized_release_notes_links_xml() {
+  local raw_links="$1"
+  local xml=""
+  local line=""
+  local lang=""
+  local url=""
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    if [[ -z "${line//[[:space:]]/}" ]]; then
+      continue
+    fi
+    if [[ "$line" != *"="* ]]; then
+      echo "Invalid LOCALIZED_RELEASE_NOTES_LINKS entry: ${line}" >&2
+      echo "Expected format: lang=url" >&2
+      exit 1
+    fi
+
+    lang="${line%%=*}"
+    url="${line#*=}"
+    if [[ -z "$lang" || -z "$url" ]]; then
+      echo "Invalid LOCALIZED_RELEASE_NOTES_LINKS entry: ${line}" >&2
+      echo "Expected format: lang=url" >&2
+      exit 1
+    fi
+
+    xml="${xml}      <sparkle:releaseNotesLink xml:lang=\"$(xml_escape "$lang")\">$(xml_escape "$url")</sparkle:releaseNotesLink>"$'\n'
+  done <<< "$raw_links"
+
+  printf '%s' "$xml"
+}
+
 if [[ -z "$ARM64_SIZE" || "$ARM64_SIZE" == "null" ]]; then
   ARM64_SIZE="0"
 fi
@@ -95,6 +139,7 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 RELEASE_NOTES_SANITIZED="$(sanitize_release_notes "$RELEASE_NOTES" "$MAX_NOTES_CHARS")"
+RELEASE_NOTES_LINKS_XML="$(localized_release_notes_links_xml "$LOCALIZED_RELEASE_NOTES_LINKS")"
 
 generate_feed() {
   local arch_label="$1"
@@ -116,6 +161,7 @@ generate_feed() {
       <title>${RELEASE_NAME}</title>
       <pubDate>${PUB_DATE}</pubDate>
       <description sparkle:format="plain-text"><![CDATA[${RELEASE_NOTES_SANITIZED}]]></description>
+${RELEASE_NOTES_LINKS_XML}
       <enclosure
         url="${url}"
         sparkle:version="${BUILD_VERSION}"

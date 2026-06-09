@@ -39,7 +39,7 @@ On success, it will:
 5. Upload the DMG as:
    - Workflow artifact
    - GitHub Release asset (for release events)
-6. Generate and upload Sparkle appcast XML assets
+6. Generate and upload Sparkle appcast XML assets that link to localized release notes
 
 Localized release note assets are required for release/tag builds. The currently supported files are:
 
@@ -50,6 +50,8 @@ Localized release note assets are required for release/tag builds. The currently
 - `release-notes.ko.md`
 - `release-notes.fr.md`
 - `release-notes.es.md`
+
+The appcast generator includes these assets as Sparkle `releaseNotesLink` entries with `xml:lang`, so Sparkle can show localized update notes in its built-in update dialog. The GitHub Release body remains the English fallback description.
 
 ## 4. Local Execution (optional)
 

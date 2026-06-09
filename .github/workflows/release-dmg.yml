@@ -308,21 +308,40 @@ jobs:
           ARM64_SIZE="$(jq -r '.assets[] | select(.name | test("apple-silicon.*\\.dmg$")) | .size' <<<"$RELEASE_JSON" | head -n1)"
           X86_64_URL="$(jq -r '.assets[] | select(.name | test("intel.*\\.dmg$")) | .browser_download_url' <<<"$RELEASE_JSON" | head -n1)"
           X86_64_SIZE="$(jq -r '.assets[] | select(.name | test("intel.*\\.dmg$")) | .size' <<<"$RELEASE_JSON" | head -n1)"
+          LOCALIZED_RELEASE_NOTES_LINKS="$(jq -r '
+            .assets[]
+            | select(.name | test("^release-notes\\.[A-Za-z-]+\\.(md|txt)$"))
+            | .name as $name
+            | ($name | capture("^release-notes\\.(?<lang>[A-Za-z-]+)\\.(md|txt)$").lang) as $lang
+            | "\($lang)=\(.browser_download_url)"
+          ' <<<"$RELEASE_JSON" | sort)"
 
           if [[ -z "${ARM64_URL:-}" || -z "${X86_64_URL:-}" ]]; then
             echo "Unable to locate both DMG assets in release ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          if [[ -z "${LOCALIZED_RELEASE_NOTES_LINKS//[[:space:]]/}" ]]; then
+            echo "Unable to locate localized release note assets in release ${RELEASE_TAG}" >&2
             exit 1
           fi
 
           RELEASE_TAG="$RELEASE_TAG" \
           RELEASE_NAME="$RELEASE_NAME" \
           RELEASE_NOTES="$RELEASE_NOTES" \
+          LOCALIZED_RELEASE_NOTES_LINKS="$LOCALIZED_RELEASE_NOTES_LINKS" \
           PUBLISHED_AT="$PUBLISHED_AT" \
           ARM64_URL="$ARM64_URL" \
           ARM64_SIZE="$ARM64_SIZE" \
           X86_64_URL="$X86_64_URL" \
           X86_64_SIZE="$X86_64_SIZE" \
           scripts/generate_sparkle_appcast.sh
+
+          for appcast in dist/appcast-arm64.xml dist/appcast-x86_64.xml; do
+            if ! grep -q '<sparkle:releaseNotesLink xml:lang=' "$appcast"; then
+              echo "Generated appcast is missing localized release note links: ${appcast}" >&2
+              exit 1
+            fi
+          done
 
           if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
             mv dist/appcast-arm64.xml dist/appcast-dev-arm64.xml
