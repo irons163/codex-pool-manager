@@ -8,6 +8,7 @@ struct PoolDashboardRelayAccountCoordinator {
         _ provider: CodexProviderConfig,
         _ apiKey: String
     ) throws -> Void
+    typealias APIKeyLogin = (Data) async throws -> Void
 
     struct AddOutput {
         let state: AccountPoolState
@@ -24,6 +25,7 @@ struct PoolDashboardRelayAccountCoordinator {
         let accountName: String
         let provider: CodexProviderConfig
         let apiKey: String
+        let apiKeyData: Data
 
         init(account: AgentAccount) throws {
             guard account.isRelayAPIKeyAccount else {
@@ -38,6 +40,7 @@ struct PoolDashboardRelayAccountCoordinator {
             accountID = account.id
             accountName = Self.stableCopy(account.name)
             self.apiKey = apiKey
+            apiKeyData = Data(apiKey.utf8)
             provider = try CodexProviderConfig(
                 providerID: Self.stableCopy(account.relayProviderID ?? ""),
                 name: Self.stableCopy(account.relayProviderName ?? account.relayProviderID ?? ""),
@@ -58,7 +61,7 @@ struct PoolDashboardRelayAccountCoordinator {
 
     private let configApplier: (CodexProviderConfig) throws -> Void
     private let enhancedConfigApplier: EnhancedConfigApplier
-    private let apiKeyLogin: (String) async throws -> Void
+    private let apiKeyLogin: APIKeyLogin
     private let appRelauncher: AppRelauncher
 
     init(
@@ -66,7 +69,7 @@ struct PoolDashboardRelayAccountCoordinator {
         enhancedConfigApplier: @escaping EnhancedConfigApplier = { provider, apiKey in
             try CodexProviderConfigService().applyPreservingOfficialAuth(provider, apiKey: apiKey)
         },
-        apiKeyLogin: @escaping (String) async throws -> Void = { try await CodexAPIKeyLoginService().login(apiKey: $0) },
+        apiKeyLogin: @escaping APIKeyLogin = { try await CodexAPIKeyLoginService().login(trimmedAPIKeyData: $0) },
         appRelauncher: @escaping AppRelauncher = Self.defaultAppRelauncher
     ) {
         self.configApplier = configApplier
@@ -144,10 +147,10 @@ struct PoolDashboardRelayAccountCoordinator {
             logLines.append(L10n.text("relay.switch.config_updated_format", provider.providerID))
             if preserveOfficialAuth {
                 logLines.append(L10n.text("relay.switch.preserve_official_auth_enabled"))
-                try await apiKeyLogin(request.apiKey)
+                try await apiKeyLogin(request.apiKeyData)
                 logLines.append(L10n.text("relay.switch.login_completed"))
             } else {
-                try await apiKeyLogin(request.apiKey)
+                try await apiKeyLogin(request.apiKeyData)
                 logLines.append(L10n.text("relay.switch.login_completed"))
             }
             nextViewState.switchLaunchError = nil

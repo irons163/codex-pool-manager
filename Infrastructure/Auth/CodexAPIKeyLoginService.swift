@@ -84,20 +84,29 @@ struct CodexAPIKeyLoginService {
     }
 
     func login(apiKey: String) async throws {
+        let trimmed = Self.trimmedStableCopy(apiKey)
+        try await login(trimmedAPIKeyData: Data(trimmed.utf8))
+    }
+
+    func login(trimmedAPIKeyData apiKeyData: Data) async throws {
         guard let executableURL = executableURLProvider() else {
             throw CodexAPIKeyLoginError.missingCodexCLI
         }
 
-        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let result = try await processRunner(
             executableURL,
             ["login", "--with-api-key"],
-            Data(trimmed.utf8),
+            apiKeyData,
             Self.loginProcessEnvironment()
         )
         guard result.terminationStatus == 0 else {
             throw CodexAPIKeyLoginError.loginFailed(result.output)
         }
+    }
+
+    private static func trimmedStableCopy(_ value: String) -> String {
+        String(decoding: Array(value.utf8), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     static func loginProcessEnvironment(

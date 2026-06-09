@@ -441,6 +441,7 @@ struct RelayAccountCoordinatorTests {
         #expect(request.accountID == accountID)
         #expect(request.accountName == "Mirror")
         #expect(request.apiKey == "sk-relay")
+        #expect(String(decoding: request.apiKeyData, as: UTF8.self) == "sk-relay")
         #expect(request.provider.providerID == "mirror")
         #expect(request.provider.name == "Mirror Provider")
         #expect(request.provider.baseURL.absoluteString == "https://ai.liaryai.com/api/codex")
@@ -453,7 +454,10 @@ struct RelayAccountCoordinatorTests {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
-            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
+            apiKeyLogin: { apiKeyData in
+                let apiKey = String(decoding: apiKeyData, as: UTF8.self)
+                events.withLock { $0.append("login:\(apiKey)") }
+            },
             appRelauncher: { launchTarget in
                 events.withLock { $0.append("launch:\(launchTarget.rawValue)") }
                 return true
@@ -494,7 +498,10 @@ struct RelayAccountCoordinatorTests {
             enhancedConfigApplier: { provider, apiKey in
                 events.withLock { $0.append("enhanced:\(provider.providerID):\(apiKey)") }
             },
-            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
+            apiKeyLogin: { apiKeyData in
+                let apiKey = String(decoding: apiKeyData, as: UTF8.self)
+                events.withLock { $0.append("login:\(apiKey)") }
+            },
             appRelauncher: { launchTarget in
                 events.withLock { $0.append("launch:\(launchTarget.rawValue)") }
                 return true
@@ -533,7 +540,10 @@ struct RelayAccountCoordinatorTests {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
-            apiKeyLogin: { apiKey in events.withLock { $0.append("login:\(apiKey)") } },
+            apiKeyLogin: { apiKeyData in
+                let apiKey = String(decoding: apiKeyData, as: UTF8.self)
+                events.withLock { $0.append("login:\(apiKey)") }
+            },
             appRelauncher: { _ in
                 events.withLock { $0.append("launch") }
                 return true
