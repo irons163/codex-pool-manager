@@ -315,6 +315,16 @@ jobs:
             | ($name | capture("^release-notes\\.(?<lang>[A-Za-z-]+)\\.(md|txt)$").lang) as $lang
             | "\($lang)=\(.browser_download_url)"
           ' <<<"$RELEASE_JSON" | sort)"
+          APP_BUILD_VERSIONS="$(
+            awk -F ' = ' '/CURRENT_PROJECT_VERSION/ {
+              version = $2
+              gsub(/[;[:space:]]/, "", version)
+              if (version != "") {
+                print version
+              }
+            }' CodexPoolManager.xcodeproj/project.pbxproj | sort -u
+          )
+          APP_BUILD_VERSION_COUNT="$(printf '%s\n' "$APP_BUILD_VERSIONS" | sed '/^$/d' | wc -l | tr -d ' ')"
 
           if [[ -z "${ARM64_URL:-}" || -z "${X86_64_URL:-}" ]]; then
             echo "Unable to locate both DMG assets in release ${RELEASE_TAG}" >&2
@@ -324,8 +334,15 @@ jobs:
             echo "Unable to locate localized release note assets in release ${RELEASE_TAG}" >&2
             exit 1
           fi
+          if [[ "$APP_BUILD_VERSION_COUNT" != "1" ]]; then
+            echo "Unable to resolve a single CURRENT_PROJECT_VERSION from CodexPoolManager.xcodeproj." >&2
+            printf 'Resolved versions:\n%s\n' "${APP_BUILD_VERSIONS:-none}" >&2
+            exit 1
+          fi
+          APP_BUILD_VERSION="$APP_BUILD_VERSIONS"
 
           RELEASE_TAG="$RELEASE_TAG" \
+          BUILD_VERSION="$APP_BUILD_VERSION" \
           RELEASE_NAME="$RELEASE_NAME" \
           RELEASE_NOTES="$RELEASE_NOTES" \
           LOCALIZED_RELEASE_NOTES_LINKS="$LOCALIZED_RELEASE_NOTES_LINKS" \
@@ -339,6 +356,10 @@ jobs:
           for appcast in dist/appcast-arm64.xml dist/appcast-x86_64.xml; do
             if ! grep -q '<sparkle:releaseNotesLink xml:lang=' "$appcast"; then
               echo "Generated appcast is missing localized release note links: ${appcast}" >&2
+              exit 1
+            fi
+            if ! grep -Fq "sparkle:version=\"${APP_BUILD_VERSION}\"" "$appcast"; then
+              echo "Generated appcast does not match CURRENT_PROJECT_VERSION=${APP_BUILD_VERSION}: ${appcast}" >&2
               exit 1
             fi
           done

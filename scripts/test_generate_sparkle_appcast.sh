@@ -20,6 +20,7 @@ assert_contains() {
 
 OUTPUT_DIR="$TMP_DIR" \
 RELEASE_TAG="v9.8.7" \
+BUILD_VERSION="112" \
 RELEASE_NAME="CodexPoolManager v9.8.7" \
 RELEASE_NOTES=$'# CodexPoolManager v9.8.7\n\nFallback notes.' \
 PUBLISHED_AT="2026-06-09T09:05:30Z" \
@@ -34,6 +35,7 @@ ARM64_APPCAST="${TMP_DIR}/appcast-arm64.xml"
 X86_64_APPCAST="${TMP_DIR}/appcast-x86_64.xml"
 
 assert_contains "$ARM64_APPCAST" '<description sparkle:format="plain-text"><![CDATA[CodexPoolManager v9.8.7'
+assert_contains "$ARM64_APPCAST" 'sparkle:version="112"'
 assert_contains "$ARM64_APPCAST" '<sparkle:releaseNotesLink xml:lang="en">https://example.com/release-notes.en.md</sparkle:releaseNotesLink>'
 assert_contains "$ARM64_APPCAST" '<sparkle:releaseNotesLink xml:lang="zh-Hant">https://example.com/release-notes.zh-Hant.md</sparkle:releaseNotesLink>'
 assert_contains "$ARM64_APPCAST" '<sparkle:releaseNotesLink xml:lang="ja">https://example.com/release-notes.ja.md</sparkle:releaseNotesLink>'

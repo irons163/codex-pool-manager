@@ -53,6 +53,8 @@ Localized release note assets are required for release/tag builds. The currently
 
 The appcast generator includes these assets as Sparkle `releaseNotesLink` entries with `xml:lang`, so Sparkle can show localized update notes in its built-in update dialog. The GitHub Release body remains the English fallback description.
 
+Sparkle compares `sparkle:version` against the app bundle build number (`CURRENT_PROJECT_VERSION` / `CFBundleVersion`). The workflow reads that value from the Xcode project when generating appcasts; do not derive it from the release tag.
+
 ## 4. Local Execution (optional)
 
 If your local machine is already configured with signing + notarization profile:
