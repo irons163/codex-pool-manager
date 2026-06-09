@@ -323,7 +323,7 @@ jobs:
                 print version
               }
             }' CodexPoolManager.xcodeproj/project.pbxproj | sort -u
-          )
+          )"
           APP_BUILD_VERSION_COUNT="$(printf '%s\n' "$APP_BUILD_VERSIONS" | sed '/^$/d' | wc -l | tr -d ' ')"
 
           if [[ -z "${ARM64_URL:-}" || -z "${X86_64_URL:-}" ]]; then
