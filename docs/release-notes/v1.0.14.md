@@ -11,3 +11,4 @@ Release date: 2026-06-09
 
 - No account, API key, auth.json, or config.toml migration is required.
 - This prerelease is intended to validate the relay API key switching hotfix before the stable rollout.
+- Prerelease builds now include matching dSYM artifacts on GitHub Releases to support symbolicated crash diagnostics.

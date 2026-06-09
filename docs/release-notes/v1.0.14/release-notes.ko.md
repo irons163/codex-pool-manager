@@ -11,3 +11,4 @@
 
 - 계정, API key, auth.json, config.toml 마이그레이션은 필요하지 않습니다.
 - 이 prerelease는 stable 배포 전에 relay API key 전환 hotfix를 검증하기 위한 버전입니다.
+- GitHub Release에 대응되는 dSYM을 함께 첨부하여 release 빌드 crash를 조사하고 symbolicated 로그를 확보할 수 있습니다.

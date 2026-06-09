@@ -11,3 +11,4 @@
 
 - 不需要遷移帳號、API key、auth.json 或 config.toml。
 - 此 prerelease 用於正式發布前驗證中轉 API key 切換 hotfix。
+- GitHub Release 現在會附上對應的 dSYM，方便後續追查 release 版 crash 並產生可讀的符號化紀錄。

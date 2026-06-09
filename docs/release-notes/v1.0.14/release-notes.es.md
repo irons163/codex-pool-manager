@@ -11,3 +11,4 @@ Fecha de publicación: 2026-06-09
 
 - No se requiere migrar cuentas, API key, auth.json ni config.toml.
 - Esta prerelease sirve para validar la hotfix de cambio de relay API key antes del lanzamiento stable.
+- GitHub Release ahora incluye los dSYM correspondientes para facilitar el diagnóstico de crashes de release con registros simbolicados.

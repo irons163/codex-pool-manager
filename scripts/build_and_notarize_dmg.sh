@@ -29,6 +29,9 @@ else
 fi
 DMG_NAME="${APP_NAME}-${SAFE_VERSION}${DMG_SUFFIX}.dmg"
 DMG_PATH="$WORK_DIR/${DMG_NAME}"
+DSYM_NAME="${APP_NAME}-${SAFE_VERSION}${DMG_SUFFIX}.dSYM.zip"
+DSYM_PATH="$ARCHIVE_PATH/dSYMs/${APP_NAME}.app.dSYM"
+DSYM_ZIP_PATH="$WORK_DIR/${DSYM_NAME}"
 
 rm -rf "$WORK_DIR" dist
 mkdir -p "$WORK_DIR" "$STAGING_DIR" dist
@@ -130,6 +133,10 @@ if [[ ! -f "$APP_BINARY" ]]; then
   echo "Unable to locate app executable in archive." >&2
   exit 1
 fi
+if [[ ! -d "$DSYM_PATH" ]]; then
+  echo "Archive did not produce ${APP_NAME}.app.dSYM at expected path: $DSYM_PATH" >&2
+  exit 1
+fi
 APP_BINARY_ARCHS="$(lipo -archs "$APP_BINARY" 2>/dev/null || true)"
 echo "Built app binary architectures: ${APP_BINARY_ARCHS:-unknown}"
 if [[ -n "$ARCHS" ]]; then
@@ -140,6 +147,20 @@ if [[ -n "$ARCHS" ]]; then
     fi
   done
 fi
+
+APP_UUIDS="$(dwarfdump --uuid "$APP_BINARY" | awk '{print $2}' | sort -u)"
+DSYM_UUIDS="$(dwarfdump --uuid "$DSYM_PATH" | awk '{print $2}' | sort -u)"
+echo "Built app UUIDs:"
+dwarfdump --uuid "$APP_BINARY"
+echo "Built dSYM UUIDs:"
+dwarfdump --uuid "$DSYM_PATH"
+if [[ -z "$APP_UUIDS" || "$APP_UUIDS" != "$DSYM_UUIDS" ]]; then
+  echo "dSYM UUIDs do not match the app binary." >&2
+  exit 1
+fi
+
+echo "==> Packaging dSYM"
+ditto -c -k --sequesterRsrc --keepParent "$DSYM_PATH" "$DSYM_ZIP_PATH"
 
 echo "==> Verifying code signature"
 codesign --verify --deep --strict --verbose=2 "$APP_PATH"
@@ -190,4 +211,6 @@ echo "==> Stapling notarization ticket"
 xcrun stapler staple "$DMG_PATH"
 
 cp "$DMG_PATH" "dist/${DMG_NAME}"
+cp "$DSYM_ZIP_PATH" "dist/${DSYM_NAME}"
 echo "DMG ready: dist/${DMG_NAME}"
+echo "dSYM ready: dist/${DSYM_NAME}"

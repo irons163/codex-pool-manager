@@ -11,3 +11,4 @@
 
 - アカウント、API key、auth.json、config.toml の移行作業は不要です。
 - この prerelease は、stable 公開前にリレー API key 切り替え hotfix を検証するためのものです。
+- GitHub Release に対応する dSYM を添付するようになり、release 版 crash の調査とシンボル化されたログの取得に使えます。
