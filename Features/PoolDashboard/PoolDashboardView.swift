@@ -7020,7 +7020,7 @@ extension PoolDashboardView {
 
     @MainActor
     static func debugCoreCoverageSnapshot(
-        store: AccountPoolStoring = DeveloperAwareAccountPoolStore()
+        store: AccountPoolStoring
     ) -> (
         selectedLaunchTargetRaw: String,
         selectedLaunchTarget: CodexLaunchTarget,

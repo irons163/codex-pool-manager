@@ -26,7 +26,7 @@ struct CodexPoolManagerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(store: AppRuntimeStorage.accountPoolStore)
+            ContentView()
                 .id(appLanguageOverride)
                 .environment(\.locale, L10n.locale(for: appLanguageOverride))
         }
@@ -55,7 +55,7 @@ enum AppRuntimeStorage {
         testingDefaults ?? .standard
     }
 
-    static var accountPoolStore: AccountPoolStoring {
+    static var accountPoolStore: DeveloperAwareAccountPoolStore {
         DeveloperAwareAccountPoolStore(defaults: defaults)
     }
 

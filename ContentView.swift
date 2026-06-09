@@ -1,17 +1,15 @@
 import SwiftUI
 
 struct ContentView: View {
-    private let store: AccountPoolStoring
-
-    init(store: AccountPoolStoring = DeveloperAwareAccountPoolStore()) {
-        self.store = store
-    }
-
     var body: some View {
-        PoolDashboardView(store: store)
+        if AppRuntimeStorage.isRunningXCTest {
+            PoolDashboardView(store: AppRuntimeStorage.accountPoolStore)
+        } else {
+            PoolDashboardView()
+        }
     }
 }
 
 #Preview {
-    ContentView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
+    PoolDashboardView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
 }
