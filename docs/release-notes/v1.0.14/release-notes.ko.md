@@ -4,6 +4,7 @@
 
 ## 수정 사항
 
+- `save()` 가 토큰 보관소를 정리(prune)하던 문제를 수정했습니다. 이전에는 메모리의 스냅샷이 오래되었거나 비어 있을 때(예: 시작 시 저장) 여전히 유효한 릴레이 및 ChatGPT(OAuth) API 키가 영구적으로 삭제될 수 있었고, 저장된 스냅샷은 가려져 있어 복구할 수 없었습니다. 이제 토큰은 계정 또는 그룹을 명시적으로 삭제할 때만 제거됩니다.
 - 계정 전환 전에 계정 ID로 active token vault에서 relay API key를 직접 가져오도록 하여, redacted 스냅샷을 API key 누락으로 잘못 판단하지 않도록 했습니다.
 - 대시보드의 메모리 상태가 redacted 계정 스냅샷만 가지고 있을 때, 계정 전환 전에 저장된 token vault에서 relay API key를 복원합니다.
 - `codex login --with-api-key`를 호출하기 전에 relay API key stdin payload를 정규화했습니다. 빈 key는 Codex CLI를 실행하기 전에 거부하고, 유효한 key는 끝에 줄바꿈이 붙은 owned bytes로 전달합니다.

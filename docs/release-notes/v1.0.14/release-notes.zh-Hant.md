@@ -4,6 +4,7 @@
 
 ## 修正
 
+- 修正 `save()` 會清除 token vault 的問題。先前若記憶體中的帳號快照過期或為空（例如開機時的存檔），可能永久刪除仍然有效的中轉與 ChatGPT (OAuth) API key，且因持久化快照已遮蔽而無法復原。現在 token 只會在你明確刪除帳號或群組時才會被移除。
 - 切換中轉帳號前會依帳號 ID 直接從作用中的 token vault 取回 relay API key，避免已遮蔽的帳號快照被誤判成缺少 API key。
 - 當儀表板記憶體狀態只剩已遮蔽的帳號快照時，切換中轉帳號前會先從持久化 token vault 補回 relay API key。
 - 呼叫 `codex login --with-api-key` 前會先正規化中轉 API key 的 stdin payload：空 key 會在啟動 Codex CLI 前被擋下，有效 key 會以獨立 bytes 加結尾換行傳入。

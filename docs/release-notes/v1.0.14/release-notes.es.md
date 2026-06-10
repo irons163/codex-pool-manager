@@ -4,6 +4,7 @@ Fecha de publicación: 2026-06-10
 
 ## Correcciones
 
+- Se evitó que `save()` purgara el almacén de tokens. Antes, una instantánea en memoria obsoleta o vacía (por ejemplo, un guardado durante el arranque) podía borrar permanentemente claves de API de relay y de ChatGPT (OAuth) aún válidas, sin posibilidad de recuperación porque la instantánea persistida está ofuscada. Ahora los tokens solo se eliminan mediante la eliminación explícita de una cuenta o un grupo.
 - Se resuelven las API key relay directamente desde el token vault activo por ID de cuenta antes de cambiar, para que los snapshots redactados ya no se interpreten como keys faltantes.
 - Se restauran las API key relay desde el token vault persistido antes de cambiar de cuenta cuando el estado en memoria del dashboard solo contiene el snapshot redactado.
 - Se normalizó el payload stdin de la API key relay antes de llamar a `codex login --with-api-key`: las keys vacías se rechazan antes de lanzar Codex CLI, y las keys válidas se envían como bytes propios con un salto de línea final.
