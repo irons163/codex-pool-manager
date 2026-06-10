@@ -2478,9 +2478,11 @@ struct PoolDashboardView: View {
                     .first(where: { $0.id == accountID })?
                     .apiToken
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                    .isEmpty == true,
-                   let loadedSnapshot = store.load() {
-                    state.hydrateMissingAPITokens(from: loadedSnapshot)
+                    .isEmpty == true {
+                    if !state.hydrateMissingAPIToken(for: accountID, token: store.apiToken(for: accountID)),
+                       let loadedSnapshot = store.load() {
+                        state.hydrateMissingAPITokens(from: loadedSnapshot)
+                    }
                 }
                 guard let account = state.accounts.first(where: { $0.id == accountID }) else {
                     throw CodexProviderConfigError.invalidProviderID

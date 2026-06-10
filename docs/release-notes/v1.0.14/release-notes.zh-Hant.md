@@ -4,6 +4,7 @@
 
 ## 修正
 
+- 切換中轉帳號前會依帳號 ID 直接從作用中的 token vault 取回 relay API key，避免已遮蔽的帳號快照被誤判成缺少 API key。
 - 當儀表板記憶體狀態只剩已遮蔽的帳號快照時，切換中轉帳號前會先從持久化 token vault 補回 relay API key。
 - 呼叫 `codex login --with-api-key` 前會先正規化中轉 API key 的 stdin payload：空 key 會在啟動 Codex CLI 前被擋下，有效 key 會以獨立 bytes 加結尾換行傳入。
 - 加強中轉 API key 帳號切換流程，會先快照帳號、provider 與 API key 資料，再進入非同步切換流程。此修正針對 v1.0.13 release 版觀察到的 crash。

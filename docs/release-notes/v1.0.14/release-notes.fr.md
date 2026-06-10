@@ -4,6 +4,7 @@ Date de publication : 2026-06-10
 
 ## Corrections
 
+- Résolution directe des API key relais depuis le token vault actif par ID de compte avant le changement, afin qu'un snapshot masqué ne soit plus interprété comme une API key manquante.
 - Restauration des API key relais depuis le token vault persistant avant le changement de compte lorsque l'état en mémoire du dashboard ne contient que le snapshot masqué.
 - Normalisation du payload stdin de l'API key relais avant d'appeler `codex login --with-api-key` : les clés vides sont rejetées avant de lancer Codex CLI, et les clés valides sont envoyées comme bytes indépendants avec un saut de ligne final.
 - Renforcement du passage aux comptes relais API key en prenant un instantané des données du compte, du provider et de l'API key avant le flux async. Cette correction cible le crash observé dans la build release v1.0.13.

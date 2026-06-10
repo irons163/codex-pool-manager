@@ -1038,6 +1038,19 @@ struct AccountPoolState {
         return didHydrate
     }
 
+    @discardableResult
+    mutating func hydrateMissingAPIToken(for accountID: UUID, token: String?) -> Bool {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return false }
+        let currentToken = accounts[index].apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard currentToken.isEmpty else { return false }
+
+        let loadedToken = token?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !loadedToken.isEmpty else { return false }
+
+        accounts[index].apiToken = loadedToken
+        return true
+    }
+
     mutating func setUsageSyncExclusion(
         for accountID: UUID,
         reason: String?,

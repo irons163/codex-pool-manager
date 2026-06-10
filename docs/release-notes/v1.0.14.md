@@ -4,6 +4,7 @@ Release date: 2026-06-10
 
 ## Fixes
 
+- Resolved relay API key tokens directly from the active token vault by account ID before switching, so redacted snapshots can no longer be mistaken for missing API keys.
 - Restored relay API key tokens from the persisted token vault before switching when the in-memory dashboard state only has the redacted account snapshot.
 - Normalized the relay API key stdin payload before calling `codex login --with-api-key`: empty keys are rejected before launching Codex CLI, and valid keys are sent as owned bytes with a trailing newline.
 - Hardened relay API key account switching by snapshotting account, provider, and API key data before the async switch flow. This targets the release-only crash observed in v1.0.13.

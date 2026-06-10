@@ -1529,6 +1529,32 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func hydrateMissingAPITokenRestoresSingleToken() {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Relay",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex"
+                )
+            ],
+            mode: .manual
+        )
+
+        let didHydrate = state.hydrateMissingAPIToken(for: accountID, token: " sk-relay ")
+
+        #expect(didHydrate)
+        #expect(state.accounts[0].apiToken == "sk-relay")
+    }
+
+    @Test
     func createGroupAllowsCaseDistinctNames() {
         var state = AccountPoolState(
             accounts: [
@@ -2935,6 +2961,50 @@ struct CodexPoolManagerTests {
         #expect(loaded.accounts.first?.apiToken == token)
         #expect(loaded.accounts.first?.chatGPTAccountID == chatGPTAccountID)
         #expect(loaded.accounts.first?.usageWindowName == "primary_window")
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
+    func userDefaultsStoreCanResolveTokenDirectlyFromVault() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        vault.setToken("sk-relay", for: accountID)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Relay",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+
+        #expect(store.apiToken(for: accountID) == "sk-relay")
         defaults.removePersistentDomain(forName: suiteName)
     }
 

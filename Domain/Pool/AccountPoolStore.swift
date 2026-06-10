@@ -3,6 +3,17 @@ import Foundation
 protocol AccountPoolStoring {
     func load() -> AccountPoolSnapshot?
     func save(_ snapshot: AccountPoolSnapshot)
+    func apiToken(for accountID: UUID) -> String?
+}
+
+extension AccountPoolStoring {
+    func apiToken(for accountID: UUID) -> String? {
+        load()?
+            .accounts
+            .first(where: { $0.id == accountID })?
+            .apiToken
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 struct UserDefaultsAccountPoolStore: AccountPoolStoring {
@@ -57,6 +68,20 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
         guard let data = try? JSONEncoder().encode(redacted) else { return }
         defaults.set(data, forKey: key)
     }
+
+    func apiToken(for accountID: UUID) -> String? {
+        if let vaultToken = tokenVault.token(for: accountID)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !vaultToken.isEmpty {
+            return vaultToken
+        }
+
+        return load()?
+            .accounts
+            .first(where: { $0.id == accountID })?
+            .apiToken
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 struct DeveloperAwareAccountPoolStore: AccountPoolStoring {
@@ -89,6 +114,10 @@ struct DeveloperAwareAccountPoolStore: AccountPoolStoring {
 
     func save(_ snapshot: AccountPoolSnapshot) {
         resolvedStore.save(snapshot)
+    }
+
+    func apiToken(for accountID: UUID) -> String? {
+        resolvedStore.apiToken(for: accountID)
     }
 
     private var resolvedStore: UserDefaultsAccountPoolStore {
