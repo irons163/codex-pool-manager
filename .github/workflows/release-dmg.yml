@@ -44,7 +44,8 @@ jobs:
           echo "Using Xcode at: $XCODE_APP"
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
           export DEVELOPER_DIR="$XCODE_APP/Contents/Developer"
-          XCODE_VERSION="$(xcodebuild -version | awk '/Xcode/ {print $2; exit}')"
+          XCODE_VERSION_OUTPUT="$(xcodebuild -version)"
+          XCODE_VERSION="$(awk '/^Xcode / {print $2; exit}' <<<"$XCODE_VERSION_OUTPUT")"
           XCODE_MAJOR="${XCODE_VERSION%%.*}"
           echo "Selected Xcode version: $XCODE_VERSION"
           if [[ "${XCODE_MAJOR:-0}" -lt 16 ]]; then
