@@ -4,6 +4,7 @@ Date de publication : 2026-06-10
 
 ## Corrections
 
+- Les comptes à clé d'API relais enregistrent désormais leur clé dans le coffre de jetons dès l'ajout, de sorte que basculer vers un compte relais juste après l'avoir créé n'échoue plus avec une erreur « clé d'API manquante ».
 - Empêché `save()` de purger le coffre de jetons. Auparavant, un instantané en mémoire obsolète ou vide (par exemple une sauvegarde au démarrage) pouvait supprimer définitivement des clés d'API relais et ChatGPT (OAuth) encore valides, sans récupération possible car l'instantané persisté est masqué. Les jetons ne sont désormais supprimés que via la suppression explicite d'un compte ou d'un groupe.
 - Résolution directe des API key relais depuis le token vault actif par ID de compte avant le changement, afin qu'un snapshot masqué ne soit plus interprété comme une API key manquante.
 - Restauration des API key relais depuis le token vault persistant avant le changement de compte lorsque l'état en mémoire du dashboard ne contient que le snapshot masqué.

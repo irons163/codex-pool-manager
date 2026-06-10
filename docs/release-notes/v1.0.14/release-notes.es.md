@@ -4,6 +4,7 @@ Fecha de publicación: 2026-06-10
 
 ## Correcciones
 
+- Las cuentas con clave de API de relay ahora guardan su clave en el almacén de tokens inmediatamente al añadirlas, de modo que cambiar a una cuenta de relay recién creada ya no falla con un error de «falta la clave de API».
 - Se evitó que `save()` purgara el almacén de tokens. Antes, una instantánea en memoria obsoleta o vacía (por ejemplo, un guardado durante el arranque) podía borrar permanentemente claves de API de relay y de ChatGPT (OAuth) aún válidas, sin posibilidad de recuperación porque la instantánea persistida está ofuscada. Ahora los tokens solo se eliminan mediante la eliminación explícita de una cuenta o un grupo.
 - Se resuelven las API key relay directamente desde el token vault activo por ID de cuenta antes de cambiar, para que los snapshots redactados ya no se interpreten como keys faltantes.
 - Se restauran las API key relay desde el token vault persistido antes de cambiar de cuenta cuando el estado en memoria del dashboard solo contiene el snapshot redactado.

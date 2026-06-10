@@ -4,6 +4,7 @@ Release date: 2026-06-10
 
 ## Fixes
 
+- Relay API key accounts now write their key to the token vault immediately when added, so switching to a relay account right after creating it no longer fails with a "missing API key" error.
 - Stopped `save()` from pruning the token vault. A stale or empty in-memory snapshot (for example a save during startup) could previously delete still-valid relay and ChatGPT (OAuth) API keys permanently, with no way to recover because the persisted snapshot is redacted. Tokens are now removed only through the explicit account or group delete flow.
 - Resolved relay API key tokens directly from the active token vault by account ID before switching, so redacted snapshots can no longer be mistaken for missing API keys.
 - Restored relay API key tokens from the persisted token vault before switching when the in-memory dashboard state only has the redacted account snapshot.

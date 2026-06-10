@@ -4,6 +4,7 @@
 
 ## 修复
 
+- 新增中转 API key 账号时会立即把 key 写入 token vault,因此刚新增完就马上切换,不会再误报「需要 API key」。
 - 修复 `save()` 会清除 token vault 的问题。此前若内存中的账号快照过期或为空（例如开机时的保存），可能永久删除仍然有效的中转与 ChatGPT (OAuth) API key，且因持久化快照已脱敏而无法恢复。现在 token 只会在你明确删除账号或分组时才会被移除。
 - 切换中转账号前会按账号 ID 直接从当前 token vault 取回 relay API key，避免已遮蔽的账号快照被误判成缺少 API key。
 - 当仪表板内存状态只剩已遮蔽的账号快照时，切换中转账号前会先从持久化 token vault 补回 relay API key。

@@ -2291,6 +2291,11 @@ struct PoolDashboardView: View {
             state = output.state
             viewState = output.viewState
             if viewState.relayError == nil {
+                // Persist immediately so the new relay API key is in the token vault
+                // before the user can switch to it. The snapshot-driven autosave is
+                // async, so without this an immediate switch resolves the key from a
+                // vault that hasn't been written yet and fails with "missing API key".
+                store.save(state.snapshot)
                 formState.resetRelayInput()
                 refreshRelayAPIKeyReadiness()
             }
