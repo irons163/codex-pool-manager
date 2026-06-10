@@ -216,55 +216,36 @@ struct CodexProviderConfigServiceTests {
 
 struct CodexAPIKeyLoginServiceTests {
     @Test
-    func loginAddsHomebrewNodePathsToProcessEnvironment() async throws {
-        var receivedEnvironment: [String: String]?
+    func loginWithPreparedAPIKeyDataWritesAuthJSONDirectly() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-api-key-login-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
         let service = CodexAPIKeyLoginService(
-            executableURLProvider: { URL(fileURLWithPath: "/tmp/codex") },
-            processRunner: { _, _, _, environment in
-                receivedEnvironment = environment
-                return (0, "")
-            }
+            authFileURLProvider: { authURL }
         )
 
-        try await service.login(apiKey: "sk-test")
+        try await service.login(trimmedAPIKeyData: Data(" relay-token-123 \n".utf8))
 
-        let path = try #require(receivedEnvironment?["PATH"])
-        let entries = path.split(separator: ":").map(String.init)
-        #expect(entries.contains("/opt/homebrew/bin"))
-        #expect(entries.contains("/usr/local/bin"))
-        #expect(entries.contains("/usr/bin"))
+        let data = try Data(contentsOf: authURL)
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(object["auth_mode"] as? String == "apikey")
+        #expect(object["OPENAI_API_KEY"] as? String == "relay-token-123")
     }
 
     @Test
-    func loginWithPreparedAPIKeyDataAppendsTrailingNewlineToStdin() async throws {
-        var receivedInput = Data()
+    func loginWithPreparedAPIKeyDataRejectsEmptyInputBeforeWritingAuthJSON() async {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-api-key-login-empty-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
         let service = CodexAPIKeyLoginService(
-            executableURLProvider: { URL(fileURLWithPath: "/tmp/codex") },
-            processRunner: { _, _, input, _ in
-                receivedInput = input
-                return (0, "")
-            }
-        )
-
-        try await service.login(trimmedAPIKeyData: Data("sk-test".utf8))
-
-        #expect(String(decoding: receivedInput, as: UTF8.self) == "sk-test\n")
-    }
-
-    @Test
-    func loginWithPreparedAPIKeyDataRejectsEmptyInputBeforeLaunchingCodex() async {
-        var didRunProcess = false
-        let service = CodexAPIKeyLoginService(
-            executableURLProvider: { URL(fileURLWithPath: "/tmp/codex") },
-            processRunner: { _, _, _, _ in
-                didRunProcess = true
-                return (0, "")
-            }
+            authFileURLProvider: { authURL }
         )
 
         await #expect(throws: CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))) {
             try await service.login(trimmedAPIKeyData: Data(" \n\t ".utf8))
         }
-        #expect(!didRunProcess)
+        #expect(!FileManager.default.fileExists(atPath: authURL.path))
     }
 }

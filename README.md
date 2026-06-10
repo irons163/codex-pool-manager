@@ -207,7 +207,7 @@ By default, the app supports public client flow and also allows your own OAuth c
 
 ### API Key Relay Providers
 
-Codex Pool Manager can add an API Key / Relay account for Codex CLI custom providers. Relay accounts write a provider block to `~/.codex/config.toml` and authenticate Codex through `codex login --with-api-key`.
+Codex Pool Manager can add an API Key / Relay account for Codex CLI custom providers. Relay accounts write a provider block to `~/.codex/config.toml` and update Codex's API-key `auth.json` directly.
 
 Relay accounts do not support ChatGPT/Codex subscription usage sync. They are available for manual switching, but are excluded from automatic intelligent/focus switching until a relay-specific usage source is configured.
 

@@ -9,9 +9,8 @@ Fecha de publicación: 2026-06-10
 - Se evitó que `save()` purgara el almacén de tokens. Antes, una instantánea en memoria obsoleta o vacía (por ejemplo, un guardado durante el arranque) podía borrar permanentemente claves de API de relay y de ChatGPT (OAuth) aún válidas, sin posibilidad de recuperación porque la instantánea persistida está ofuscada. Ahora los tokens solo se eliminan mediante la eliminación explícita de una cuenta o un grupo.
 - Se resuelven las API key relay directamente desde el token vault activo por ID de cuenta antes de cambiar, para que los snapshots redactados ya no se interpreten como keys faltantes.
 - Se restauran las API key relay desde el token vault persistido antes de cambiar de cuenta cuando el estado en memoria del dashboard solo contiene el snapshot redactado.
-- Se normalizó el payload stdin de la API key relay antes de llamar a `codex login --with-api-key`: las keys vacías se rechazan antes de lanzar Codex CLI, y las keys válidas se envían como bytes propios con un salto de línea final.
+- El cambio de cuentas relay API key ahora escribe directamente el `auth.json` API-key de Codex en lugar de invocar Codex CLI mediante stdin, evitando fallos de entrega stdin en builds release que hacían parecer faltante una key existente.
 - Se reforzó el cambio a cuentas relay API key tomando una instantánea de los datos de la cuenta, el provider y la API key antes del flujo async. Esta corrección apunta al crash observado en la build release de v1.0.13.
-- Se evitó el crash de release al cambiar a una cuenta relay pasando bytes ya preparados de la API key al login de Codex CLI, en lugar de volver a hacer trim del string dentro del closure async de login.
 - Se movió la comprobación de disponibilidad del formulario relay API key fuera del renderizado de SwiftUI body para evitar trims de strings adicionales durante las actualizaciones de la vista.
 - Se añadió un diagnóstico de cambio relay sin datos sensibles: registra ID de cuenta, longitudes de token y etapas del cambio sin guardar valores de API key, para ubicar con precisión los reportes release-only donde la key parece faltar.
 
