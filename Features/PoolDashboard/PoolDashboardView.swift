@@ -1905,6 +1905,7 @@ struct PoolDashboardView: View {
 
     private func handleRemoveAccount(accountID: UUID) {
         applyQuickAction(.removeAccount(accountID))
+        store.removeToken(for: accountID)
     }
 
     private func handleMoveAccount(accountID: UUID, to groupName: String) {
@@ -1924,7 +1925,11 @@ struct PoolDashboardView: View {
 
     private func handleDeleteGroup(name: String) {
         let normalized = AgentAccount.normalizedGroupName(name)
+        let removedAccountIDs = state.accounts
+            .filter { $0.groupName == normalized }
+            .map(\.id)
         guard state.deleteGroup(normalized) else { return }
+        removedAccountIDs.forEach { store.removeToken(for: $0) }
 
         if selectedGroupName == normalized {
             selectedGroupName = AgentAccount.defaultGroupName

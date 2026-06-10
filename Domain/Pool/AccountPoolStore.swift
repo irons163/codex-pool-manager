@@ -4,6 +4,7 @@ protocol AccountPoolStoring {
     func load() -> AccountPoolSnapshot?
     func save(_ snapshot: AccountPoolSnapshot)
     func apiToken(for accountID: UUID) -> String?
+    func removeToken(for accountID: UUID)
 }
 
 extension AccountPoolStoring {
@@ -14,6 +15,8 @@ extension AccountPoolStoring {
             .apiToken
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    func removeToken(for accountID: UUID) {}
 }
 
 struct UserDefaultsAccountPoolStore: AccountPoolStoring {
@@ -61,7 +64,13 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
                 tokenVault.setToken(normalizedToken, for: account.id)
             }
         }
-        tokenVault.pruneTokens(keeping: Set(snapshot.accounts.map(\.id)))
+        // Intentionally NOT pruning the vault here. `save` runs on every snapshot
+        // change, sometimes with a stale or empty in-memory snapshot (e.g. a
+        // startup save before state has loaded, or a test host booting on real
+        // prefs). Pruning to the saved snapshot's account set would then delete
+        // still-valid tokens permanently, since the persisted snapshot is redacted
+        // and there is no other copy. Tokens for genuinely deleted accounts are
+        // removed explicitly via `removeToken(for:)` from the delete flow.
 
         let redacted = snapshot.redactingAPITokens()
 
@@ -81,6 +90,10 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
             .first(where: { $0.id == accountID })?
             .apiToken
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func removeToken(for accountID: UUID) {
+        tokenVault.removeToken(for: accountID)
     }
 }
 
@@ -118,6 +131,10 @@ struct DeveloperAwareAccountPoolStore: AccountPoolStoring {
 
     func apiToken(for accountID: UUID) -> String? {
         resolvedStore.apiToken(for: accountID)
+    }
+
+    func removeToken(for accountID: UUID) {
+        resolvedStore.removeToken(for: accountID)
     }
 
     private var resolvedStore: UserDefaultsAccountPoolStore {

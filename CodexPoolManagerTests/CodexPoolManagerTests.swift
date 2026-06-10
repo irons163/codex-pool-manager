@@ -3975,7 +3975,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func userDefaultsStoreSavePrunesTokensForDeletedAccounts() throws {
+    func userDefaultsStoreSaveKeepsAllTokensAndRemoveTokenDeletes() throws {
         let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             Issue.record("Cannot create UserDefaults suite")
@@ -3984,9 +3984,9 @@ struct CodexPoolManagerTests {
         defaults.removePersistentDomain(forName: suiteName)
         let vault = InMemoryAccountTokenVault()
         let keptAccountID = UUID()
-        let deletedAccountID = UUID()
+        let removedAccountID = UUID()
         vault.setToken("kept-token", for: keptAccountID)
-        vault.setToken("deleted-token", for: deletedAccountID)
+        vault.setToken("removed-token", for: removedAccountID)
 
         let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
         let snapshot = AccountPoolSnapshot(
@@ -4013,9 +4013,19 @@ struct CodexPoolManagerTests {
 
         store.save(snapshot)
 
+        // `save` must never prune: a token for an account absent from the saved
+        // snapshot stays in the vault. This is the guard against catastrophic loss
+        // from a stale or empty in-memory snapshot being persisted.
         #expect(vault.token(for: keptAccountID) == "kept-token")
-        #expect(vault.token(for: deletedAccountID) == nil)
+        #expect(vault.token(for: removedAccountID) == "removed-token")
+        #expect(vault.tokenCount == 2)
+
+        // Removal is explicit — only `removeToken` (the delete flow) drops a token.
+        store.removeToken(for: removedAccountID)
+        #expect(vault.token(for: removedAccountID) == nil)
+        #expect(vault.token(for: keptAccountID) == "kept-token")
         #expect(vault.tokenCount == 1)
+
         defaults.removePersistentDomain(forName: suiteName)
     }
 
@@ -6151,6 +6161,87 @@ extension CodexPoolManagerTests {
         )
 
         #expect(result != nil)
+    }
+
+    @Test
+    func saveDoesNotPruneVaultTokensForAccountsMissingFromSnapshot() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+
+        let keepID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B1")!
+        let absentID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        vault.setToken("sk-keep", for: keepID)
+        vault.setToken("sk-absent", for: absentID)
+
+        // Save a snapshot that contains only `keepID` — `absentID` is omitted,
+        // exactly the "stale/partial snapshot" shape that used to wipe tokens.
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: keepID,
+                    name: "Keep",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "sk-keep",
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex"
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+
+        // Regression: a save that omits an account must NOT delete its vault token.
+        #expect(store.apiToken(for: absentID) == "sk-absent")
+        #expect(store.apiToken(for: keepID) == "sk-keep")
+    }
+
+    @Test
+    func removeTokenDeletesVaultEntry() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B3")!
+        vault.setToken("sk-x", for: accountID)
+        #expect(store.apiToken(for: accountID) == "sk-x")
+
+        store.removeToken(for: accountID)
+
+        #expect(store.apiToken(for: accountID) == nil)
+    }
+
+    @Test
+    func isRunningTestEnvironmentDetectsTestBundle() {
+        // A .xctest bundle is loaded during any test run (XCTest or Swift Testing),
+        // so detection must be true here — guarding the app from real prefs.
+        #expect(AppRuntimeStorage.isRunningTestEnvironment())
     }
 
 }

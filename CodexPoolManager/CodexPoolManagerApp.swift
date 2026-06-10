@@ -48,7 +48,35 @@ struct CodexPoolManagerApp: App {
 
 enum AppRuntimeStorage {
     static var isRunningXCTest: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        isRunningTestEnvironment()
+    }
+
+    // Detects both XCTest and Swift Testing. The app must never operate on the
+    // user's real preferences while under test. Checking only
+    // `XCTestConfigurationFilePath` misses Swift Testing, which is how the real
+    // token vault once got wiped by a test host booting against `.standard`.
+    static func isRunningTestEnvironment(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
+        let testEnvKeys = [
+            "XCTestConfigurationFilePath",
+            "XCTestBundlePath",
+            "XCTestSessionIdentifier"
+        ]
+        if testEnvKeys.contains(where: { environment[$0] != nil }) {
+            return true
+        }
+        if let injected = environment["DYLD_INSERT_LIBRARIES"],
+           injected.contains("XCTest") || injected.contains(".xctest") {
+            return true
+        }
+        if Bundle.allBundles.contains(where: { $0.bundlePath.hasSuffix(".xctest") }) {
+            return true
+        }
+        if NSClassFromString("XCTestCase") != nil {
+            return true
+        }
+        return false
     }
 
     static var defaults: UserDefaults {
