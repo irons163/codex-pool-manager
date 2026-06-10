@@ -17,6 +17,8 @@ struct RelaySwitchDiagnostic: Equatable {
     let launchTarget: CodexLaunchTarget?
     let selectedAuthMethod: String?
     let storeType: String?
+    let appVersion: String?
+    let appBuild: String?
     let errorStage: String?
     let errorDescription: String?
 
@@ -36,6 +38,8 @@ struct RelaySwitchDiagnostic: Equatable {
         launchTarget: CodexLaunchTarget? = nil,
         selectedAuthMethod: String? = nil,
         storeType: String? = nil,
+        appVersion: String? = nil,
+        appBuild: String? = nil,
         errorStage: String? = nil,
         errorDescription: String? = nil
     ) {
@@ -55,6 +59,8 @@ struct RelaySwitchDiagnostic: Equatable {
         self.launchTarget = launchTarget
         self.selectedAuthMethod = selectedAuthMethod
         self.storeType = storeType
+        self.appVersion = appVersion
+        self.appBuild = appBuild
         self.errorStage = errorStage
         self.errorDescription = errorDescription
     }
@@ -78,6 +84,8 @@ struct RelaySwitchDiagnostic: Equatable {
             "launch_target=\(Self.value(launchTarget?.rawValue))",
             "selected_auth_method=\(Self.value(selectedAuthMethod))",
             "store_type=\(Self.value(storeType))",
+            "app_version=\(Self.value(appVersion))",
+            "app_build=\(Self.value(appBuild))",
             "error_stage=\(Self.value(errorStage))",
             "error_description=\(Self.value(errorDescription))"
         ].joined(separator: "\n")
@@ -105,7 +113,7 @@ struct PoolDashboardRelayAccountCoordinator {
         _ provider: CodexProviderConfig,
         _ apiKey: String
     ) throws -> Void
-    typealias APIKeyLogin = (Data) async throws -> Void
+    typealias APIKeyLogin = (Data) async throws -> String
 
     struct AddOutput {
         let state: AccountPoolState
@@ -253,15 +261,20 @@ struct PoolDashboardRelayAccountCoordinator {
             logLines.append(L10n.text("relay.switch.config_updated_format", provider.providerID))
             if preserveOfficialAuth {
                 logLines.append(L10n.text("relay.switch.preserve_official_auth_enabled"))
-                try await apiKeyLogin(request.apiKeyData)
-                logLines.append(L10n.text("relay.switch.login_completed"))
-            } else {
-                try await apiKeyLogin(request.apiKeyData)
-                logLines.append(L10n.text("relay.switch.login_completed"))
             }
+            let loginDiagnostic = try await apiKeyLogin(request.apiKeyData)
+            if !loginDiagnostic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                logLines.append(loginDiagnostic)
+            }
+            logLines.append(L10n.text("relay.switch.login_completed"))
             nextViewState.switchLaunchError = nil
             nextViewState.switchLaunchWarning = nil
         } catch {
+            if let error = error as? CodexAPIKeyLoginError,
+               let diagnosticLog = error.diagnosticLog,
+               !diagnosticLog.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                logLines.append(diagnosticLog)
+            }
             logLines.append(L10n.text("relay.switch.failed_format", error.localizedDescription))
             nextViewState.switchLaunchError = error.localizedDescription
             nextViewState.switchLaunchWarning = nil

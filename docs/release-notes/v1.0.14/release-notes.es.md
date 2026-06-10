@@ -4,6 +4,7 @@ Fecha de publicación: 2026-06-10
 
 ## Correcciones
 
+- Se añadieron diagnósticos más profundos para la auth relay API key: versión/build de la app, longitudes recibidas por el login service y etapas sanitizadas de escritura de auth.json, sin exponer valores de API key.
 - Ahora se pasa la API key del token vault directamente al request de cambio de cuenta relay, evitando que un estado SwiftUI obsoleto o redactado haga parecer faltante una key existente.
 - Las cuentas con clave de API de relay ahora guardan su clave en el almacén de tokens inmediatamente al añadirlas, de modo que cambiar a una cuenta de relay recién creada ya no falla con un error de «falta la clave de API».
 - Se evitó que `save()` purgara el almacén de tokens. Antes, una instantánea en memoria obsoleta o vacía (por ejemplo, un guardado durante el arranque) podía borrar permanentemente claves de API de relay y de ChatGPT (OAuth) aún válidas, sin posibilidad de recuperación porque la instantánea persistida está ofuscada. Ahora los tokens solo se eliminan mediante la eliminación explícita de una cuenta o un grupo.

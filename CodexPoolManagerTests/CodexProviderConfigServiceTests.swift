@@ -225,12 +225,17 @@ struct CodexAPIKeyLoginServiceTests {
             authFileURLProvider: { authURL }
         )
 
-        try await service.login(trimmedAPIKeyData: Data(" relay-token-123 \n".utf8))
+        let diagnostic = try await service.login(trimmedAPIKeyData: Data(" relay-token-123 \n".utf8))
 
         let data = try Data(contentsOf: authURL)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(object["auth_mode"] as? String == "apikey")
         #expect(object["OPENAI_API_KEY"] as? String == "relay-token-123")
+        #expect(diagnostic.contains("Relay API key auth diagnostic:"))
+        #expect(diagnostic.contains("api_key_data_len=18"))
+        #expect(diagnostic.contains("trimmed_api_key_len=15"))
+        #expect(diagnostic.contains("auth_write_stage=written"))
+        #expect(!diagnostic.contains("relay-token-123"))
     }
 
     @Test
@@ -243,8 +248,17 @@ struct CodexAPIKeyLoginServiceTests {
             authFileURLProvider: { authURL }
         )
 
-        await #expect(throws: CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))) {
-            try await service.login(trimmedAPIKeyData: Data(" \n\t ".utf8))
+        do {
+            _ = try await service.login(trimmedAPIKeyData: Data(" \n\t ".utf8))
+            Issue.record("Expected empty API key data to fail before writing auth.json.")
+        } catch let error as CodexAPIKeyLoginError {
+            #expect(error == CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key")))
+            #expect(error.diagnosticLog?.contains("Relay API key auth diagnostic:") == true)
+            #expect(error.diagnosticLog?.contains("api_key_data_len=4") == true)
+            #expect(error.diagnosticLog?.contains("trimmed_api_key_len=0") == true)
+            #expect(error.diagnosticLog?.contains("auth_write_stage=missing_api_key") == true)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
         }
         #expect(!FileManager.default.fileExists(atPath: authURL.path))
     }

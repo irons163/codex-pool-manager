@@ -4,6 +4,7 @@ Date de publication : 2026-06-10
 
 ## Corrections
 
+- Diagnostic renforcé pour l'authentification relay API key : version/build de l'app, longueurs reçues par le login service et étapes d'écriture auth.json, sans exposer la valeur de l'API key.
 - La clé d'API du token vault est désormais transmise directement à la requête de changement de compte relais, afin qu'un état SwiftUI obsolète ou masqué ne fasse plus passer une clé existante pour manquante.
 - Les comptes à clé d'API relais enregistrent désormais leur clé dans le coffre de jetons dès l'ajout, de sorte que basculer vers un compte relais juste après l'avoir créé n'échoue plus avec une erreur « clé d'API manquante ».
 - Empêché `save()` de purger le coffre de jetons. Auparavant, un instantané en mémoire obsolète ou vide (par exemple une sauvegarde au démarrage) pouvait supprimer définitivement des clés d'API relais et ChatGPT (OAuth) encore valides, sans récupération possible car l'instantané persisté est masqué. Les jetons ne sont désormais supprimés que via la suppression explicite d'un compte ou d'un groupe.

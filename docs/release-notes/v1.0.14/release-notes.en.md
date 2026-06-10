@@ -4,6 +4,7 @@ Release date: 2026-06-10
 
 ## Fixes
 
+- Added deeper relay API key auth diagnostics that record app version/build, login-service input lengths, and sanitized auth.json write stages without exposing API key values.
 - Passed the token-vault API key directly into relay switch requests, so stale or redacted SwiftUI state can no longer make an existing relay key look missing.
 - Relay API key accounts now write their key to the token vault immediately when added, so switching to a relay account right after creating it no longer fails with a "missing API key" error.
 - Stopped `save()` from pruning the token vault. A stale or empty in-memory snapshot (for example a save during startup) could previously delete still-valid relay and ChatGPT (OAuth) API keys permanently, with no way to recover because the persisted snapshot is redacted. Tokens are now removed only through the explicit account or group delete flow.

@@ -392,7 +392,7 @@ struct RelayAccountCoordinatorTests {
     func relayCoordinatorAddsRelayAccountAndMarksUsageSyncUnavailable() async {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
-            apiKeyLogin: { _ in }
+            apiKeyLogin: { _ in "" }
         )
         var state = AccountPoolState(accounts: [], mode: .manual)
         var viewState = PoolDashboardViewState()
@@ -507,7 +507,9 @@ struct RelayAccountCoordinatorTests {
             switchWithoutLaunching: false,
             launchTarget: .codex,
             selectedAuthMethod: "relayAPIKey",
-            storeType: "UserDefaultsAccountPoolStore"
+            storeType: "UserDefaultsAccountPoolStore",
+            appVersion: "1.0.14",
+            appBuild: "124"
         )
         let rendered = diagnostic.renderedLog()
 
@@ -518,6 +520,8 @@ struct RelayAccountCoordinatorTests {
         #expect(rendered.contains("snapshot_api_key_len=15"))
         #expect(rendered.contains("vault_api_key_len=14"))
         #expect(rendered.contains("request_api_key_data_len=15"))
+        #expect(rendered.contains("app_version=1.0.14"))
+        #expect(rendered.contains("app_build=124"))
         #expect(!rendered.contains("sk-secret-token"))
         #expect(!rendered.contains("sk-vault-token"))
     }
@@ -530,6 +534,7 @@ struct RelayAccountCoordinatorTests {
             apiKeyLogin: { apiKeyData in
                 let apiKey = String(decoding: apiKeyData, as: UTF8.self)
                 events.withLock { $0.append("login:\(apiKey)") }
+                return "test_login_diagnostic=ok"
             },
             appRelauncher: { launchTarget in
                 events.withLock { $0.append("launch:\(launchTarget.rawValue)") }
@@ -561,13 +566,14 @@ struct RelayAccountCoordinatorTests {
         #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains("mirror"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains("test_login_diagnostic=ok"))
     }
 
     @Test
     func relayCoordinatorKeepsDiagnosticPrefixInSwitchLog() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
-            apiKeyLogin: { _ in },
+            apiKeyLogin: { _ in "" },
             appRelauncher: { _ in true }
         )
         let account = AgentAccount(
@@ -608,6 +614,7 @@ struct RelayAccountCoordinatorTests {
             apiKeyLogin: { apiKeyData in
                 let apiKey = String(decoding: apiKeyData, as: UTF8.self)
                 events.withLock { $0.append("login:\(apiKey)") }
+                return ""
             },
             appRelauncher: { launchTarget in
                 events.withLock { $0.append("launch:\(launchTarget.rawValue)") }
@@ -650,6 +657,7 @@ struct RelayAccountCoordinatorTests {
             apiKeyLogin: { apiKeyData in
                 let apiKey = String(decoding: apiKeyData, as: UTF8.self)
                 events.withLock { $0.append("login:\(apiKey)") }
+                return ""
             },
             appRelauncher: { _ in
                 events.withLock { $0.append("launch") }
@@ -687,7 +695,7 @@ struct RelayAccountCoordinatorTests {
     func relayCoordinatorKeepsSwitchSuccessfulWhenRelaunchFails() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
-            apiKeyLogin: { _ in },
+            apiKeyLogin: { _ in "" },
             appRelauncher: { _ in
                 throw CodexAuthSwitchError.launchFailedAfterSwitch(reason: "Codex still running")
             }
@@ -723,7 +731,7 @@ struct RelayAccountCoordinatorTests {
     func relaySwitchDoesNotRequireAuthJSONFields() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
-            apiKeyLogin: { _ in },
+            apiKeyLogin: { _ in "" },
             appRelauncher: { _ in true }
         )
         let account = AgentAccount(
@@ -748,5 +756,42 @@ struct RelayAccountCoordinatorTests {
         #expect(account.chatGPTAccountID == nil)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("relay.switch.login_completed")))
+    }
+
+    @Test
+    func relayCoordinatorIncludesAPIKeyLoginDiagnosticWhenLoginFails() async throws {
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLogin: { _ in
+                throw CodexAPIKeyLoginError.loginFailed(
+                    "login failed",
+                    diagnosticLog: "Relay API key auth diagnostic:\nauth_write_stage=missing_api_key"
+                )
+            },
+            appRelauncher: { _ in true }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
+            viewState: PoolDashboardViewState()
+        )
+
+        #expect(!output.didSwitchAuth)
+        #expect(output.viewState.lastSwitchLaunchLog.contains("Relay API key auth diagnostic:"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains("auth_write_stage=missing_api_key"))
+        #expect(!output.viewState.lastSwitchLaunchLog.contains("sk-relay"))
     }
 }

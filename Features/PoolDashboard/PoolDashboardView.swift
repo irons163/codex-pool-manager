@@ -2527,7 +2527,9 @@ struct PoolDashboardView: View {
                 switchWithoutLaunching: state.switchWithoutLaunching,
                 launchTarget: selectedLaunchTarget,
                 selectedAuthMethod: selectedAuthMethodRaw,
-                storeType: String(describing: type(of: store))
+                storeType: String(describing: type(of: store)),
+                appVersion: appVersionText(),
+                appBuild: appBuildText()
             ).renderedLog()
         } catch {
             diagnosticLog = RelaySwitchDiagnostic(
@@ -2546,6 +2548,8 @@ struct PoolDashboardView: View {
                 launchTarget: selectedLaunchTarget,
                 selectedAuthMethod: selectedAuthMethodRaw,
                 storeType: String(describing: type(of: store)),
+                appVersion: appVersionText(),
+                appBuild: appBuildText(),
                 errorStage: "switch_request",
                 errorDescription: error.localizedDescription
             ).renderedLog()
@@ -2908,6 +2912,10 @@ struct PoolDashboardView: View {
     private func appVersionText() -> String {
         let shortVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "0"
         return AppUpdateVersioning.normalizedVersion(from: shortVersion)
+    }
+
+    private func appBuildText() -> String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String) ?? "0"
     }
 
     private var isPrereleaseUpdateChannelEnabled: Bool {
