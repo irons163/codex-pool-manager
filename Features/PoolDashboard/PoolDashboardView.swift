@@ -2484,12 +2484,13 @@ struct PoolDashboardView: View {
         var requestAccountName = L10n.text("account.unknown")
         do {
             request = try {
+                let fallbackAPIKey = store.apiToken(for: accountID)
                 if state.accounts
                     .first(where: { $0.id == accountID })?
                     .apiToken
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .isEmpty == true {
-                    if !state.hydrateMissingAPIToken(for: accountID, token: store.apiToken(for: accountID)),
+                    if !state.hydrateMissingAPIToken(for: accountID, token: fallbackAPIKey),
                        let loadedSnapshot = store.load() {
                         state.hydrateMissingAPITokens(from: loadedSnapshot)
                     }
@@ -2498,7 +2499,10 @@ struct PoolDashboardView: View {
                     throw CodexProviderConfigError.invalidProviderID
                 }
                 requestAccountName = account.name
-                return try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account)
+                return try PoolDashboardRelayAccountCoordinator.SwitchRequest(
+                    account: account,
+                    fallbackAPIKey: fallbackAPIKey
+                )
             }()
         } catch {
             viewState.switchLaunchError = error.localizedDescription

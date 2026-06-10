@@ -4,6 +4,7 @@
 
 ## 修正
 
+- 切換中轉帳號時會把 token vault 中的 API key 直接傳入切換 request，避免 SwiftUI 狀態尚未回寫或已遮蔽時，把既有 key 誤判為缺少 API key。
 - 新增中轉 API key 帳號時會立即把 key 寫入 token vault,因此剛新增完就馬上切換,不會再誤報「需要 API key」。
 - 修正 `save()` 會清除 token vault 的問題。先前若記憶體中的帳號快照過期或為空（例如開機時的存檔），可能永久刪除仍然有效的中轉與 ChatGPT (OAuth) API key，且因持久化快照已遮蔽而無法復原。現在 token 只會在你明確刪除帳號或群組時才會被移除。
 - 切換中轉帳號前會依帳號 ID 直接從作用中的 token vault 取回 relay API key，避免已遮蔽的帳號快照被誤判成缺少 API key。

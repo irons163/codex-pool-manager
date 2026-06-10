@@ -450,6 +450,31 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
+    func relaySwitchRequestUsesFallbackAPIKeyWhenAccountSnapshotIsRedacted() throws {
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(
+            account: account,
+            fallbackAPIKey: " sk-relay "
+        )
+
+        #expect(request.apiKey == "sk-relay")
+        #expect(String(decoding: request.apiKeyData, as: UTF8.self) == "sk-relay")
+    }
+
+    @Test
     func relayCoordinatorSwitchesByApplyingConfigThenLoggingIn() async throws {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(

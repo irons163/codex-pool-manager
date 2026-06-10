@@ -27,12 +27,14 @@ struct PoolDashboardRelayAccountCoordinator {
         let apiKey: String
         let apiKeyData: Data
 
-        init(account: AgentAccount) throws {
+        init(account: AgentAccount, fallbackAPIKey: String? = nil) throws {
             guard account.isRelayAPIKeyAccount else {
                 throw CodexProviderConfigError.invalidProviderID
             }
 
-            let apiKey = Self.trimmedStableCopy(account.apiToken)
+            let accountAPIKey = Self.trimmedStableCopy(account.apiToken)
+            let fallbackAPIKey = Self.trimmedStableCopy(fallbackAPIKey ?? "")
+            let apiKey = accountAPIKey.isEmpty ? fallbackAPIKey : accountAPIKey
             guard !apiKey.isEmpty else {
                 throw CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key"))
             }
