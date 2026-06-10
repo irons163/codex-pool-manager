@@ -13,6 +13,7 @@ Date de publication : 2026-06-10
 - Renforcement du passage aux comptes relais API key en prenant un instantané des données du compte, du provider et de l'API key avant le flux async. Cette correction cible le crash observé dans la build release v1.0.13.
 - Contournement du crash release restant lors du passage à un compte relais en envoyant des bytes d'API key déjà préparés au flux de connexion Codex CLI, au lieu de refaire un trim de la chaîne API key dans la closure async de connexion.
 - Déplacement du calcul d'état du formulaire relais API key hors du rendu SwiftUI body afin d'éviter des trims de chaînes supplémentaires pendant les mises à jour de la vue.
+- Ajout d'un journal de diagnostic de changement relais sans données sensibles : il enregistre les ID de compte, les longueurs de jeton et les étapes du changement sans stocker les valeurs d'API key, afin de localiser précisément les rapports release-only où la clé semble manquante.
 
 ## Notes
 

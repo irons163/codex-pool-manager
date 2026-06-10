@@ -1,5 +1,102 @@
 import Foundation
 
+struct RelaySwitchDiagnostic: Equatable {
+    let stage: String
+    let accountID: UUID
+    let accountName: String?
+    let credentialType: String?
+    let stateAccountCount: Int?
+    let relayAccountCount: Int?
+    let snapshotAPIKeyLength: Int?
+    let vaultAPIKeyLength: Int?
+    let hydratedFromVault: Bool?
+    let requestAPIKeyLength: Int?
+    let requestAPIKeyDataLength: Int?
+    let preserveOfficialAuth: Bool?
+    let switchWithoutLaunching: Bool?
+    let launchTarget: CodexLaunchTarget?
+    let selectedAuthMethod: String?
+    let storeType: String?
+    let errorStage: String?
+    let errorDescription: String?
+
+    init(
+        stage: String,
+        accountID: UUID,
+        account: AgentAccount?,
+        stateAccountCount: Int? = nil,
+        relayAccountCount: Int? = nil,
+        snapshotAPIKeyLength: Int? = nil,
+        vaultAPIKeyLength: Int? = nil,
+        hydratedFromVault: Bool? = nil,
+        requestAPIKeyLength: Int? = nil,
+        requestAPIKeyDataLength: Int? = nil,
+        preserveOfficialAuth: Bool? = nil,
+        switchWithoutLaunching: Bool? = nil,
+        launchTarget: CodexLaunchTarget? = nil,
+        selectedAuthMethod: String? = nil,
+        storeType: String? = nil,
+        errorStage: String? = nil,
+        errorDescription: String? = nil
+    ) {
+        self.stage = stage
+        self.accountID = accountID
+        accountName = account?.name
+        credentialType = account?.credentialType.rawValue
+        self.stateAccountCount = stateAccountCount
+        self.relayAccountCount = relayAccountCount
+        self.snapshotAPIKeyLength = snapshotAPIKeyLength
+        self.vaultAPIKeyLength = vaultAPIKeyLength
+        self.hydratedFromVault = hydratedFromVault
+        self.requestAPIKeyLength = requestAPIKeyLength
+        self.requestAPIKeyDataLength = requestAPIKeyDataLength
+        self.preserveOfficialAuth = preserveOfficialAuth
+        self.switchWithoutLaunching = switchWithoutLaunching
+        self.launchTarget = launchTarget
+        self.selectedAuthMethod = selectedAuthMethod
+        self.storeType = storeType
+        self.errorStage = errorStage
+        self.errorDescription = errorDescription
+    }
+
+    func renderedLog() -> String {
+        [
+            "Relay switch diagnostic:",
+            "stage=\(stage)",
+            "account_id=\(accountID.uuidString)",
+            "account_name=\(Self.value(accountName))",
+            "credential_type=\(Self.value(credentialType))",
+            "state_account_count=\(Self.value(stateAccountCount))",
+            "relay_account_count=\(Self.value(relayAccountCount))",
+            "snapshot_api_key_len=\(Self.value(snapshotAPIKeyLength))",
+            "vault_api_key_len=\(Self.value(vaultAPIKeyLength))",
+            "hydrated_from_vault=\(Self.value(hydratedFromVault))",
+            "request_api_key_len=\(Self.value(requestAPIKeyLength))",
+            "request_api_key_data_len=\(Self.value(requestAPIKeyDataLength))",
+            "preserve_official_auth=\(Self.value(preserveOfficialAuth))",
+            "switch_without_launching=\(Self.value(switchWithoutLaunching))",
+            "launch_target=\(Self.value(launchTarget?.rawValue))",
+            "selected_auth_method=\(Self.value(selectedAuthMethod))",
+            "store_type=\(Self.value(storeType))",
+            "error_stage=\(Self.value(errorStage))",
+            "error_description=\(Self.value(errorDescription))"
+        ].joined(separator: "\n")
+    }
+
+    private static func value(_ value: String?) -> String {
+        guard let value, !value.isEmpty else { return "nil" }
+        return value.replacingOccurrences(of: "\n", with: "\\n")
+    }
+
+    private static func value(_ value: Int?) -> String {
+        value.map(String.init) ?? "nil"
+    }
+
+    private static func value(_ value: Bool?) -> String {
+        value.map { $0 ? "true" : "false" } ?? "nil"
+    }
+}
+
 struct PoolDashboardRelayAccountCoordinator {
     typealias AppRelauncher = @MainActor (
         _ launchTarget: CodexLaunchTarget
@@ -133,13 +230,20 @@ struct PoolDashboardRelayAccountCoordinator {
         switchWithoutLaunching: Bool = false,
         preserveOfficialAuth: Bool = false,
         launchTarget: CodexLaunchTarget = .auto,
+        diagnosticLog: String? = nil,
         viewState: PoolDashboardViewState
     ) async -> SwitchOutput {
         var nextViewState = viewState
-        var logLines = [L10n.text("relay.switch.start_format", request.accountName)]
+        var logLines = [String]()
+        if let diagnosticLog,
+           !diagnosticLog.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            logLines.append(diagnosticLog)
+        }
+        logLines.append(L10n.text("relay.switch.start_format", request.accountName))
 
         do {
             let provider = request.provider
+            logLines.append("Relay switch request: api_key_data_len=\(request.apiKeyData.count)")
 
             if preserveOfficialAuth {
                 try enhancedConfigApplier(provider, request.apiKey)

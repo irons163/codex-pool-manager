@@ -13,6 +13,7 @@
 - 加強中轉 API key 帳號切換流程，會先快照帳號、provider 與 API key 資料，再進入非同步切換流程。此修正針對 v1.0.13 release 版觀察到的 crash。
 - 修正 release 版切換中轉帳號時仍可能 crash 的問題；現在會把已準備好的 API key bytes 傳入 Codex CLI 登入流程，不再於非同步登入 closure 內重新 trim API key 字串。
 - 將中轉 API key 表單可新增狀態移出 SwiftUI body 計算，避免畫面更新時重複進行字串 trim。
+- 新增不含敏感資訊的中轉切換診斷日誌，只記錄帳號 ID、token 長度與切換階段，不保存 API key 值，方便精準定位 release 版才出現的「明明有 key 卻誤報缺少」問題。
 
 ## 注意事項
 

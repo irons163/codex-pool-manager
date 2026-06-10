@@ -475,6 +475,54 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
+    func relaySwitchDiagnosticRedactsAPIKeyValues() throws {
+        let accountID = UUID()
+        let account = AgentAccount(
+            id: accountID,
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-secret-token",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account)
+
+        let diagnostic = RelaySwitchDiagnostic(
+            stage: "prepared",
+            accountID: accountID,
+            account: account,
+            stateAccountCount: 3,
+            relayAccountCount: 1,
+            snapshotAPIKeyLength: account.apiToken.count,
+            vaultAPIKeyLength: "sk-vault-token".count,
+            hydratedFromVault: false,
+            requestAPIKeyLength: request.apiKey.count,
+            requestAPIKeyDataLength: request.apiKeyData.count,
+            preserveOfficialAuth: true,
+            switchWithoutLaunching: false,
+            launchTarget: .codex,
+            selectedAuthMethod: "relayAPIKey",
+            storeType: "UserDefaultsAccountPoolStore"
+        )
+        let rendered = diagnostic.renderedLog()
+
+        #expect(rendered.contains("Relay switch diagnostic"))
+        #expect(rendered.contains("stage=prepared"))
+        #expect(rendered.contains("account_id=\(accountID.uuidString)"))
+        #expect(rendered.contains("credential_type=relay_api_key"))
+        #expect(rendered.contains("snapshot_api_key_len=15"))
+        #expect(rendered.contains("vault_api_key_len=14"))
+        #expect(rendered.contains("request_api_key_data_len=15"))
+        #expect(!rendered.contains("sk-secret-token"))
+        #expect(!rendered.contains("sk-vault-token"))
+    }
+
+    @Test
     func relayCoordinatorSwitchesByApplyingConfigThenLoggingIn() async throws {
         let events = LockedValue<[String]>([])
         let coordinator = PoolDashboardRelayAccountCoordinator(
@@ -513,6 +561,40 @@ struct RelayAccountCoordinatorTests {
         #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains("mirror"))
+    }
+
+    @Test
+    func relayCoordinatorKeepsDiagnosticPrefixInSwitchLog() async throws {
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLogin: { _ in },
+            appRelauncher: { _ in true }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
+            switchWithoutLaunching: true,
+            diagnosticLog: "Relay switch diagnostic:\nrequest_api_key_data_len=8",
+            viewState: PoolDashboardViewState()
+        )
+
+        #expect(output.didSwitchAuth)
+        #expect(output.viewState.lastSwitchLaunchLog.contains("Relay switch diagnostic"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains("request_api_key_data_len=8"))
+        #expect(!output.viewState.lastSwitchLaunchLog.contains("sk-relay"))
     }
 
     @Test

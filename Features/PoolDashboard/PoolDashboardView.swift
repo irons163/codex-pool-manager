@@ -2481,18 +2481,26 @@ struct PoolDashboardView: View {
     @MainActor
     private func switchToRelayProvider(using accountID: UUID) async {
         let request: PoolDashboardRelayAccountCoordinator.SwitchRequest
+        let stateAccountCount = state.accounts.count
+        let relayAccountCount = state.accounts.filter(\.isRelayAPIKeyAccount).count
+        let fallbackAPIKey = store.apiToken(for: accountID)
+        let initialAccount = state.accounts.first(where: { $0.id == accountID })
+        let initialSnapshotAPIKeyLength = relayDiagnosticTokenLength(initialAccount?.apiToken)
+        let vaultAPIKeyLength = relayDiagnosticTokenLength(fallbackAPIKey)
+        var hydratedFromVault = false
+        var diagnosticLog = ""
         var requestAccountName = L10n.text("account.unknown")
         do {
             request = try {
-                let fallbackAPIKey = store.apiToken(for: accountID)
                 if state.accounts
                     .first(where: { $0.id == accountID })?
                     .apiToken
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .isEmpty == true {
-                    if !state.hydrateMissingAPIToken(for: accountID, token: fallbackAPIKey),
+                    hydratedFromVault = state.hydrateMissingAPIToken(for: accountID, token: fallbackAPIKey)
+                    if !hydratedFromVault,
                        let loadedSnapshot = store.load() {
-                        state.hydrateMissingAPITokens(from: loadedSnapshot)
+                        hydratedFromVault = state.hydrateMissingAPITokens(from: loadedSnapshot)
                     }
                 }
                 guard let account = state.accounts.first(where: { $0.id == accountID }) else {
@@ -2504,10 +2512,47 @@ struct PoolDashboardView: View {
                     fallbackAPIKey: fallbackAPIKey
                 )
             }()
+            diagnosticLog = RelaySwitchDiagnostic(
+                stage: "prepared",
+                accountID: accountID,
+                account: state.accounts.first(where: { $0.id == accountID }),
+                stateAccountCount: stateAccountCount,
+                relayAccountCount: relayAccountCount,
+                snapshotAPIKeyLength: initialSnapshotAPIKeyLength,
+                vaultAPIKeyLength: vaultAPIKeyLength,
+                hydratedFromVault: hydratedFromVault,
+                requestAPIKeyLength: request.apiKey.count,
+                requestAPIKeyDataLength: request.apiKeyData.count,
+                preserveOfficialAuth: relayPreserveOfficialAuth,
+                switchWithoutLaunching: state.switchWithoutLaunching,
+                launchTarget: selectedLaunchTarget,
+                selectedAuthMethod: selectedAuthMethodRaw,
+                storeType: String(describing: type(of: store))
+            ).renderedLog()
         } catch {
+            diagnosticLog = RelaySwitchDiagnostic(
+                stage: "prepare_failed",
+                accountID: accountID,
+                account: state.accounts.first(where: { $0.id == accountID }) ?? initialAccount,
+                stateAccountCount: stateAccountCount,
+                relayAccountCount: relayAccountCount,
+                snapshotAPIKeyLength: initialSnapshotAPIKeyLength,
+                vaultAPIKeyLength: vaultAPIKeyLength,
+                hydratedFromVault: hydratedFromVault,
+                requestAPIKeyLength: nil,
+                requestAPIKeyDataLength: nil,
+                preserveOfficialAuth: relayPreserveOfficialAuth,
+                switchWithoutLaunching: state.switchWithoutLaunching,
+                launchTarget: selectedLaunchTarget,
+                selectedAuthMethod: selectedAuthMethodRaw,
+                storeType: String(describing: type(of: store)),
+                errorStage: "switch_request",
+                errorDescription: error.localizedDescription
+            ).renderedLog()
             viewState.switchLaunchError = error.localizedDescription
             viewState.switchLaunchWarning = nil
             viewState.lastSwitchLaunchLog = [
+                diagnosticLog,
                 L10n.text("relay.switch.start_format", requestAccountName),
                 L10n.text("relay.switch.failed_format", error.localizedDescription)
             ].joined(separator: "\n")
@@ -2525,6 +2570,7 @@ struct PoolDashboardView: View {
             switchWithoutLaunching: state.switchWithoutLaunching,
             preserveOfficialAuth: relayPreserveOfficialAuth,
             launchTarget: selectedLaunchTarget,
+            diagnosticLog: diagnosticLog,
             viewState: viewState
         )
         viewState = output.viewState
@@ -2548,6 +2594,10 @@ struct PoolDashboardView: View {
                 minInterval: 120
             )
         }
+    }
+
+    private func relayDiagnosticTokenLength(_ token: String?) -> Int {
+        token?.trimmingCharacters(in: .whitespacesAndNewlines).count ?? 0
     }
 
     // MARK: - Special Reset Watch
