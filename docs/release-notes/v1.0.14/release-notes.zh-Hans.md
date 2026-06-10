@@ -4,6 +4,7 @@
 
 ## 修复
 
+- 中转 API key 登录的正式路径不再经过 async 依赖注入 closure，避免 release 版把已验证的 request key 传到 login service 时变成空 Data。
 - 新增更深入的中转 API key auth 诊断，会记录 App 版本/build、login service 实际收到的长度，以及不含 API key 值的 auth.json 写入阶段。
 - 切换中转账号时会把 token vault 中的 API key 直接传入切换 request，避免 SwiftUI 状态尚未回写或已脱敏时，把既有 key 误判为缺少 API key。
 - 新增中转 API key 账号时会立即把 key 写入 token vault,因此刚新增完就马上切换,不会再误报「需要 API key」。

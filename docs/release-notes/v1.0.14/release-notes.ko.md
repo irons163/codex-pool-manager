@@ -4,6 +4,7 @@
 
 ## 수정 사항
 
+- 릴레이 API key 로그인의 프로덕션 경로에서 async 의존성 주입 클로저를 우회하여, Release 빌드에서 빈 Data 대신 이미 검증된 request key가 login service에 전달되도록 했습니다.
 - relay API key auth 진단을 강화해 API key 값을 노출하지 않고 App 버전/build, login service 입력 길이, auth.json 쓰기 단계를 기록합니다.
 - relay 계정으로 전환할 때 token vault의 API key를 switch request에 직접 전달합니다. SwiftUI 상태가 아직 반영되지 않았거나 redacted 상태여도 기존 key를 누락으로 잘못 판단하지 않습니다.
 - 릴레이 API 키 계정은 추가 시 키를 토큰 보관소에 즉시 저장합니다. 따라서 계정을 만든 직후 전환해도 "API 키 필요" 오류로 실패하지 않습니다.

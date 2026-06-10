@@ -168,7 +168,8 @@ struct PoolDashboardRelayAccountCoordinator {
 
     private let configApplier: (CodexProviderConfig) throws -> Void
     private let enhancedConfigApplier: EnhancedConfigApplier
-    private let apiKeyLogin: APIKeyLogin
+    private let apiKeyLogin: APIKeyLogin?
+    private let apiKeyLoginService: CodexAPIKeyLoginService
     private let appRelauncher: AppRelauncher
 
     init(
@@ -176,12 +177,14 @@ struct PoolDashboardRelayAccountCoordinator {
         enhancedConfigApplier: @escaping EnhancedConfigApplier = { provider, apiKey in
             try CodexProviderConfigService().applyPreservingOfficialAuth(provider, apiKey: apiKey)
         },
-        apiKeyLogin: @escaping APIKeyLogin = { try await CodexAPIKeyLoginService().login(trimmedAPIKeyData: $0) },
+        apiKeyLogin: APIKeyLogin? = nil,
+        apiKeyLoginService: CodexAPIKeyLoginService = CodexAPIKeyLoginService(),
         appRelauncher: @escaping AppRelauncher = Self.defaultAppRelauncher
     ) {
         self.configApplier = configApplier
         self.enhancedConfigApplier = enhancedConfigApplier
         self.apiKeyLogin = apiKeyLogin
+        self.apiKeyLoginService = apiKeyLoginService
         self.appRelauncher = appRelauncher
     }
 
@@ -262,7 +265,12 @@ struct PoolDashboardRelayAccountCoordinator {
             if preserveOfficialAuth {
                 logLines.append(L10n.text("relay.switch.preserve_official_auth_enabled"))
             }
-            let loginDiagnostic = try await apiKeyLogin(request.apiKeyData)
+            let loginDiagnostic: String
+            if let apiKeyLogin {
+                loginDiagnostic = try await apiKeyLogin(request.apiKeyData)
+            } else {
+                loginDiagnostic = try await apiKeyLoginService.login(apiKey: request.apiKey)
+            }
             if !loginDiagnostic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 logLines.append(loginDiagnostic)
             }

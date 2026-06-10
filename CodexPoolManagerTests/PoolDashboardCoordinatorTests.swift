@@ -570,6 +570,49 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
+    func relayCoordinatorDefaultLoginWritesRequestAPIKey() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("relay-coordinator-default-login-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLoginService: CodexAPIKeyLoginService(authFileURLProvider: { authURL }),
+            appRelauncher: { _ in true }
+        )
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+
+        let output = await coordinator.switchToRelayAccount(
+            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
+            switchWithoutLaunching: true,
+            viewState: PoolDashboardViewState()
+        )
+
+        let data = try Data(contentsOf: authURL)
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(output.didSwitchAuth)
+        #expect(object["auth_mode"] as? String == "apikey")
+        #expect(object["OPENAI_API_KEY"] as? String == "sk-relay")
+        #expect(output.viewState.lastSwitchLaunchLog.contains("Relay API key auth diagnostic:"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains("auth_write_stage=written"))
+        #expect(output.viewState.lastSwitchLaunchLog.contains("api_key_data_len=8"))
+        #expect(!output.viewState.lastSwitchLaunchLog.contains("sk-relay"))
+    }
+
+    @Test
     func relayCoordinatorKeepsDiagnosticPrefixInSwitchLog() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },

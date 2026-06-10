@@ -4,6 +4,7 @@ Fecha de publicación: 2026-06-10
 
 ## Correcciones
 
+- Se evita el cierre async de inyección de dependencias de producción para el inicio de sesión con API key de relay, de modo que el servicio recibe la clave ya validada en lugar de un Data vacío en builds release.
 - Se añadieron diagnósticos más profundos para la auth relay API key: versión/build de la app, longitudes recibidas por el login service y etapas sanitizadas de escritura de auth.json, sin exponer valores de API key.
 - Ahora se pasa la API key del token vault directamente al request de cambio de cuenta relay, evitando que un estado SwiftUI obsoleto o redactado haga parecer faltante una key existente.
 - Las cuentas con clave de API de relay ahora guardan su clave en el almacén de tokens inmediatamente al añadirlas, de modo que cambiar a una cuenta de relay recién creada ya no falla con un error de «falta la clave de API».

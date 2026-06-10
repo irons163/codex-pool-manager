@@ -4,6 +4,7 @@
 
 ## 修正
 
+- 中継 API key ログインの本番経路で async 依存注入クロージャを経由しないようにし、Release ビルドで空の Data ではなく検証済みの request key が login service に届くようにしました。
 - リレー API key auth の診断を強化し、API key の値を出さずに App バージョン/build、login service が受け取った長さ、auth.json 書き込み段階を記録します。
 - リレーアカウントへ切り替える際、token vault の API key を切り替え request に直接渡すようにしました。SwiftUI の状態がまだ反映されていない、またはマスク済みの場合でも、既存の key を欠落と誤判定しません。
 - リレー API キーのアカウントは追加時にキーを即座にトークン保管庫へ保存するようになりました。作成直後に切り替えても「API キーが必要です」エラーで失敗しなくなります。

@@ -4,6 +4,7 @@ Release date: 2026-06-10
 
 ## Fixes
 
+- Bypassed the production async dependency-injection closure for relay API key login, so the login service receives the already validated request key instead of an empty Data value in release builds.
 - Added deeper relay API key auth diagnostics that record app version/build, login-service input lengths, and sanitized auth.json write stages without exposing API key values.
 - Passed the token-vault API key directly into relay switch requests, so stale or redacted SwiftUI state can no longer make an existing relay key look missing.
 - Relay API key accounts now write their key to the token vault immediately when added, so switching to a relay account right after creating it no longer fails with a "missing API key" error.

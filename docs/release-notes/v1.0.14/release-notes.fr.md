@@ -4,6 +4,7 @@ Date de publication : 2026-06-10
 
 ## Corrections
 
+- Le chemin de production contourne maintenant la closure async d'injection de dépendance pour la connexion par clé API de relais, afin que le service reçoive la clé déjà validée plutôt qu'une valeur Data vide en build Release.
 - Diagnostic renforcé pour l'authentification relay API key : version/build de l'app, longueurs reçues par le login service et étapes d'écriture auth.json, sans exposer la valeur de l'API key.
 - La clé d'API du token vault est désormais transmise directement à la requête de changement de compte relais, afin qu'un état SwiftUI obsolète ou masqué ne fasse plus passer une clé existante pour manquante.
 - Les comptes à clé d'API relais enregistrent désormais leur clé dans le coffre de jetons dès l'ajout, de sorte que basculer vers un compte relais juste après l'avoir créé n'échoue plus avec une erreur « clé d'API manquante ».
