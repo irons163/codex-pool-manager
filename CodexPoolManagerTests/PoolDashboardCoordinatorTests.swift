@@ -748,6 +748,70 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
+    func relayAccountCanSwitchImmediatelyAfterAddAndRedactedStoreRoundTrip() async throws {
+        let suiteName = "RelayImmediateSwitch.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("relay-immediate-switch-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let apiKey = "relay-key-\(UUID().uuidString)"
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let coordinator = PoolDashboardRelayAccountCoordinator(
+            configApplier: { _ in },
+            apiKeyLoginService: CodexAPIKeyLoginService(authFileURLProvider: { authURL }),
+            appRelauncher: { _ in true }
+        )
+
+        let addOutput = await coordinator.addRelayAccount(
+            to: AccountPoolState(accounts: [], mode: .manual),
+            viewState: PoolDashboardViewState(),
+            name: "Mirror",
+            providerID: "mirror",
+            providerName: "mirror",
+            baseURL: "https://ai.liaryai.com/api/codex",
+            wireAPI: "responses",
+            apiKey: apiKey
+        )
+        store.save(addOutput.state.snapshot)
+        let rawData = try #require(defaults.data(forKey: "snapshot"))
+        let rawJSON = String(data: rawData, encoding: .utf8) ?? ""
+        let redactedSnapshot = try JSONDecoder().decode(AccountPoolSnapshot.self, from: rawData)
+        let redactedAccount = try #require(redactedSnapshot.accounts.first)
+        let fallbackAPIKey = store.apiToken(for: redactedAccount.id)
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(
+            account: redactedAccount,
+            fallbackAPIKey: fallbackAPIKey
+        )
+        let output = await coordinator.switchToRelayAccount(
+            request,
+            switchWithoutLaunching: true,
+            viewState: PoolDashboardViewState()
+        )
+
+        let authData = try Data(contentsOf: authURL)
+        let authObject = try #require(JSONSerialization.jsonObject(with: authData) as? [String: Any])
+        let wroteExpectedAPIKey = authObject["OPENAI_API_KEY"] as? String == apiKey
+        let log = output.viewState.lastSwitchLaunchLog
+        #expect(addOutput.viewState.relayError == nil)
+        #expect(redactedAccount.apiToken.isEmpty)
+        #expect(!rawJSON.contains(apiKey))
+        #expect(fallbackAPIKey?.count == apiKey.count)
+        #expect(output.didSwitchAuth)
+        #expect(wroteExpectedAPIKey)
+        #expect(log.contains("api_key_data_len=\(apiKey.count)"))
+        #expect(!log.contains(apiKey))
+    }
+
+    @Test
     func relayCoordinatorKeepsDiagnosticPrefixInSwitchLog() async throws {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
