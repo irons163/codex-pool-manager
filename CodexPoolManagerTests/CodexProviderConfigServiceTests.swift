@@ -201,6 +201,53 @@ struct CodexProviderConfigServiceTests {
     }
 
     @Test
+    func configServiceApplyAndResetDoNotMutateOAuthAuthJSON() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-provider-auth-isolation-\(UUID().uuidString)", isDirectory: true)
+        let configURL = directory.appendingPathComponent("config.toml")
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try """
+        model = "gpt-5.1-codex"
+        """.write(to: configURL, atomically: true, encoding: .utf8)
+        try """
+        {
+          "auth_mode": "chatgpt",
+          "tokens": {
+            "access_token": "oauth-access-token",
+            "refresh_token": "oauth-refresh-token"
+          },
+          "last_refresh_at": 1800000000
+        }
+        """.write(to: authURL, atomically: true, encoding: .utf8)
+        let provider = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://ai.liaryai.com/api/codex",
+            wireAPI: "responses",
+            requiresOpenAIAuth: true
+        )
+        let service = CodexProviderConfigService(configURLProvider: { configURL })
+
+        try service.apply(provider)
+        try service.applyPreservingOfficialAuth(provider, apiKey: "relay-key-\(UUID().uuidString)")
+        try service.resetToDefaultModelProvider()
+
+        let authData = try Data(contentsOf: authURL)
+        let authObject = try #require(JSONSerialization.jsonObject(with: authData) as? [String: Any])
+        let tokens = try #require(authObject["tokens"] as? [String: Any])
+        let authText = String(data: authData, encoding: .utf8) ?? ""
+        #expect(authObject["auth_mode"] as? String == "chatgpt")
+        #expect(tokens.keys.contains("access_token"))
+        #expect(tokens.keys.contains("refresh_token"))
+        #expect((tokens["access_token"] as? String)?.isEmpty == false)
+        #expect((tokens["refresh_token"] as? String)?.isEmpty == false)
+        #expect(authObject["last_refresh_at"] as? Int == 1_800_000_000)
+        #expect(!authText.contains("OPENAI_API_KEY"))
+    }
+
+    @Test
     func providerConfigRejectsInvalidProviderID() {
         #expect(throws: CodexProviderConfigError.invalidProviderID) {
             _ = try CodexProviderConfig(

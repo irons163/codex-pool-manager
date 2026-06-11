@@ -533,7 +533,7 @@ struct RelayAccountCoordinatorTests {
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
             apiKeyLogin: { apiKeyData in
                 let apiKey = String(decoding: apiKeyData, as: UTF8.self)
-                events.withLock { $0.append("login:\(apiKey)") }
+                events.withLock { $0.append("login:api_key_len=\(apiKey.count)") }
                 return "test_login_diagnostic=ok"
             },
             appRelauncher: { launchTarget in
@@ -562,7 +562,7 @@ struct RelayAccountCoordinatorTests {
             viewState: PoolDashboardViewState()
         )
 
-        #expect(events.value == ["config:mirror", "login:sk-relay", "launch:codex"])
+        #expect(events.value == ["config:mirror", "login:api_key_len=8", "launch:codex"])
         #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains("mirror"))
@@ -570,12 +570,13 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
-    func relayCoordinatorDefaultLoginWritesRequestAPIKey() async throws {
+    func relayCoordinatorDefaultLoginWritesRequestAPIKeyAndSanitizedDiagnostics() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("relay-coordinator-default-login-\(UUID().uuidString)", isDirectory: true)
         let authURL = directory.appendingPathComponent("auth.json")
         defer { try? FileManager.default.removeItem(at: directory) }
 
+        let apiKey = "relay-key-\(UUID().uuidString)"
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { _ in },
             apiKeyLoginService: CodexAPIKeyLoginService(authFileURLProvider: { authURL }),
@@ -586,7 +587,7 @@ struct RelayAccountCoordinatorTests {
             name: "Mirror",
             usedUnits: 0,
             quota: 100,
-            apiToken: "sk-relay",
+            apiToken: apiKey,
             credentialType: .relayAPIKey,
             relayProviderID: "mirror",
             relayProviderName: "mirror",
@@ -594,22 +595,156 @@ struct RelayAccountCoordinatorTests {
             relayWireAPI: "responses",
             relayRequiresOpenAIAuth: true
         )
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account)
+        let diagnostic = RelaySwitchDiagnostic(
+            stage: "prepared",
+            accountID: account.id,
+            account: account,
+            requestAPIKeyLength: request.apiKey.count,
+            requestAPIKeyDataLength: request.apiKeyData.count
+        ).renderedLog()
 
         let output = await coordinator.switchToRelayAccount(
-            try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
+            request,
             switchWithoutLaunching: true,
+            diagnosticLog: diagnostic,
             viewState: PoolDashboardViewState()
         )
 
         let data = try Data(contentsOf: authURL)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let wroteExpectedAPIKey = object["OPENAI_API_KEY"] as? String == apiKey
+        let log = output.viewState.lastSwitchLaunchLog
         #expect(output.didSwitchAuth)
         #expect(object["auth_mode"] as? String == "apikey")
-        #expect(object["OPENAI_API_KEY"] as? String == "sk-relay")
-        #expect(output.viewState.lastSwitchLaunchLog.contains("Relay API key auth diagnostic:"))
-        #expect(output.viewState.lastSwitchLaunchLog.contains("auth_write_stage=written"))
-        #expect(output.viewState.lastSwitchLaunchLog.contains("api_key_data_len=8"))
-        #expect(!output.viewState.lastSwitchLaunchLog.contains("sk-relay"))
+        #expect(wroteExpectedAPIKey)
+        #expect(log.contains("Relay switch diagnostic:"))
+        #expect(log.contains("request_api_key_len=\(apiKey.count)"))
+        #expect(log.contains("request_api_key_data_len=\(apiKey.count)"))
+        #expect(log.contains("Relay API key auth diagnostic:"))
+        #expect(log.contains("auth_write_stage=written"))
+        #expect(log.contains("api_key_data_len=\(apiKey.count)"))
+        #expect(log.contains("trimmed_api_key_len=\(apiKey.count)"))
+        #expect(!log.contains(apiKey))
+    }
+
+    @Test
+    func relayCoordinatorDefaultLoginPreservesAPIKeyAcrossOfficialAuthModes() async throws {
+        for preserveOfficialAuth in [false, true] {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("relay-coordinator-preserve-\(preserveOfficialAuth)-\(UUID().uuidString)", isDirectory: true)
+            let authURL = directory.appendingPathComponent("auth.json")
+            defer { try? FileManager.default.removeItem(at: directory) }
+
+            let apiKey = "relay-key-\(UUID().uuidString)"
+            let events = LockedValue<[String]>([])
+            let coordinator = PoolDashboardRelayAccountCoordinator(
+                configApplier: { provider in
+                    events.withLock { $0.append("config:\(provider.providerID)") }
+                },
+                enhancedConfigApplier: { provider, apiKey in
+                    events.withLock { $0.append("enhanced:\(provider.providerID):api_key_len=\(apiKey.count)") }
+                },
+                apiKeyLoginService: CodexAPIKeyLoginService(authFileURLProvider: { authURL }),
+                appRelauncher: { _ in true }
+            )
+            let account = AgentAccount(
+                id: UUID(),
+                name: "Mirror",
+                usedUnits: 0,
+                quota: 100,
+                apiToken: apiKey,
+                credentialType: .relayAPIKey,
+                relayProviderID: "mirror",
+                relayProviderName: "mirror",
+                relayBaseURL: "https://ai.liaryai.com/api/codex",
+                relayWireAPI: "responses",
+                relayRequiresOpenAIAuth: true
+            )
+
+            let output = await coordinator.switchToRelayAccount(
+                try PoolDashboardRelayAccountCoordinator.SwitchRequest(account: account),
+                switchWithoutLaunching: true,
+                preserveOfficialAuth: preserveOfficialAuth,
+                viewState: PoolDashboardViewState()
+            )
+
+            let data = try Data(contentsOf: authURL)
+            let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let wroteExpectedAPIKey = object["OPENAI_API_KEY"] as? String == apiKey
+            #expect(output.didSwitchAuth)
+            #expect(wroteExpectedAPIKey)
+            #expect(object["auth_mode"] as? String == "apikey")
+            #expect(!output.viewState.lastSwitchLaunchLog.contains(apiKey))
+            if preserveOfficialAuth {
+                #expect(events.value == ["enhanced:mirror:api_key_len=\(apiKey.count)"])
+            } else {
+                #expect(events.value == ["config:mirror"])
+            }
+        }
+    }
+
+    @Test
+    func relaySwitchRequestUsesVaultFallbackFromRedactedStoredSnapshot() throws {
+        let suiteName = "RelaySwitchRequestFallback.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let accountID = UUID()
+        let apiKey = "relay-key-\(UUID().uuidString)"
+        let vault = InMemoryAccountTokenVault()
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Mirror",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: apiKey,
+                    credentialType: .relayAPIKey,
+                    relayProviderID: "mirror",
+                    relayProviderName: "mirror",
+                    relayBaseURL: "https://ai.liaryai.com/api/codex",
+                    relayWireAPI: "responses",
+                    relayRequiresOpenAIAuth: true
+                )
+            ],
+            groups: [],
+            activities: [],
+            mode: .manual,
+            activeAccountID: accountID,
+            manualAccountID: accountID,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+        let rawData = try #require(defaults.data(forKey: "snapshot"))
+        let rawJSON = String(data: rawData, encoding: .utf8) ?? ""
+        let redactedSnapshot = try JSONDecoder().decode(AccountPoolSnapshot.self, from: rawData)
+        let redactedAccount = try #require(redactedSnapshot.accounts.first)
+        let fallbackAPIKey = store.apiToken(for: accountID)
+
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(
+            account: redactedAccount,
+            fallbackAPIKey: fallbackAPIKey
+        )
+        let requestMatchesVaultKey = request.apiKey == apiKey
+        let requestDataMatchesVaultKey = String(decoding: request.apiKeyData, as: UTF8.self) == apiKey
+
+        #expect(redactedAccount.apiToken.isEmpty)
+        #expect(!rawJSON.contains(apiKey))
+        #expect(fallbackAPIKey?.count == apiKey.count)
+        #expect(requestMatchesVaultKey)
+        #expect(requestDataMatchesVaultKey)
     }
 
     @Test
@@ -652,11 +787,11 @@ struct RelayAccountCoordinatorTests {
         let coordinator = PoolDashboardRelayAccountCoordinator(
             configApplier: { provider in events.withLock { $0.append("legacy:\(provider.providerID)") } },
             enhancedConfigApplier: { provider, apiKey in
-                events.withLock { $0.append("enhanced:\(provider.providerID):\(apiKey)") }
+                events.withLock { $0.append("enhanced:\(provider.providerID):api_key_len=\(apiKey.count)") }
             },
             apiKeyLogin: { apiKeyData in
                 let apiKey = String(decoding: apiKeyData, as: UTF8.self)
-                events.withLock { $0.append("login:\(apiKey)") }
+                events.withLock { $0.append("login:api_key_len=\(apiKey.count)") }
                 return ""
             },
             appRelauncher: { launchTarget in
@@ -686,7 +821,7 @@ struct RelayAccountCoordinatorTests {
             viewState: PoolDashboardViewState()
         )
 
-        #expect(events.value == ["enhanced:mirror:sk-relay", "login:sk-relay", "launch:codex"])
+        #expect(events.value == ["enhanced:mirror:api_key_len=8", "login:api_key_len=8", "launch:codex"])
         #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("relay.switch.preserve_official_auth_enabled")))
@@ -699,7 +834,7 @@ struct RelayAccountCoordinatorTests {
             configApplier: { provider in events.withLock { $0.append("config:\(provider.providerID)") } },
             apiKeyLogin: { apiKeyData in
                 let apiKey = String(decoding: apiKeyData, as: UTF8.self)
-                events.withLock { $0.append("login:\(apiKey)") }
+                events.withLock { $0.append("login:api_key_len=\(apiKey.count)") }
                 return ""
             },
             appRelauncher: { _ in
@@ -728,7 +863,7 @@ struct RelayAccountCoordinatorTests {
             viewState: PoolDashboardViewState()
         )
 
-        #expect(events.value == ["config:mirror", "login:sk-relay"])
+        #expect(events.value == ["config:mirror", "login:api_key_len=8"])
         #expect(output.didSwitchAuth)
         #expect(output.viewState.switchLaunchError == nil)
         #expect(output.viewState.lastSwitchLaunchLog.contains(L10n.text("switch.service.log.launch_skipped_by_setting")))
