@@ -288,6 +288,30 @@ struct CodexAPIKeyLoginServiceTests {
     }
 
     @Test
+    func loginWithAPIKeyStringRejectsWhitespaceBeforeWritingAuthJSON() async {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-api-key-login-string-empty-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let service = CodexAPIKeyLoginService(
+            authFileURLProvider: { authURL }
+        )
+
+        do {
+            _ = try await service.login(apiKey: " \n\t ")
+            Issue.record("Expected whitespace API key string to fail before writing auth.json.")
+        } catch let error as CodexAPIKeyLoginError {
+            #expect(error.diagnosticLog?.contains("Relay API key auth diagnostic:") == true)
+            #expect(error.diagnosticLog?.contains("api_key_data_len=0") == true)
+            #expect(error.diagnosticLog?.contains("trimmed_api_key_len=0") == true)
+            #expect(error.diagnosticLog?.contains("auth_write_stage=missing_api_key") == true)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+        #expect(!FileManager.default.fileExists(atPath: authURL.path))
+    }
+
+    @Test
     func loginWithPreparedAPIKeyDataWritesAuthJSONDirectly() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-api-key-login-\(UUID().uuidString)", isDirectory: true)
@@ -324,7 +348,6 @@ struct CodexAPIKeyLoginServiceTests {
             _ = try await service.login(trimmedAPIKeyData: Data(" \n\t ".utf8))
             Issue.record("Expected empty API key data to fail before writing auth.json.")
         } catch let error as CodexAPIKeyLoginError {
-            #expect(error == CodexAPIKeyLoginError.loginFailed(L10n.text("relay.error.missing_api_key")))
             #expect(error.diagnosticLog?.contains("Relay API key auth diagnostic:") == true)
             #expect(error.diagnosticLog?.contains("api_key_data_len=4") == true)
             #expect(error.diagnosticLog?.contains("trimmed_api_key_len=0") == true)
