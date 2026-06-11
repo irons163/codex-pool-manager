@@ -475,6 +475,34 @@ struct RelayAccountCoordinatorTests {
     }
 
     @Test
+    func relaySwitchRequestUsesFallbackAPIKeyWhenAccountSnapshotTokenIsWhitespace() throws {
+        let account = AgentAccount(
+            id: UUID(),
+            name: "Mirror",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: " \n\t ",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://ai.liaryai.com/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true
+        )
+        let fallbackAPIKey = "relay-key-\(UUID().uuidString)"
+
+        let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(
+            account: account,
+            fallbackAPIKey: " \(fallbackAPIKey)\n"
+        )
+        let requestMatchesFallback = request.apiKey == fallbackAPIKey
+        let dataMatchesFallback = String(decoding: request.apiKeyData, as: UTF8.self) == fallbackAPIKey
+
+        #expect(requestMatchesFallback)
+        #expect(dataMatchesFallback)
+    }
+
+    @Test
     func relaySwitchDiagnosticRedactsAPIKeyValues() throws {
         let accountID = UUID()
         let account = AgentAccount(
