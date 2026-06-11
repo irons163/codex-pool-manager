@@ -263,6 +263,31 @@ struct CodexProviderConfigServiceTests {
 
 struct CodexAPIKeyLoginServiceTests {
     @Test
+    func loginWithAPIKeyStringWritesTrimmedAuthJSONAndSanitizedDiagnostic() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-api-key-login-string-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let service = CodexAPIKeyLoginService(
+            authFileURLProvider: { authURL }
+        )
+        let apiKey = "relay-key-\(UUID().uuidString)"
+
+        let diagnostic = try await service.login(apiKey: " \n\(apiKey)\t ")
+
+        let data = try Data(contentsOf: authURL)
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let wroteExpectedAPIKey = object["OPENAI_API_KEY"] as? String == apiKey
+        #expect(object["auth_mode"] as? String == "apikey")
+        #expect(wroteExpectedAPIKey)
+        #expect(diagnostic.contains("Relay API key auth diagnostic:"))
+        #expect(diagnostic.contains("api_key_data_len=\(apiKey.count)"))
+        #expect(diagnostic.contains("trimmed_api_key_len=\(apiKey.count)"))
+        #expect(diagnostic.contains("auth_write_stage=written"))
+        #expect(!diagnostic.contains(apiKey))
+    }
+
+    @Test
     func loginWithPreparedAPIKeyDataWritesAuthJSONDirectly() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-api-key-login-\(UUID().uuidString)", isDirectory: true)
