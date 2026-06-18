@@ -206,7 +206,7 @@ struct PoolDashboardView: View {
     }
 
     private static let codexAuthBookmarkKey = "codex_auth_json_bookmark"
-    private static let defaultOAuthClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+    private static let defaultOAuthClientID = OAuthClientConfiguration.defaultClientID
     private static let productionSnapshotKey = "account_pool_snapshot"
     private static let productionTokenKey = "account_pool_tokens"
     private static let developerSnapshotKey = "account_pool_snapshot_developer"
@@ -297,9 +297,9 @@ struct PoolDashboardView: View {
     }
     @AppStorage("oauth_issuer") private var oauthIssuer = "https://auth.openai.com"
     @AppStorage("oauth_client_id") private var oauthClientID = Self.defaultOAuthClientID
-    @AppStorage("oauth_scopes") private var oauthScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
-    @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = "http://localhost:1455/auth/callback"
-    @AppStorage("oauth_originator") private var oauthOriginator = "codex_cli_rs"
+    @AppStorage("oauth_scopes") private var oauthScopes = OAuthClientConfiguration.defaultScopes
+    @AppStorage("oauth_redirect_uri") private var oauthRedirectURI = OAuthClientConfiguration.defaultRedirectURI
+    @AppStorage("oauth_originator") private var oauthOriginator = OAuthClientConfiguration.defaultOriginator
     @AppStorage("oauth_workspace_id") private var oauthWorkspaceID = ""
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @AppStorage(AppAppearancePreference.storageKey) private var appAppearanceOverride = AppAppearancePreference.system.rawValue

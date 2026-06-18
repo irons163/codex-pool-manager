@@ -835,14 +835,16 @@ struct PoolDashboardAuthFlowCoordinatorCoverageTests {
         let context = try await coordinator.fetchLocalImportContext(
             decision: .importAccount(
                 name: "Imported",
-                accessToken: "token-local",
+                tokens: OAuthTokens(accessToken: "token-local", refreshToken: "refresh-local", idToken: "id-local"),
                 chatGPTAccountID: "acct-local"
             ),
             usageClient: usageFetcher
         )
 
         #expect(context.name == "Imported")
-        #expect(context.accessToken == "token-local")
+        #expect(context.tokens.accessToken == "token-local")
+        #expect(context.tokens.refreshToken == "refresh-local")
+        #expect(context.tokens.idToken == "id-local")
         #expect(context.chatGPTAccountID == "acct-local")
         #expect(context.usage.usedUnits == 44)
         #expect(usageFetcher.capturedRequests.value.first?.token == "token-local")
@@ -854,7 +856,7 @@ struct PoolDashboardAuthFlowCoordinatorCoverageTests {
         var state = AccountPoolState(accounts: [], mode: .manual)
         let context = PoolDashboardAuthFlowCoordinator.LocalImportContext(
             name: "local@example.com",
-            accessToken: "token-local",
+            tokens: OAuthTokens(accessToken: "token-local", refreshToken: "refresh-local", idToken: "id-local"),
             chatGPTAccountID: "acct-local",
             usage: CodexUsage(
                 usedUnits: 22,
@@ -869,6 +871,9 @@ struct PoolDashboardAuthFlowCoordinatorCoverageTests {
 
         #expect(state.accounts.count == 1)
         #expect(state.accounts[0].chatGPTAccountID == "acct-local")
+        #expect(state.accounts[0].apiToken == "token-local")
+        #expect(state.accounts[0].oauthRefreshToken == "refresh-local")
+        #expect(state.accounts[0].oauthIDToken == "id-local")
         #expect(state.accounts[0].usedUnits == 22)
         #expect(state.accounts[0].quota == 200)
     }

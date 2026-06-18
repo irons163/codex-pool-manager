@@ -8,6 +8,18 @@ import AppKit
 #endif
 
 struct OAuthClientConfiguration: Equatable, Codable {
+    static let defaultClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
+    static let defaultScopes = "openid profile email offline_access  api.connectors.read api.connectors.invoke"
+    static let defaultRedirectURI = "http://localhost:1455/auth/callback"
+    static let defaultOriginator = "codex_cli_rs"
+    static let codexDefault = OAuthClientConfiguration(
+        issuer: URL(string: "https://auth.openai.com")!,
+        clientID: defaultClientID,
+        scopes: defaultScopes,
+        redirectURI: defaultRedirectURI,
+        originator: defaultOriginator
+    )
+
     let issuer: URL
     let clientID: String
     let scopes: String
@@ -17,10 +29,10 @@ struct OAuthClientConfiguration: Equatable, Codable {
 
     init(
         issuer: URL,
-        clientID: String = "app_EMoamEEZ73f0CkXaXp7hrann",
+        clientID: String = Self.defaultClientID,
         scopes: String,
         redirectURI: String,
-        originator: String = "codex_cli_rs",
+        originator: String = Self.defaultOriginator,
         forcedWorkspaceID: String? = nil
     ) {
         self.issuer = issuer
@@ -124,6 +136,17 @@ enum OAuthTokenRequestBuilder {
         ])
     }
 
+    static func refreshTokenBody(
+        clientID: String,
+        refreshToken: String
+    ) -> Data {
+        formEncodedBody([
+            ("grant_type", "refresh_token"),
+            ("client_id", clientID),
+            ("refresh_token", refreshToken)
+        ])
+    }
+
     private static func formEncodedBody(_ pairs: [(String, String)]) -> Data {
         let form = pairs
             .map { "\($0.0)=\($0.1.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? "")" }
@@ -136,6 +159,58 @@ struct OAuthTokens: Equatable {
     let accessToken: String
     let refreshToken: String?
     let idToken: String?
+}
+
+protocol OAuthTokenRefreshing {
+    func refreshTokens(
+        refreshToken: String,
+        configuration: OAuthClientConfiguration
+    ) async throws -> OAuthTokens
+}
+
+struct OAuthTokenRefreshService: OAuthTokenRefreshing {
+    var session: URLSession = .shared
+
+    func refreshTokens(
+        refreshToken: String,
+        configuration: OAuthClientConfiguration
+    ) async throws -> OAuthTokens {
+        var request = URLRequest(url: configuration.tokenEndpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = OAuthTokenRequestBuilder.refreshTokenBody(
+            clientID: configuration.clientID,
+            refreshToken: refreshToken
+        )
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw OAuthLoginError.tokenExchangeFailed(L10n.text("oauth.error.invalid_response"))
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
+            throw OAuthLoginError.tokenExchangeFailed(String(message.prefix(200)))
+        }
+
+        let tokenResponse = try JSONDecoder().decode(TokenExchangeResponse.self, from: data)
+        return OAuthTokens(
+            accessToken: tokenResponse.accessToken,
+            refreshToken: tokenResponse.refreshToken,
+            idToken: tokenResponse.idToken
+        )
+    }
+
+    private struct TokenExchangeResponse: Decodable {
+        let accessToken: String
+        let refreshToken: String?
+        let idToken: String?
+
+        private enum CodingKeys: String, CodingKey {
+            case accessToken = "access_token"
+            case refreshToken = "refresh_token"
+            case idToken = "id_token"
+        }
+    }
 }
 
 struct OAuthManualSignInPreparation: Equatable {

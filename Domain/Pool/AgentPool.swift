@@ -33,6 +33,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var primaryUsageResetAt: Date?
     var secondaryUsagePercent: Int?
     var secondaryUsageResetAt: Date?
+    var oauthRefreshToken: String?
+    var oauthIDToken: String?
+    var oauthLastRefreshAt: Date?
     var isPaid: Bool
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
@@ -60,6 +63,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         primaryUsageResetAt: Date? = nil,
         secondaryUsagePercent: Int? = nil,
         secondaryUsageResetAt: Date? = nil,
+        oauthRefreshToken: String? = nil,
+        oauthIDToken: String? = nil,
+        oauthLastRefreshAt: Date? = nil,
         isPaid: Bool = false,
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
@@ -87,6 +93,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.primaryUsageResetAt = primaryUsageResetAt
         self.secondaryUsagePercent = secondaryUsagePercent
         self.secondaryUsageResetAt = secondaryUsageResetAt
+        self.oauthRefreshToken = oauthRefreshToken
+        self.oauthIDToken = oauthIDToken
+        self.oauthLastRefreshAt = oauthLastRefreshAt
         self.isPaid = isPaid
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
@@ -123,6 +132,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         primaryUsageResetAt = try container.decodeIfPresent(Date.self, forKey: .primaryUsageResetAt)
         secondaryUsagePercent = try container.decodeIfPresent(Int.self, forKey: .secondaryUsagePercent)
         secondaryUsageResetAt = try container.decodeIfPresent(Date.self, forKey: .secondaryUsageResetAt)
+        oauthRefreshToken = try container.decodeIfPresent(String.self, forKey: .oauthRefreshToken)
+        oauthIDToken = try container.decodeIfPresent(String.self, forKey: .oauthIDToken)
+        oauthLastRefreshAt = try container.decodeIfPresent(Date.self, forKey: .oauthLastRefreshAt)
         isPaid = try container.decodeIfPresent(Bool.self, forKey: .isPaid) ?? false
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
@@ -174,6 +186,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             primaryUsageResetAt: primaryUsageResetAt,
             secondaryUsagePercent: secondaryUsagePercent,
             secondaryUsageResetAt: secondaryUsageResetAt,
+            oauthRefreshToken: nil,
+            oauthIDToken: nil,
+            oauthLastRefreshAt: oauthLastRefreshAt,
             isPaid: isPaid,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
@@ -764,6 +779,9 @@ struct AccountPoolState {
         identityScope: String = AgentAccount.personalIdentityScope,
         usageWindowName: String? = nil,
         usageWindowResetAt: Date? = nil,
+        oauthRefreshToken: String? = nil,
+        oauthIDToken: String? = nil,
+        oauthLastRefreshAt: Date? = nil,
         now: Date = .now
     ) -> UUID {
         let normalizedQuota = max(1, quota)
@@ -786,7 +804,10 @@ struct AccountPoolState {
             chatGPTAccountID: chatGPTAccountID,
             identityScope: identityScope,
             usageWindowName: usageWindowName,
-            usageWindowResetAt: usageWindowResetAt
+            usageWindowResetAt: usageWindowResetAt,
+            oauthRefreshToken: oauthRefreshToken,
+            oauthIDToken: oauthIDToken,
+            oauthLastRefreshAt: oauthLastRefreshAt
         )
         accounts.append(account)
         appendActivity(String(format: L10n.text("activity.account_added_format"), account.name), now: now)
@@ -838,6 +859,9 @@ struct AccountPoolState {
         primaryUsageResetAt: Date? = nil,
         secondaryUsagePercent: Int? = nil,
         secondaryUsageResetAt: Date? = nil,
+        oauthRefreshToken: String? = nil,
+        oauthIDToken: String? = nil,
+        oauthLastRefreshAt: Date? = nil,
         isPaid: Bool? = nil,
         now: Date = .now,
         shouldEvaluate: Bool = true
@@ -905,6 +929,15 @@ struct AccountPoolState {
         if let secondaryUsageResetAt {
             accounts[index].secondaryUsageResetAt = secondaryUsageResetAt
         }
+        if let oauthRefreshToken {
+            accounts[index].oauthRefreshToken = oauthRefreshToken
+        }
+        if let oauthIDToken {
+            accounts[index].oauthIDToken = oauthIDToken
+        }
+        if let oauthLastRefreshAt {
+            accounts[index].oauthLastRefreshAt = oauthLastRefreshAt
+        }
         if let isPaid {
             accounts[index].isPaid = isPaid
         }
@@ -946,6 +979,9 @@ struct AccountPoolState {
             primaryUsageResetAt: source.primaryUsageResetAt,
             secondaryUsagePercent: source.secondaryUsagePercent,
             secondaryUsageResetAt: source.secondaryUsageResetAt,
+            oauthRefreshToken: source.oauthRefreshToken,
+            oauthIDToken: source.oauthIDToken,
+            oauthLastRefreshAt: source.oauthLastRefreshAt,
             isPaid: source.isPaid,
             isUsageSyncExcluded: source.isUsageSyncExcluded,
             usageSyncError: source.usageSyncError
@@ -999,6 +1035,12 @@ struct AccountPoolState {
             accounts[index].primaryUsageResetAt = synced.primaryUsageResetAt
             accounts[index].secondaryUsagePercent = synced.secondaryUsagePercent.map { min(max($0, 0), 100) }
             accounts[index].secondaryUsageResetAt = synced.secondaryUsageResetAt
+            if shouldAdoptSyncedOAuthCredential(current: accounts[index], synced: synced) {
+                accounts[index].apiToken = synced.apiToken
+                accounts[index].oauthRefreshToken = synced.oauthRefreshToken
+                accounts[index].oauthIDToken = synced.oauthIDToken
+                accounts[index].oauthLastRefreshAt = synced.oauthLastRefreshAt
+            }
             accounts[index].isPaid = synced.isPaid
             accounts[index].isUsageSyncExcluded = synced.isUsageSyncExcluded
             accounts[index].usageSyncError = synced.usageSyncError
@@ -1013,6 +1055,19 @@ struct AccountPoolState {
         if didUpdate {
             evaluate(now: now)
         }
+    }
+
+    private func shouldAdoptSyncedOAuthCredential(current: AgentAccount, synced: AgentAccount) -> Bool {
+        let syncedToken = synced.apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !syncedToken.isEmpty,
+              let syncedRefreshAt = synced.oauthLastRefreshAt
+        else {
+            return false
+        }
+        guard let currentRefreshAt = current.oauthLastRefreshAt else {
+            return true
+        }
+        return syncedRefreshAt > currentRefreshAt
     }
 
     @discardableResult

@@ -43,13 +43,23 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
             let accountID = snapshot.accounts[index].id
             let snapshotToken = snapshot.accounts[index].apiToken
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if let vaultToken = tokenVault.token(for: accountID)?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-               !vaultToken.isEmpty {
-                snapshot.accounts[index].apiToken = vaultToken
+            if let credential = tokenVault.oauthCredential(for: accountID),
+               !credential.accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                snapshot.accounts[index].apiToken = credential.accessToken
+                snapshot.accounts[index].oauthRefreshToken = credential.refreshToken
+                snapshot.accounts[index].oauthIDToken = credential.idToken
+                snapshot.accounts[index].oauthLastRefreshAt = credential.lastRefreshAt
             } else if !snapshotToken.isEmpty {
                 snapshot.accounts[index].apiToken = snapshotToken
-                tokenVault.setToken(snapshotToken, for: accountID)
+                tokenVault.setOAuthCredential(
+                    OAuthCredential(
+                        accessToken: snapshotToken,
+                        refreshToken: snapshot.accounts[index].oauthRefreshToken,
+                        idToken: snapshot.accounts[index].oauthIDToken,
+                        lastRefreshAt: snapshot.accounts[index].oauthLastRefreshAt
+                    ),
+                    for: accountID
+                )
             } else {
                 snapshot.accounts[index].apiToken = ""
             }
@@ -61,7 +71,15 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
         for account in snapshot.accounts {
             let normalizedToken = account.apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
             if !normalizedToken.isEmpty {
-                tokenVault.setToken(normalizedToken, for: account.id)
+                tokenVault.setOAuthCredential(
+                    OAuthCredential(
+                        accessToken: normalizedToken,
+                        refreshToken: account.oauthRefreshToken,
+                        idToken: account.oauthIDToken,
+                        lastRefreshAt: account.oauthLastRefreshAt
+                    ),
+                    for: account.id
+                )
             }
         }
         // Intentionally NOT pruning the vault here. `save` runs on every snapshot
@@ -79,7 +97,7 @@ struct UserDefaultsAccountPoolStore: AccountPoolStoring {
     }
 
     func apiToken(for accountID: UUID) -> String? {
-        if let vaultToken = tokenVault.token(for: accountID)?
+        if let vaultToken = tokenVault.oauthCredential(for: accountID)?.accessToken
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !vaultToken.isEmpty {
             return vaultToken

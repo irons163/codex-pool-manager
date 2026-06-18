@@ -2965,6 +2965,62 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func userDefaultsStorePreservesOAuthCredentialOutsideSnapshotPayload() throws {
+        let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Cannot create UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+        let vault = UserDefaultsAccountTokenVault(defaults: defaults, key: "tokens")
+        let store = UserDefaultsAccountPoolStore(defaults: defaults, key: "snapshot", tokenVault: vault)
+
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A2")!
+        let lastRefreshAt = Date(timeIntervalSince1970: 1_786_000_000)
+        let snapshot = AccountPoolSnapshot(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "OAuth",
+                    usedUnits: 10,
+                    quota: 1000,
+                    apiToken: "access-secret",
+                    chatGPTAccountID: "acct-oauth",
+                    oauthRefreshToken: "refresh-secret",
+                    oauthIDToken: "id-secret",
+                    oauthLastRefreshAt: lastRefreshAt
+                )
+            ],
+            activities: [],
+            mode: .manual,
+            activeAccountID: nil,
+            manualAccountID: nil,
+            focusLockedAccountID: nil,
+            minSwitchInterval: 300,
+            lowUsageThresholdRatio: 0.15,
+            minUsageRatioDeltaToSwitch: 0,
+            lastSwitchAt: nil
+        )
+
+        store.save(snapshot)
+        let rawData = try #require(defaults.data(forKey: "snapshot"))
+        let rawJSON = String(data: rawData, encoding: .utf8) ?? ""
+
+        #expect(!rawJSON.contains("access-secret"))
+        #expect(!rawJSON.contains("refresh-secret"))
+        #expect(!rawJSON.contains("id-secret"))
+
+        let loaded = try #require(store.load())
+        let account = try #require(loaded.accounts.first)
+        #expect(account.apiToken == "access-secret")
+        #expect(account.oauthRefreshToken == "refresh-secret")
+        #expect(account.oauthIDToken == "id-secret")
+        #expect(account.oauthLastRefreshAt == lastRefreshAt)
+        #expect(store.apiToken(for: accountID) == "access-secret")
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test
     func userDefaultsStoreCanResolveTokenDirectlyFromVault() throws {
         let suiteName = "CodexPoolManagerTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
@@ -3136,6 +3192,153 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].isUsageSyncExcluded)
         #expect(state.accounts[0].usageSyncError == CodexSyncError.unauthorized.localizedDescription)
+    }
+
+    @Test
+    func codexSyncRefreshesOAuthTokenAndRetriesUnauthorizedOnce() async throws {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 1000,
+                    apiToken: "expired-access-token",
+                    oauthRefreshToken: "old-refresh-token",
+                    oauthIDToken: "old-id-token"
+                )
+            ],
+            mode: .manual
+        )
+        state.updateAccount(accountID, chatGPTAccountID: "acct-a")
+
+        let usageRequests = LockedValue<[(token: String, accountID: String)]>([])
+        let usageResponses = LockedValue<[String: Result<CodexUsage, Error>]>([
+            "expired-access-token": .failure(CodexClientHTTPError(statusCode: 401)),
+            "fresh-access-token": .success(CodexUsage(usedUnits: 222, quota: 1000))
+        ])
+        let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        let usageClient = SequencedCodexUsageClient(
+            requests: usageRequests,
+            responses: usageResponses
+        )
+        let refreshClient = StubOAuthTokenRefreshClient(
+            requests: refreshRequests,
+            result: .success(
+                OAuthTokens(
+                    accessToken: "fresh-access-token",
+                    refreshToken: "new-refresh-token",
+                    idToken: "new-id-token"
+                )
+            )
+        )
+        let sync = CodexUsageSyncService(
+            client: usageClient,
+            oauthRefreshClient: refreshClient,
+            oauthConfiguration: .codexDefault
+        )
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+        try await sync.sync(state: &state, now: now)
+
+        #expect(usageRequests.value.map(\.token) == ["expired-access-token", "fresh-access-token"])
+        #expect(refreshRequests.value.map(\.refreshToken) == ["old-refresh-token"])
+        #expect(state.accounts[0].apiToken == "fresh-access-token")
+        #expect(state.accounts[0].oauthRefreshToken == "new-refresh-token")
+        #expect(state.accounts[0].oauthIDToken == "new-id-token")
+        #expect(state.accounts[0].oauthLastRefreshAt == now)
+        #expect(state.accounts[0].usedUnits == 222)
+        #expect(!state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == nil)
+    }
+
+    @Test
+    func mergeUsageSyncStatePreservesCurrentCredentialWhenSyncDidNotRefreshOAuthToken() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Current",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "current-access-token",
+                    oauthRefreshToken: "current-refresh-token",
+                    oauthIDToken: "current-id-token",
+                    oauthLastRefreshAt: Date(timeIntervalSince1970: 200)
+                )
+            ],
+            mode: .manual
+        )
+        let syncedState = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Sync Snapshot",
+                    usedUnits: 42,
+                    quota: 100,
+                    apiToken: "old-access-token",
+                    oauthRefreshToken: "old-refresh-token",
+                    oauthIDToken: "old-id-token",
+                    oauthLastRefreshAt: Date(timeIntervalSince1970: 100)
+                )
+            ],
+            mode: .manual
+        )
+
+        state.mergeUsageSyncState(from: syncedState)
+
+        let account = state.accounts[0]
+        #expect(account.usedUnits == 42)
+        #expect(account.apiToken == "current-access-token")
+        #expect(account.oauthRefreshToken == "current-refresh-token")
+        #expect(account.oauthIDToken == "current-id-token")
+        #expect(account.oauthLastRefreshAt == Date(timeIntervalSince1970: 200))
+    }
+
+    @Test
+    func mergeUsageSyncStateAdoptsCredentialWhenSyncRefreshedOAuthToken() {
+        let accountID = UUID()
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Current",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "expired-access-token",
+                    oauthRefreshToken: "old-refresh-token",
+                    oauthIDToken: "old-id-token",
+                    oauthLastRefreshAt: Date(timeIntervalSince1970: 100)
+                )
+            ],
+            mode: .manual
+        )
+        let syncedState = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Sync Snapshot",
+                    usedUnits: 42,
+                    quota: 100,
+                    apiToken: "fresh-access-token",
+                    oauthRefreshToken: "new-refresh-token",
+                    oauthIDToken: "new-id-token",
+                    oauthLastRefreshAt: Date(timeIntervalSince1970: 200)
+                )
+            ],
+            mode: .manual
+        )
+
+        state.mergeUsageSyncState(from: syncedState)
+
+        let account = state.accounts[0]
+        #expect(account.usedUnits == 42)
+        #expect(account.apiToken == "fresh-access-token")
+        #expect(account.oauthRefreshToken == "new-refresh-token")
+        #expect(account.oauthIDToken == "new-id-token")
+        #expect(account.oauthLastRefreshAt == Date(timeIntervalSince1970: 200))
     }
 
     @Test
@@ -3544,14 +3747,18 @@ struct CodexPoolManagerTests {
               "name": "Phil",
               "email": "phil@example.com",
               "account_id": "acct-phil",
-              "access_token": "sk-local-token-111111"
+              "access_token": "sk-local-token-111111",
+              "refresh_token": "refresh-phil",
+              "id_token": "id-phil"
             },
             {
               "session": {
                 "display_name": "Teammate",
                 "user_email": "team@example.com",
                 "account_id": "acct-team",
-                "accessToken": "sk-local-token-222222"
+                "accessToken": "sk-local-token-222222",
+                "refreshToken": "refresh-team",
+                "idToken": "id-team"
               }
             }
           ]
@@ -3565,6 +3772,10 @@ struct CodexPoolManagerTests {
         #expect(accounts[0].displayName == "Phil")
         #expect(accounts[1].email == "team@example.com")
         #expect(accounts[0].chatGPTAccountID == "acct-phil")
+        #expect(accounts[0].refreshToken == "refresh-phil")
+        #expect(accounts[0].idToken == "id-phil")
+        #expect(accounts[1].refreshToken == "refresh-team")
+        #expect(accounts[1].idToken == "id-team")
     }
 
     @Test
@@ -5733,7 +5944,11 @@ extension CodexPoolManagerTests {
             state: &state,
             usage: usage,
             fallbackName: "fallback",
-            accessToken: "token-new",
+            tokens: OAuthTokens(
+                accessToken: "token-new",
+                refreshToken: "refresh-new",
+                idToken: "id-new"
+            ),
             chatGPTAccountID: "acct-1"
         )
 
@@ -5741,6 +5956,8 @@ extension CodexPoolManagerTests {
         #expect(state.accounts[0].id == existingID)
         #expect(state.accounts[0].name == "new@example.com")
         #expect(state.accounts[0].apiToken == "token-new")
+        #expect(state.accounts[0].oauthRefreshToken == "refresh-new")
+        #expect(state.accounts[0].oauthIDToken == "id-new")
         #expect(state.accounts[0].usedUnits == 42)
         #expect(state.accounts[0].usageWindowName == "primary_window")
     }

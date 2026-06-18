@@ -61,6 +61,9 @@ struct PoolAccountUpsertCoordinator {
                 identityScope: resolvedIdentityScope,
                 usageWindowName: resolvedWindowName,
                 usageWindowResetAt: resolvedWindowResetAt,
+                oauthRefreshToken: tokens.refreshToken,
+                oauthIDToken: tokens.idToken,
+                oauthLastRefreshAt: now,
                 now: now
             )
             return L10n.text("auth.sign_in_success_updated")
@@ -77,6 +80,9 @@ struct PoolAccountUpsertCoordinator {
             identityScope: resolvedIdentityScope,
             usageWindowName: resolvedWindowName,
             usageWindowResetAt: resolvedWindowResetAt,
+            oauthRefreshToken: tokens.refreshToken,
+            oauthIDToken: tokens.idToken,
+            oauthLastRefreshAt: now,
             now: now
         )
         state.updateAccount(
@@ -96,7 +102,7 @@ struct PoolAccountUpsertCoordinator {
         state: inout AccountPoolState,
         usage: CodexUsage,
         fallbackName: String,
-        accessToken: String,
+        tokens: OAuthTokens,
         chatGPTAccountID: String,
         now: Date = .now
     ) {
@@ -108,7 +114,7 @@ struct PoolAccountUpsertCoordinator {
         let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
             in: state.accounts,
             chatGPTAccountID: resolvedAccountID,
-            accessToken: accessToken,
+            accessToken: tokens.accessToken,
             identityScope: resolvedIdentityScope
         )
 
@@ -118,12 +124,15 @@ struct PoolAccountUpsertCoordinator {
                 name: resolvedName,
                 quota: usage.quota,
                 usedUnits: usage.usedUnits,
-                apiToken: accessToken,
+                apiToken: tokens.accessToken,
                 email: normalizedEmail,
                 chatGPTAccountID: resolvedAccountID,
                 identityScope: resolvedIdentityScope,
                 usageWindowName: usage.usageWindowName,
                 usageWindowResetAt: usage.usageWindowResetAt,
+                oauthRefreshToken: tokens.refreshToken,
+                oauthIDToken: tokens.idToken,
+                oauthLastRefreshAt: now,
                 now: now
             )
             return
@@ -142,12 +151,15 @@ struct PoolAccountUpsertCoordinator {
         )
         state.updateAccount(
             newAccountID,
-            apiToken: accessToken,
+            apiToken: tokens.accessToken,
             email: normalizedEmail,
             chatGPTAccountID: resolvedAccountID,
             identityScope: resolvedIdentityScope,
             usageWindowName: usage.usageWindowName,
             usageWindowResetAt: usage.usageWindowResetAt,
+            oauthRefreshToken: tokens.refreshToken,
+            oauthIDToken: tokens.idToken,
+            oauthLastRefreshAt: now,
             now: now
         )
     }

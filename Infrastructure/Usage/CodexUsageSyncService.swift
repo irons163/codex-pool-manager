@@ -71,10 +71,19 @@ protocol CodexUsageClient {
 struct CodexUsageSyncService<Client: CodexUsageClient> {
     let client: Client
     let maxRetries: Int
+    let oauthRefreshClient: (any OAuthTokenRefreshing)?
+    let oauthConfiguration: OAuthClientConfiguration?
 
-    init(client: Client, maxRetries: Int = 0) {
+    init(
+        client: Client,
+        maxRetries: Int = 0,
+        oauthRefreshClient: (any OAuthTokenRefreshing)? = nil,
+        oauthConfiguration: OAuthClientConfiguration? = nil
+    ) {
         self.client = client
         self.maxRetries = max(0, maxRetries)
+        self.oauthRefreshClient = oauthRefreshClient
+        self.oauthConfiguration = oauthConfiguration
     }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
@@ -125,6 +134,48 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 throw CancellationError()
             } catch {
                 let mapped = mapSyncError(error)
+                if mapped == .unauthorized {
+                    do {
+                        if let refreshed = try await refreshOAuthTokenAndFetchUsageIfPossible(
+                            account: account,
+                            chatGPTAccountID: chatGPTAccountID,
+                            now: now
+                        ) {
+                            state.updateAccount(
+                                account.id,
+                                quota: refreshed.usage.quota,
+                                usedUnits: refreshed.usage.usedUnits,
+                                apiToken: refreshed.tokens.accessToken,
+                                email: refreshed.usage.accountEmail,
+                                chatGPTAccountID: refreshed.usage.accountID ?? chatGPTAccountID,
+                                usageWindowName: refreshed.usage.usageWindowName,
+                                usageWindowResetAt: refreshed.usage.usageWindowResetAt,
+                                primaryUsagePercent: refreshed.usage.primaryUsagePercent,
+                                primaryUsageResetAt: refreshed.usage.primaryUsageResetAt,
+                                secondaryUsagePercent: refreshed.usage.secondaryUsagePercent,
+                                secondaryUsageResetAt: refreshed.usage.secondaryUsageResetAt,
+                                oauthRefreshToken: refreshed.refreshToken,
+                                oauthIDToken: refreshed.idToken,
+                                oauthLastRefreshAt: now,
+                                isPaid: refreshed.usage.isPaid,
+                                now: now,
+                                shouldEvaluate: false
+                            )
+                            state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
+                            continue
+                        }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        state.setUsageSyncExclusion(
+                            for: account.id,
+                            reason: mapSyncError(error).localizedDescription,
+                            now: now,
+                            shouldEvaluate: false
+                        )
+                        continue
+                    }
+                }
                 state.setUsageSyncExclusion(
                     for: account.id,
                     reason: mapped.localizedDescription,
@@ -154,6 +205,57 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 attempt += 1
             }
         }
+    }
+
+    private func refreshOAuthTokenAndFetchUsageIfPossible(
+        account: AgentAccount,
+        chatGPTAccountID: String,
+        now: Date
+    ) async throws -> (tokens: OAuthTokens, refreshToken: String?, idToken: String?, usage: CodexUsage)? {
+        guard account.supportsCodexUsageSync,
+              let oauthRefreshClient,
+              let oauthConfiguration
+        else {
+            return nil
+        }
+        let refreshToken = account.oauthRefreshToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !refreshToken.isEmpty else { return nil }
+
+        let refreshedTokens: OAuthTokens
+        do {
+            refreshedTokens = try await oauthRefreshClient.refreshTokens(
+                refreshToken: refreshToken,
+                configuration: oauthConfiguration
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw CodexSyncError.unauthorized
+        }
+
+        let freshAccessToken = refreshedTokens.accessToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !freshAccessToken.isEmpty else {
+            throw CodexSyncError.unauthorized
+        }
+
+        let usage = try await fetchUsageWithRetry(
+            accessToken: freshAccessToken,
+            accountID: chatGPTAccountID
+        )
+        let nextRefreshToken = refreshedTokens.refreshToken?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let nextIDToken = refreshedTokens.idToken?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return (
+            tokens: OAuthTokens(
+                accessToken: freshAccessToken,
+                refreshToken: nextRefreshToken?.isEmpty == false ? nextRefreshToken : account.oauthRefreshToken,
+                idToken: nextIDToken?.isEmpty == false ? nextIDToken : account.oauthIDToken
+            ),
+            refreshToken: nextRefreshToken?.isEmpty == false ? nextRefreshToken : account.oauthRefreshToken,
+            idToken: nextIDToken?.isEmpty == false ? nextIDToken : account.oauthIDToken,
+            usage: usage
+        )
     }
 
     private func mapSyncError(_ error: Error) -> CodexSyncError {

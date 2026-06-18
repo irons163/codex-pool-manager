@@ -38,7 +38,7 @@ struct PoolDashboardAuthFlowCoordinator {
 
     struct LocalImportContext {
         let name: String
-        let accessToken: String
+        let tokens: OAuthTokens
         let chatGPTAccountID: String
         let usage: CodexUsage
     }
@@ -134,17 +134,17 @@ struct PoolDashboardAuthFlowCoordinator {
         decision: LocalOAuthImportViewModel.ImportDecision,
         usageClient: CodexUsageFetching
     ) async throws -> LocalImportContext {
-        guard case let .importAccount(name, accessToken, chatGPTAccountID) = decision else {
+        guard case let .importAccount(name, tokens, chatGPTAccountID) = decision else {
             throw PoolDashboardAuthFlowError.invalidImportDecision
         }
 
         let usage = try await usageClient.fetchUsage(
-            accessToken: accessToken,
+            accessToken: tokens.accessToken,
             accountID: chatGPTAccountID
         )
         return LocalImportContext(
             name: name,
-            accessToken: accessToken,
+            tokens: tokens,
             chatGPTAccountID: chatGPTAccountID,
             usage: usage
         )
@@ -158,7 +158,7 @@ struct PoolDashboardAuthFlowCoordinator {
             state: &state,
             usage: context.usage,
             fallbackName: context.name,
-            accessToken: context.accessToken,
+            tokens: context.tokens,
             chatGPTAccountID: context.chatGPTAccountID
         )
     }

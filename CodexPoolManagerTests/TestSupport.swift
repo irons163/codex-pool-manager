@@ -106,10 +106,11 @@ final class LockedValue<Value> {
         return _value
     }
 
-    func withLock(_ body: (inout Value) -> Void) {
+    @discardableResult
+    func withLock<Result>(_ body: (inout Value) -> Result) -> Result {
         lock.lock()
         defer { lock.unlock() }
-        body(&_value)
+        return body(&_value)
     }
 }
 
@@ -141,5 +142,38 @@ actor CancellingCodexUsageClient: CodexUsageClient {
 
     func callCount() -> Int {
         _callCount
+    }
+}
+
+struct SequencedCodexUsageClient: CodexUsageClient {
+    let requests: LockedValue<[(token: String, accountID: String)]>
+    let responses: LockedValue<[String: Result<CodexUsage, Error>]>
+
+    func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
+        requests.withLock { $0.append((accessToken, accountID)) }
+        let result = responses.withLock { responses in
+            responses.removeValue(forKey: accessToken)
+        }
+        switch result {
+        case .success(let usage):
+            return usage
+        case .failure(let error):
+            throw error
+        case nil:
+            return CodexUsage(usedUnits: 0, quota: 1000)
+        }
+    }
+}
+
+struct StubOAuthTokenRefreshClient: OAuthTokenRefreshing {
+    let requests: LockedValue<[(refreshToken: String, clientID: String)]>
+    let result: Result<OAuthTokens, Error>
+
+    func refreshTokens(
+        refreshToken: String,
+        configuration: OAuthClientConfiguration
+    ) async throws -> OAuthTokens {
+        requests.withLock { $0.append((refreshToken, configuration.clientID)) }
+        return try result.get()
     }
 }

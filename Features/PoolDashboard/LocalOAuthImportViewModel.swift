@@ -2,7 +2,7 @@ import Foundation
 
 struct LocalOAuthImportViewModel {
     enum ImportDecision: Equatable {
-        case importAccount(name: String, accessToken: String, chatGPTAccountID: String)
+        case importAccount(name: String, tokens: OAuthTokens, chatGPTAccountID: String)
         case missingAccountID
     }
 
@@ -59,6 +59,14 @@ struct LocalOAuthImportViewModel {
         successMessage = nil
         errorMessage = nil
         let name = account.email ?? account.displayName
-        return .importAccount(name: name, accessToken: account.accessToken, chatGPTAccountID: chatGPTAccountID)
+        return .importAccount(
+            name: name,
+            tokens: OAuthTokens(
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                idToken: account.idToken
+            ),
+            chatGPTAccountID: chatGPTAccountID
+        )
     }
 }

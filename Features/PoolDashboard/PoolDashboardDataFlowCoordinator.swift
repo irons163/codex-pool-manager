@@ -21,7 +21,11 @@ struct PoolDashboardDataFlowCoordinator {
         let client = OpenAICodexUsageClient { raw in
             capturedRaw = raw
         }
-        let service = CodexUsageSyncService(client: client)
+        let service = CodexUsageSyncService(
+            client: client,
+            oauthRefreshClient: OAuthTokenRefreshService(),
+            oauthConfiguration: .codexDefault
+        )
         var nextState = state
         try await service.sync(state: &nextState)
         return (nextState, capturedRaw)

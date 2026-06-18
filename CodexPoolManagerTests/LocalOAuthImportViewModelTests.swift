@@ -100,7 +100,7 @@ struct LocalOAuthImportViewModelTests {
         #expect(
             decision == .importAccount(
                 name: "dup@example.com",
-                accessToken: "sk-dup-token",
+                tokens: OAuthTokens(accessToken: "sk-dup-token", refreshToken: nil, idToken: nil),
                 chatGPTAccountID: "account-123"
             )
         )
@@ -119,7 +119,7 @@ struct LocalOAuthImportViewModelTests {
         #expect(
             decision == .importAccount(
                 name: "new@example.com",
-                accessToken: "sk-new-token",
+                tokens: OAuthTokens(accessToken: "sk-new-token", refreshToken: nil, idToken: nil),
                 chatGPTAccountID: "account-123"
             )
         )
@@ -184,7 +184,7 @@ struct LocalOAuthImportViewModelTests {
         #expect(
             decision == .importAccount(
                 name: "Display Name",
-                accessToken: "sk-display",
+                tokens: OAuthTokens(accessToken: "sk-display", refreshToken: nil, idToken: nil),
                 chatGPTAccountID: "account-display"
             )
         )

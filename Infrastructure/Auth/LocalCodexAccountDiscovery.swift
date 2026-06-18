@@ -6,7 +6,29 @@ struct LocalCodexOAuthAccount: Identifiable, Equatable {
     let email: String?
     let source: String
     let accessToken: String
+    let refreshToken: String?
+    let idToken: String?
     let chatGPTAccountID: String?
+
+    init(
+        id: String,
+        displayName: String,
+        email: String?,
+        source: String,
+        accessToken: String,
+        refreshToken: String? = nil,
+        idToken: String? = nil,
+        chatGPTAccountID: String?
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.email = email
+        self.source = source
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.idToken = idToken
+        self.chatGPTAccountID = chatGPTAccountID
+    }
 
     var maskedToken: String {
         guard accessToken.count > 10 else { return "********" }
@@ -30,6 +52,8 @@ enum LocalCodexAccountDiscovery {
     private static let displayNameKeys = ["name", "display_name", "user_name", "account_name"]
     private static let accountIDKeys = ["account_id", "accountId", "chatgpt_account_id", "chatgptAccountId"]
     private static let accessTokenKeys = ["access_token", "accessToken"]
+    private static let refreshTokenKeys = ["refresh_token", "refreshToken"]
+    private static let idTokenKeys = ["id_token", "idToken"]
 
     static func discover(
         fileManager: FileManager = .default,
@@ -57,6 +81,8 @@ enum LocalCodexAccountDiscovery {
                 let email = findStringDeep(in: dictionary, keys: emailKeys)
                 let name = findStringDeep(in: dictionary, keys: displayNameKeys) ?? email ?? L10n.text("account.default_oauth_name")
                 let chatGPTAccountID = findStringDeep(in: dictionary, keys: accountIDKeys)
+                let refreshToken = findStringDeep(in: dictionary, keys: refreshTokenKeys)
+                let idToken = findStringDeep(in: dictionary, keys: idTokenKeys)
                 let id = "\(source)|\(chatGPTAccountID ?? (email ?? name))|\(accessToken.prefix(16))"
                 accounts.append(
                     LocalCodexOAuthAccount(
@@ -65,6 +91,8 @@ enum LocalCodexAccountDiscovery {
                         email: email,
                         source: source,
                         accessToken: accessToken,
+                        refreshToken: refreshToken,
+                        idToken: idToken,
                         chatGPTAccountID: chatGPTAccountID
                     )
                 )
