@@ -18,6 +18,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     private let widgetPublisher: WidgetPublisher
     private var stateRevision = 0
     private var autoSyncTask: Task<Void, Never>?
+    private var didBootstrap = false
 
     var menuBarSnapshot: MenuBarDashboardSnapshot {
         MenuBarDashboardPresenter.makeSnapshot(
@@ -68,6 +69,13 @@ final class AppPoolRuntimeModel: ObservableObject {
             stateRevision += 1
         }
         publishWidgetSnapshot()
+    }
+
+    func bootstrapIfNeeded() {
+        guard !didBootstrap else { return }
+        didBootstrap = true
+        load()
+        startAutoSyncIfNeeded()
     }
 
     func replaceStateFromDashboard(_ nextState: AccountPoolState) {

@@ -9,9 +9,11 @@ struct AppPoolRuntimeModelTests {
         var loadedSnapshot: AccountPoolSnapshot?
         var savedSnapshots: [AccountPoolSnapshot] = []
         var tokens: [UUID: String] = [:]
+        var loadCount = 0
 
         func load() -> AccountPoolSnapshot? {
-            loadedSnapshot
+            loadCount += 1
+            return loadedSnapshot
         }
 
         func save(_ snapshot: AccountPoolSnapshot) {
@@ -257,5 +259,46 @@ struct AppPoolRuntimeModelTests {
         model.stopAutoSync()
 
         #expect(store.savedSnapshots.count == 1)
+    }
+
+    @Test
+    func bootstrapIfNeededLoadsPublishesAndStartsAutoSyncOnlyOnce() async {
+        let store = SpyStore()
+        var state = makeState(name: "bootstrap@example.com")
+        state.setAutoSyncEnabled(true)
+        store.loadedSnapshot = state.snapshot
+        var publishedNames: [String] = []
+        var syncCallCount = 0
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            widgetPublisher: { snapshot in
+                publishedNames.append(snapshot.accounts.first?.name ?? "")
+            },
+            syncRunner: { state, _ in
+                syncCallCount += 1
+                syncStartedContinuation.yield(())
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: state,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+
+        model.bootstrapIfNeeded()
+
+        var iterator = syncStarted.makeAsyncIterator()
+        _ = await iterator.next()
+        let publishedCountAfterFirstBootstrap = publishedNames.count
+        let savedCountAfterFirstBootstrap = store.savedSnapshots.count
+        model.bootstrapIfNeeded()
+        model.stopAutoSync()
+
+        #expect(model.state.accounts.first?.name == "bootstrap@example.com")
+        #expect(store.loadCount == 1)
+        #expect(publishedNames.count == publishedCountAfterFirstBootstrap)
+        #expect(publishedNames.allSatisfy { $0 == "bootstrap@example.com" })
+        #expect(syncCallCount == 1)
+        #expect(store.savedSnapshots.count == savedCountAfterFirstBootstrap)
     }
 }

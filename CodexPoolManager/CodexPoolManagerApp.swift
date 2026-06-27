@@ -30,10 +30,6 @@ struct CodexPoolManagerApp: App {
             ContentView(runtimeModel: runtimeModel)
                 .id(appLanguageOverride)
                 .environment(\.locale, L10n.locale(for: appLanguageOverride))
-                .task {
-                    runtimeModel.load()
-                    runtimeModel.startAutoSyncIfNeeded()
-                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -46,6 +42,9 @@ struct CodexPoolManagerApp: App {
         } label: {
             Text(menuBarModel.menuBarTitle)
                 .monospacedDigit()
+                .task {
+                    runtimeModel.bootstrapIfNeeded()
+                }
         }
         .menuBarExtraStyle(.menu)
     }

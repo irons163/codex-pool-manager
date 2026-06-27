@@ -332,6 +332,7 @@ struct PoolDashboardView: View {
     @State private var selectedGroupName: String = AgentAccount.defaultGroupName
     @State private var workspaceDrawerState: WorkspaceDrawerState = .partial
     @State private var isSidebarCollapsed = false
+    @State private var isApplyingRuntimeStateUpdate = false
     @State private var themeRenderToken = 0
     @State private var suppressNextSnapshotDrivenSwitch = false
     @State private var usageSyncRunID: UUID?
@@ -552,12 +553,18 @@ struct PoolDashboardView: View {
             handleOnAppear()
         }
         .onChange(of: state.snapshot) { previousSnapshot, snapshot in
+            let isRuntimeStateUpdate = isApplyingRuntimeStateUpdate
+            isApplyingRuntimeStateUpdate = false
+            if isRuntimeStateUpdate {
+                suppressNextSnapshotDrivenSwitch = false
+                return
+            }
             let wasShowingLowUsageAlert = viewState.showLowUsageAlert
             showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
                 previousSnapshot: previousSnapshot,
                 currentSnapshot: snapshot
             )
-            handleSnapshotChange(snapshot)
+            handleSnapshotChange(snapshot, previousSnapshot: previousSnapshot)
             postLowUsageDesktopNotificationIfNeeded(
                 wasShowingLowUsageAlert: wasShowingLowUsageAlert
             )
@@ -575,8 +582,7 @@ struct PoolDashboardView: View {
         }
         .onReceive(runtimeStatePublisher) { nextState in
             guard runtimeModel != nil else { return }
-            guard state.snapshot != nextState.snapshot else { return }
-            state = nextState
+            applyRuntimeStateUpdate(nextState)
         }
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
@@ -1850,7 +1856,10 @@ struct PoolDashboardView: View {
         }
     }
 
-    private func handleSnapshotChange(_ snapshot: AccountPoolSnapshot) {
+    private func handleSnapshotChange(
+        _ snapshot: AccountPoolSnapshot,
+        previousSnapshot: AccountPoolSnapshot
+    ) {
         WidgetBridgePublisher.publish(from: snapshot)
         let output = lifecycleFlowCoordinator.onSnapshotChanged(
             snapshot: snapshot,
@@ -1862,8 +1871,25 @@ struct PoolDashboardView: View {
         applyLifecycleSnapshotChangeOutput(output)
         if let runtimeModel, runtimeModel.state.snapshot != state.snapshot {
             runtimeModel.replaceStateFromDashboard(state)
-            runtimeModel.restartAutoSyncIfNeeded()
+            if autoSyncCadenceChanged(from: previousSnapshot, to: snapshot) {
+                runtimeModel.restartAutoSyncIfNeeded()
+            }
         }
+    }
+
+    private func applyRuntimeStateUpdate(_ nextState: AccountPoolState) {
+        guard state.snapshot != nextState.snapshot else { return }
+        isApplyingRuntimeStateUpdate = true
+        suppressNextSnapshotDrivenSwitch = true
+        state = nextState
+    }
+
+    private func autoSyncCadenceChanged(
+        from previousSnapshot: AccountPoolSnapshot,
+        to snapshot: AccountPoolSnapshot
+    ) -> Bool {
+        previousSnapshot.autoSyncEnabled != snapshot.autoSyncEnabled
+            || previousSnapshot.autoSyncIntervalSeconds != snapshot.autoSyncIntervalSeconds
     }
 
     private func showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
@@ -2058,8 +2084,12 @@ struct PoolDashboardView: View {
     @MainActor
     private func syncCodexUsage() async {
         if let runtimeModel {
+            guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
+            defer {
+                asyncStateCoordinator.endUsageSync(viewState: &viewState)
+            }
             await runtimeModel.syncNow()
-            state = runtimeModel.state
+            applyRuntimeStateUpdate(runtimeModel.state)
             viewState.syncError = runtimeModel.lastSyncError
             return
         }
