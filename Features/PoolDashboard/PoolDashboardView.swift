@@ -2178,6 +2178,9 @@ struct PoolDashboardView: View {
         lastHandledRuntimeSyncOutcomeID = outcome.id
 
         viewState.syncError = outcome.syncError
+        if !outcome.outputViewState.lastUsageRawJSON.isEmpty {
+            viewState.lastUsageRawJSON = outcome.outputViewState.lastUsageRawJSON
+        }
 
         if let syncError = outcome.syncError, !syncError.isEmpty {
             DesktopNotifier.post(
