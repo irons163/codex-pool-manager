@@ -5,6 +5,7 @@
 # Build artifacts
 DerivedData/
 .build/
+.superpowers/
 
 # macOS
 .DS_Store
