@@ -640,6 +640,62 @@ struct AppPoolRuntimeModelTests {
     }
 
     @Test
+    func stopAutoSyncClearsHungActiveSyncAndAllowsRetry() async {
+        let store = SpyStore()
+        var state = makeState(name: "stop-auto@example.com")
+        state.setAutoSyncEnabled(true)
+        state.setAutoSyncIntervalSeconds(5)
+        var syncCallCount = 0
+        var firstSyncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: state,
+            syncTimeoutNanoseconds: 1_000_000_000,
+            syncRunner: { state, _ in
+                syncCallCount += 1
+                if syncCallCount == 1 {
+                    return await withCheckedContinuation { continuation in
+                        firstSyncContinuation = continuation
+                        syncStartedContinuation.yield(())
+                    }
+                }
+
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 16)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+
+        model.startAutoSyncIfNeeded()
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
+        #expect(model.isSyncingUsage == true)
+
+        model.stopAutoSync()
+
+        #expect(model.isSyncingUsage == false)
+
+        let retryOutcome = await model.syncNowWithTimeout(
+            timeoutNanoseconds: 1_000_000_000,
+            timeoutErrorMessage: "timeout"
+        )
+
+        #expect(retryOutcome?.status == .success)
+        #expect(model.state.accounts.first?.usedUnits == 16)
+
+        var staleState = state
+        staleState.updateAccount(state.accounts[0].id, usedUnits: 99)
+        firstSyncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: staleState,
+            viewState: PoolDashboardViewState()
+        ))
+    }
+
+    @Test
     func autoSyncUsesTimeoutAwareRuntimeSync() async {
         let store = SpyStore()
         var state = makeState(name: "auto-timeout@example.com")

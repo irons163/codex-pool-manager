@@ -23,6 +23,11 @@ struct AppPoolRuntimeSyncOutcome: Identifiable {
 final class AppPoolRuntimeModel: ObservableObject {
     typealias SyncOutcome = AppPoolRuntimeSyncOutcome
 
+    private enum SyncOrigin {
+        case manual
+        case autoSync
+    }
+
     typealias SyncRunner = @MainActor (
         _ state: AccountPoolState,
         _ viewState: PoolDashboardViewState
@@ -41,6 +46,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     private var stateRevision = 0
     private var autoSyncTask: Task<Void, Never>?
     private var activeSyncID: UUID?
+    private var activeSyncOrigin: SyncOrigin?
     private var didBootstrap = false
     private var didLoadFromStore = false
 
@@ -134,7 +140,7 @@ final class AppPoolRuntimeModel: ObservableObject {
 
         autoSyncTask = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.syncNowWithTimeout()
+                await self?.syncNowWithTimeout(origin: .autoSync)
                 if Task.isCancelled { break }
                 let sleepNanoseconds = self?.autoSyncSleepNanoseconds() ?? Self.minimumAutoSyncSleepNanoseconds
                 try? await Task.sleep(nanoseconds: sleepNanoseconds)
@@ -145,6 +151,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     func stopAutoSync() {
         autoSyncTask?.cancel()
         autoSyncTask = nil
+        cancelActiveSyncSilently(origin: .autoSync)
     }
 
     func restartAutoSyncIfNeeded() {
@@ -154,14 +161,21 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     @discardableResult
     func syncNow() async -> SyncOutcome? {
+        await syncNow(origin: .manual)
+    }
+
+    @discardableResult
+    private func syncNow(origin: SyncOrigin) async -> SyncOutcome? {
         guard !isSyncingUsage else { return nil }
 
         let syncID = UUID()
         activeSyncID = syncID
+        activeSyncOrigin = origin
         isSyncingUsage = true
         defer {
             if activeSyncID == syncID {
                 activeSyncID = nil
+                activeSyncOrigin = nil
                 isSyncingUsage = false
             }
         }
@@ -223,6 +237,7 @@ final class AppPoolRuntimeModel: ObservableObject {
 
         stateRevision += 1
         activeSyncID = nil
+        activeSyncOrigin = nil
         isSyncingUsage = false
         lastSyncError = message
         return publishSyncOutcome(
@@ -241,11 +256,24 @@ final class AppPoolRuntimeModel: ObservableObject {
         timeoutNanoseconds: UInt64? = nil,
         timeoutErrorMessage: String? = nil
     ) async -> SyncOutcome? {
+        await syncNowWithTimeout(
+            timeoutNanoseconds: timeoutNanoseconds,
+            timeoutErrorMessage: timeoutErrorMessage,
+            origin: .manual
+        )
+    }
+
+    @discardableResult
+    private func syncNowWithTimeout(
+        timeoutNanoseconds: UInt64? = nil,
+        timeoutErrorMessage: String? = nil,
+        origin: SyncOrigin
+    ) async -> SyncOutcome? {
         let timeoutNanoseconds = timeoutNanoseconds ?? syncTimeoutNanoseconds
         let timeoutErrorMessage = timeoutErrorMessage ?? Self.defaultSyncTimeoutErrorMessage()
         let syncTask = Task<SyncOutcome?, Never> { [weak self] in
             guard let self else { return nil }
-            return await self.syncNow()
+            return await self.syncNow(origin: origin)
         }
         let timeoutTask = Task<SyncOutcome?, Never> { [weak self] in
             do {
@@ -280,6 +308,16 @@ final class AppPoolRuntimeModel: ObservableObject {
             syncTask.cancel()
             timeoutTask.cancel()
         }
+    }
+
+    private func cancelActiveSyncSilently(origin: SyncOrigin) {
+        guard activeSyncID != nil || isSyncingUsage else { return }
+        guard activeSyncOrigin == origin else { return }
+
+        stateRevision += 1
+        activeSyncID = nil
+        activeSyncOrigin = nil
+        isSyncingUsage = false
     }
 
     private func saveAndPublish() {
