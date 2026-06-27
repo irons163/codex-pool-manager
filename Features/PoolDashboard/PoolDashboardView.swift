@@ -2177,7 +2177,6 @@ struct PoolDashboardView: View {
         guard lastHandledRuntimeSyncOutcomeID != outcome.id else { return }
         lastHandledRuntimeSyncOutcomeID = outcome.id
 
-        applyRuntimeStateUpdate(outcome.resultingState)
         viewState.syncError = outcome.syncError
 
         if let syncError = outcome.syncError, !syncError.isEmpty {
@@ -2190,6 +2189,9 @@ struct PoolDashboardView: View {
             return
         }
 
+        guard outcome.stateApplied else { return }
+        applyRuntimeStateUpdate(outcome.resultingState)
+
         if outcome.previousSyncError != nil {
             DesktopNotifier.post(
                 key: "usage-sync-recovered",
@@ -2199,7 +2201,6 @@ struct PoolDashboardView: View {
             )
         }
 
-        guard outcome.stateApplied else { return }
         evaluateSpecialResetWatchAfterSync(now: .now)
         updateUsageAnalyticsAfterSync(now: .now)
         await triggerAutomaticSwitchActionIfNeeded(
