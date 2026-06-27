@@ -50,6 +50,7 @@ struct MenuBarDashboardPresenterTests {
             mode: .manual
         )
         state.markActiveAccountForSwitchLaunch(activeID, now: Date(timeIntervalSince1970: 1_010))
+        state.markUsageSynced(at: Date(timeIntervalSince1970: 1_000))
 
         let snapshot = MenuBarDashboardPresenter.makeSnapshot(
             from: state,
@@ -104,6 +105,8 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.warningRows.contains(where: { $0.kind == .relayUsageUnavailable }))
         #expect(snapshot.warningRows.contains(where: { $0.kind == .oauthExpired }))
         #expect(snapshot.warningRows.contains(where: { $0.kind == .syncFailed }))
-        #expect(snapshot.accountRows.first?.credentialLabel == L10n.text("account.api_key_badge"))
+        #expect(snapshot.totalAccountsText == "2")
+        #expect(snapshot.availableAccountsText == "1")
+        #expect(snapshot.accountRows.first(where: { $0.name == "relay" })?.credentialLabel == L10n.text("account.api_key_badge"))
     }
 }
