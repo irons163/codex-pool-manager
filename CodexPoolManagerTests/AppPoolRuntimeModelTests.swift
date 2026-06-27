@@ -90,16 +90,26 @@ struct AppPoolRuntimeModelTests {
     func syncNowUsesInjectedRunnerAndSavesReturnedState() async {
         let store = SpyStore()
         var syncCallCount = 0
+        var publishedSnapshots: [AccountPoolSnapshot] = []
         let model = AppPoolRuntimeModel(
             store: store,
             initialState: makeState(name: "before@example.com"),
+            widgetPublisher: { snapshot in
+                publishedSnapshots.append(snapshot)
+            },
             syncRunner: { state, _ in
                 var nextViewState = PoolDashboardViewState()
                 syncCallCount += 1
                 if syncCallCount == 1 {
+                    var failedOutputState = state
+                    failedOutputState.updateAccount(
+                        state.accounts[0].id,
+                        name: "failed-output@example.com",
+                        usedUnits: 99
+                    )
                     nextViewState.syncError = "offline"
                     return PoolDashboardUsageSyncFlowCoordinator.Output(
-                        state: state,
+                        state: failedOutputState,
                         viewState: nextViewState
                     )
                 }
@@ -129,8 +139,12 @@ struct AppPoolRuntimeModelTests {
         #expect(model.isSyncingUsage == false)
         #expect(model.lastSyncError == nil)
         #expect(model.state.accounts.first?.usedUnits == 10)
-        #expect(store.savedSnapshots.count == 2)
         #expect(store.savedSnapshots.last?.accounts.first?.usedUnits == 10)
+        #expect(publishedSnapshots.contains { $0.accounts.first?.usedUnits == 10 })
+        #expect(!store.savedSnapshots.contains {
+            $0.accounts.first?.name == "failed-output@example.com"
+            || $0.accounts.first?.usedUnits == 99
+        })
     }
 
     @Test
@@ -160,8 +174,9 @@ struct AppPoolRuntimeModelTests {
         #expect(model.lastSyncError == "offline")
         #expect(model.state.accounts.first?.name == "stable@example.com")
         #expect(model.state.accounts.first?.usedUnits == 40)
-        #expect(store.savedSnapshots.count == 1)
-        #expect(store.savedSnapshots.first?.accounts.first?.name == "stable@example.com")
-        #expect(store.savedSnapshots.first?.accounts.first?.usedUnits == 40)
+        #expect(!store.savedSnapshots.contains {
+            $0.accounts.first?.name == "mutated@example.com"
+            || $0.accounts.first?.usedUnits == 99
+        })
     }
 }
