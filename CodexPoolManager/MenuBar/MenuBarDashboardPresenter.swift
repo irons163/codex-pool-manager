@@ -122,7 +122,7 @@ enum MenuBarDashboardPresenter {
             ))
         }
 
-        if state.accounts.contains(where: { $0.isRelayAPIKeyAccount && $0.usageSyncError == AgentAccount.relayUsageSyncUnavailableReason }) {
+        if state.accounts.contains(where: \.isRelayAPIKeyAccount) {
             rows.append(MenuBarWarningRow(
                 id: "relayUsageUnavailable",
                 kind: .relayUsageUnavailable,
@@ -130,6 +130,19 @@ enum MenuBarDashboardPresenter {
                 message: L10n.text("menu_bar.warning.relay_usage.message")
             ))
         }
+
+        rows.append(contentsOf: state.accounts.compactMap { account in
+            guard account.isUsageSyncExcluded, !account.isRelayAPIKeyAccount else {
+                return nil
+            }
+
+            return MenuBarWarningRow(
+                id: "excluded-\(account.id.uuidString)",
+                kind: .excluded,
+                title: account.name,
+                message: account.usageSyncError ?? account.name
+            )
+        })
 
         return rows
     }

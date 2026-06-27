@@ -109,4 +109,46 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.availableAccountsText == "1")
         #expect(snapshot.accountRows.first(where: { $0.name == "relay" })?.credentialLabel == L10n.text("account.api_key_badge"))
     }
+
+    @Test
+    func presenterClassifiesRelayAndExcludedWarningsSeparately() {
+        let excludedMessage = "Excluded from sync by policy"
+        var state = AccountPoolState(
+            accounts: [
+                makeAccount(
+                    name: "relay",
+                    usedUnits: 0,
+                    quota: 100,
+                    isPaid: false,
+                    usageSyncError: nil,
+                    isUsageSyncExcluded: true,
+                    credentialType: .relayAPIKey
+                ),
+                makeAccount(
+                    id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
+                    name: "excluded@example.com",
+                    usedUnits: 10,
+                    quota: 100,
+                    isPaid: true,
+                    usageSyncError: excludedMessage,
+                    isUsageSyncExcluded: true
+                )
+            ],
+            mode: .manual
+        )
+        state.evaluate(now: Date(timeIntervalSince1970: 1_000))
+
+        let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: nil,
+            now: Date(timeIntervalSince1970: 1_030)
+        )
+
+        #expect(snapshot.warningRows.contains(where: { $0.kind == .relayUsageUnavailable }))
+        #expect(!snapshot.warningRows.contains(where: { $0.kind == .syncFailed }))
+
+        let excludedWarning = snapshot.warningRows.first(where: { $0.kind == .excluded })
+        #expect(excludedWarning?.message == excludedMessage)
+    }
 }
