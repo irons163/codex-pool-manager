@@ -16,6 +16,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     private let store: AccountPoolStoring
     private let syncRunner: SyncRunner
     private let widgetPublisher: WidgetPublisher
+    private var stateRevision = 0
 
     var menuBarSnapshot: MenuBarDashboardSnapshot {
         MenuBarDashboardPresenter.makeSnapshot(
@@ -59,12 +60,14 @@ final class AppPoolRuntimeModel: ObservableObject {
     func load() {
         if let snapshot = store.load() {
             state = AccountPoolState(snapshot: snapshot)
+            stateRevision += 1
         }
         publishWidgetSnapshot()
     }
 
     func replaceStateFromDashboard(_ nextState: AccountPoolState) {
         state = nextState
+        stateRevision += 1
         saveAndPublish()
     }
 
@@ -74,7 +77,10 @@ final class AppPoolRuntimeModel: ObservableObject {
         isSyncingUsage = true
         defer { isSyncingUsage = false }
 
+        let syncRevision = stateRevision
         let output = await syncRunner(state, PoolDashboardViewState())
+        guard syncRevision == stateRevision else { return }
+
         let syncError = output.viewState.syncError?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let syncError, !syncError.isEmpty {
             lastSyncError = syncError
@@ -82,6 +88,7 @@ final class AppPoolRuntimeModel: ObservableObject {
         }
 
         state = output.state
+        stateRevision += 1
         lastSyncError = nil
         saveAndPublish()
     }

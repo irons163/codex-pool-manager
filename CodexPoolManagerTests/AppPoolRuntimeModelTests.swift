@@ -179,4 +179,55 @@ struct AppPoolRuntimeModelTests {
             || $0.accounts.first?.usedUnits == 99
         })
     }
+
+    @Test
+    func syncNowDiscardsStaleOutputWhenDashboardStateChangesDuringSync() async {
+        let store = SpyStore()
+        var publishedSnapshots: [AccountPoolSnapshot] = []
+        var outputContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (runnerStarted, runnerStartedContinuation) = AsyncStream<Void>.makeStream()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: makeState(name: "before@example.com"),
+            widgetPublisher: { snapshot in
+                publishedSnapshots.append(snapshot)
+            },
+            syncRunner: { state, _ in
+                await withCheckedContinuation { continuation in
+                    outputContinuation = continuation
+                    runnerStartedContinuation.yield(())
+                }
+            }
+        )
+
+        let syncTask = Task {
+            await model.syncNow()
+        }
+        var runnerStartedIterator = runnerStarted.makeAsyncIterator()
+        _ = await runnerStartedIterator.next()
+
+        model.replaceStateFromDashboard(makeState(name: "dashboard@example.com"))
+
+        var staleState = makeState(name: "synced-old@example.com")
+        staleState.updateAccount(
+            staleState.accounts[0].id,
+            name: "synced-old@example.com",
+            usedUnits: 5
+        )
+        outputContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: staleState,
+            viewState: PoolDashboardViewState()
+        ))
+
+        await syncTask.value
+
+        #expect(model.state.accounts.first?.name == "dashboard@example.com")
+        #expect(model.isSyncingUsage == false)
+        #expect(!store.savedSnapshots.contains {
+            $0.accounts.first?.name == "synced-old@example.com"
+        })
+        #expect(!publishedSnapshots.contains {
+            $0.accounts.first?.name == "synced-old@example.com"
+        })
+    }
 }
