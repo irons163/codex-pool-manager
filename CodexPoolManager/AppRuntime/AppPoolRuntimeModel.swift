@@ -17,6 +17,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     private let syncRunner: SyncRunner
     private let widgetPublisher: WidgetPublisher
     private var stateRevision = 0
+    private var autoSyncTask: Task<Void, Never>?
 
     var menuBarSnapshot: MenuBarDashboardSnapshot {
         MenuBarDashboardPresenter.makeSnapshot(
@@ -57,6 +58,10 @@ final class AppPoolRuntimeModel: ObservableObject {
         self.syncRunner = syncRunner
     }
 
+    deinit {
+        autoSyncTask?.cancel()
+    }
+
     func load() {
         if let snapshot = store.load() {
             state = AccountPoolState(snapshot: snapshot)
@@ -66,9 +71,34 @@ final class AppPoolRuntimeModel: ObservableObject {
     }
 
     func replaceStateFromDashboard(_ nextState: AccountPoolState) {
+        guard state.snapshot != nextState.snapshot else { return }
         state = nextState
         stateRevision += 1
         saveAndPublish()
+    }
+
+    func startAutoSyncIfNeeded() {
+        guard autoSyncTask == nil else { return }
+        guard state.autoSyncEnabled else { return }
+
+        autoSyncTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.syncNow()
+                if Task.isCancelled { break }
+                let sleepNanoseconds = self?.autoSyncSleepNanoseconds() ?? Self.minimumAutoSyncSleepNanoseconds
+                try? await Task.sleep(nanoseconds: sleepNanoseconds)
+            }
+        }
+    }
+
+    func stopAutoSync() {
+        autoSyncTask?.cancel()
+        autoSyncTask = nil
+    }
+
+    func restartAutoSyncIfNeeded() {
+        stopAutoSync()
+        startAutoSyncIfNeeded()
     }
 
     func syncNow() async {
@@ -100,5 +130,12 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     private func publishWidgetSnapshot() {
         widgetPublisher(state.snapshot)
+    }
+
+    private static let minimumAutoSyncSleepNanoseconds: UInt64 = 15_000_000_000
+
+    private func autoSyncSleepNanoseconds() -> UInt64 {
+        let clampedSeconds = max(15, state.autoSyncIntervalSeconds)
+        return UInt64(clampedSeconds * 1_000_000_000)
     }
 }

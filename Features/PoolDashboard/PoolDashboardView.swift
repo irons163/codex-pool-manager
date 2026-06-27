@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UserNotifications
 #if canImport(AppKit)
@@ -360,6 +361,7 @@ struct PoolDashboardView: View {
     private let asyncStateCoordinator = PoolDashboardAsyncStateCoordinator()
     private let appUpdateService = AppUpdateService()
     private let sparkleUpdateDriver = SparkleUpdateDriver.shared
+    private let runtimeModel: AppPoolRuntimeModel?
     private var authFileAccessService: CodexAuthFileAccessService {
         CodexAuthFileAccessService(bookmarkKey: Self.codexAuthBookmarkKey)
     }
@@ -383,6 +385,10 @@ struct PoolDashboardView: View {
 
     private var autoSyncTaskID: String {
         "\(state.autoSyncEnabled)-\(Int(state.autoSyncIntervalSeconds))"
+    }
+
+    private var runtimeStatePublisher: AnyPublisher<AccountPoolState, Never> {
+        runtimeModel?.$state.eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()
     }
 
     private var appUpdateAutoCheckTaskID: String {
@@ -477,9 +483,15 @@ struct PoolDashboardView: View {
         }
     }
 
-    init(store: AccountPoolStoring = DeveloperAwareAccountPoolStore()) {
+    init(
+        store: AccountPoolStoring = DeveloperAwareAccountPoolStore(),
+        runtimeModel: AppPoolRuntimeModel? = nil
+    ) {
         self.store = store
-        if let snapshot = store.load() {
+        self.runtimeModel = runtimeModel
+        if let runtimeModel {
+            _state = State(initialValue: runtimeModel.state)
+        } else if let snapshot = store.load() {
             _state = State(initialValue: AccountPoolState(snapshot: snapshot))
         } else {
             var defaultState = Self.makeDefaultState(accounts: Self.defaultAccounts)
@@ -561,6 +573,11 @@ struct PoolDashboardView: View {
                 )
             }
         }
+        .onReceive(runtimeStatePublisher) { nextState in
+            guard runtimeModel != nil else { return }
+            guard state.snapshot != nextState.snapshot else { return }
+            state = nextState
+        }
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
                 selectedWorkspace = .authentication
@@ -611,6 +628,7 @@ struct PoolDashboardView: View {
             syncThemePaletteIfNeeded()
         }
         .task(id: autoSyncTaskID) {
+            guard runtimeModel == nil else { return }
             guard state.autoSyncEnabled else { return }
             await syncCodexUsage()
             while !Task.isCancelled {
@@ -1842,6 +1860,10 @@ struct PoolDashboardView: View {
             store: store
         )
         applyLifecycleSnapshotChangeOutput(output)
+        if let runtimeModel, runtimeModel.state.snapshot != state.snapshot {
+            runtimeModel.replaceStateFromDashboard(state)
+            runtimeModel.restartAutoSyncIfNeeded()
+        }
     }
 
     private func showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
@@ -2035,6 +2057,13 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func syncCodexUsage() async {
+        if let runtimeModel {
+            await runtimeModel.syncNow()
+            state = runtimeModel.state
+            viewState.syncError = runtimeModel.lastSyncError
+            return
+        }
+
         guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
         let runID = UUID()
         usageSyncRunID = runID

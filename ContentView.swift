@@ -1,15 +1,25 @@
 import SwiftUI
 
 struct ContentView: View {
+    @ObservedObject var runtimeModel: AppPoolRuntimeModel
+
     var body: some View {
         if AppRuntimeStorage.isRunningXCTest {
-            PoolDashboardView(store: AppRuntimeStorage.accountPoolStore)
+            PoolDashboardView(
+                store: AppRuntimeStorage.accountPoolStore,
+                runtimeModel: runtimeModel
+            )
         } else {
-            PoolDashboardView()
+            PoolDashboardView(runtimeModel: runtimeModel)
         }
     }
 }
 
 #Preview {
-    PoolDashboardView(store: UserDefaultsAccountPoolStore(defaults: .standard, key: "preview_account_pool_snapshot"))
+    let store = UserDefaultsAccountPoolStore(
+        defaults: .standard,
+        key: "preview_account_pool_snapshot"
+    )
+    let runtimeModel = AppPoolRuntimeModel(store: store)
+    ContentView(runtimeModel: runtimeModel)
 }

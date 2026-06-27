@@ -13,6 +13,7 @@ import Combine
 struct CodexPoolManagerApp: App {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @StateObject private var menuBarModel = MenuBarSnapshotModel()
+    @StateObject private var runtimeModel = AppPoolRuntimeModel()
     
     init() {
         let defaults = AppRuntimeStorage.defaults
@@ -25,10 +26,14 @@ struct CodexPoolManagerApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        WindowGroup("Dashboard", id: "dashboard") {
+            ContentView(runtimeModel: runtimeModel)
                 .id(appLanguageOverride)
                 .environment(\.locale, L10n.locale(for: appLanguageOverride))
+                .task {
+                    runtimeModel.load()
+                    runtimeModel.startAutoSyncIfNeeded()
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)

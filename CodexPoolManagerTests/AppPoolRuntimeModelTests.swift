@@ -230,4 +230,32 @@ struct AppPoolRuntimeModelTests {
             $0.accounts.first?.name == "synced-old@example.com"
         })
     }
+
+    @Test
+    func startAutoSyncIfNeededRunsImmediateSyncAndStopCancelsTask() async {
+        let store = SpyStore()
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        var state = makeState(name: "autosync@example.com")
+        state.setAutoSyncEnabled(true)
+        state.setAutoSyncIntervalSeconds(5)
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: state,
+            syncRunner: { state, _ in
+                syncStartedContinuation.yield(())
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: state,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+
+        model.startAutoSyncIfNeeded()
+
+        var iterator = syncStarted.makeAsyncIterator()
+        _ = await iterator.next()
+        model.stopAutoSync()
+
+        #expect(store.savedSnapshots.count == 1)
+    }
 }

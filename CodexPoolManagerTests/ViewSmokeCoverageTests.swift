@@ -1163,6 +1163,22 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func poolDashboardAcceptsSharedRuntimeModel() {
+        let account = AgentAccount(
+            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
+            name: "runtime@example.com",
+            usedUnits: 10,
+            quota: 100
+        )
+        let state = AccountPoolState(accounts: [account], mode: .manual)
+        let store = ViewSmokeStore(snapshot: state.snapshot)
+        let model = AppPoolRuntimeModel(store: store, initialState: state)
+
+        _ = PoolDashboardView(store: store, runtimeModel: model)
+    }
+
+    @Test
+    @MainActor
     func poolDashboardAuthenticationRoutesRenderOAuthAndAPIKeyTabs() {
         let defaults = UserDefaults.standard
         let authMethodKey = "pool_dashboard.authentication.method"
