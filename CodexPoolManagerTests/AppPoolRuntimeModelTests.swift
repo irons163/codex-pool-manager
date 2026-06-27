@@ -48,6 +48,44 @@ struct AppPoolRuntimeModelTests {
         return state
     }
 
+    private func nextValue<T>(
+        from stream: AsyncStream<T>,
+        timeoutNanoseconds: UInt64 = 1_000_000_000
+    ) async -> T? {
+        await withTaskGroup(of: T?.self) { group in
+            group.addTask {
+                var iterator = stream.makeAsyncIterator()
+                return await iterator.next()
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: timeoutNanoseconds)
+                return nil
+            }
+            let value = await group.next() ?? nil
+            group.cancelAll()
+            return value
+        }
+    }
+
+    @Test
+    func initUsesStoreSnapshotBeforeBootstrapWithoutSavingEmptyState() {
+        let store = SpyStore()
+        store.loadedSnapshot = makeState(name: "persisted@example.com").snapshot
+        var publishedSnapshots: [AccountPoolSnapshot] = []
+
+        let model = AppPoolRuntimeModel(
+            store: store,
+            widgetPublisher: { snapshot in
+                publishedSnapshots.append(snapshot)
+            }
+        )
+
+        #expect(model.state.accounts.first?.name == "persisted@example.com")
+        #expect(store.loadCount == 1)
+        #expect(store.savedSnapshots.isEmpty)
+        #expect(publishedSnapshots.isEmpty)
+    }
+
     @Test
     func loadUsesStoreSnapshotAndPublishesWidgetSnapshot() {
         let store = SpyStore()
@@ -205,8 +243,8 @@ struct AppPoolRuntimeModelTests {
         let syncTask = Task {
             await model.syncNow()
         }
-        var runnerStartedIterator = runnerStarted.makeAsyncIterator()
-        _ = await runnerStartedIterator.next()
+        let didStart: Void? = await nextValue(from: runnerStarted)
+        #expect(didStart != nil)
 
         model.replaceStateFromDashboard(makeState(name: "dashboard@example.com"))
 
@@ -221,7 +259,7 @@ struct AppPoolRuntimeModelTests {
             viewState: PoolDashboardViewState()
         ))
 
-        await syncTask.value
+        _ = await syncTask.value
 
         #expect(model.state.accounts.first?.name == "dashboard@example.com")
         #expect(model.isSyncingUsage == false)
@@ -254,8 +292,8 @@ struct AppPoolRuntimeModelTests {
 
         model.startAutoSyncIfNeeded()
 
-        var iterator = syncStarted.makeAsyncIterator()
-        _ = await iterator.next()
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
         model.stopAutoSync()
 
         #expect(store.savedSnapshots.count == 1)
@@ -287,8 +325,8 @@ struct AppPoolRuntimeModelTests {
 
         model.bootstrapIfNeeded()
 
-        var iterator = syncStarted.makeAsyncIterator()
-        _ = await iterator.next()
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
         let publishedCountAfterFirstBootstrap = publishedNames.count
         let savedCountAfterFirstBootstrap = store.savedSnapshots.count
         model.bootstrapIfNeeded()
@@ -300,5 +338,80 @@ struct AppPoolRuntimeModelTests {
         #expect(publishedNames.allSatisfy { $0 == "bootstrap@example.com" })
         #expect(syncCallCount == 1)
         #expect(store.savedSnapshots.count == savedCountAfterFirstBootstrap)
+    }
+
+    @Test
+    func syncNowPublishesErrorOutcomeWithoutChangingState() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "error-stable@example.com")
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { state, _ in
+                var mutatedState = state
+                mutatedState.updateAccount(
+                    state.accounts[0].id,
+                    name: "should-not-apply@example.com",
+                    usedUnits: 99
+                )
+                var nextViewState = PoolDashboardViewState()
+                nextViewState.syncError = "offline"
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: mutatedState,
+                    viewState: nextViewState
+                )
+            }
+        )
+
+        let outcome = await model.syncNow()
+
+        #expect(outcome?.previousState.snapshot == initialState.snapshot)
+        #expect(outcome?.previousSyncError == nil)
+        #expect(outcome?.syncError == "offline")
+        #expect(outcome?.stateApplied == false)
+        #expect(outcome?.resultingState.snapshot == initialState.snapshot)
+        #expect(model.lastSyncOutcome?.id == outcome?.id)
+        #expect(model.lastSyncError == "offline")
+        #expect(model.state.accounts.first?.name == "error-stable@example.com")
+        #expect(store.savedSnapshots.isEmpty)
+    }
+
+    @Test
+    func syncNowOutcomeIncludesPreviousStateAndPreviousErrorWhenRecovered() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "recovering@example.com")
+        var syncCallCount = 0
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { state, _ in
+                syncCallCount += 1
+                var nextViewState = PoolDashboardViewState()
+                if syncCallCount == 1 {
+                    nextViewState.syncError = "offline"
+                    return PoolDashboardUsageSyncFlowCoordinator.Output(
+                        state: state,
+                        viewState: nextViewState
+                    )
+                }
+
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 8)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: nextViewState
+                )
+            }
+        )
+
+        _ = await model.syncNow()
+        let outcome = await model.syncNow()
+
+        #expect(outcome?.previousState.snapshot == initialState.snapshot)
+        #expect(outcome?.previousSyncError == "offline")
+        #expect(outcome?.syncError == nil)
+        #expect(outcome?.stateApplied == true)
+        #expect(outcome?.resultingState.accounts.first?.usedUnits == 8)
+        #expect(model.lastSyncError == nil)
     }
 }

@@ -333,6 +333,7 @@ struct PoolDashboardView: View {
     @State private var workspaceDrawerState: WorkspaceDrawerState = .partial
     @State private var isSidebarCollapsed = false
     @State private var isApplyingRuntimeStateUpdate = false
+    @State private var lastHandledRuntimeSyncOutcomeID: UUID?
     @State private var themeRenderToken = 0
     @State private var suppressNextSnapshotDrivenSwitch = false
     @State private var usageSyncRunID: UUID?
@@ -390,6 +391,12 @@ struct PoolDashboardView: View {
 
     private var runtimeStatePublisher: AnyPublisher<AccountPoolState, Never> {
         runtimeModel?.$state.eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()
+    }
+
+    private var runtimeSyncOutcomePublisher: AnyPublisher<AppPoolRuntimeModel.SyncOutcome, Never> {
+        runtimeModel?.$lastSyncOutcome
+            .compactMap { $0 }
+            .eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()
     }
 
     private var appUpdateAutoCheckTaskID: String {
@@ -584,6 +591,11 @@ struct PoolDashboardView: View {
             guard runtimeModel != nil else { return }
             applyRuntimeStateUpdate(nextState)
         }
+        .onReceive(runtimeSyncOutcomePublisher) { outcome in
+            Task { @MainActor in
+                await handleRuntimeSyncOutcome(outcome)
+            }
+        }
         .onChange(of: isDeveloperBuild) { _, isEnabled in
             if !isEnabled && selectedWorkspace == .developer {
                 selectedWorkspace = .authentication
@@ -634,23 +646,10 @@ struct PoolDashboardView: View {
             syncThemePaletteIfNeeded()
         }
         .task(id: autoSyncTaskID) {
-            guard runtimeModel == nil else { return }
-            guard state.autoSyncEnabled else { return }
-            await syncCodexUsage()
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(state.autoSyncIntervalSeconds * 1_000_000_000))
-                if Task.isCancelled { break }
-                await syncCodexUsage()
-            }
+            await runDashboardAutoSyncTask()
         }
         .task(id: appUpdateAutoCheckTaskID) {
-            guard appUpdateAutoCheckEnabled else { return }
-            await checkForAppUpdates(force: false, bypassCadence: true)
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: AppUpdateAutoCheckPolicy.intervalNanoseconds)
-                if Task.isCancelled { break }
-                await checkForAppUpdates(force: false)
-            }
+            await runAppUpdateAutoCheckTask()
         }
         .alert(L10n.text("alert.low_usage.title"), isPresented: $viewState.showLowUsageAlert) {
             Button(L10n.text("alert.dismiss"), role: .cancel) {
@@ -2082,15 +2081,47 @@ struct PoolDashboardView: View {
     // MARK: - Usage Sync
 
     @MainActor
+    private func runDashboardAutoSyncTask() async {
+        guard runtimeModel == nil else { return }
+        guard state.autoSyncEnabled else { return }
+        await syncCodexUsage()
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: UInt64(state.autoSyncIntervalSeconds * 1_000_000_000))
+            if Task.isCancelled { break }
+            await syncCodexUsage()
+        }
+    }
+
+    @MainActor
+    private func runAppUpdateAutoCheckTask() async {
+        guard appUpdateAutoCheckEnabled else { return }
+        await checkForAppUpdates(force: false, bypassCadence: true)
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: AppUpdateAutoCheckPolicy.intervalNanoseconds)
+            if Task.isCancelled { break }
+            await checkForAppUpdates(force: false)
+        }
+    }
+
+    @MainActor
     private func syncCodexUsage() async {
         if let runtimeModel {
             guard asyncStateCoordinator.beginUsageSync(viewState: &viewState) else { return }
+            let runID = UUID()
+            usageSyncRunID = runID
+            scheduleUsageSyncStuckRecovery(for: runID)
             defer {
-                asyncStateCoordinator.endUsageSync(viewState: &viewState)
+                if usageSyncRunID == runID {
+                    usageSyncRunID = nil
+                    asyncStateCoordinator.endUsageSync(viewState: &viewState)
+                }
             }
-            await runtimeModel.syncNow()
-            applyRuntimeStateUpdate(runtimeModel.state)
-            viewState.syncError = runtimeModel.lastSyncError
+
+            let outcome = await syncRuntimeCodexUsageWithTimeout(runtimeModel)
+            guard usageSyncRunID == runID else { return }
+            if let outcome {
+                await handleRuntimeSyncOutcome(outcome)
+            }
             return
         }
 
@@ -2138,6 +2169,83 @@ struct PoolDashboardView: View {
         await triggerAutomaticSwitchActionIfNeeded(
             previousMode: previousMode,
             previousActiveAccountID: previousActiveAccountID
+        )
+    }
+
+    @MainActor
+    private func handleRuntimeSyncOutcome(_ outcome: AppPoolRuntimeModel.SyncOutcome) async {
+        guard lastHandledRuntimeSyncOutcomeID != outcome.id else { return }
+        lastHandledRuntimeSyncOutcomeID = outcome.id
+
+        applyRuntimeStateUpdate(outcome.resultingState)
+        viewState.syncError = outcome.syncError
+
+        if let syncError = outcome.syncError, !syncError.isEmpty {
+            DesktopNotifier.post(
+                key: "usage-sync-error",
+                title: "Codex Pool 同步失敗",
+                body: "\(syncError)\n\n\(notificationUsageSummary(for: state.activeAccount))",
+                minInterval: 300
+            )
+            return
+        }
+
+        if outcome.previousSyncError != nil {
+            DesktopNotifier.post(
+                key: "usage-sync-recovered",
+                title: "Codex Pool 已恢復同步",
+                body: notificationUsageSummary(for: state.activeAccount),
+                minInterval: 60
+            )
+        }
+
+        guard outcome.stateApplied else { return }
+        evaluateSpecialResetWatchAfterSync(now: .now)
+        updateUsageAnalyticsAfterSync(now: .now)
+        await triggerAutomaticSwitchActionIfNeeded(
+            previousMode: outcome.previousState.mode,
+            previousActiveAccountID: outcome.previousState.activeAccountID
+        )
+    }
+
+    @MainActor
+    private func syncRuntimeCodexUsageWithTimeout(
+        _ runtimeModel: AppPoolRuntimeModel
+    ) async -> AppPoolRuntimeModel.SyncOutcome? {
+        let timeoutErrorMessage = runtimeSyncTimeoutErrorMessage()
+        let timeoutPreviousState = runtimeModel.state
+        let timeoutPreviousSyncError = runtimeModel.lastSyncError
+        var timeoutViewState = PoolDashboardViewState()
+        timeoutViewState.syncError = timeoutErrorMessage
+
+        return await withTaskGroup(of: AppPoolRuntimeModel.SyncOutcome?.self) { group in
+            group.addTask {
+                await runtimeModel.syncNow()
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: SyncPolicy.timeoutNanoseconds)
+                return AppPoolRuntimeModel.SyncOutcome(
+                    id: UUID(),
+                    previousState: timeoutPreviousState,
+                    previousSyncError: timeoutPreviousSyncError,
+                    outputViewState: timeoutViewState,
+                    syncError: timeoutErrorMessage,
+                    stateApplied: false,
+                    resultingState: timeoutPreviousState
+                )
+            }
+
+            let firstOutcome = await group.next() ?? nil
+            group.cancelAll()
+            return firstOutcome
+        }
+    }
+
+    private func runtimeSyncTimeoutErrorMessage() -> String {
+        L10n.text(
+            "sync.failure.with_description_format",
+            L10n.text("sync.failure.prefix"),
+            L10n.text("usage.sync.error.timeout")
         )
     }
 

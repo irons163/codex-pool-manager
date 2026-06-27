@@ -3,6 +3,16 @@ import Foundation
 
 @MainActor
 final class AppPoolRuntimeModel: ObservableObject {
+    struct SyncOutcome: Identifiable {
+        let id: UUID
+        let previousState: AccountPoolState
+        let previousSyncError: String?
+        let outputViewState: PoolDashboardViewState
+        let syncError: String?
+        let stateApplied: Bool
+        let resultingState: AccountPoolState
+    }
+
     typealias SyncRunner = @MainActor (
         _ state: AccountPoolState,
         _ viewState: PoolDashboardViewState
@@ -12,6 +22,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     @Published private(set) var state: AccountPoolState
     @Published private(set) var isSyncingUsage = false
     @Published private(set) var lastSyncError: String?
+    @Published private(set) var lastSyncOutcome: SyncOutcome?
 
     private let store: AccountPoolStoring
     private let syncRunner: SyncRunner
@@ -19,6 +30,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     private var stateRevision = 0
     private var autoSyncTask: Task<Void, Never>?
     private var didBootstrap = false
+    private var didLoadFromStore = false
 
     var menuBarSnapshot: MenuBarDashboardSnapshot {
         MenuBarDashboardPresenter.makeSnapshot(
@@ -54,7 +66,17 @@ final class AppPoolRuntimeModel: ObservableObject {
         }
     ) {
         self.store = store
-        self.state = initialState ?? AccountPoolState(accounts: [])
+        if let initialState {
+            self.state = initialState
+            self.didLoadFromStore = true
+        } else if let snapshot = store.load() {
+            self.state = AccountPoolState(snapshot: snapshot)
+            self.didLoadFromStore = true
+            self.stateRevision = 1
+        } else {
+            self.state = AccountPoolState(accounts: [])
+            self.didLoadFromStore = true
+        }
         self.widgetPublisher = widgetPublisher
         self.syncRunner = syncRunner
     }
@@ -68,13 +90,18 @@ final class AppPoolRuntimeModel: ObservableObject {
             state = AccountPoolState(snapshot: snapshot)
             stateRevision += 1
         }
+        didLoadFromStore = true
         publishWidgetSnapshot()
     }
 
     func bootstrapIfNeeded() {
         guard !didBootstrap else { return }
         didBootstrap = true
-        load()
+        if didLoadFromStore {
+            publishWidgetSnapshot()
+        } else {
+            load()
+        }
         startAutoSyncIfNeeded()
     }
 
@@ -109,26 +136,53 @@ final class AppPoolRuntimeModel: ObservableObject {
         startAutoSyncIfNeeded()
     }
 
-    func syncNow() async {
-        guard !isSyncingUsage else { return }
+    @discardableResult
+    func syncNow() async -> SyncOutcome? {
+        guard !isSyncingUsage else { return nil }
 
         isSyncingUsage = true
         defer { isSyncingUsage = false }
 
+        let previousState = state
+        let previousSyncError = lastSyncError
         let syncRevision = stateRevision
         let output = await syncRunner(state, PoolDashboardViewState())
-        guard syncRevision == stateRevision else { return }
+        let syncError = Self.normalizedSyncError(output.viewState.syncError)
+        guard syncRevision == stateRevision else {
+            return publishSyncOutcome(
+                previousState: previousState,
+                previousSyncError: previousSyncError,
+                outputViewState: output.viewState,
+                syncError: syncError,
+                stateApplied: false,
+                resultingState: state
+            )
+        }
 
-        let syncError = output.viewState.syncError?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let syncError, !syncError.isEmpty {
             lastSyncError = syncError
-            return
+            return publishSyncOutcome(
+                previousState: previousState,
+                previousSyncError: previousSyncError,
+                outputViewState: output.viewState,
+                syncError: syncError,
+                stateApplied: false,
+                resultingState: state
+            )
         }
 
         state = output.state
         stateRevision += 1
         lastSyncError = nil
         saveAndPublish()
+        return publishSyncOutcome(
+            previousState: previousState,
+            previousSyncError: previousSyncError,
+            outputViewState: output.viewState,
+            syncError: nil,
+            stateApplied: true,
+            resultingState: state
+        )
     }
 
     private func saveAndPublish() {
@@ -138,6 +192,32 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     private func publishWidgetSnapshot() {
         widgetPublisher(state.snapshot)
+    }
+
+    private static func normalizedSyncError(_ syncError: String?) -> String? {
+        let trimmed = syncError?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed?.isEmpty == false ? trimmed : nil
+    }
+
+    private func publishSyncOutcome(
+        previousState: AccountPoolState,
+        previousSyncError: String?,
+        outputViewState: PoolDashboardViewState,
+        syncError: String?,
+        stateApplied: Bool,
+        resultingState: AccountPoolState
+    ) -> SyncOutcome {
+        let outcome = SyncOutcome(
+            id: UUID(),
+            previousState: previousState,
+            previousSyncError: previousSyncError,
+            outputViewState: outputViewState,
+            syncError: syncError,
+            stateApplied: stateApplied,
+            resultingState: resultingState
+        )
+        lastSyncOutcome = outcome
+        return outcome
     }
 
     private static let minimumAutoSyncSleepNanoseconds: UInt64 = 15_000_000_000
