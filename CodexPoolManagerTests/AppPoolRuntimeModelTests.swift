@@ -69,11 +69,13 @@ struct AppPoolRuntimeModelTests {
     @Test
     func replaceFromDashboardSavesAndPublishesOnce() {
         let store = SpyStore()
-        var publishedCount = 0
+        var publishedNames: [String] = []
         let model = AppPoolRuntimeModel(
             store: store,
             initialState: makeState(name: "initial@example.com"),
-            widgetPublisher: { _ in publishedCount += 1 }
+            widgetPublisher: { snapshot in
+                publishedNames.append(snapshot.accounts.first?.name ?? "")
+            }
         )
 
         model.replaceStateFromDashboard(makeState(name: "dashboard@example.com"))
@@ -81,28 +83,35 @@ struct AppPoolRuntimeModelTests {
         #expect(model.state.accounts.first?.name == "dashboard@example.com")
         #expect(store.savedSnapshots.count == 1)
         #expect(store.savedSnapshots.first?.accounts.first?.name == "dashboard@example.com")
-        #expect(publishedCount == 1)
+        #expect(publishedNames == ["dashboard@example.com"])
     }
 
     @Test
     func syncNowUsesInjectedRunnerAndSavesReturnedState() async {
         let store = SpyStore()
+        var syncCallCount = 0
         let model = AppPoolRuntimeModel(
             store: store,
             initialState: makeState(name: "before@example.com"),
-            syncRunner: { state, viewState in
-                _ = viewState
+            syncRunner: { state, _ in
+                var nextViewState = PoolDashboardViewState()
+                syncCallCount += 1
+                if syncCallCount == 1 {
+                    nextViewState.syncError = "offline"
+                    return PoolDashboardUsageSyncFlowCoordinator.Output(
+                        state: state,
+                        viewState: nextViewState
+                    )
+                }
+
                 var next = state
-                let id = next.accounts[0].id
                 next.updateAccount(
-                    id,
+                    state.accounts[0].id,
                     usedUnits: 10,
                     usageWindowResetAt: Date(timeIntervalSince1970: 3_000),
                     primaryUsagePercent: 20,
                     primaryUsageResetAt: Date(timeIntervalSince1970: 2_400)
                 )
-                var nextViewState = PoolDashboardViewState()
-                nextViewState.syncError = nil
                 return PoolDashboardUsageSyncFlowCoordinator.Output(
                     state: next,
                     viewState: nextViewState
@@ -111,12 +120,17 @@ struct AppPoolRuntimeModelTests {
         )
 
         await model.syncNow()
+        #expect(model.lastSyncError == "offline")
+        #expect(model.state.accounts.first?.name == "before@example.com")
 
+        await model.syncNow()
+
+        #expect(syncCallCount == 2)
         #expect(model.isSyncingUsage == false)
         #expect(model.lastSyncError == nil)
         #expect(model.state.accounts.first?.usedUnits == 10)
-        #expect(store.savedSnapshots.count == 1)
-        #expect(store.savedSnapshots.first?.accounts.first?.usedUnits == 10)
+        #expect(store.savedSnapshots.count == 2)
+        #expect(store.savedSnapshots.last?.accounts.first?.usedUnits == 10)
     }
 
     @Test
@@ -126,10 +140,16 @@ struct AppPoolRuntimeModelTests {
             store: store,
             initialState: makeState(name: "stable@example.com"),
             syncRunner: { state, _ in
+                var mutatedState = state
+                mutatedState.updateAccount(
+                    state.accounts[0].id,
+                    name: "mutated@example.com",
+                    usedUnits: 99
+                )
                 var nextViewState = PoolDashboardViewState()
                 nextViewState.syncError = "offline"
                 return PoolDashboardUsageSyncFlowCoordinator.Output(
-                    state: state,
+                    state: mutatedState,
                     viewState: nextViewState
                 )
             }
@@ -139,7 +159,9 @@ struct AppPoolRuntimeModelTests {
 
         #expect(model.lastSyncError == "offline")
         #expect(model.state.accounts.first?.name == "stable@example.com")
+        #expect(model.state.accounts.first?.usedUnits == 40)
         #expect(store.savedSnapshots.count == 1)
         #expect(store.savedSnapshots.first?.accounts.first?.name == "stable@example.com")
+        #expect(store.savedSnapshots.first?.accounts.first?.usedUnits == 40)
     }
 }
