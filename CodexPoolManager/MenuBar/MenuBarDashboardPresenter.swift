@@ -113,7 +113,7 @@ enum MenuBarDashboardPresenter {
             ))
         }
 
-        if state.accounts.contains(where: { $0.usageSyncError == L10n.text("usage.sync.error.oauth_login_expired") }) {
+        if state.accounts.contains(where: { isOAuthExpiredSyncError($0.usageSyncError) }) {
             rows.append(MenuBarWarningRow(
                 id: "oauthExpired",
                 kind: .oauthExpired,
@@ -140,11 +140,50 @@ enum MenuBarDashboardPresenter {
                 id: "excluded-\(account.id.uuidString)",
                 kind: .excluded,
                 title: account.name,
-                message: account.usageSyncError ?? account.name
+                message: excludedWarningMessage(for: account)
             )
         })
 
         return rows
+    }
+
+    private static func isOAuthExpiredSyncError(_ message: String?) -> Bool {
+        guard let trimmed = message?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else {
+            return false
+        }
+        return oauthExpiredMessages().contains(trimmed)
+    }
+
+    private static func oauthExpiredMessages() -> Set<String> {
+        let key = "usage.sync.error.oauth_login_expired"
+        let supportedLanguageCodes = ["en", "zh-Hant", "zh-Hans", "fr", "es", "ja", "ko"]
+        var messages: Set<String> = [L10n.text(key)]
+
+        for code in supportedLanguageCodes {
+            guard let path = Bundle.main.path(forResource: code, ofType: "lproj"),
+                  let bundle = Bundle(path: path)
+            else {
+                continue
+            }
+
+            let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
+            if localized != key {
+                messages.insert(localized)
+            }
+        }
+
+        return messages
+    }
+
+    private static func excludedWarningMessage(for account: AgentAccount) -> String {
+        guard let message = account.usageSyncError?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !message.isEmpty
+        else {
+            return L10n.text("sync.excluded.default_message")
+        }
+        return message
     }
 
     private static func modeText(for mode: SwitchMode) -> String {

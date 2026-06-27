@@ -151,4 +151,73 @@ struct MenuBarDashboardPresenterTests {
         let excludedWarning = snapshot.warningRows.first(where: { $0.kind == .excluded })
         #expect(excludedWarning?.message == excludedMessage)
     }
+
+    @Test
+    func presenterRecognizesPersistedLocalizedOAuthExpiredWarnings() {
+        var state = AccountPoolState(
+            accounts: [
+                makeAccount(
+                    name: "expired@example.com",
+                    usageSyncError: nonCurrentOAuthExpiredMessage()
+                )
+            ],
+            mode: .manual
+        )
+        state.evaluate(now: Date(timeIntervalSince1970: 1_000))
+
+        let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: nil,
+            now: Date(timeIntervalSince1970: 1_030)
+        )
+
+        #expect(snapshot.warningRows.contains(where: { $0.kind == .oauthExpired }))
+    }
+
+    @Test
+    func presenterUsesDefaultMessageForExcludedAccountWithoutError() {
+        var state = AccountPoolState(
+            accounts: [
+                makeAccount(
+                    name: "excluded@example.com",
+                    usageSyncError: nil,
+                    isUsageSyncExcluded: true
+                )
+            ],
+            mode: .manual
+        )
+        state.evaluate(now: Date(timeIntervalSince1970: 1_000))
+
+        let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: "  \n\t  ",
+            now: Date(timeIntervalSince1970: 1_030)
+        )
+
+        let excludedWarning = snapshot.warningRows.first(where: { $0.kind == .excluded })
+        #expect(excludedWarning?.message == L10n.text("sync.excluded.default_message"))
+        #expect(!snapshot.warningRows.contains(where: { $0.kind == .syncFailed }))
+    }
+
+    private func nonCurrentOAuthExpiredMessage() -> String {
+        let key = "usage.sync.error.oauth_login_expired"
+        let currentMessage = L10n.text(key)
+
+        for code in ["en", "zh-Hant", "zh-Hans", "fr", "es", "ja", "ko"] {
+            guard let path = Bundle.main.path(forResource: code, ofType: "lproj"),
+                  let bundle = Bundle(path: path)
+            else {
+                continue
+            }
+
+            let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
+            if localized != key, localized != currentMessage {
+                return localized
+            }
+        }
+
+        return "登入資訊已過期，請重新登入或重新匯入此帳號。"
+    }
 }
