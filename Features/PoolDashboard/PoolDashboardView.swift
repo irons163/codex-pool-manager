@@ -2177,6 +2177,8 @@ struct PoolDashboardView: View {
         guard lastHandledRuntimeSyncOutcomeID != outcome.id else { return }
         lastHandledRuntimeSyncOutcomeID = outcome.id
 
+        guard outcome.status != .staleDiscard else { return }
+
         viewState.syncError = outcome.syncError
         if !outcome.outputViewState.lastUsageRawJSON.isEmpty {
             viewState.lastUsageRawJSON = outcome.outputViewState.lastUsageRawJSON
@@ -2224,30 +2226,10 @@ struct PoolDashboardView: View {
     private func syncRuntimeCodexUsageWithTimeout(
         _ runtimeModel: AppPoolRuntimeModel
     ) async -> AppPoolRuntimeModel.SyncOutcome? {
-        let timeoutErrorMessage = runtimeSyncTimeoutErrorMessage()
-
-        return await withTaskGroup(of: AppPoolRuntimeModel.SyncOutcome?.self) { group in
-            group.addTask {
-                await runtimeModel.syncNow()
-            }
-            group.addTask {
-                do {
-                    try await Task.sleep(nanoseconds: SyncPolicy.timeoutNanoseconds)
-                } catch {
-                    return nil
-                }
-
-                guard !Task.isCancelled else {
-                    return nil
-                }
-
-                return await runtimeModel.cancelSyncWithError(timeoutErrorMessage)
-            }
-
-            let firstOutcome = await group.next() ?? nil
-            group.cancelAll()
-            return firstOutcome
-        }
+        await runtimeModel.syncNowWithTimeout(
+            timeoutNanoseconds: SyncPolicy.timeoutNanoseconds,
+            timeoutErrorMessage: runtimeSyncTimeoutErrorMessage()
+        )
     }
 
     private func runtimeSyncTimeoutErrorMessage() -> String {

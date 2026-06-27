@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import Testing
 
@@ -56,6 +57,31 @@ struct AppPoolRuntimeModelTests {
             group.addTask {
                 var iterator = stream.makeAsyncIterator()
                 return await iterator.next()
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: timeoutNanoseconds)
+                return nil
+            }
+            let value = await group.next() ?? nil
+            group.cancelAll()
+            return value
+        }
+    }
+
+    private func nextOutcome(
+        from stream: AsyncStream<AppPoolRuntimeModel.SyncOutcome>,
+        matching status: AppPoolRuntimeSyncOutcomeStatus,
+        timeoutNanoseconds: UInt64 = 1_000_000_000
+    ) async -> AppPoolRuntimeModel.SyncOutcome? {
+        await withTaskGroup(of: AppPoolRuntimeModel.SyncOutcome?.self) { group in
+            group.addTask {
+                var iterator = stream.makeAsyncIterator()
+                while let outcome = await iterator.next() {
+                    if await MainActor.run(body: { outcome.status == status }) {
+                        return outcome
+                    }
+                }
+                return nil
             }
             group.addTask {
                 try? await Task.sleep(nanoseconds: timeoutNanoseconds)
@@ -259,10 +285,14 @@ struct AppPoolRuntimeModelTests {
             viewState: PoolDashboardViewState()
         ))
 
-        _ = await syncTask.value
+        let staleOutcome = await syncTask.value
 
         #expect(model.state.accounts.first?.name == "dashboard@example.com")
         #expect(model.isSyncingUsage == false)
+        #expect(staleOutcome?.status == .staleDiscard)
+        #expect(staleOutcome?.stateApplied == false)
+        #expect(staleOutcome?.resultingState.accounts.first?.name == "dashboard@example.com")
+        #expect(model.lastSyncOutcome?.id == staleOutcome?.id)
         #expect(!store.savedSnapshots.contains {
             $0.accounts.first?.name == "synced-old@example.com"
         })
@@ -367,6 +397,7 @@ struct AppPoolRuntimeModelTests {
 
         #expect(outcome?.previousState.snapshot == initialState.snapshot)
         #expect(outcome?.previousSyncError == nil)
+        #expect(outcome?.status == .failure)
         #expect(outcome?.syncError == "offline")
         #expect(outcome?.stateApplied == false)
         #expect(outcome?.resultingState.snapshot == initialState.snapshot)
@@ -409,6 +440,7 @@ struct AppPoolRuntimeModelTests {
 
         #expect(outcome?.previousState.snapshot == initialState.snapshot)
         #expect(outcome?.previousSyncError == "offline")
+        #expect(outcome?.status == .success)
         #expect(outcome?.syncError == nil)
         #expect(outcome?.stateApplied == true)
         #expect(outcome?.resultingState.accounts.first?.usedUnits == 8)
@@ -465,12 +497,14 @@ struct AppPoolRuntimeModelTests {
         ))
         let staleOutcome = await firstSyncTask.value
 
-        #expect(staleOutcome == nil)
+        #expect(staleOutcome?.status == .staleDiscard)
+        #expect(staleOutcome?.stateApplied == false)
         #expect(model.state.accounts.first?.usedUnits == initialState.accounts.first?.usedUnits)
         #expect(store.savedSnapshots.isEmpty)
 
         let retryOutcome = await model.syncNow()
 
+        #expect(retryOutcome?.status == .success)
         #expect(retryOutcome?.stateApplied == true)
         #expect(retryOutcome?.previousSyncError == "timeout")
         #expect(model.lastSyncError == nil)
@@ -503,5 +537,145 @@ struct AppPoolRuntimeModelTests {
         #expect(model.lastSyncError == nil)
         #expect(model.lastSyncOutcome?.id == completedOutcomeID)
         #expect(model.state.accounts.first?.usedUnits == 22)
+    }
+
+    @Test
+    func syncNowWithTimeoutPublishesTimeoutInvalidatesHungSyncAndAllowsRetry() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "timeout-api@example.com")
+        var syncCallCount = 0
+        var firstSyncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let (outcomes, outcomeContinuation) = AsyncStream<AppPoolRuntimeModel.SyncOutcome>.makeStream()
+        var cancellables = Set<AnyCancellable>()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { state, _ in
+                syncCallCount += 1
+                if syncCallCount == 1 {
+                    return await withCheckedContinuation { continuation in
+                        firstSyncContinuation = continuation
+                        syncStartedContinuation.yield(())
+                    }
+                }
+
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 14)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+        model.$lastSyncOutcome
+            .compactMap { $0 }
+            .sink { outcome in outcomeContinuation.yield(outcome) }
+            .store(in: &cancellables)
+
+        let timeoutOutcome = await model.syncNowWithTimeout(
+            timeoutNanoseconds: 1_000_000,
+            timeoutErrorMessage: "timeout"
+        )
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
+
+        #expect(timeoutOutcome?.status == .timeout)
+        #expect(timeoutOutcome?.syncError == "timeout")
+        #expect(timeoutOutcome?.stateApplied == false)
+        #expect(model.isSyncingUsage == false)
+        #expect(model.lastSyncError == "timeout")
+
+        var staleState = initialState
+        staleState.updateAccount(initialState.accounts[0].id, usedUnits: 99)
+        firstSyncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: staleState,
+            viewState: PoolDashboardViewState()
+        ))
+        let staleOutcome = await nextOutcome(from: outcomes, matching: .staleDiscard)
+
+        #expect(staleOutcome?.stateApplied == false)
+        #expect(model.lastSyncError == "timeout")
+        #expect(model.state.accounts.first?.usedUnits == initialState.accounts.first?.usedUnits)
+        #expect(store.savedSnapshots.isEmpty)
+
+        let retryOutcome = await model.syncNowWithTimeout(
+            timeoutNanoseconds: 1_000_000_000,
+            timeoutErrorMessage: "timeout"
+        )
+
+        #expect(retryOutcome?.status == .success)
+        #expect(retryOutcome?.previousSyncError == "timeout")
+        #expect(model.lastSyncError == nil)
+        #expect(model.state.accounts.first?.usedUnits == 14)
+    }
+
+    @Test
+    func syncNowWithTimeoutReturnsSuccessfulOutcomeWhenTimeoutTaskIsCancelled() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "fast-success@example.com")
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { state, _ in
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 18)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+
+        let outcome = await model.syncNowWithTimeout(
+            timeoutNanoseconds: 1_000_000_000,
+            timeoutErrorMessage: "timeout"
+        )
+
+        #expect(outcome?.status == .success)
+        #expect(outcome?.stateApplied == true)
+        #expect(outcome?.syncError == nil)
+        #expect(model.lastSyncError == nil)
+        #expect(model.state.accounts.first?.usedUnits == 18)
+    }
+
+    @Test
+    func autoSyncUsesTimeoutAwareRuntimeSync() async {
+        let store = SpyStore()
+        var state = makeState(name: "auto-timeout@example.com")
+        state.setAutoSyncEnabled(true)
+        state.setAutoSyncIntervalSeconds(5)
+        var syncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let (outcomes, outcomeContinuation) = AsyncStream<AppPoolRuntimeModel.SyncOutcome>.makeStream()
+        var cancellables = Set<AnyCancellable>()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: state,
+            syncTimeoutNanoseconds: 1_000_000,
+            syncRunner: { state, _ in
+                await withCheckedContinuation { continuation in
+                    syncContinuation = continuation
+                    syncStartedContinuation.yield(())
+                }
+            }
+        )
+        model.$lastSyncOutcome
+            .compactMap { $0 }
+            .sink { outcome in outcomeContinuation.yield(outcome) }
+            .store(in: &cancellables)
+
+        model.startAutoSyncIfNeeded()
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
+        let timeoutOutcome = await nextOutcome(from: outcomes, matching: .timeout)
+        model.stopAutoSync()
+
+        #expect(timeoutOutcome?.status == .timeout)
+        #expect(model.isSyncingUsage == false)
+        syncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: state,
+            viewState: PoolDashboardViewState()
+        ))
     }
 }
