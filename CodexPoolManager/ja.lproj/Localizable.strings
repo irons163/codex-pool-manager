@@ -603,3 +603,16 @@
 "relay.usage_sync_unavailable.title" = "手動切り替えのみ";
 "relay.usage_sync_unavailable.hint" = "中継 API key アカウントは ChatGPT サブスクリプション使用量を提供しないため、自動切り替えから除外されます。";
 "relay.card.badge" = "中継";
+
+"menu_bar.updated.never" = "未同期";
+"menu_bar.updated.format" = "%@ 前に更新";
+"menu_bar.reset.now" = "今";
+"menu_bar.reset.minutes_format" = "%d 分";
+"menu_bar.reset.hours_format" = "%d 時間";
+"menu_bar.reset.days_format" = "%d 日";
+"menu_bar.warning.sync_failed.title" = "同期に失敗";
+"menu_bar.warning.relay_usage.title" = "リレー使用量は同期不可";
+"menu_bar.warning.relay_usage.message" = "API key リレーアカウントは手動切替できますが、使用量同期には対応していません。";
+"menu_bar.warning.oauth_expired.title" = "ログイン期限切れ";
+"menu_bar.warning.oauth_expired.message" = "ダッシュボードを開いて再ログインすると使用量同期が復旧します。";
+"account.api_key_badge" = "API Key";

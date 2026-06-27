@@ -604,3 +604,16 @@
 "relay.usage_sync_unavailable.title" = "僅支援手動切換";
 "relay.usage_sync_unavailable.hint" = "中轉 API key 帳號不會提供 ChatGPT 訂閱用量，因此不會納入自動切換。";
 "relay.card.badge" = "中轉";
+
+"menu_bar.updated.never" = "尚未同步";
+"menu_bar.updated.format" = "%@ 前更新";
+"menu_bar.reset.now" = "現在";
+"menu_bar.reset.minutes_format" = "%d 分";
+"menu_bar.reset.hours_format" = "%d 小時";
+"menu_bar.reset.days_format" = "%d 天";
+"menu_bar.warning.sync_failed.title" = "同步失敗";
+"menu_bar.warning.relay_usage.title" = "中轉用量無法同步";
+"menu_bar.warning.relay_usage.message" = "API key 中轉帳號可手動切換，但不支援用量同步。";
+"menu_bar.warning.oauth_expired.title" = "登入已過期";
+"menu_bar.warning.oauth_expired.message" = "請開啟主畫面並重新登入，以恢復用量同步。";
+"account.api_key_badge" = "API Key";

@@ -603,3 +603,16 @@
 "relay.usage_sync_unavailable.title" = "Solo cambio manual";
 "relay.usage_sync_unavailable.hint" = "Las cuentas relay con API key no exponen el uso de suscripción de ChatGPT, así que se excluyen del cambio automático.";
 "relay.card.badge" = "Relay";
+
+"menu_bar.updated.never" = "Nunca sincronizado";
+"menu_bar.updated.format" = "Actualizado hace %@";
+"menu_bar.reset.now" = "ahora";
+"menu_bar.reset.minutes_format" = "%d min";
+"menu_bar.reset.hours_format" = "%d h";
+"menu_bar.reset.days_format" = "%d d";
+"menu_bar.warning.sync_failed.title" = "Error de sincronización";
+"menu_bar.warning.relay_usage.title" = "Uso de relay no disponible";
+"menu_bar.warning.relay_usage.message" = "Las cuentas relay con API key pueden cambiarse manualmente, pero no admiten sincronización de uso.";
+"menu_bar.warning.oauth_expired.title" = "Inicio de sesión vencido";
+"menu_bar.warning.oauth_expired.message" = "Abre el panel y vuelve a iniciar sesión para restaurar la sincronización.";
+"account.api_key_badge" = "API Key";

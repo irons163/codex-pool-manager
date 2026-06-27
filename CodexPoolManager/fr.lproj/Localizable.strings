@@ -603,3 +603,16 @@
 "relay.usage_sync_unavailable.title" = "Bascule manuelle uniquement";
 "relay.usage_sync_unavailable.hint" = "Les comptes relais avec clé API n’exposent pas l’usage de l’abonnement ChatGPT, ils sont donc exclus de la bascule automatique.";
 "relay.card.badge" = "Relais";
+
+"menu_bar.updated.never" = "Jamais synchronisé";
+"menu_bar.updated.format" = "Mis à jour il y a %@";
+"menu_bar.reset.now" = "maintenant";
+"menu_bar.reset.minutes_format" = "%d min";
+"menu_bar.reset.hours_format" = "%d h";
+"menu_bar.reset.days_format" = "%d j";
+"menu_bar.warning.sync_failed.title" = "Échec de la synchronisation";
+"menu_bar.warning.relay_usage.title" = "Usage relais indisponible";
+"menu_bar.warning.relay_usage.message" = "Les comptes relais API key peuvent être changés manuellement, mais la synchronisation d’usage n’est pas disponible.";
+"menu_bar.warning.oauth_expired.title" = "Connexion expirée";
+"menu_bar.warning.oauth_expired.message" = "Ouvrez le tableau de bord et reconnectez-vous pour rétablir la synchronisation.";
+"account.api_key_badge" = "API Key";

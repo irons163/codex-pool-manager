@@ -612,3 +612,16 @@
 "relay.usage_sync_unavailable.title" = "Manual switching only";
 "relay.usage_sync_unavailable.hint" = "Relay API key accounts do not expose ChatGPT subscription usage, so they are excluded from automatic switching.";
 "relay.card.badge" = "Relay";
+
+"menu_bar.updated.never" = "Never synced";
+"menu_bar.updated.format" = "Updated %@ ago";
+"menu_bar.reset.now" = "now";
+"menu_bar.reset.minutes_format" = "%d min";
+"menu_bar.reset.hours_format" = "%d hr";
+"menu_bar.reset.days_format" = "%d d";
+"menu_bar.warning.sync_failed.title" = "Sync failed";
+"menu_bar.warning.relay_usage.title" = "Relay usage unavailable";
+"menu_bar.warning.relay_usage.message" = "API key relay accounts can be switched manually, but usage sync is not available.";
+"menu_bar.warning.oauth_expired.title" = "Login expired";
+"menu_bar.warning.oauth_expired.message" = "Open the dashboard and sign in again to restore usage sync.";
+"account.api_key_badge" = "API Key";
