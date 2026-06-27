@@ -414,4 +414,66 @@ struct AppPoolRuntimeModelTests {
         #expect(outcome?.resultingState.accounts.first?.usedUnits == 8)
         #expect(model.lastSyncError == nil)
     }
+
+    @Test
+    func cancelSyncWithErrorPublishesTimeoutInvalidatesStaleOutputAndAllowsRetry() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "timeout@example.com")
+        var syncCallCount = 0
+        var firstSyncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { state, _ in
+                syncCallCount += 1
+                if syncCallCount == 1 {
+                    return await withCheckedContinuation { continuation in
+                        firstSyncContinuation = continuation
+                        syncStartedContinuation.yield(())
+                    }
+                }
+
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 12)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+
+        let firstSyncTask = Task {
+            await model.syncNow()
+        }
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
+
+        let timeoutOutcome = model.cancelSyncWithError("timeout")
+
+        #expect(timeoutOutcome.syncError == "timeout")
+        #expect(timeoutOutcome.stateApplied == false)
+        #expect(model.isSyncingUsage == false)
+        #expect(model.lastSyncError == "timeout")
+        #expect(model.lastSyncOutcome?.id == timeoutOutcome.id)
+
+        var staleState = initialState
+        staleState.updateAccount(initialState.accounts[0].id, usedUnits: 99)
+        firstSyncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: staleState,
+            viewState: PoolDashboardViewState()
+        ))
+        let staleOutcome = await firstSyncTask.value
+
+        #expect(staleOutcome == nil)
+        #expect(model.state.accounts.first?.usedUnits == initialState.accounts.first?.usedUnits)
+        #expect(store.savedSnapshots.isEmpty)
+
+        let retryOutcome = await model.syncNow()
+
+        #expect(retryOutcome?.stateApplied == true)
+        #expect(retryOutcome?.previousSyncError == "timeout")
+        #expect(model.lastSyncError == nil)
+        #expect(model.state.accounts.first?.usedUnits == 12)
+    }
 }

@@ -13,12 +13,13 @@ import Combine
 struct CodexPoolManagerApp: App {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @StateObject private var menuBarModel = MenuBarSnapshotModel()
-    @StateObject private var runtimeModel = AppPoolRuntimeModel()
+    @StateObject private var runtimeModel: AppPoolRuntimeModel
     
     init() {
         let defaults = AppRuntimeStorage.defaults
         LegacySandboxPreferencesMigrator.migrateIfNeeded(defaults: defaults)
         PreferenceValueNormalizer.normalizeIfNeeded(defaults: defaults)
+        _runtimeModel = StateObject(wrappedValue: AppPoolRuntimeModel())
         if !AppRuntimeStorage.isRunningXCTest {
             WidgetBridgePublisher.configureBridge()
             WidgetBridgePublisher.publishFromMainApp(status: "Codex Pool Manager is running")

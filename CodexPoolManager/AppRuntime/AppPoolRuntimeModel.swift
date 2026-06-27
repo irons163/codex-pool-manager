@@ -29,6 +29,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     private let widgetPublisher: WidgetPublisher
     private var stateRevision = 0
     private var autoSyncTask: Task<Void, Never>?
+    private var activeSyncID: UUID?
     private var didBootstrap = false
     private var didLoadFromStore = false
 
@@ -140,8 +141,15 @@ final class AppPoolRuntimeModel: ObservableObject {
     func syncNow() async -> SyncOutcome? {
         guard !isSyncingUsage else { return nil }
 
+        let syncID = UUID()
+        activeSyncID = syncID
         isSyncingUsage = true
-        defer { isSyncingUsage = false }
+        defer {
+            if activeSyncID == syncID {
+                activeSyncID = nil
+                isSyncingUsage = false
+            }
+        }
 
         let previousState = state
         let previousSyncError = lastSyncError
@@ -149,14 +157,7 @@ final class AppPoolRuntimeModel: ObservableObject {
         let output = await syncRunner(state, PoolDashboardViewState())
         let syncError = Self.normalizedSyncError(output.viewState.syncError)
         guard syncRevision == stateRevision else {
-            return publishSyncOutcome(
-                previousState: previousState,
-                previousSyncError: previousSyncError,
-                outputViewState: output.viewState,
-                syncError: syncError,
-                stateApplied: false,
-                resultingState: state
-            )
+            return nil
         }
 
         if let syncError, !syncError.isEmpty {
@@ -181,6 +182,26 @@ final class AppPoolRuntimeModel: ObservableObject {
             outputViewState: output.viewState,
             syncError: nil,
             stateApplied: true,
+            resultingState: state
+        )
+    }
+
+    func cancelSyncWithError(_ message: String) -> SyncOutcome {
+        let previousState = state
+        let previousSyncError = lastSyncError
+        var outputViewState = PoolDashboardViewState()
+        outputViewState.syncError = message
+
+        stateRevision += 1
+        activeSyncID = nil
+        isSyncingUsage = false
+        lastSyncError = message
+        return publishSyncOutcome(
+            previousState: previousState,
+            previousSyncError: previousSyncError,
+            outputViewState: outputViewState,
+            syncError: message,
+            stateApplied: false,
             resultingState: state
         )
     }
@@ -220,10 +241,10 @@ final class AppPoolRuntimeModel: ObservableObject {
         return outcome
     }
 
-    private static let minimumAutoSyncSleepNanoseconds: UInt64 = 15_000_000_000
+    private static let minimumAutoSyncSleepNanoseconds: UInt64 = 5_000_000_000
 
     private func autoSyncSleepNanoseconds() -> UInt64 {
-        let clampedSeconds = max(15, state.autoSyncIntervalSeconds)
+        let clampedSeconds = max(5, state.autoSyncIntervalSeconds)
         return UInt64(clampedSeconds * 1_000_000_000)
     }
 }

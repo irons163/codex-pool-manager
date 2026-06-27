@@ -2193,7 +2193,15 @@ struct PoolDashboardView: View {
         }
 
         guard outcome.stateApplied else { return }
+        let wasShowingLowUsageAlert = viewState.showLowUsageAlert
         applyRuntimeStateUpdate(outcome.resultingState)
+        showLowUsageAlertForThresholdTriggeredIntelligentSwitch(
+            previousSnapshot: outcome.previousState.snapshot,
+            currentSnapshot: outcome.resultingState.snapshot
+        )
+        postLowUsageDesktopNotificationIfNeeded(
+            wasShowingLowUsageAlert: wasShowingLowUsageAlert
+        )
 
         if outcome.previousSyncError != nil {
             DesktopNotifier.post(
@@ -2217,10 +2225,6 @@ struct PoolDashboardView: View {
         _ runtimeModel: AppPoolRuntimeModel
     ) async -> AppPoolRuntimeModel.SyncOutcome? {
         let timeoutErrorMessage = runtimeSyncTimeoutErrorMessage()
-        let timeoutPreviousState = runtimeModel.state
-        let timeoutPreviousSyncError = runtimeModel.lastSyncError
-        var timeoutViewState = PoolDashboardViewState()
-        timeoutViewState.syncError = timeoutErrorMessage
 
         return await withTaskGroup(of: AppPoolRuntimeModel.SyncOutcome?.self) { group in
             group.addTask {
@@ -2228,15 +2232,7 @@ struct PoolDashboardView: View {
             }
             group.addTask {
                 try? await Task.sleep(nanoseconds: SyncPolicy.timeoutNanoseconds)
-                return AppPoolRuntimeModel.SyncOutcome(
-                    id: UUID(),
-                    previousState: timeoutPreviousState,
-                    previousSyncError: timeoutPreviousSyncError,
-                    outputViewState: timeoutViewState,
-                    syncError: timeoutErrorMessage,
-                    stateApplied: false,
-                    resultingState: timeoutPreviousState
-                )
+                return await runtimeModel.cancelSyncWithError(timeoutErrorMessage)
             }
 
             let firstOutcome = await group.next() ?? nil
