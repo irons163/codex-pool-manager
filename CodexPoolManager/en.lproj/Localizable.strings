@@ -526,6 +526,7 @@
 "sync.failure.prefix" = "Sync failed";
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "Authorization failed. Please check your API token.";
+"usage.sync.error.oauth_login_expired" = "Sign-in information expired. Please sign in again or re-import this account.";
 "usage.sync.error.rate_limited" = "Rate limit reached. Please try again later.";
 "usage.sync.error.network" = "Network error. Please check your connection.";
 "usage.sync.error.timeout" = "Sync timed out. Please try again.";

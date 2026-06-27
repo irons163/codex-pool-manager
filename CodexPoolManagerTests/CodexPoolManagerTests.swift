@@ -3151,6 +3151,37 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncShowsOAuthLoginExpiredWhenUnauthorizedWithoutRefreshToken() async {
+        let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: UUID(), name: "OAuth", usedUnits: 0, quota: 1000, apiToken: "expired-access-token")
+            ],
+            mode: .manual
+        )
+        if let accountID = state.accounts.first?.id {
+            state.updateAccount(accountID, chatGPTAccountID: "acct-oauth")
+        }
+        let client = MockCodexUsageClient(
+            responseByToken: [:],
+            shouldThrowError: CodexClientHTTPError(statusCode: 401)
+        )
+        let sync = CodexUsageSyncService(
+            client: client,
+            oauthRefreshClient: StubOAuthTokenRefreshClient(
+                requests: refreshRequests,
+                result: .failure(CodexSyncError.unauthorized)
+            ),
+            oauthConfiguration: .codexDefault
+        )
+        try? await sync.sync(state: &state)
+
+        #expect(refreshRequests.value.isEmpty)
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == L10n.text("usage.sync.error.oauth_login_expired"))
+    }
+
+    @Test
     func codexSyncMapsRateLimitError() async {
         var state = AccountPoolState(
             accounts: [

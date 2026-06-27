@@ -332,6 +332,7 @@
 "sync.failure.prefix" = "Sincronización fallida";
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "Autorización fallida. Verifica tu token de API.";
+"usage.sync.error.oauth_login_expired" = "La información de inicio de sesión caducó. Vuelve a iniciar sesión o reimporta esta cuenta.";
 "usage.sync.error.rate_limited" = "Se alcanzó el límite de velocidad. Inténtalo más tarde.";
 "usage.sync.error.network" = "Error de red. Verifica tu conexión.";
 "usage.sync.error.unknown" = "La sincronización falló. Inténtalo más tarde.";

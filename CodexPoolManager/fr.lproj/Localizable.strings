@@ -332,6 +332,7 @@
 "sync.failure.prefix" = "Échec de la synchronisation";
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "Échec de l'autorisation. Vérifiez votre token API.";
+"usage.sync.error.oauth_login_expired" = "Les informations de connexion ont expiré. Connectez-vous à nouveau ou réimportez ce compte.";
 "usage.sync.error.rate_limited" = "Limite de débit atteinte. Veuillez réessayer plus tard.";
 "usage.sync.error.network" = "Erreur réseau. Vérifiez votre connexion.";
 "usage.sync.error.unknown" = "Échec de la synchronisation. Veuillez réessayer plus tard.";

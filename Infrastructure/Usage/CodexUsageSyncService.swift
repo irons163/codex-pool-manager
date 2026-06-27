@@ -6,6 +6,7 @@ struct CodexClientHTTPError: Error, Equatable {
 
 enum CodexSyncError: Error, Equatable, LocalizedError {
     case unauthorized
+    case oauthLoginExpired
     case rateLimited
     case network
     case unknown
@@ -14,6 +15,8 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
         switch self {
         case .unauthorized:
             return L10n.text("usage.sync.error.unauthorized")
+        case .oauthLoginExpired:
+            return L10n.text("usage.sync.error.oauth_login_expired")
         case .rateLimited:
             return L10n.text("usage.sync.error.rate_limited")
         case .network:
@@ -164,12 +167,24 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                             state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
                             continue
                         }
+                        if shouldReportOAuthLoginExpired(for: account) {
+                            state.setUsageSyncExclusion(
+                                for: account.id,
+                                reason: CodexSyncError.oauthLoginExpired.localizedDescription,
+                                now: now,
+                                shouldEvaluate: false
+                            )
+                            continue
+                        }
                     } catch is CancellationError {
                         throw CancellationError()
                     } catch {
+                        let reason = shouldReportOAuthLoginExpired(for: account)
+                            ? CodexSyncError.oauthLoginExpired.localizedDescription
+                            : mapSyncError(error).localizedDescription
                         state.setUsageSyncExclusion(
                             for: account.id,
-                            reason: mapSyncError(error).localizedDescription,
+                            reason: reason,
                             now: now,
                             shouldEvaluate: false
                         )
@@ -275,6 +290,12 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
             return .network
         }
         return .unknown
+    }
+
+    private func shouldReportOAuthLoginExpired(for account: AgentAccount) -> Bool {
+        account.supportsCodexUsageSync
+            && oauthRefreshClient != nil
+            && oauthConfiguration != nil
     }
 }
 

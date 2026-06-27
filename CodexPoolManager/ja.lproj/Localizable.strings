@@ -332,6 +332,7 @@
 "sync.failure.prefix" = "同期に失敗しました";
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "認可に失敗しました。API token を確認してください。";
+"usage.sync.error.oauth_login_expired" = "ログイン情報の有効期限が切れました。もう一度ログインするか、このアカウントを再インポートしてください。";
 "usage.sync.error.rate_limited" = "レート制限に達しました。しばらくしてから再試行してください。";
 "usage.sync.error.network" = "ネットワークエラーです。接続を確認してください。";
 "usage.sync.error.unknown" = "同期に失敗しました。しばらくしてから再試行してください。";
