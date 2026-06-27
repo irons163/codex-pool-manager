@@ -451,11 +451,11 @@ struct AppPoolRuntimeModelTests {
 
         let timeoutOutcome = model.cancelSyncWithError("timeout")
 
-        #expect(timeoutOutcome.syncError == "timeout")
-        #expect(timeoutOutcome.stateApplied == false)
+        #expect(timeoutOutcome?.syncError == "timeout")
+        #expect(timeoutOutcome?.stateApplied == false)
         #expect(model.isSyncingUsage == false)
         #expect(model.lastSyncError == "timeout")
-        #expect(model.lastSyncOutcome?.id == timeoutOutcome.id)
+        #expect(model.lastSyncOutcome?.id == timeoutOutcome?.id)
 
         var staleState = initialState
         staleState.updateAccount(initialState.accounts[0].id, usedUnits: 99)
@@ -475,5 +475,33 @@ struct AppPoolRuntimeModelTests {
         #expect(retryOutcome?.previousSyncError == "timeout")
         #expect(model.lastSyncError == nil)
         #expect(model.state.accounts.first?.usedUnits == 12)
+    }
+
+    @Test
+    func cancelSyncWithErrorDoesNotOverwriteCompletedSyncWhenNoSyncIsActive() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "complete@example.com")
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { state, _ in
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 22)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: PoolDashboardViewState()
+                )
+            }
+        )
+
+        let successOutcome = await model.syncNow()
+        let completedOutcomeID = model.lastSyncOutcome?.id
+        let ignoredTimeoutOutcome: AppPoolRuntimeModel.SyncOutcome? = model.cancelSyncWithError("timeout")
+
+        #expect(successOutcome?.stateApplied == true)
+        #expect(ignoredTimeoutOutcome == nil)
+        #expect(model.lastSyncError == nil)
+        #expect(model.lastSyncOutcome?.id == completedOutcomeID)
+        #expect(model.state.accounts.first?.usedUnits == 22)
     }
 }

@@ -2231,7 +2231,16 @@ struct PoolDashboardView: View {
                 await runtimeModel.syncNow()
             }
             group.addTask {
-                try? await Task.sleep(nanoseconds: SyncPolicy.timeoutNanoseconds)
+                do {
+                    try await Task.sleep(nanoseconds: SyncPolicy.timeoutNanoseconds)
+                } catch {
+                    return nil
+                }
+
+                guard !Task.isCancelled else {
+                    return nil
+                }
+
                 return await runtimeModel.cancelSyncWithError(timeoutErrorMessage)
             }
 

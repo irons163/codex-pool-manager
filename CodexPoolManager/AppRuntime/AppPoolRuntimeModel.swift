@@ -186,7 +186,11 @@ final class AppPoolRuntimeModel: ObservableObject {
         )
     }
 
-    func cancelSyncWithError(_ message: String) -> SyncOutcome {
+    func cancelSyncWithError(_ message: String) -> SyncOutcome? {
+        guard activeSyncID != nil || isSyncingUsage else {
+            return nil
+        }
+
         let previousState = state
         let previousSyncError = lastSyncError
         var outputViewState = PoolDashboardViewState()
