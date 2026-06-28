@@ -92,7 +92,9 @@ enum MenuBarDashboardPresenter {
             isPaid: account.isPaid,
             credentialLabel: account.isRelayAPIKeyAccount ? L10n.text("account.api_key_badge") : nil,
             weeklyRemainingText: percentText(account.remainingRatio),
-            fiveHourRemainingText: remainingPercent(fromUsagePercent: account.primaryUsagePercent).map { "\($0)%" },
+            fiveHourRemainingText: account.isPaid
+                ? remainingPercent(fromUsagePercent: account.primaryUsagePercent).map { "\($0)%" }
+                : nil,
             resetText: resetText(for: account.usageWindowResetAt, now: now),
             warningText: account.usageSyncError
         )
