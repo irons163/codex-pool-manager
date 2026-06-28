@@ -348,6 +348,13 @@ struct AppPoolRuntimeModelTests {
                     outputContinuation = continuation
                     runnerStartedContinuation.yield(())
                 }
+            },
+            officialSwitchRunner: { _ in
+                .success("switched")
+            },
+            relaySwitchRunner: { _ in
+                Issue.record("relay runner must not be used for an OAuth account")
+                return .failure("wrong runner")
             }
         )
 
@@ -378,6 +385,75 @@ struct AppPoolRuntimeModelTests {
     }
 
     @Test
+    func switchAccountMarksOfficialAccountActiveAfterSuccessfulSwitch() async {
+        let store = SpyStore()
+        let account = AgentAccount(
+            id: UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!,
+            name: "official@example.com",
+            usedUnits: 20,
+            quota: 100,
+            apiToken: "access-token",
+            credentialType: .chatGPTOAuth,
+            chatGPTAccountID: "user-official"
+        )
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: AccountPoolState(accounts: [account], mode: .manual),
+            officialSwitchRunner: { request in
+                #expect(request.account.id == account.id)
+                return .success("official switched")
+            },
+            relaySwitchRunner: { _ in
+                Issue.record("relay runner must not be used for an OAuth account")
+                return .failure("wrong runner")
+            }
+        )
+
+        await model.switchAccount(account.id)
+
+        #expect(model.state.activeAccountID == account.id)
+        #expect(model.lastSwitchMessage == "official switched")
+        #expect(store.savedSnapshots.count == 1)
+    }
+
+    @Test
+    func switchAccountUsesRelayRunnerForRelayAccount() async {
+        let relayID = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
+        let account = AgentAccount(
+            id: relayID,
+            name: "relay",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "relay-key",
+            credentialType: .relayAPIKey,
+            relayProviderID: "mirror",
+            relayProviderName: "mirror",
+            relayBaseURL: "https://relay.example.test/api/codex",
+            relayWireAPI: "responses",
+            relayRequiresOpenAIAuth: true,
+            isUsageSyncExcluded: true,
+            usageSyncError: AgentAccount.relayUsageSyncUnavailableReason
+        )
+        let model = AppPoolRuntimeModel(
+            initialState: AccountPoolState(accounts: [account], mode: .manual),
+            officialSwitchRunner: { _ in
+                Issue.record("official runner must not be used for relay account")
+                return .failure("wrong runner")
+            },
+            relaySwitchRunner: { request in
+                #expect(request.accountID == relayID)
+                #expect(request.apiKey == "relay-key")
+                return .success("relay switched")
+            }
+        )
+
+        await model.switchAccount(relayID)
+
+        #expect(model.state.activeAccountID == relayID)
+        #expect(model.lastSwitchMessage == "relay switched")
+    }
+
+    @Test
     func switchAccountIgnoresAlreadyActiveAccountWithoutSaving() async {
         let store = SpyStore()
         let initialState = makeTwoAccountState()
@@ -385,7 +461,14 @@ struct AppPoolRuntimeModelTests {
         let model = AppPoolRuntimeModel(
             store: store,
             initialState: initialState,
-            widgetPublisher: { _ in }
+            widgetPublisher: { _ in },
+            officialSwitchRunner: { _ in
+                .success("already active")
+            },
+            relaySwitchRunner: { _ in
+                Issue.record("relay runner must not be used for an OAuth account")
+                return .failure("wrong runner")
+            }
         )
 
         await model.switchAccount(activeID)

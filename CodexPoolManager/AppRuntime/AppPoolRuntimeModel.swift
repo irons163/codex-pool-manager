@@ -34,15 +34,34 @@ final class AppPoolRuntimeModel: ObservableObject {
     ) async -> PoolDashboardUsageSyncFlowCoordinator.Output
     typealias WidgetPublisher = @MainActor (_ snapshot: AccountPoolSnapshot) -> Void
     typealias MenuBarNowProvider = @MainActor () -> Date
+    struct OfficialSwitchRequest {
+        let account: AgentAccount
+        let switchWithoutLaunching: Bool
+        let launchTarget: CodexLaunchTarget
+    }
+
+    enum SwitchResult: Equatable {
+        case success(String)
+        case failure(String)
+    }
+
+    typealias OfficialSwitchRunner = @MainActor (_ request: OfficialSwitchRequest) async -> SwitchResult
+    typealias RelaySwitchRunner = @MainActor (
+        _ request: PoolDashboardRelayAccountCoordinator.SwitchRequest
+    ) async -> SwitchResult
 
     @Published private(set) var state: AccountPoolState
     @Published private(set) var isSyncingUsage = false
     @Published private(set) var lastSyncError: String?
     @Published private(set) var lastSyncOutcome: SyncOutcome?
+    @Published private(set) var lastSwitchMessage: String?
     @Published private(set) var menuBarNow: Date
 
     private let store: AccountPoolStoring
     private let syncRunner: SyncRunner
+    private let officialSwitchRunner: OfficialSwitchRunner
+    private let relaySwitchRunner: RelaySwitchRunner
+    private let defaults: UserDefaults
     private let widgetPublisher: WidgetPublisher
     private let syncTimeoutNanoseconds: UInt64
     private let menuBarClockIntervalNanoseconds: UInt64
@@ -73,7 +92,10 @@ final class AppPoolRuntimeModel: ObservableObject {
         syncRunner: @escaping SyncRunner = { state, viewState in
             await PoolDashboardUsageSyncFlowCoordinator()
                 .syncCodexUsage(from: state, viewState: viewState)
-        }
+        },
+        officialSwitchRunner: OfficialSwitchRunner? = nil,
+        relaySwitchRunner: RelaySwitchRunner? = nil,
+        defaults: UserDefaults? = nil
     ) {
         self.init(
             store: AppRuntimeStorage.accountPoolStore,
@@ -82,7 +104,10 @@ final class AppPoolRuntimeModel: ObservableObject {
             menuBarClockIntervalNanoseconds: menuBarClockIntervalNanoseconds,
             menuBarNowProvider: menuBarNowProvider,
             widgetPublisher: widgetPublisher,
-            syncRunner: syncRunner
+            syncRunner: syncRunner,
+            officialSwitchRunner: officialSwitchRunner,
+            relaySwitchRunner: relaySwitchRunner,
+            defaults: defaults
         )
     }
 
@@ -96,9 +121,15 @@ final class AppPoolRuntimeModel: ObservableObject {
         syncRunner: @escaping SyncRunner = { state, viewState in
             await PoolDashboardUsageSyncFlowCoordinator()
                 .syncCodexUsage(from: state, viewState: viewState)
-        }
+        },
+        officialSwitchRunner: OfficialSwitchRunner? = nil,
+        relaySwitchRunner: RelaySwitchRunner? = nil,
+        defaults: UserDefaults? = nil
     ) {
         self.store = store
+        self.defaults = defaults ?? AppRuntimeStorage.defaults
+        self.officialSwitchRunner = officialSwitchRunner ?? Self.makeOfficialSwitchRunner()
+        self.relaySwitchRunner = relaySwitchRunner ?? Self.makeRelaySwitchRunner()
         self.menuBarClockIntervalNanoseconds = menuBarClockIntervalNanoseconds
         self.menuBarNowProvider = menuBarNowProvider
         self.menuBarNow = menuBarNowProvider()
@@ -152,12 +183,83 @@ final class AppPoolRuntimeModel: ObservableObject {
     }
 
     func switchAccount(_ accountID: UUID) async {
-        guard state.accounts.contains(where: { $0.id == accountID }) else { return }
-        let previousSnapshot = state.snapshot
-        state.markActiveAccountForSwitchLaunch(accountID)
-        guard state.snapshot != previousSnapshot else { return }
-        stateRevision += 1
-        saveAndPublish()
+        guard let account = state.accounts.first(where: { $0.id == accountID }) else { return }
+
+        let result: SwitchResult
+        if account.isRelayAPIKeyAccount {
+            do {
+                let request = try PoolDashboardRelayAccountCoordinator.SwitchRequest(
+                    account: account,
+                    fallbackAPIKey: store.apiToken(for: accountID)
+                )
+                result = await relaySwitchRunner(request)
+            } catch {
+                result = .failure(error.localizedDescription)
+            }
+        } else {
+            result = await officialSwitchRunner(OfficialSwitchRequest(
+                account: account,
+                switchWithoutLaunching: state.switchWithoutLaunching,
+                launchTarget: selectedSwitchLaunchTarget()
+            ))
+        }
+
+        switch result {
+        case .success(let message):
+            let previousSnapshot = state.snapshot
+            state.markActiveAccountForSwitchLaunch(accountID)
+            lastSwitchMessage = message
+            guard state.snapshot != previousSnapshot else { return }
+            stateRevision += 1
+            saveAndPublish()
+        case .failure(let message):
+            lastSwitchMessage = message
+        }
+    }
+
+    private static func makeOfficialSwitchRunner() -> OfficialSwitchRunner {
+        { request in
+            let output = await PoolDashboardSwitchLaunchFlowCoordinator().switchAndLaunch(
+                using: request.account,
+                switchWithoutLaunching: request.switchWithoutLaunching,
+                launchTarget: request.launchTarget,
+                currentAuthorizedAuthFileURL: nil,
+                authFileAccessService: CodexAuthFileAccessService(bookmarkKey: "codex_auth_json_bookmark"),
+                viewModel: LocalOAuthImportViewModel(),
+                viewState: PoolDashboardViewState(),
+                authorizeAuthFile: {
+                    CodexAuthFilePanelService().pickAuthFileURL()
+                }
+            )
+            if output.didSwitchAuth {
+                return .success(output.viewState.lastSwitchLaunchLog)
+            }
+            return .failure(output.viewState.switchLaunchError ?? L10n.text("switch.error.prefix"))
+        }
+    }
+
+    private static func makeRelaySwitchRunner() -> RelaySwitchRunner {
+        { request in
+            let output = await PoolDashboardRelayAccountCoordinator().switchToRelayAccount(
+                request,
+                switchWithoutLaunching: false,
+                preserveOfficialAuth: false,
+                launchTarget: .auto,
+                diagnosticLog: nil,
+                viewState: PoolDashboardViewState()
+            )
+            if output.didSwitchAuth {
+                return .success(output.viewState.lastSwitchLaunchLog)
+            }
+            return .failure(output.viewState.switchLaunchError ?? L10n.text("relay.switch.failed_format", ""))
+        }
+    }
+
+    private func selectedSwitchLaunchTarget() -> CodexLaunchTarget {
+        guard let storedTarget = defaults.string(forKey: "pool_dashboard.switch_launch_target") else {
+            return .auto
+        }
+        return CodexLaunchTarget(rawValue: CodexLaunchTarget.normalizedRawValue(storedTarget)) ?? .auto
     }
 
     private func startMenuBarClockIfNeeded() {
