@@ -7,7 +7,6 @@
 
 import SwiftUI
 import AppKit
-import Combine
 
 @main
 struct CodexPoolManagerApp: App {
@@ -259,151 +258,7 @@ enum MenuBarSnapshotFormatter {
     }
 }
 
-@MainActor
-private final class MenuBarSnapshotModel: ObservableObject {
-    @Published private(set) var snapshot: MenuBarBridgeSnapshot?
-
-    private var timer: Timer?
-
-    var menuBarTitle: String {
-        MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
-    }
-
-    init(fetchOnInit: Bool = true, startTimer: Bool = true) {
-        if fetchOnInit {
-            refresh()
-        }
-        guard startTimer else { return }
-
-        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.refresh()
-            }
-        }
-        if let timer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
-    }
-
-    deinit {
-        timer?.invalidate()
-    }
-
-    func refresh() {
-        Task {
-            let latest = await Self.fetchSnapshot()
-            if let latest {
-                snapshot = latest
-            }
-        }
-    }
-
-    private static func fetchSnapshot() async -> MenuBarBridgeSnapshot? {
-        guard let url = URL(string: "http://127.0.0.1:38477/widget-snapshot") else { return nil }
-
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 1.0
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 1.0
-        configuration.timeoutIntervalForResource = 1.0
-
-        do {
-            let (data, response) = try await URLSession(configuration: configuration).data(for: request)
-            guard let http = response as? HTTPURLResponse,
-                  (200..<300).contains(http.statusCode),
-                  !data.isEmpty else {
-                return nil
-            }
-
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(MenuBarBridgeSnapshot.self, from: data)
-        } catch {
-            return nil
-        }
-    }
-
-}
-
-private struct MenuBarStatusMenuView: View {
-    @ObservedObject var model: MenuBarSnapshotModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let snapshot = model.snapshot {
-                if let accountName = snapshot.activeAccountName, !accountName.isEmpty {
-                    Text(accountName)
-                        .font(.headline)
-                        .lineLimit(1)
-                } else {
-                    Text("No active account")
-                        .font(.headline)
-                }
-
-                if let remaining = snapshot.activeRemainingUnits,
-                   let quota = snapshot.activeQuota,
-                   quota > 0 {
-                    Text("Remaining: \(remaining)/\(quota)")
-                        .monospacedDigit()
-                } else if let remaining = snapshot.activeRemainingUnits {
-                    Text("Remaining: \(remaining)")
-                        .monospacedDigit()
-                }
-
-                if snapshot.activeIsPaid == true {
-                    if let fiveHourLeft = snapshot.activeFiveHourRemainingPercent {
-                        Text("5h left: \(fiveHourLeft)%")
-                            .monospacedDigit()
-                    }
-                    Text("Weekly reset: \(formatDate(snapshot.activeWeeklyResetAt))")
-                    Text("5h reset: \(formatDate(snapshot.activeFiveHourResetAt))")
-                } else {
-                    Text("Reset: \(formatDate(snapshot.activeWeeklyResetAt))")
-                }
-
-                Text("Updated \(localizedRelativeText(for: snapshot.updatedAt))")
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("No snapshot available")
-                    .foregroundStyle(.secondary)
-            }
-
-            Divider()
-
-            Button("Refresh") {
-                model.refresh()
-            }
-            Button("Open CodexPoolManager") {
-                NSApp.activate(ignoringOtherApps: true)
-            }
-        }
-        .padding(.vertical, 2)
-        .frame(minWidth: 280, alignment: .leading)
-    }
-
-    private func formatDate(_ value: Date?) -> String {
-        guard let value else { return "--" }
-        return value.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
-    }
-
-    private func localizedRelativeText(for date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = L10n.locale()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-}
-
 #if DEBUG
-extension MenuBarSnapshotModel {
-    convenience init(debugSnapshot: MenuBarBridgeSnapshot?) {
-        self.init(fetchOnInit: false, startTimer: false)
-        snapshot = debugSnapshot
-    }
-}
-
 extension CodexPoolManagerApp {
     static func debugRunLegacyMigration(
         defaults: UserDefaults,
@@ -421,11 +276,6 @@ extension CodexPoolManagerApp {
 
     static func debugMenuBarTitle(snapshot: MenuBarBridgeSnapshot?, now: Date = Date()) -> String {
         MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
-    }
-
-    @MainActor
-    static func debugMenuBarStatusMenuView(snapshot: MenuBarBridgeSnapshot?) -> some View {
-        MenuBarStatusMenuView(model: MenuBarSnapshotModel(debugSnapshot: snapshot))
     }
 }
 #endif

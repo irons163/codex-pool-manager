@@ -1395,10 +1395,8 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
-    func menuBarStatusMenuViewRendersEmptyAndAccountSnapshots() {
+    func menuBarTitlesCoverPaidFreeAndFallbackSnapshots() {
         let now = Date(timeIntervalSince1970: 1_780_000_000)
-        let emptyView = CodexPoolManagerApp.debugMenuBarStatusMenuView(snapshot: nil)
-        renderInHostingView(emptyView, size: CGSize(width: 420, height: 240))
 
         let paidSnapshot = MenuBarBridgeSnapshot(
             updatedAt: now.addingTimeInterval(-120),
@@ -1410,8 +1408,6 @@ struct ViewSmokeCoverageTests {
             activeWeeklyResetAt: now.addingTimeInterval(86_400),
             activeFiveHourResetAt: now.addingTimeInterval(9_000)
         )
-        let paidView = CodexPoolManagerApp.debugMenuBarStatusMenuView(snapshot: paidSnapshot)
-        renderInHostingView(paidView, size: CGSize(width: 420, height: 280))
 
         let freeSnapshot = MenuBarBridgeSnapshot(
             updatedAt: now.addingTimeInterval(-20),
@@ -1423,8 +1419,6 @@ struct ViewSmokeCoverageTests {
             activeWeeklyResetAt: now.addingTimeInterval(7_200),
             activeFiveHourResetAt: nil
         )
-        let freeView = CodexPoolManagerApp.debugMenuBarStatusMenuView(snapshot: freeSnapshot)
-        renderInHostingView(freeView, size: CGSize(width: 420, height: 260))
 
         let paidTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: paidSnapshot, now: now)
         #expect(paidTitle.contains("Codex "))
