@@ -625,3 +625,17 @@
 "menu_bar.warning.oauth_expired.title" = "Login expired";
 "menu_bar.warning.oauth_expired.message" = "Open the dashboard and sign in again to restore usage sync.";
 "account.api_key_badge" = "API Key";
+"menu_bar.header.title" = "Codex Pool";
+"menu_bar.header.subtitle" = "Menu bar dashboard";
+"menu_bar.action.sync_now" = "Sync Now";
+"menu_bar.action.open_dashboard" = "Open Dashboard";
+"menu_bar.action.switch" = "Switch";
+"menu_bar.summary.accounts" = "Accounts";
+"menu_bar.summary.available" = "Available";
+"menu_bar.summary.usage" = "Usage";
+"menu_bar.summary.mode" = "Mode";
+"menu_bar.section.active" = "Active Account";
+"menu_bar.section.accounts" = "Accounts";
+"menu_bar.section.warnings" = "Needs Attention";
+"menu_bar.empty.title" = "No accounts yet";
+"menu_bar.empty.message" = "Open the dashboard to import or add an account.";

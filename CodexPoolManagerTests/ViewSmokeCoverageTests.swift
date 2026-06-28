@@ -429,6 +429,76 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func richMenuBarDashboardViewRendersWithRuntimeModel() {
+        let baseDate = Date(timeIntervalSince1970: 1_750_000_000)
+        let activeID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let backupID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: activeID,
+                    createdAt: baseDate,
+                    name: "paid@example.com",
+                    groupName: AgentAccount.defaultGroupName,
+                    usedUnits: 20,
+                    quota: 100,
+                    apiToken: "token-active",
+                    email: "paid@example.com",
+                    chatGPTAccountID: "acct-active",
+                    identityScope: AgentAccount.personalIdentityScope,
+                    primaryUsagePercent: 30,
+                    primaryUsageResetAt: baseDate.addingTimeInterval(300),
+                    secondaryUsagePercent: 40,
+                    secondaryUsageResetAt: baseDate.addingTimeInterval(600),
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: backupID,
+                    createdAt: baseDate.addingTimeInterval(-10),
+                    name: "backup@example.com",
+                    groupName: AgentAccount.defaultGroupName,
+                    usedUnits: 90,
+                    quota: 100,
+                    apiToken: "token-backup",
+                    email: "backup@example.com",
+                    chatGPTAccountID: "acct-backup",
+                    identityScope: AgentAccount.personalIdentityScope,
+                    primaryUsagePercent: 95,
+                    primaryUsageResetAt: baseDate.addingTimeInterval(900),
+                    secondaryUsagePercent: 95,
+                    secondaryUsageResetAt: baseDate.addingTimeInterval(1_800),
+                    isPaid: true,
+                    usageSyncError: "Needs login"
+                )
+            ],
+            mode: .intelligent
+        )
+        state.markActiveAccountForSwitchLaunch(activeID, now: baseDate)
+        state.markUsageSynced(at: baseDate)
+
+        let runtimeModel = AppPoolRuntimeModel(
+            store: ViewSmokeStore(snapshot: nil),
+            initialState: state,
+            widgetPublisher: { _ in }
+        )
+
+        var openedDashboard = false
+        var switchedAccountIDs: [UUID] = []
+        let view = MenuBarDashboardView(
+            runtimeModel: runtimeModel,
+            openDashboard: { openedDashboard = true },
+            switchAccount: { switchedAccountIDs.append($0) }
+        )
+
+        renderInHostingView(view, size: CGSize(width: 420, height: 620))
+
+        #expect(openedDashboard == false)
+        #expect(switchedAccountIDs.isEmpty)
+    }
+
+    @Test
+    @MainActor
     func accountUsagePanelViewRendersFullAndMinimalLayouts() {
         let defaults = UserDefaults.standard
         let sortModeKey = "pool_dashboard.account_usage.sort_mode"

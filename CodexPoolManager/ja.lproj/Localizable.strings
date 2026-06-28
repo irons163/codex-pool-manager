@@ -616,3 +616,17 @@
 "menu_bar.warning.oauth_expired.title" = "ログイン期限切れ";
 "menu_bar.warning.oauth_expired.message" = "ダッシュボードを開いて再ログインすると使用量同期が復旧します。";
 "account.api_key_badge" = "API Key";
+"menu_bar.header.title" = "Codex Pool";
+"menu_bar.header.subtitle" = "メニューバーダッシュボード";
+"menu_bar.action.sync_now" = "今すぐ同期";
+"menu_bar.action.open_dashboard" = "ダッシュボードを開く";
+"menu_bar.action.switch" = "切替";
+"menu_bar.summary.accounts" = "アカウント";
+"menu_bar.summary.available" = "利用可能";
+"menu_bar.summary.usage" = "使用量";
+"menu_bar.summary.mode" = "モード";
+"menu_bar.section.active" = "現在のアカウント";
+"menu_bar.section.accounts" = "アカウント";
+"menu_bar.section.warnings" = "要確認";
+"menu_bar.empty.title" = "アカウント未追加";
+"menu_bar.empty.message" = "ダッシュボードを開いてアカウントをインポートまたは追加してください。";

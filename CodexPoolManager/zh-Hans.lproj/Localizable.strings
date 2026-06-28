@@ -617,3 +617,17 @@
 "menu_bar.warning.oauth_expired.title" = "登录已过期";
 "menu_bar.warning.oauth_expired.message" = "请打开主界面并重新登录，以恢复用量同步。";
 "account.api_key_badge" = "API Key";
+"menu_bar.header.title" = "Codex Pool";
+"menu_bar.header.subtitle" = "菜单栏仪表板";
+"menu_bar.action.sync_now" = "立即同步";
+"menu_bar.action.open_dashboard" = "打开主界面";
+"menu_bar.action.switch" = "切换";
+"menu_bar.summary.accounts" = "账号";
+"menu_bar.summary.available" = "可用";
+"menu_bar.summary.usage" = "用量";
+"menu_bar.summary.mode" = "模式";
+"menu_bar.section.active" = "当前账号";
+"menu_bar.section.accounts" = "账号";
+"menu_bar.section.warnings" = "需要注意";
+"menu_bar.empty.title" = "尚未添加账号";
+"menu_bar.empty.message" = "打开主界面以导入或添加账号。";

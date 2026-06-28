@@ -12,8 +12,8 @@ import Combine
 @main
 struct CodexPoolManagerApp: App {
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
-    @StateObject private var menuBarModel = MenuBarSnapshotModel()
     @StateObject private var runtimeModel: AppPoolRuntimeModel
+    @Environment(\.openWindow) private var openWindow
     
     init() {
         let defaults = AppRuntimeStorage.defaults
@@ -39,15 +39,31 @@ struct CodexPoolManagerApp: App {
         }
 
         MenuBarExtra {
-            MenuBarStatusMenuView(model: menuBarModel)
+            MenuBarDashboardView(
+                runtimeModel: runtimeModel,
+                openDashboard: {
+                    openWindow(id: "dashboard")
+                    NSApp.activate(ignoringOtherApps: true)
+                },
+                switchAccount: { accountID in
+                    Task { @MainActor in
+                        await runtimeModel.switchAccount(accountID)
+                    }
+                }
+            )
+            .id(appLanguageOverride)
+            .environment(\.locale, L10n.locale(for: appLanguageOverride))
+            .task {
+                runtimeModel.bootstrapIfNeeded()
+            }
         } label: {
-            Text(menuBarModel.menuBarTitle)
+            Text(runtimeModel.menuBarSnapshot.title)
                 .monospacedDigit()
                 .task {
                     runtimeModel.bootstrapIfNeeded()
                 }
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 }
 

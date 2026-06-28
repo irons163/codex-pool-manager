@@ -616,3 +616,17 @@
 "menu_bar.warning.oauth_expired.title" = "Inicio de sesión vencido";
 "menu_bar.warning.oauth_expired.message" = "Abre el panel y vuelve a iniciar sesión para restaurar la sincronización.";
 "account.api_key_badge" = "API Key";
+"menu_bar.header.title" = "Codex Pool";
+"menu_bar.header.subtitle" = "Panel de barra de menús";
+"menu_bar.action.sync_now" = "Sincronizar";
+"menu_bar.action.open_dashboard" = "Abrir panel";
+"menu_bar.action.switch" = "Cambiar";
+"menu_bar.summary.accounts" = "Cuentas";
+"menu_bar.summary.available" = "Disponibles";
+"menu_bar.summary.usage" = "Uso";
+"menu_bar.summary.mode" = "Modo";
+"menu_bar.section.active" = "Cuenta activa";
+"menu_bar.section.accounts" = "Cuentas";
+"menu_bar.section.warnings" = "Revisar";
+"menu_bar.empty.title" = "Sin cuentas";
+"menu_bar.empty.message" = "Abre el panel para importar o agregar una cuenta.";

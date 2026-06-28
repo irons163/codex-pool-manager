@@ -616,3 +616,17 @@
 "menu_bar.warning.oauth_expired.title" = "Connexion expirée";
 "menu_bar.warning.oauth_expired.message" = "Ouvrez le tableau de bord et reconnectez-vous pour rétablir la synchronisation.";
 "account.api_key_badge" = "API Key";
+"menu_bar.header.title" = "Codex Pool";
+"menu_bar.header.subtitle" = "Tableau de bord menu bar";
+"menu_bar.action.sync_now" = "Synchroniser";
+"menu_bar.action.open_dashboard" = "Ouvrir le tableau";
+"menu_bar.action.switch" = "Changer";
+"menu_bar.summary.accounts" = "Comptes";
+"menu_bar.summary.available" = "Disponibles";
+"menu_bar.summary.usage" = "Usage";
+"menu_bar.summary.mode" = "Mode";
+"menu_bar.section.active" = "Compte actif";
+"menu_bar.section.accounts" = "Comptes";
+"menu_bar.section.warnings" = "À vérifier";
+"menu_bar.empty.title" = "Aucun compte";
+"menu_bar.empty.message" = "Ouvrez le tableau pour importer ou ajouter un compte.";

@@ -136,6 +136,12 @@ final class AppPoolRuntimeModel: ObservableObject {
         saveAndPublish()
     }
 
+    func switchAccount(_ accountID: UUID) async {
+        guard state.accounts.contains(where: { $0.id == accountID }) else { return }
+        state.markActiveAccountForSwitchLaunch(accountID)
+        saveAndPublish()
+    }
+
     func startAutoSyncIfNeeded() {
         guard autoSyncTask == nil else { return }
         guard state.autoSyncEnabled else { return }

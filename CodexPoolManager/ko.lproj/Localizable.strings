@@ -616,3 +616,17 @@
 "menu_bar.warning.oauth_expired.title" = "로그인 만료";
 "menu_bar.warning.oauth_expired.message" = "대시보드를 열고 다시 로그인하면 사용량 동기화가 복구됩니다.";
 "account.api_key_badge" = "API Key";
+"menu_bar.header.title" = "Codex Pool";
+"menu_bar.header.subtitle" = "메뉴 막대 대시보드";
+"menu_bar.action.sync_now" = "지금 동기화";
+"menu_bar.action.open_dashboard" = "대시보드 열기";
+"menu_bar.action.switch" = "전환";
+"menu_bar.summary.accounts" = "계정";
+"menu_bar.summary.available" = "사용 가능";
+"menu_bar.summary.usage" = "사용량";
+"menu_bar.summary.mode" = "모드";
+"menu_bar.section.active" = "현재 계정";
+"menu_bar.section.accounts" = "계정";
+"menu_bar.section.warnings" = "확인 필요";
+"menu_bar.empty.title" = "계정 없음";
+"menu_bar.empty.message" = "대시보드를 열어 계정을 가져오거나 추가하세요.";
