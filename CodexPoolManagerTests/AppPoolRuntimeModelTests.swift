@@ -640,21 +640,38 @@ struct AppPoolRuntimeModelTests {
     }
 
     @Test
-    func syncNowWithTimeoutCompletesWhenOuterTaskIsCancelled() async {
+    func syncNowWithTimeoutCancellationClearsHungSyncAndAllowsRetry() async {
         let store = SpyStore()
         let initialState = makeState(name: "cancel-timeout@example.com")
-        var syncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        var syncCallCount = 0
+        var firstSyncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
         let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let (outcomes, outcomeContinuation) = AsyncStream<AppPoolRuntimeModel.SyncOutcome>.makeStream()
+        var cancellables = Set<AnyCancellable>()
         let model = AppPoolRuntimeModel(
             store: store,
             initialState: initialState,
-            syncRunner: { _, _ in
-                await withCheckedContinuation { continuation in
-                    syncContinuation = continuation
+            syncRunner: { state, _ in
+                syncCallCount += 1
+                if syncCallCount == 1 {
                     syncStartedContinuation.yield(())
+                    return await withCheckedContinuation { continuation in
+                        firstSyncContinuation = continuation
+                    }
                 }
+
+                var next = state
+                next.updateAccount(state.accounts[0].id, usedUnits: 24)
+                return PoolDashboardUsageSyncFlowCoordinator.Output(
+                    state: next,
+                    viewState: PoolDashboardViewState()
+                )
             }
         )
+        model.$lastSyncOutcome
+            .compactMap { $0 }
+            .sink { outcome in outcomeContinuation.yield(outcome) }
+            .store(in: &cancellables)
 
         let syncTask = Task {
             await model.syncNowWithTimeout(
@@ -676,11 +693,27 @@ struct AppPoolRuntimeModelTests {
         #expect(cancelledOutcome != nil)
         let flattenedOutcome = cancelledOutcome ?? nil
         #expect(flattenedOutcome == nil)
+        #expect(model.isSyncingUsage == false)
 
-        syncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
-            state: initialState,
+        let retryOutcome = await model.syncNowWithTimeout(
+            timeoutNanoseconds: 1_000_000_000,
+            timeoutErrorMessage: "timeout"
+        )
+
+        #expect(syncCallCount == 2)
+        #expect(retryOutcome?.status == .success)
+        #expect(model.state.accounts.first?.usedUnits == 24)
+
+        var staleState = initialState
+        staleState.updateAccount(initialState.accounts[0].id, usedUnits: 99)
+        firstSyncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: staleState,
             viewState: PoolDashboardViewState()
         ))
+        let staleOutcome = await nextOutcome(from: outcomes, matching: .staleDiscard)
+
+        #expect(staleOutcome?.stateApplied == false)
+        #expect(model.state.accounts.first?.usedUnits == 24)
     }
 
     @Test

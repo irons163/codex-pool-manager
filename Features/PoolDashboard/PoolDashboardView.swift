@@ -127,6 +127,11 @@ enum DailyUsagePlanEvaluator {
 }
 
 struct PoolDashboardView: View {
+    private struct RuntimeOwnedSnapshotStore: AccountPoolStoring {
+        func load() -> AccountPoolSnapshot? { nil }
+        func save(_ snapshot: AccountPoolSnapshot) {}
+    }
+
     private enum SyncPolicy {
         static let timeoutNanoseconds: UInt64 = 45_000_000_000
         static let stuckRecoveryNanoseconds: UInt64 = 70_000_000_000
@@ -1857,19 +1862,23 @@ struct PoolDashboardView: View {
 
     private func handleSnapshotChange(
         _ snapshot: AccountPoolSnapshot,
-        previousSnapshot: AccountPoolSnapshot
+        previousSnapshot: AccountPoolSnapshot,
+        currentState: AccountPoolState? = nil
     ) {
-        WidgetBridgePublisher.publish(from: snapshot)
+        let currentState = currentState ?? state
+        if runtimeModel == nil {
+            WidgetBridgePublisher.publish(from: snapshot)
+        }
         let output = lifecycleFlowCoordinator.onSnapshotChanged(
             snapshot: snapshot,
-            state: state,
+            state: currentState,
             lowUsageAlertPolicy: lowUsageAlertPolicy,
             viewState: viewState,
-            store: store
+            store: runtimeModel == nil ? store : RuntimeOwnedSnapshotStore()
         )
         applyLifecycleSnapshotChangeOutput(output)
-        if let runtimeModel, runtimeModel.state.snapshot != state.snapshot {
-            runtimeModel.replaceStateFromDashboard(state)
+        if let runtimeModel, runtimeModel.state.snapshot != currentState.snapshot {
+            runtimeModel.replaceStateFromDashboard(currentState)
             if autoSyncCadenceChanged(from: previousSnapshot, to: snapshot) {
                 runtimeModel.restartAutoSyncIfNeeded()
             }
@@ -7372,6 +7381,21 @@ extension PoolDashboardView {
             firstAccountName: firstName,
             firstAccountQuota: firstQuota,
             strategyMode: strategyMode
+        )
+    }
+
+    @MainActor
+    static func debugApplySnapshotChange(
+        store: AccountPoolStoring,
+        runtimeModel: AppPoolRuntimeModel?,
+        previousState: AccountPoolState,
+        nextState: AccountPoolState
+    ) {
+        let view = PoolDashboardView(store: store, runtimeModel: runtimeModel)
+        view.handleSnapshotChange(
+            nextState.snapshot,
+            previousSnapshot: previousState.snapshot,
+            currentState: nextState
         )
     }
 }

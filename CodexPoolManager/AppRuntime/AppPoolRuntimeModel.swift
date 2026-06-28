@@ -168,9 +168,14 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     @discardableResult
     private func syncNow(origin: SyncOrigin) async -> SyncOutcome? {
+        await syncNow(origin: origin, syncID: UUID())
+    }
+
+    @discardableResult
+    private func syncNow(origin: SyncOrigin, syncID: UUID) async -> SyncOutcome? {
+        guard !Task.isCancelled else { return nil }
         guard !isSyncingUsage else { return nil }
 
-        let syncID = UUID()
         activeSyncID = syncID
         activeSyncOrigin = origin
         isSyncingUsage = true
@@ -273,9 +278,10 @@ final class AppPoolRuntimeModel: ObservableObject {
     ) async -> SyncOutcome? {
         let timeoutNanoseconds = timeoutNanoseconds ?? syncTimeoutNanoseconds
         let timeoutErrorMessage = timeoutErrorMessage ?? Self.defaultSyncTimeoutErrorMessage()
+        let syncID = UUID()
         let syncTask = Task<SyncOutcome?, Never> { [weak self] in
             guard let self else { return nil }
-            return await self.syncNow(origin: origin)
+            return await self.syncNow(origin: origin, syncID: syncID)
         }
         let timeoutTask = Task<SyncOutcome?, Never> { [weak self] in
             do {
@@ -315,14 +321,22 @@ final class AppPoolRuntimeModel: ObservableObject {
             syncTask.cancel()
             timeoutTask.cancel()
             Task {
+                await self.cancelActiveSyncSilently(origin: origin, syncID: syncID)
                 await resolver.cancel()
             }
         }
     }
 
     private func cancelActiveSyncSilently(origin: SyncOrigin) {
+        cancelActiveSyncSilently(origin: origin, syncID: nil)
+    }
+
+    private func cancelActiveSyncSilently(origin: SyncOrigin, syncID: UUID?) {
         guard activeSyncID != nil || isSyncingUsage else { return }
         guard activeSyncOrigin == origin else { return }
+        if let syncID {
+            guard activeSyncID == syncID else { return }
+        }
 
         stateRevision += 1
         activeSyncID = nil

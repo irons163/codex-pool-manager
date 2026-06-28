@@ -1179,6 +1179,44 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func poolDashboardRuntimeBackedSnapshotChangeSavesOnce() {
+        let account = AgentAccount(
+            id: UUID(uuidString: "88888888-8888-8888-8888-888888888888")!,
+            name: "runtime-edit@example.com",
+            usedUnits: 10,
+            quota: 100
+        )
+        let initialState = AccountPoolState(accounts: [account], mode: .manual)
+        var nextState = initialState
+        nextState.updateAccount(account.id, usedUnits: 25)
+
+        let runtimeStore = ViewSmokeStore(snapshot: initialState.snapshot)
+        let model = AppPoolRuntimeModel(store: runtimeStore, initialState: initialState)
+        PoolDashboardView.debugApplySnapshotChange(
+            store: runtimeStore,
+            runtimeModel: model,
+            previousState: initialState,
+            nextState: nextState
+        )
+
+        #expect(runtimeStore.saved.count == 1)
+        #expect(runtimeStore.saved.first?.accounts.first?.usedUnits == 25)
+        #expect(model.state.accounts.first?.usedUnits == 25)
+
+        let dashboardOnlyStore = ViewSmokeStore(snapshot: initialState.snapshot)
+        PoolDashboardView.debugApplySnapshotChange(
+            store: dashboardOnlyStore,
+            runtimeModel: nil,
+            previousState: initialState,
+            nextState: nextState
+        )
+
+        #expect(dashboardOnlyStore.saved.count == 1)
+        #expect(dashboardOnlyStore.saved.first?.accounts.first?.usedUnits == 25)
+    }
+
+    @Test
+    @MainActor
     func poolDashboardAuthenticationRoutesRenderOAuthAndAPIKeyTabs() {
         let defaults = UserDefaults.standard
         let authMethodKey = "pool_dashboard.authentication.method"
