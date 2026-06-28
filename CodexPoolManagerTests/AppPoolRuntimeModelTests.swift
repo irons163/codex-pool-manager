@@ -4,6 +4,7 @@ import Testing
 
 @testable import CodexPoolManager
 
+@Suite(.serialized)
 @MainActor
 struct AppPoolRuntimeModelTests {
     final class SpyStore: AccountPoolStoring {
