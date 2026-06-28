@@ -354,6 +354,7 @@ struct CodexAuthSwitchServiceCoverageTests {
     }
 }
 
+@Suite(.serialized)
 struct CodexAuthSwitchServiceDebugHelperTests {
     @Test
     func launchSetHelpersReturnStableUniqueValues() {
