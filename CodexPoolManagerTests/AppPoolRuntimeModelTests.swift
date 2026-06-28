@@ -640,6 +640,50 @@ struct AppPoolRuntimeModelTests {
     }
 
     @Test
+    func syncNowWithTimeoutCompletesWhenOuterTaskIsCancelled() async {
+        let store = SpyStore()
+        let initialState = makeState(name: "cancel-timeout@example.com")
+        var syncContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (syncStarted, syncStartedContinuation) = AsyncStream<Void>.makeStream()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { _, _ in
+                await withCheckedContinuation { continuation in
+                    syncContinuation = continuation
+                    syncStartedContinuation.yield(())
+                }
+            }
+        )
+
+        let syncTask = Task {
+            await model.syncNowWithTimeout(
+                timeoutNanoseconds: 1_000_000_000,
+                timeoutErrorMessage: "timeout"
+            )
+        }
+        let didStart: Void? = await nextValue(from: syncStarted)
+        #expect(didStart != nil)
+
+        syncTask.cancel()
+        let cancelledOutcome = await nextValue(from: AsyncStream { continuation in
+            Task {
+                continuation.yield(await syncTask.value)
+                continuation.finish()
+            }
+        }, timeoutNanoseconds: 100_000_000)
+
+        #expect(cancelledOutcome != nil)
+        let flattenedOutcome = cancelledOutcome ?? nil
+        #expect(flattenedOutcome == nil)
+
+        syncContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: initialState,
+            viewState: PoolDashboardViewState()
+        ))
+    }
+
+    @Test
     func stopAutoSyncClearsHungActiveSyncAndAllowsRetry() async {
         let store = SpyStore()
         var state = makeState(name: "stop-auto@example.com")

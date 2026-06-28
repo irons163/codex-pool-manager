@@ -1,6 +1,8 @@
 import Combine
 import Foundation
 
+private let appPoolRuntimeDefaultSyncTimeoutNanoseconds: UInt64 = 45_000_000_000
+
 enum AppPoolRuntimeSyncOutcomeStatus: Sendable {
     case success
     case failure
@@ -60,7 +62,7 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     convenience init(
         initialState: AccountPoolState? = nil,
-        syncTimeoutNanoseconds: UInt64 = 45_000_000_000,
+        syncTimeoutNanoseconds: UInt64 = appPoolRuntimeDefaultSyncTimeoutNanoseconds,
         widgetPublisher: @escaping WidgetPublisher = { WidgetBridgePublisher.publish(from: $0) },
         syncRunner: @escaping SyncRunner = { state, viewState in
             await PoolDashboardUsageSyncFlowCoordinator()
@@ -79,7 +81,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     init(
         store: AccountPoolStoring,
         initialState: AccountPoolState? = nil,
-        syncTimeoutNanoseconds: UInt64 = 45_000_000_000,
+        syncTimeoutNanoseconds: UInt64 = appPoolRuntimeDefaultSyncTimeoutNanoseconds,
         widgetPublisher: @escaping WidgetPublisher = { WidgetBridgePublisher.publish(from: $0) },
         syncRunner: @escaping SyncRunner = { state, viewState in
             await PoolDashboardUsageSyncFlowCoordinator()
@@ -294,19 +296,27 @@ final class AppPoolRuntimeModel: ObservableObject {
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 Task {
-                    let outcome = await syncTask.value
-                    timeoutTask.cancel()
-                    await resolver.resume(outcome, continuation: continuation)
-                }
-                Task {
-                    let outcome = await timeoutTask.value
-                    syncTask.cancel()
-                    await resolver.resume(outcome, continuation: continuation)
+                    let shouldStartWaiters = await resolver.register(continuation)
+                    guard shouldStartWaiters else { return }
+
+                    Task {
+                        let outcome = await syncTask.value
+                        timeoutTask.cancel()
+                        await resolver.resume(outcome)
+                    }
+                    Task {
+                        let outcome = await timeoutTask.value
+                        syncTask.cancel()
+                        await resolver.resume(outcome)
+                    }
                 }
             }
         } onCancel: {
             syncTask.cancel()
             timeoutTask.cancel()
+            Task {
+                await resolver.cancel()
+            }
         }
     }
 
@@ -357,7 +367,7 @@ final class AppPoolRuntimeModel: ObservableObject {
         return outcome
     }
 
-    static let defaultSyncTimeoutNanoseconds: UInt64 = 45_000_000_000
+    static let defaultSyncTimeoutNanoseconds: UInt64 = appPoolRuntimeDefaultSyncTimeoutNanoseconds
     private static let minimumAutoSyncSleepNanoseconds: UInt64 = 5_000_000_000
 
     private func autoSyncSleepNanoseconds() -> UInt64 {
@@ -376,23 +386,57 @@ final class AppPoolRuntimeModel: ObservableObject {
 
 private actor SyncOutcomeRaceResolver {
     private var didResume = false
+    private var didCancel = false
     private var nilResultCount = 0
+    private var continuation: CheckedContinuation<AppPoolRuntimeModel.SyncOutcome?, Never>?
 
-    func resume(
-        _ outcome: AppPoolRuntimeModel.SyncOutcome?,
-        continuation: CheckedContinuation<AppPoolRuntimeModel.SyncOutcome?, Never>
-    ) {
+    func register(
+        _ continuation: CheckedContinuation<AppPoolRuntimeModel.SyncOutcome?, Never>
+    ) -> Bool {
+        guard !didResume else {
+            continuation.resume(returning: nil)
+            return false
+        }
+
+        self.continuation = continuation
+        if didCancel {
+            resumeNil()
+            return false
+        }
+
+        return true
+    }
+
+    func resume(_ outcome: AppPoolRuntimeModel.SyncOutcome?) {
         guard !didResume else { return }
         guard let outcome else {
             nilResultCount += 1
             if nilResultCount == 2 {
-                didResume = true
-                continuation.resume(returning: nil)
+                resumeNil()
             }
             return
         }
 
+        resume(outcome)
+    }
+
+    func cancel() {
+        guard !didResume else { return }
+        didCancel = true
+        if continuation != nil {
+            resumeNil()
+        }
+    }
+
+    private func resume(_ outcome: AppPoolRuntimeModel.SyncOutcome) {
         didResume = true
-        continuation.resume(returning: outcome)
+        continuation?.resume(returning: outcome)
+        continuation = nil
+    }
+
+    private func resumeNil() {
+        didResume = true
+        continuation?.resume(returning: nil)
+        continuation = nil
     }
 }
