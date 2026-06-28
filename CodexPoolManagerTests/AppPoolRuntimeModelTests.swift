@@ -49,6 +49,37 @@ struct AppPoolRuntimeModelTests {
         return state
     }
 
+    private func makeTwoAccountState() -> AccountPoolState {
+        let firstID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+        let secondID = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+        let first = AgentAccount(
+            id: firstID,
+            name: "alpha@example.com",
+            usedUnits: 40,
+            quota: 100,
+            chatGPTAccountID: "user-alpha",
+            usageWindowResetAt: Date(timeIntervalSince1970: 2_000),
+            primaryUsagePercent: 30,
+            primaryUsageResetAt: Date(timeIntervalSince1970: 1_600),
+            isPaid: true
+        )
+        let second = AgentAccount(
+            id: secondID,
+            name: "beta@example.com",
+            usedUnits: 20,
+            quota: 100,
+            chatGPTAccountID: "user-beta",
+            usageWindowResetAt: Date(timeIntervalSince1970: 2_200),
+            primaryUsagePercent: 10,
+            primaryUsageResetAt: Date(timeIntervalSince1970: 1_800),
+            isPaid: true
+        )
+        var state = AccountPoolState(accounts: [first, second], mode: .manual)
+        state.markActiveAccountForSwitchLaunch(firstID, now: Date(timeIntervalSince1970: 1_000))
+        state.markUsageSynced(at: Date(timeIntervalSince1970: 1_000))
+        return state
+    }
+
     private func nextValue<T>(
         from stream: AsyncStream<T>,
         timeoutNanoseconds: UInt64 = 1_000_000_000
@@ -299,6 +330,110 @@ struct AppPoolRuntimeModelTests {
         #expect(!publishedSnapshots.contains {
             $0.accounts.first?.name == "synced-old@example.com"
         })
+    }
+
+    @Test
+    func switchAccountDiscardsStaleOutputWhenMenuSwitchChangesStateDuringSync() async {
+        let store = SpyStore()
+        let initialState = makeTwoAccountState()
+        let firstID = initialState.accounts[0].id
+        let secondID = initialState.accounts[1].id
+        var outputContinuation: CheckedContinuation<PoolDashboardUsageSyncFlowCoordinator.Output, Never>?
+        let (runnerStarted, runnerStartedContinuation) = AsyncStream<Void>.makeStream()
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            syncRunner: { _, _ in
+                await withCheckedContinuation { continuation in
+                    outputContinuation = continuation
+                    runnerStartedContinuation.yield(())
+                }
+            }
+        )
+
+        let syncTask = Task {
+            await model.syncNow()
+        }
+        let didStart: Void? = await nextValue(from: runnerStarted)
+        #expect(didStart != nil)
+
+        await model.switchAccount(secondID)
+        #expect(model.state.activeAccountID == secondID)
+
+        var staleState = initialState
+        staleState.markActiveAccountForSwitchLaunch(firstID, now: Date(timeIntervalSince1970: 1_100))
+        staleState.updateAccount(firstID, usedUnits: 5)
+        outputContinuation?.resume(returning: PoolDashboardUsageSyncFlowCoordinator.Output(
+            state: staleState,
+            viewState: PoolDashboardViewState()
+        ))
+
+        let staleOutcome = await syncTask.value
+
+        #expect(staleOutcome?.status == .staleDiscard)
+        #expect(staleOutcome?.stateApplied == false)
+        #expect(model.state.activeAccountID == secondID)
+        #expect(model.state.accounts.first(where: { $0.id == firstID })?.usedUnits == 40)
+        #expect(!store.savedSnapshots.contains { $0.accounts.first?.usedUnits == 5 })
+    }
+
+    @Test
+    func switchAccountIgnoresAlreadyActiveAccountWithoutSaving() async {
+        let store = SpyStore()
+        let initialState = makeTwoAccountState()
+        let activeID = initialState.activeAccountID!
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: initialState,
+            widgetPublisher: { _ in }
+        )
+
+        await model.switchAccount(activeID)
+
+        #expect(model.state.snapshot == initialState.snapshot)
+        #expect(store.savedSnapshots.isEmpty)
+    }
+
+    @Test
+    func bootstrapStartsMenuBarClockWithoutPersistingOrPublishingOnTicks() async {
+        let store = SpyStore()
+        let baseDate = Date(timeIntervalSince1970: 1_700_000_000)
+        var nowOffset: TimeInterval = 0
+        var publishedSnapshots: [AccountPoolSnapshot] = []
+        var state = makeState(name: "clock@example.com")
+        state.setAutoSyncEnabled(false)
+        state.markUsageSynced(at: baseDate)
+        let model = AppPoolRuntimeModel(
+            store: store,
+            initialState: state,
+            menuBarClockIntervalNanoseconds: 1_000_000,
+            menuBarNowProvider: {
+                let date = baseDate.addingTimeInterval(nowOffset)
+                nowOffset += 20
+                return date
+            },
+            widgetPublisher: { snapshot in
+                publishedSnapshots.append(snapshot)
+            }
+        )
+        let initialMenuBarNow = model.menuBarNow
+        let initialTitle = model.menuBarSnapshot.title
+        let (ticks, tickContinuation) = AsyncStream<Date>.makeStream()
+        var cancellables = Set<AnyCancellable>()
+        model.$menuBarNow
+            .dropFirst()
+            .sink { date in tickContinuation.yield(date) }
+            .store(in: &cancellables)
+
+        model.bootstrapIfNeeded()
+
+        let tickedDate = await nextValue(from: ticks)
+
+        #expect(tickedDate != nil)
+        #expect(model.menuBarNow != initialMenuBarNow)
+        #expect(model.menuBarSnapshot.title != initialTitle)
+        #expect(store.savedSnapshots.isEmpty)
+        #expect(publishedSnapshots.count == 1)
     }
 
     @Test

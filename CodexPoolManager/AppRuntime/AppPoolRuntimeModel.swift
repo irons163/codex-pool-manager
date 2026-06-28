@@ -1,8 +1,6 @@
 import Combine
 import Foundation
 
-private let appPoolRuntimeDefaultSyncTimeoutNanoseconds: UInt64 = 45_000_000_000
-
 enum AppPoolRuntimeSyncOutcomeStatus: Sendable {
     case success
     case failure
@@ -35,18 +33,23 @@ final class AppPoolRuntimeModel: ObservableObject {
         _ viewState: PoolDashboardViewState
     ) async -> PoolDashboardUsageSyncFlowCoordinator.Output
     typealias WidgetPublisher = @MainActor (_ snapshot: AccountPoolSnapshot) -> Void
+    typealias MenuBarNowProvider = @MainActor () -> Date
 
     @Published private(set) var state: AccountPoolState
     @Published private(set) var isSyncingUsage = false
     @Published private(set) var lastSyncError: String?
     @Published private(set) var lastSyncOutcome: SyncOutcome?
+    @Published private(set) var menuBarNow: Date
 
     private let store: AccountPoolStoring
     private let syncRunner: SyncRunner
     private let widgetPublisher: WidgetPublisher
     private let syncTimeoutNanoseconds: UInt64
+    private let menuBarClockIntervalNanoseconds: UInt64
+    private let menuBarNowProvider: MenuBarNowProvider
     private var stateRevision = 0
     private var autoSyncTask: Task<Void, Never>?
+    private var menuBarClockTask: Task<Void, Never>?
     private var activeSyncID: UUID?
     private var activeSyncOrigin: SyncOrigin?
     private var didBootstrap = false
@@ -56,13 +59,16 @@ final class AppPoolRuntimeModel: ObservableObject {
         MenuBarDashboardPresenter.makeSnapshot(
             from: state,
             isSyncing: isSyncingUsage,
-            lastSyncError: lastSyncError
+            lastSyncError: lastSyncError,
+            now: menuBarNow
         )
     }
 
     convenience init(
         initialState: AccountPoolState? = nil,
-        syncTimeoutNanoseconds: UInt64 = appPoolRuntimeDefaultSyncTimeoutNanoseconds,
+        syncTimeoutNanoseconds: UInt64 = 45_000_000_000,
+        menuBarClockIntervalNanoseconds: UInt64 = 15_000_000_000,
+        menuBarNowProvider: @escaping MenuBarNowProvider = { Date() },
         widgetPublisher: @escaping WidgetPublisher = { WidgetBridgePublisher.publish(from: $0) },
         syncRunner: @escaping SyncRunner = { state, viewState in
             await PoolDashboardUsageSyncFlowCoordinator()
@@ -73,6 +79,8 @@ final class AppPoolRuntimeModel: ObservableObject {
             store: AppRuntimeStorage.accountPoolStore,
             initialState: initialState,
             syncTimeoutNanoseconds: syncTimeoutNanoseconds,
+            menuBarClockIntervalNanoseconds: menuBarClockIntervalNanoseconds,
+            menuBarNowProvider: menuBarNowProvider,
             widgetPublisher: widgetPublisher,
             syncRunner: syncRunner
         )
@@ -81,7 +89,9 @@ final class AppPoolRuntimeModel: ObservableObject {
     init(
         store: AccountPoolStoring,
         initialState: AccountPoolState? = nil,
-        syncTimeoutNanoseconds: UInt64 = appPoolRuntimeDefaultSyncTimeoutNanoseconds,
+        syncTimeoutNanoseconds: UInt64 = 45_000_000_000,
+        menuBarClockIntervalNanoseconds: UInt64 = 15_000_000_000,
+        menuBarNowProvider: @escaping MenuBarNowProvider = { Date() },
         widgetPublisher: @escaping WidgetPublisher = { WidgetBridgePublisher.publish(from: $0) },
         syncRunner: @escaping SyncRunner = { state, viewState in
             await PoolDashboardUsageSyncFlowCoordinator()
@@ -89,6 +99,9 @@ final class AppPoolRuntimeModel: ObservableObject {
         }
     ) {
         self.store = store
+        self.menuBarClockIntervalNanoseconds = menuBarClockIntervalNanoseconds
+        self.menuBarNowProvider = menuBarNowProvider
+        self.menuBarNow = menuBarNowProvider()
         if let initialState {
             self.state = initialState
             self.didLoadFromStore = true
@@ -107,6 +120,7 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     deinit {
         autoSyncTask?.cancel()
+        menuBarClockTask?.cancel()
     }
 
     func load() {
@@ -127,6 +141,7 @@ final class AppPoolRuntimeModel: ObservableObject {
             load()
         }
         startAutoSyncIfNeeded()
+        startMenuBarClockIfNeeded()
     }
 
     func replaceStateFromDashboard(_ nextState: AccountPoolState) {
@@ -138,8 +153,25 @@ final class AppPoolRuntimeModel: ObservableObject {
 
     func switchAccount(_ accountID: UUID) async {
         guard state.accounts.contains(where: { $0.id == accountID }) else { return }
+        let previousSnapshot = state.snapshot
         state.markActiveAccountForSwitchLaunch(accountID)
+        guard state.snapshot != previousSnapshot else { return }
+        stateRevision += 1
         saveAndPublish()
+    }
+
+    private func startMenuBarClockIfNeeded() {
+        guard menuBarClockTask == nil else { return }
+        guard menuBarClockIntervalNanoseconds > 0 else { return }
+
+        menuBarClockTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let interval = self?.menuBarClockIntervalNanoseconds else { return }
+                try? await Task.sleep(nanoseconds: interval)
+                guard !Task.isCancelled, let self else { return }
+                self.menuBarNow = self.menuBarNowProvider()
+            }
+        }
     }
 
     func startAutoSyncIfNeeded() {
@@ -387,7 +419,7 @@ final class AppPoolRuntimeModel: ObservableObject {
         return outcome
     }
 
-    static let defaultSyncTimeoutNanoseconds: UInt64 = appPoolRuntimeDefaultSyncTimeoutNanoseconds
+    static let defaultSyncTimeoutNanoseconds: UInt64 = 45_000_000_000
     private static let minimumAutoSyncSleepNanoseconds: UInt64 = 5_000_000_000
 
     private func autoSyncSleepNanoseconds() -> UInt64 {

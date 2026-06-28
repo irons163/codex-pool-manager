@@ -70,7 +70,7 @@ struct MenuBarDashboardView: View {
             HStack(spacing: 8) {
                 Button {
                     Task { @MainActor in
-                        await runtimeModel.syncNow()
+                        await runtimeModel.syncNowWithTimeout()
                     }
                 } label: {
                     Label(
@@ -308,6 +308,7 @@ private struct AccountRowView: View {
                 Button(L10n.text("menu_bar.action.switch")) {
                     switchAccount(row.id)
                 }
+                .accessibilityLabel("\(L10n.text("menu_bar.action.switch")) \(row.name)")
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             }
