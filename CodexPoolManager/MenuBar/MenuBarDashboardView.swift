@@ -230,18 +230,21 @@ private struct SectionCard<Content: View>: View {
 }
 
 private struct AccountRowView: View {
+    @State private var isAccountWarningPopoverPresented = false
+
     let row: MenuBarAccountRow
     let switchAccount: (UUID) -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 8) {
             activeIndicator
 
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(row.name)
                         .font(.callout.weight(.semibold))
                         .lineLimit(1)
+                        .truncationMode(.middle)
 
                     if row.isPaid {
                         Image(systemName: "sparkles")
@@ -256,44 +259,19 @@ private struct AccountRowView: View {
                             .padding(.horizontal, 6)
                             .background(Color.secondary.opacity(0.14), in: Capsule())
                     }
+
+                    accountWarningIndicator
+
+                    Spacer(minLength: 8)
+
+                    accountAction
                 }
 
-                HStack(spacing: 8) {
-                    MetricPill(text: row.weeklyRemainingText, systemImage: "calendar")
-
-                    if let fiveHourRemainingText = row.fiveHourRemainingText {
-                        MetricPill(text: "5h \(fiveHourRemainingText)", systemImage: "timer")
-                    }
-
-                    MetricPill(text: row.resetText, systemImage: "arrow.counterclockwise")
-                }
-
-                if let warningText = row.warningText,
-                   !warningText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(warningText)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .lineLimit(2)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            if row.isActive {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.accentColor)
-                    .accessibilityLabel(L10n.text("menu_bar.section.active"))
-            } else {
-                Button(L10n.text("menu_bar.action.switch")) {
-                    switchAccount(row.id)
-                }
-                .accessibilityLabel("\(L10n.text("menu_bar.action.switch")) \(row.name)")
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                accountMetricLine
             }
         }
-        .padding(10)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
         .background(rowBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
@@ -301,6 +279,72 @@ private struct AccountRowView: View {
         Circle()
             .fill(row.isActive ? Color.accentColor : Color.secondary.opacity(0.35))
             .frame(width: 8, height: 8)
+    }
+
+    @ViewBuilder
+    private var accountWarningIndicator: some View {
+        if let warningText = row.warningText?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !warningText.isEmpty {
+            Button {
+                isAccountWarningPopoverPresented.toggle()
+            } label: {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+            .help(warningText)
+            .accessibilityLabel(warningText)
+            .popover(isPresented: $isAccountWarningPopoverPresented, arrowEdge: .bottom) {
+                Text(warningText)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(12)
+                    .frame(width: 260, alignment: .leading)
+            }
+        }
+    }
+
+    private var accountMetricLine: some View {
+        HStack(spacing: 6) {
+            Label("W \(row.weeklyRemainingText)", systemImage: "calendar")
+
+            if let fiveHourRemainingText = row.fiveHourRemainingText {
+                Label("5h \(fiveHourRemainingText)", systemImage: "timer")
+            }
+
+            Text("·")
+                .foregroundStyle(.tertiary)
+
+            Label("W \(row.resetText)", systemImage: "arrow.counterclockwise")
+
+            if let fiveHourResetText = row.fiveHourResetText {
+                Text("5h \(fiveHourResetText)")
+            }
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .monospacedDigit()
+        .lineLimit(1)
+        .minimumScaleFactor(0.74)
+    }
+
+    @ViewBuilder
+    private var accountAction: some View {
+        if row.isActive {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.headline)
+                .foregroundStyle(Color.accentColor)
+                .accessibilityLabel(L10n.text("menu_bar.section.active"))
+        } else {
+            Button(L10n.text("menu_bar.action.switch")) {
+                switchAccount(row.id)
+            }
+            .accessibilityLabel("\(L10n.text("menu_bar.action.switch")) \(row.name)")
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
     }
 
     private var rowBackground: some ShapeStyle {
@@ -377,20 +421,5 @@ private struct WarningsPopoverView: View {
         .padding(12)
         .frame(width: 320, alignment: .leading)
         .frame(maxHeight: 360, alignment: .topLeading)
-    }
-}
-
-private struct MetricPill: View {
-    let text: String
-    let systemImage: String
-
-    var body: some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption2.weight(.semibold))
-            .monospacedDigit()
-            .lineLimit(1)
-            .padding(.vertical, 3)
-            .padding(.horizontal, 7)
-            .background(Color.secondary.opacity(0.12), in: Capsule())
     }
 }

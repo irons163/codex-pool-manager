@@ -67,6 +67,8 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.activeAccount?.name == "paid@example.com")
         #expect(snapshot.activeAccount?.weeklyRemainingText == "80%")
         #expect(snapshot.activeAccount?.fiveHourRemainingText == "75%")
+        #expect(snapshot.activeAccount?.resetText.contains(":") == true)
+        #expect(snapshot.activeAccount?.fiveHourResetText?.contains(":") == true)
         #expect(snapshot.accountRows.map(\.name) == ["paid@example.com", "backup@example.com"])
         #expect(snapshot.accountRows.last?.fiveHourRemainingText == nil)
     }

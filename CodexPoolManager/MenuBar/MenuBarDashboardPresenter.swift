@@ -24,6 +24,7 @@ struct MenuBarAccountRow: Identifiable, Equatable {
     let weeklyRemainingText: String
     let fiveHourRemainingText: String?
     let resetText: String
+    let fiveHourResetText: String?
     let warningText: String?
 }
 
@@ -49,7 +50,7 @@ enum MenuBarDashboardPresenter {
         now: Date = Date()
     ) -> MenuBarDashboardSnapshot {
         let accountRows = state.accounts.map { account in
-            makeAccountRow(account, activeAccountID: state.activeAccountID, now: now)
+            makeAccountRow(account, activeAccountID: state.activeAccountID)
         }
         let activeAccount = state.activeAccount.flatMap { active in
             accountRows.first(where: { $0.id == active.id })
@@ -108,8 +109,7 @@ enum MenuBarDashboardPresenter {
 
     private static func makeAccountRow(
         _ account: AgentAccount,
-        activeAccountID: UUID?,
-        now: Date
+        activeAccountID: UUID?
     ) -> MenuBarAccountRow {
         MenuBarAccountRow(
             id: account.id,
@@ -121,7 +121,8 @@ enum MenuBarDashboardPresenter {
             fiveHourRemainingText: account.isPaid
                 ? remainingPercent(fromUsagePercent: account.primaryUsagePercent).map { "\($0)%" }
                 : nil,
-            resetText: resetText(for: account.usageWindowResetAt, now: now),
+            resetText: resetText(for: account.usageWindowResetAt),
+            fiveHourResetText: account.isPaid ? resetText(for: account.primaryUsageResetAt) : nil,
             warningText: account.usageSyncError
         )
     }
@@ -230,9 +231,9 @@ enum MenuBarDashboardPresenter {
         return L10n.text("menu_bar.updated.format", durationText(from: date, to: now))
     }
 
-    private static func resetText(for date: Date?, now: Date) -> String {
-        guard let date else { return L10n.text("menu_bar.reset.now") }
-        return durationText(from: now, to: date)
+    private static func resetText(for date: Date?) -> String {
+        guard let date else { return "—" }
+        return date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
     }
 
     private static func durationText(from start: Date, to end: Date) -> String {

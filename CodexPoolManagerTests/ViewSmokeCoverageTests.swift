@@ -511,6 +511,20 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func richMenuBarDashboardKeepsAccountRowsCompact() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let viewSourceURL = repositoryRoot.appendingPathComponent("CodexPoolManager/MenuBar/MenuBarDashboardView.swift")
+        let source = try String(contentsOf: viewSourceURL, encoding: .utf8)
+
+        #expect(!source.contains("Text(warningText)\n                        .font(.caption)"))
+        #expect(source.contains("accountWarningIndicator"))
+        #expect(source.contains(".help(warningText)"))
+        #expect(source.contains("isAccountWarningPopoverPresented"))
+        #expect(source.contains(".popover(isPresented: $isAccountWarningPopoverPresented"))
+    }
+
+    @Test
     @MainActor
     func accountUsagePanelViewRendersFullAndMinimalLayouts() {
         let defaults = UserDefaults.standard
