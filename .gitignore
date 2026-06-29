@@ -6,6 +6,7 @@
 DerivedData/
 .build/
 .superpowers/
+.worktrees/
 
 # macOS
 .DS_Store
