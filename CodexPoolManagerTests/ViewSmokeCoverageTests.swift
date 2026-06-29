@@ -528,6 +528,20 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func richMenuBarDashboardUsesSingleAccountSectionAndResetCreditPopover() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let viewSourceURL = repositoryRoot.appendingPathComponent("CodexPoolManager/MenuBar/MenuBarDashboardView.swift")
+        let source = try String(contentsOf: viewSourceURL, encoding: .utf8)
+
+        #expect(!source.contains("activeAccountSection"))
+        #expect(source.contains("resetCreditIndicator"))
+        #expect(source.contains("isResetCreditPopoverPresented"))
+        #expect(source.contains("menu_bar.reset_credit.detail.title"))
+        #expect(source.contains("row.resetCreditAccessibilityLabel"))
+    }
+
+    @Test
     func richMenuBarDashboardOffersAccountGroupSwitcher() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()

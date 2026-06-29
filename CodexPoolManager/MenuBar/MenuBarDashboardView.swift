@@ -22,7 +22,6 @@ struct MenuBarDashboardView: View {
                 if snapshot.accountRows.isEmpty {
                     emptyState
                 } else {
-                    activeAccountSection
                     accountsSection
                 }
             }
@@ -104,15 +103,6 @@ struct MenuBarDashboardView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var activeAccountSection: some View {
-        if let activeAccount = snapshot.activeAccount {
-            SectionCard(title: L10n.text("menu_bar.section.active")) {
-                AccountRowView(row: activeAccount, switchAccount: switchAccount)
             }
         }
     }
@@ -348,6 +338,7 @@ private struct SectionCard<HeaderAccessory: View, Content: View>: View {
 
 private struct AccountRowView: View {
     @State private var isAccountWarningPopoverPresented = false
+    @State private var isResetCreditPopoverPresented = false
 
     let row: MenuBarAccountRow
     let switchAccount: (UUID) -> Void
@@ -387,6 +378,8 @@ private struct AccountRowView: View {
                             .foregroundStyle(Color.accentColor)
                     }
 
+                    resetCreditIndicator
+
                     accountWarningIndicator
 
                     Spacer(minLength: 8)
@@ -402,6 +395,44 @@ private struct AccountRowView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
         .background(rowBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var resetCreditIndicator: some View {
+        if let badgeText = row.resetCreditBadgeText,
+           let detailText = row.resetCreditDetailText {
+            Button {
+                isResetCreditPopoverPresented.toggle()
+            } label: {
+                Label {
+                    Text(badgeText)
+                        .lineLimit(1)
+                } icon: {
+                    Image(systemName: "arrow.counterclockwise.circle")
+                }
+                .font(.caption2.weight(.semibold))
+                .padding(.vertical, 2)
+                .padding(.horizontal, 6)
+                .foregroundStyle(Color.accentColor)
+                .background(Color.accentColor.opacity(0.12), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .fixedSize()
+            .help(detailText)
+            .accessibilityLabel(row.resetCreditAccessibilityLabel ?? detailText)
+            .popover(isPresented: $isResetCreditPopoverPresented, arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.text("menu_bar.reset_credit.detail.title"))
+                        .font(.headline)
+                    Text(detailText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(width: 280, alignment: .leading)
+            }
+        }
     }
 
     private var activeIndicator: some View {
