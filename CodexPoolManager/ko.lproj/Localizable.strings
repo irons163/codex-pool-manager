@@ -630,3 +630,7 @@
 "menu_bar.section.warnings" = "확인 필요";
 "menu_bar.empty.title" = "계정 없음";
 "menu_bar.empty.message" = "대시보드를 열어 계정을 가져오거나 추가하세요.";
+"menu_bar.reset_credit.badge_format" = "%d회 · 약 %@ 만료";
+"menu_bar.reset_credit.detail.title" = "사용 가능한 초기화";
+"menu_bar.reset_credit.detail_format" = "사용 가능한 초기화 %d회\n예상 만료: %@\n이전 동기화 성공 시각에 30일을 더해 추정하므로 실제 만료 시각과 다를 수 있습니다.";
+"menu_bar.reset_credit.accessibility_format" = "사용 가능한 초기화 %d회, 예상 만료 %@";

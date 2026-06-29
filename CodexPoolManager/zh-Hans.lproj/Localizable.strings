@@ -631,3 +631,7 @@
 "menu_bar.section.warnings" = "需要注意";
 "menu_bar.empty.title" = "尚未添加账号";
 "menu_bar.empty.message" = "打开主界面以导入或添加账号。";
+"menu_bar.reset_credit.badge_format" = "%d 次 · 约 %@ 到期";
+"menu_bar.reset_credit.detail.title" = "可用重置额度";
+"menu_bar.reset_credit.detail_format" = "可重置 %d 次\n预计到期：%@\n根据上次成功同步时间加 30 天估算，实际期限可能不同。";
+"menu_bar.reset_credit.accessibility_format" = "可重置 %d 次，预计 %@ 到期";

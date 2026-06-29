@@ -59,11 +59,20 @@ struct MenuBarAccountRow: Identifiable, Equatable {
     let isPaid: Bool
     let credentialLabel: String?
     let planBadgeText: String?
+    let resetCreditBadgeText: String?
+    let resetCreditDetailText: String?
+    let resetCreditAccessibilityLabel: String?
     let weeklyRemainingText: String
     let fiveHourRemainingText: String?
     let resetText: String
     let fiveHourResetText: String?
     let warningText: String?
+}
+
+private struct ResetCreditPresentation {
+    let badgeText: String
+    let detailText: String
+    let accessibilityLabel: String
 }
 
 struct MenuBarWarningRow: Identifiable, Equatable {
@@ -156,7 +165,9 @@ enum MenuBarDashboardPresenter {
         _ account: AgentAccount,
         activeAccountID: UUID?
     ) -> MenuBarAccountRow {
-        MenuBarAccountRow(
+        let resetCredit = resetCreditPresentation(for: account)
+
+        return MenuBarAccountRow(
             id: account.id,
             name: account.name,
             groupName: account.groupName,
@@ -164,6 +175,9 @@ enum MenuBarDashboardPresenter {
             isPaid: account.isPaid,
             credentialLabel: account.isRelayAPIKeyAccount ? L10n.text("account.api_key_badge") : nil,
             planBadgeText: account.planBadgeText,
+            resetCreditBadgeText: resetCredit?.badgeText,
+            resetCreditDetailText: resetCredit?.detailText,
+            resetCreditAccessibilityLabel: resetCredit?.accessibilityLabel,
             weeklyRemainingText: percentText(account.remainingRatio),
             fiveHourRemainingText: account.isPaid
                 ? remainingPercent(fromUsagePercent: account.primaryUsagePercent).map { "\($0)%" }
@@ -171,6 +185,31 @@ enum MenuBarDashboardPresenter {
             resetText: resetText(for: account.usageWindowResetAt),
             fiveHourResetText: account.isPaid ? resetText(for: account.primaryUsageResetAt) : nil,
             warningText: account.usageSyncError
+        )
+    }
+
+    private static func resetCreditPresentation(for account: AgentAccount) -> ResetCreditPresentation? {
+        guard account.supportsCodexUsageSync,
+              let count = account.rateLimitResetCreditsAvailableCount,
+              count > 0,
+              let expiry = account.rateLimitResetCreditsEstimatedExpiresAt
+        else {
+            return nil
+        }
+
+        let compactFormatter = DateFormatter()
+        compactFormatter.locale = L10n.locale()
+        compactFormatter.dateFormat = "M/d"
+        let fullFormatter = DateFormatter()
+        fullFormatter.locale = L10n.locale()
+        fullFormatter.dateFormat = "yyyy/M/d HH:mm"
+        let compactDate = compactFormatter.string(from: expiry)
+        let fullDate = fullFormatter.string(from: expiry)
+
+        return ResetCreditPresentation(
+            badgeText: L10n.text("menu_bar.reset_credit.badge_format", count, compactDate),
+            detailText: L10n.text("menu_bar.reset_credit.detail_format", count, fullDate),
+            accessibilityLabel: L10n.text("menu_bar.reset_credit.accessibility_format", count, fullDate)
         )
     }
 

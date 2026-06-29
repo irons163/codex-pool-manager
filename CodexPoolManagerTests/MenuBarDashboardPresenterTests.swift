@@ -36,6 +36,8 @@ struct MenuBarDashboardPresenterTests {
         weeklyResetAt: Date? = Date(timeIntervalSince1970: 1_800),
         fiveHourWindowResetAt: Date? = Date(timeIntervalSince1970: 1_200),
         fiveHourUsedPercent: Int? = 25,
+        rateLimitResetCreditsAvailableCount: Int? = nil,
+        rateLimitResetCreditsEstimatedExpiresAt: Date? = nil,
         usageSyncError: String? = nil,
         isUsageSyncExcluded: Bool = false,
         credentialType: AgentAccountCredentialType = .chatGPTOAuth
@@ -53,6 +55,8 @@ struct MenuBarDashboardPresenterTests {
             primaryUsageResetAt: fiveHourWindowResetAt,
             isPaid: isPaid,
             planType: planType,
+            rateLimitResetCreditsAvailableCount: rateLimitResetCreditsAvailableCount,
+            rateLimitResetCreditsEstimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -190,6 +194,75 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.accountRows.first(where: { $0.id == proID })?.planBadgeText == "Pro")
         #expect(snapshot.accountRows.first(where: { $0.id == relayID })?.credentialLabel == L10n.text("account.api_key_badge"))
         #expect(snapshot.accountRows.first(where: { $0.id == relayID })?.planBadgeText == nil)
+    }
+
+    @Test
+    func presenterFormatsEstimatedResetCreditExpiry() throws {
+        try withMenuBarLanguageOverride("zh-Hant") {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let expiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 7,
+                day: 29,
+                hour: 23,
+                minute: 15
+            )))
+            let accountID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+            let state = AccountPoolState(
+                accounts: [
+                    makeAccount(
+                        id: accountID,
+                        planType: "pro",
+                        rateLimitResetCreditsAvailableCount: 2,
+                        rateLimitResetCreditsEstimatedExpiresAt: expiry
+                    )
+                ],
+                mode: .manual
+            )
+
+            let row = try #require(MenuBarDashboardPresenter.makeSnapshot(
+                from: state,
+                isSyncing: false,
+                lastSyncError: nil,
+                now: expiry
+            ).accountRows.first)
+
+            #expect(row.resetCreditBadgeText?.contains("2") == true)
+            #expect(row.resetCreditBadgeText?.contains("約") == true)
+            #expect(row.resetCreditBadgeText?.contains("7/29") == true)
+            #expect(row.resetCreditDetailText?.contains("30 天") == true)
+            #expect(row.resetCreditAccessibilityLabel?.contains("2") == true)
+        }
+    }
+
+    @Test
+    func presenterHidesResetCreditBadgeForRelayAccounts() throws {
+        let expiry = Date(timeIntervalSince1970: 1_800_000_000)
+        let relayID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let state = AccountPoolState(
+            accounts: [
+                makeAccount(
+                    id: relayID,
+                    name: "relay",
+                    isPaid: false,
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditsEstimatedExpiresAt: expiry,
+                    credentialType: .relayAPIKey
+                )
+            ],
+            mode: .manual
+        )
+
+        let row = try #require(MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: nil,
+            now: expiry
+        ).accountRows.first)
+
+        #expect(row.resetCreditBadgeText == nil)
+        #expect(row.resetCreditDetailText == nil)
     }
 
     @Test
