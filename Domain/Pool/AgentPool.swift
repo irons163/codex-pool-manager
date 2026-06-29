@@ -38,6 +38,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var oauthLastRefreshAt: Date?
     var isPaid: Bool
     var planType: String?
+    var rateLimitResetCreditsAvailableCount: Int?
+    var rateLimitResetCreditsEstimatedExpiresAt: Date?
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
 
@@ -69,6 +71,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         oauthLastRefreshAt: Date? = nil,
         isPaid: Bool = false,
         planType: String? = nil,
+        rateLimitResetCreditsAvailableCount: Int? = nil,
+        rateLimitResetCreditsEstimatedExpiresAt: Date? = nil,
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
     ) {
@@ -100,6 +104,11 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.oauthLastRefreshAt = oauthLastRefreshAt
         self.isPaid = isPaid
         self.planType = AgentAccount.normalizedPlanType(planType)
+        let normalizedResetCount = rateLimitResetCreditsAvailableCount.map { max(0, $0) }
+        self.rateLimitResetCreditsAvailableCount = normalizedResetCount
+        self.rateLimitResetCreditsEstimatedExpiresAt = (normalizedResetCount ?? 0) > 0
+            ? rateLimitResetCreditsEstimatedExpiresAt
+            : nil
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
     }
@@ -140,6 +149,11 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         oauthLastRefreshAt = try container.decodeIfPresent(Date.self, forKey: .oauthLastRefreshAt)
         isPaid = try container.decodeIfPresent(Bool.self, forKey: .isPaid) ?? false
         planType = AgentAccount.normalizedPlanType(try container.decodeIfPresent(String.self, forKey: .planType))
+        let decodedResetCount = try container.decodeIfPresent(Int.self, forKey: .rateLimitResetCreditsAvailableCount)
+        rateLimitResetCreditsAvailableCount = decodedResetCount.map { max(0, $0) }
+        rateLimitResetCreditsEstimatedExpiresAt = (rateLimitResetCreditsAvailableCount ?? 0) > 0
+            ? try container.decodeIfPresent(Date.self, forKey: .rateLimitResetCreditsEstimatedExpiresAt)
+            : nil
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
     }
@@ -195,6 +209,8 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             oauthLastRefreshAt: oauthLastRefreshAt,
             isPaid: isPaid,
             planType: planType,
+            rateLimitResetCreditsAvailableCount: rateLimitResetCreditsAvailableCount,
+            rateLimitResetCreditsEstimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -1021,6 +1037,8 @@ struct AccountPoolState {
             oauthLastRefreshAt: source.oauthLastRefreshAt,
             isPaid: source.isPaid,
             planType: source.planType,
+            rateLimitResetCreditsAvailableCount: source.rateLimitResetCreditsAvailableCount,
+            rateLimitResetCreditsEstimatedExpiresAt: source.rateLimitResetCreditsEstimatedExpiresAt,
             isUsageSyncExcluded: source.isUsageSyncExcluded,
             usageSyncError: source.usageSyncError
         )
@@ -1056,6 +1074,35 @@ struct AccountPoolState {
         lastUsageSyncAt = now
     }
 
+    mutating func updateRateLimitResetCredits(
+        for accountID: UUID,
+        availableCount: Int?,
+        previousSuccessfulSyncAt: Date?,
+        now: Date = .now
+    ) {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
+        guard let availableCount else {
+            accounts[index].rateLimitResetCreditsAvailableCount = nil
+            accounts[index].rateLimitResetCreditsEstimatedExpiresAt = nil
+            return
+        }
+
+        let normalizedCount = max(0, availableCount)
+        let hadPositiveCount = (accounts[index].rateLimitResetCreditsAvailableCount ?? 0) > 0
+        accounts[index].rateLimitResetCreditsAvailableCount = normalizedCount
+
+        guard normalizedCount > 0 else {
+            accounts[index].rateLimitResetCreditsEstimatedExpiresAt = nil
+            return
+        }
+        guard !hadPositiveCount || accounts[index].rateLimitResetCreditsEstimatedExpiresAt == nil else {
+            return
+        }
+
+        let baseline = min(previousSuccessfulSyncAt ?? now, now)
+        accounts[index].rateLimitResetCreditsEstimatedExpiresAt = baseline.addingTimeInterval(30 * 24 * 60 * 60)
+    }
+
     mutating func mergeUsageSyncState(from syncedState: AccountPoolState, now: Date = .now) {
         let syncedAccountsByID = Dictionary(uniqueKeysWithValues: syncedState.accounts.map { ($0.id, $0) })
         var didUpdate = false
@@ -1081,6 +1128,8 @@ struct AccountPoolState {
             }
             accounts[index].isPaid = synced.isPaid
             accounts[index].planType = synced.planType
+            accounts[index].rateLimitResetCreditsAvailableCount = synced.rateLimitResetCreditsAvailableCount
+            accounts[index].rateLimitResetCreditsEstimatedExpiresAt = synced.rateLimitResetCreditsEstimatedExpiresAt
             accounts[index].isUsageSyncExcluded = synced.isUsageSyncExcluded
             accounts[index].usageSyncError = synced.usageSyncError
             didUpdate = true

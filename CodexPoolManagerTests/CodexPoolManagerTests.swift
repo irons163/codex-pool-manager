@@ -1643,6 +1643,31 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func duplicateAccountPreservesResetCreditMetadata() {
+        let accountID = UUID()
+        let expiry = Date(timeIntervalSince1970: 1_700_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "A",
+                    usedUnits: 15,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditsEstimatedExpiresAt: expiry
+                )
+            ],
+            mode: .manual
+        )
+
+        let duplicatedID = state.duplicateAccount(accountID)
+
+        let duplicated = state.accounts.first(where: { $0.id == duplicatedID })
+        #expect(duplicated?.rateLimitResetCreditsAvailableCount == 2)
+        #expect(duplicated?.rateLimitResetCreditsEstimatedExpiresAt == expiry)
+    }
+
+    @Test
     func deleteGroupRemovesAccountsInThatGroup() {
         let first = UUID()
         let second = UUID()
@@ -2647,6 +2672,24 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func agentAccountDecodesMissingResetCreditFieldsAsUnavailable() throws {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000112")!
+        let json = """
+        {
+          "id": "\(id.uuidString)",
+          "name": "legacy@example.com",
+          "usedUnits": 1,
+          "quota": 100
+        }
+        """
+
+        let account = try JSONDecoder().decode(AgentAccount.self, from: Data(json.utf8))
+
+        #expect(account.rateLimitResetCreditsAvailableCount == nil)
+        #expect(account.rateLimitResetCreditsEstimatedExpiresAt == nil)
+    }
+
+    @Test
     func relayAPIKeyAccountKeepsProviderMetadataAndRedactsKey() {
         let account = AgentAccount(
             id: UUID(),
@@ -2672,6 +2715,26 @@ struct CodexPoolManagerTests {
         #expect(redacted.apiToken == "")
         #expect(redacted.credentialType == .relayAPIKey)
         #expect(redacted.relayProviderID == "mirror")
+    }
+
+    @Test
+    func agentAccountRedactionPreservesResetCreditMetadata() {
+        let expiry = Date(timeIntervalSince1970: 1_700_000_000)
+        let account = AgentAccount(
+            id: UUID(),
+            name: "A",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "secret-token",
+            rateLimitResetCreditsAvailableCount: 2,
+            rateLimitResetCreditsEstimatedExpiresAt: expiry
+        )
+
+        let redacted = account.redactingAPIToken()
+
+        #expect(redacted.apiToken == "")
+        #expect(redacted.rateLimitResetCreditsAvailableCount == 2)
+        #expect(redacted.rateLimitResetCreditsEstimatedExpiresAt == expiry)
     }
 
     @Test
@@ -2790,6 +2853,171 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncEstimatesResetCreditExpiryFromPreviousSuccessfulSync() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+        let previousSync = Date(timeIntervalSince1970: 1_000)
+        state.markUsageSynced(at: previousSync)
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 10,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 2
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 2_000))
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 2)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == previousSync.addingTimeInterval(30 * 24 * 60 * 60))
+    }
+
+    @Test
+    func codexSyncUsesCurrentTimeWhenNoPreviousSuccessfulSyncExists() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+        let currentSync = Date(timeIntervalSince1970: 2_000)
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 10,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 1
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        try await sync.sync(state: &state, now: currentSync)
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 1)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == currentSync.addingTimeInterval(30 * 24 * 60 * 60))
+    }
+
+    @Test
+    func codexSyncRetainsFirstResetCreditEstimateWhileCountRemainsPositive() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let firstEstimate = Date(timeIntervalSince1970: 1_700_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 0,
+                    quota: 1000,
+                    apiToken: "token-a",
+                    rateLimitResetCreditsAvailableCount: 1,
+                    rateLimitResetCreditsEstimatedExpiresAt: firstEstimate
+                )
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+        state.markUsageSynced(at: Date(timeIntervalSince1970: 1_000))
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 10,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 3
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 2_000))
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 3)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == firstEstimate)
+    }
+
+    @Test
+    func codexSyncClearsResetCreditEstimateWhenCountBecomesZero() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 0,
+                    quota: 1000,
+                    apiToken: "token-a",
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditsEstimatedExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 10,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 0
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 2_000))
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 0)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == nil)
+    }
+
+    @Test
+    func codexSyncClearsResetCreditMetadataWhenFieldIsUnavailable() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 0,
+                    quota: 1000,
+                    apiToken: "token-a",
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditsEstimatedExpiresAt: Date(timeIntervalSince1970: 1_700_000_000)
+                )
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(usedUnits: 10, quota: 100)
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 2_000))
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == nil)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == nil)
+    }
+
+    @Test
     func codexSyncClearsPlanTypeWhenAccountBecomesFree() async throws {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         var state = AccountPoolState(
@@ -2844,6 +3072,57 @@ struct CodexPoolManagerTests {
         #expect(state.accounts[0].usedUnits == 10)
         #expect(state.accounts[0].isUsageSyncExcluded)
         #expect(state.accounts[0].usageSyncError == CodexSyncError.network.localizedDescription)
+    }
+
+    @Test
+    func codexSyncPreservesResetCreditEstimateWhenClientFails() async {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let expiry = Date(timeIntervalSince1970: 1_700_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 10,
+                    quota: 1000,
+                    apiToken: "bad-token",
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditsEstimatedExpiresAt: expiry
+                )
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let client = MockCodexUsageClient(responseByToken: [:], shouldThrow: true)
+        let sync = CodexUsageSyncService(client: client)
+        try? await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 2)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == expiry)
+    }
+
+    @Test
+    func resetCreditEstimateClampsFuturePreviousSyncToCurrentTime() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 10, quota: 1000)
+            ],
+            mode: .manual
+        )
+        let now = Date(timeIntervalSince1970: 1_000)
+        let futurePreviousSync = Date(timeIntervalSince1970: 2_000)
+
+        state.updateRateLimitResetCredits(
+            for: a,
+            availableCount: 1,
+            previousSuccessfulSyncAt: futurePreviousSync,
+            now: now
+        )
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 1)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == now.addingTimeInterval(30 * 24 * 60 * 60))
     }
 
     @Test
@@ -3435,6 +3714,42 @@ struct CodexPoolManagerTests {
         #expect(account.oauthRefreshToken == "new-refresh-token")
         #expect(account.oauthIDToken == "new-id-token")
         #expect(account.oauthLastRefreshAt == Date(timeIntervalSince1970: 200))
+    }
+
+    @Test
+    func mergeUsageSyncStateCopiesResetCreditMetadata() {
+        let accountID = UUID()
+        let expiry = Date(timeIntervalSince1970: 1_700_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Current",
+                    usedUnits: 10,
+                    quota: 100
+                )
+            ],
+            mode: .manual
+        )
+        let syncedState = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Sync Snapshot",
+                    usedUnits: 42,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditsEstimatedExpiresAt: expiry
+                )
+            ],
+            mode: .manual
+        )
+
+        state.mergeUsageSyncState(from: syncedState)
+
+        let account = state.accounts[0]
+        #expect(account.rateLimitResetCreditsAvailableCount == 2)
+        #expect(account.rateLimitResetCreditsEstimatedExpiresAt == expiry)
     }
 
     @Test

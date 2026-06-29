@@ -98,6 +98,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
         let missingTokenMessage = L10n.text("usage.sync.excluded.missing_token")
         let missingAccountIDMessage = L10n.text("usage.sync.excluded.missing_account_id")
+        let previousSuccessfulSyncAt = state.lastUsageSyncAt
         for account in state.accounts {
             try Task.checkCancellation()
 
@@ -139,6 +140,12 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     now: now,
                     shouldEvaluate: false
                 )
+                state.updateRateLimitResetCredits(
+                    for: account.id,
+                    availableCount: usage.rateLimitResetCreditsAvailableCount,
+                    previousSuccessfulSyncAt: previousSuccessfulSyncAt,
+                    now: now
+                )
                 state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
             } catch is CancellationError {
                 throw CancellationError()
@@ -171,6 +178,12 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                                 planType: refreshed.usage.planType,
                                 now: now,
                                 shouldEvaluate: false
+                            )
+                            state.updateRateLimitResetCredits(
+                                for: account.id,
+                                availableCount: refreshed.usage.rateLimitResetCreditsAvailableCount,
+                                previousSuccessfulSyncAt: previousSuccessfulSyncAt,
+                                now: now
                             )
                             state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
                             continue
