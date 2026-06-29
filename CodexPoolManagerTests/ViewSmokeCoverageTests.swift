@@ -499,6 +499,18 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func richMenuBarDashboardUsesCompactWarningPopoverInsteadOfInlineSection() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let viewSourceURL = repositoryRoot.appendingPathComponent("CodexPoolManager/MenuBar/MenuBarDashboardView.swift")
+        let source = try String(contentsOf: viewSourceURL, encoding: .utf8)
+
+        #expect(!source.contains("warningsSection"))
+        #expect(source.contains("warningPopoverButton"))
+        #expect(source.contains("WarningsPopoverView"))
+    }
+
+    @Test
     @MainActor
     func accountUsagePanelViewRendersFullAndMinimalLayouts() {
         let defaults = UserDefaults.standard

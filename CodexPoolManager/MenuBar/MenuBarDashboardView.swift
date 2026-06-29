@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarDashboardView: View {
     @ObservedObject var runtimeModel: AppPoolRuntimeModel
+    @State private var isWarningPopoverPresented = false
 
     let openDashboard: () -> Void
     let switchAccount: (UUID) -> Void
@@ -19,7 +20,6 @@ struct MenuBarDashboardView: View {
                     emptyState
                 } else {
                     activeAccountSection
-                    warningsSection
                     accountsSection
                 }
             }
@@ -66,6 +66,8 @@ struct MenuBarDashboardView: View {
                 }
 
                 Spacer(minLength: 0)
+
+                warningPopoverButton
             }
 
             HStack(spacing: 8) {
@@ -113,14 +115,26 @@ struct MenuBarDashboardView: View {
     }
 
     @ViewBuilder
-    private var warningsSection: some View {
+    private var warningPopoverButton: some View {
         if !snapshot.warningRows.isEmpty {
-            SectionCard(title: L10n.text("menu_bar.section.warnings")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(snapshot.warningRows) { warning in
-                        WarningRowView(row: warning)
+            Button {
+                isWarningPopoverPresented.toggle()
+            } label: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+                    .frame(width: 28, height: 28)
+                    .background(.regularMaterial, in: Circle())
+                    .overlay {
+                        Circle()
+                            .stroke(.white.opacity(0.16), lineWidth: 0.8)
                     }
-                }
+            }
+            .buttonStyle(.plain)
+            .help(L10n.text("menu_bar.section.warnings"))
+            .accessibilityLabel(L10n.text("menu_bar.section.warnings"))
+            .popover(isPresented: $isWarningPopoverPresented, arrowEdge: .bottom) {
+                WarningsPopoverView(rows: snapshot.warningRows)
             }
         }
     }
@@ -340,6 +354,29 @@ private struct WarningRowView: View {
         case .excluded:
             return "minus.circle"
         }
+    }
+}
+
+private struct WarningsPopoverView: View {
+    let rows: [MenuBarWarningRow]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.text("menu_bar.section.warnings"))
+                .font(.headline)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(rows) { row in
+                        WarningRowView(row: row)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(12)
+        .frame(width: 320, alignment: .leading)
+        .frame(maxHeight: 360, alignment: .topLeading)
     }
 }
 
