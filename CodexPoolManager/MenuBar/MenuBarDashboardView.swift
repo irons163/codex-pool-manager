@@ -18,7 +18,6 @@ struct MenuBarDashboardView: View {
                 if snapshot.accountRows.isEmpty {
                     emptyState
                 } else {
-                    summaryGrid
                     activeAccountSection
                     warningsSection
                     accountsSection
@@ -59,9 +58,11 @@ struct MenuBarDashboardView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(L10n.text("menu_bar.header.title"))
                         .font(.title3.weight(.semibold))
-                    Text(L10n.text("menu_bar.header.subtitle"))
+                    Text(snapshot.headerSummaryText)
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
                 }
 
                 Spacer(minLength: 0)
@@ -99,15 +100,6 @@ struct MenuBarDashboardView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-        }
-    }
-
-    private var summaryGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-            SummaryTile(title: L10n.text("menu_bar.summary.accounts"), value: snapshot.totalAccountsText)
-            SummaryTile(title: L10n.text("menu_bar.summary.available"), value: snapshot.availableAccountsText)
-            SummaryTile(title: L10n.text("menu_bar.summary.usage"), value: snapshot.usageText)
-            SummaryTile(title: L10n.text("menu_bar.summary.mode"), value: snapshot.modeText)
         }
     }
 
@@ -195,32 +187,6 @@ struct MenuBarDashboardView: View {
                 .frame(width: 160, height: 160)
                 .blur(radius: 40)
                 .offset(x: 160, y: 260)
-        }
-    }
-}
-
-private struct SummaryTile: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Text(value)
-                .font(.title3.weight(.semibold))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.white.opacity(0.18), lineWidth: 0.8)
         }
     }
 }

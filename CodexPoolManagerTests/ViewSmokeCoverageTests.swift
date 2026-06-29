@@ -493,6 +493,7 @@ struct ViewSmokeCoverageTests {
 
         renderInHostingView(view, size: CGSize(width: 420, height: 620))
 
+        #expect(runtimeModel.menuBarSnapshot.headerSummaryText.contains(L10n.text("menu_bar.summary.accounts")))
         #expect(openedDashboard == false)
         #expect(switchedAccountIDs.isEmpty)
     }

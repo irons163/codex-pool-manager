@@ -63,6 +63,7 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.totalAccountsText == "2")
         #expect(snapshot.availableAccountsText == "2")
         #expect(snapshot.modeText == L10n.text("mode.manual"))
+        #expect(snapshot.headerSummaryText == "\(L10n.text("menu_bar.header.subtitle")) · \(L10n.text("menu_bar.summary.accounts")) 2 · \(L10n.text("menu_bar.summary.available")) 2 · \(L10n.text("menu_bar.summary.usage")) 50% · \(L10n.text("mode.manual"))")
         #expect(snapshot.activeAccount?.name == "paid@example.com")
         #expect(snapshot.activeAccount?.weeklyRemainingText == "80%")
         #expect(snapshot.activeAccount?.fiveHourRemainingText == "75%")

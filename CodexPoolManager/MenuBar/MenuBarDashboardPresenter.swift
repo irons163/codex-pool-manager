@@ -6,6 +6,7 @@ struct MenuBarDashboardSnapshot: Equatable {
     let availableAccountsText: String
     let usageText: String
     let modeText: String
+    let headerSummaryText: String
     let updatedText: String
     let activeAccount: MenuBarAccountRow?
     let accountRows: [MenuBarAccountRow]
@@ -53,6 +54,10 @@ enum MenuBarDashboardPresenter {
         let activeAccount = state.activeAccount.flatMap { active in
             accountRows.first(where: { $0.id == active.id })
         }
+        let totalAccountsText = String(state.accounts.count)
+        let availableAccountsText = String(state.availableAccountsCount)
+        let usageText = percentText(1 - state.overallUsageRatio)
+        let modeText = modeText(for: state.mode)
         let updatedAt = state.lastUsageSyncAt ?? now
         let bridgeSnapshot = MenuBarBridgeSnapshot(
             updatedAt: updatedAt,
@@ -67,10 +72,16 @@ enum MenuBarDashboardPresenter {
 
         return MenuBarDashboardSnapshot(
             title: MenuBarSnapshotFormatter.menuBarTitle(snapshot: bridgeSnapshot, now: now),
-            totalAccountsText: String(state.accounts.count),
-            availableAccountsText: String(state.availableAccountsCount),
-            usageText: percentText(1 - state.overallUsageRatio),
-            modeText: modeText(for: state.mode),
+            totalAccountsText: totalAccountsText,
+            availableAccountsText: availableAccountsText,
+            usageText: usageText,
+            modeText: modeText,
+            headerSummaryText: headerSummaryText(
+                totalAccountsText: totalAccountsText,
+                availableAccountsText: availableAccountsText,
+                usageText: usageText,
+                modeText: modeText
+            ),
             updatedText: updatedText(since: state.lastUsageSyncAt, now: now),
             activeAccount: activeAccount,
             accountRows: accountRows,
@@ -78,6 +89,21 @@ enum MenuBarDashboardPresenter {
             isSyncing: isSyncing,
             lastSyncError: lastSyncError
         )
+    }
+
+    private static func headerSummaryText(
+        totalAccountsText: String,
+        availableAccountsText: String,
+        usageText: String,
+        modeText: String
+    ) -> String {
+        [
+            L10n.text("menu_bar.header.subtitle"),
+            "\(L10n.text("menu_bar.summary.accounts")) \(totalAccountsText)",
+            "\(L10n.text("menu_bar.summary.available")) \(availableAccountsText)",
+            "\(L10n.text("menu_bar.summary.usage")) \(usageText)",
+            modeText
+        ].joined(separator: " · ")
     }
 
     private static func makeAccountRow(
