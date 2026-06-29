@@ -2762,6 +2762,71 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncStoresPlanTypeMetadata() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 20,
+                    quota: 100,
+                    isPaid: true,
+                    planType: "pro"
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(state.accounts[0].isPaid)
+        #expect(state.accounts[0].planType == "pro")
+    }
+
+    @Test
+    func codexSyncClearsPlanTypeWhenAccountBecomesFree() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: a,
+                    name: "A",
+                    usedUnits: 0,
+                    quota: 1000,
+                    apiToken: "token-a",
+                    isPaid: true,
+                    planType: "pro"
+                )
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 20,
+                    quota: 100,
+                    isPaid: false,
+                    planType: nil
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 10))
+
+        #expect(!state.accounts[0].isPaid)
+        #expect(state.accounts[0].planType == nil)
+        #expect(state.accounts[0].planBadgeText == nil)
+    }
+
+    @Test
     func codexSyncKeepsStateWhenClientFails() async {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         var state = AccountPoolState(
@@ -3558,6 +3623,7 @@ struct CodexPoolManagerTests {
         let usage = try await client.fetchUsage(accessToken: "token-paid", accountID: "acct-paid")
 
         #expect(usage.isPaid)
+        #expect(usage.planType == "plus")
         #expect(usage.primaryUsagePercent == 80)
         #expect(usage.secondaryUsagePercent == 22)
         #expect(usage.primaryUsageResetAt == Date(timeIntervalSince1970: 1_774_600_000))
@@ -3604,6 +3670,7 @@ struct CodexPoolManagerTests {
         let usage = try await client.fetchUsage(accessToken: "token-paid", accountID: "acct-paid")
 
         #expect(usage.isPaid)
+        #expect(usage.planType == "plus")
         #expect(usage.primaryUsagePercent == 70)
         #expect(usage.secondaryUsagePercent == 18)
         #expect(usage.primaryUsageResetAt == Date(timeIntervalSince1970: 1_774_600_000))
@@ -3655,6 +3722,7 @@ struct CodexPoolManagerTests {
         let expectedSecondaryReset = Date(timeIntervalSince1970: secondaryResetUnix)
 
         #expect(usage.isPaid)
+        #expect(usage.planType == "pro")
         #expect(usage.primaryUsagePercent == 30)
         #expect(usage.secondaryUsagePercent == 70)
         #expect(usage.primaryUsageResetAt == expectedPrimaryReset)

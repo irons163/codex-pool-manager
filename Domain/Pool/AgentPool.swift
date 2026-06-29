@@ -37,6 +37,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var oauthIDToken: String?
     var oauthLastRefreshAt: Date?
     var isPaid: Bool
+    var planType: String?
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
 
@@ -67,6 +68,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         oauthIDToken: String? = nil,
         oauthLastRefreshAt: Date? = nil,
         isPaid: Bool = false,
+        planType: String? = nil,
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
     ) {
@@ -97,6 +99,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.oauthIDToken = oauthIDToken
         self.oauthLastRefreshAt = oauthLastRefreshAt
         self.isPaid = isPaid
+        self.planType = AgentAccount.normalizedPlanType(planType)
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
     }
@@ -136,6 +139,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         oauthIDToken = try container.decodeIfPresent(String.self, forKey: .oauthIDToken)
         oauthLastRefreshAt = try container.decodeIfPresent(Date.self, forKey: .oauthLastRefreshAt)
         isPaid = try container.decodeIfPresent(Bool.self, forKey: .isPaid) ?? false
+        planType = AgentAccount.normalizedPlanType(try container.decodeIfPresent(String.self, forKey: .planType))
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
     }
@@ -190,6 +194,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             oauthIDToken: nil,
             oauthLastRefreshAt: oauthLastRefreshAt,
             isPaid: isPaid,
+            planType: planType,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -204,9 +209,31 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return trimmed.isEmpty ? personalIdentityScope : trimmed
     }
+
+    static func normalizedPlanType(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 extension AgentAccount {
+    var planBadgeText: String? {
+        guard isPaid else { return nil }
+        switch planType {
+        case "plus":
+            return "Plus"
+        case "pro":
+            return "Pro"
+        case .some(let value):
+            return value
+                .split { !$0.isLetter && !$0.isNumber }
+                .map { $0.prefix(1).uppercased() + String($0.dropFirst()) }
+                .joined(separator: " ")
+        case nil:
+            return L10n.text("account.paid_badge")
+        }
+    }
+
     var deduplicationKey: String {
         if let chatGPTAccountID = normalizedIdentityComponent(chatGPTAccountID) {
             return "account:\(chatGPTAccountID)|scope:\(identityScope)"
@@ -782,6 +809,8 @@ struct AccountPoolState {
         oauthRefreshToken: String? = nil,
         oauthIDToken: String? = nil,
         oauthLastRefreshAt: Date? = nil,
+        isPaid: Bool = false,
+        planType: String? = nil,
         now: Date = .now
     ) -> UUID {
         let normalizedQuota = max(1, quota)
@@ -807,7 +836,9 @@ struct AccountPoolState {
             usageWindowResetAt: usageWindowResetAt,
             oauthRefreshToken: oauthRefreshToken,
             oauthIDToken: oauthIDToken,
-            oauthLastRefreshAt: oauthLastRefreshAt
+            oauthLastRefreshAt: oauthLastRefreshAt,
+            isPaid: isPaid,
+            planType: planType
         )
         accounts.append(account)
         appendActivity(String(format: L10n.text("activity.account_added_format"), account.name), now: now)
@@ -863,6 +894,7 @@ struct AccountPoolState {
         oauthIDToken: String? = nil,
         oauthLastRefreshAt: Date? = nil,
         isPaid: Bool? = nil,
+        planType: String? = nil,
         now: Date = .now,
         shouldEvaluate: Bool = true
     ) {
@@ -941,6 +973,11 @@ struct AccountPoolState {
         if let isPaid {
             accounts[index].isPaid = isPaid
         }
+        if let planType {
+            accounts[index].planType = AgentAccount.normalizedPlanType(planType)
+        } else if isPaid == false {
+            accounts[index].planType = nil
+        }
 
         accounts[index].usedUnits = min(accounts[index].usedUnits, accounts[index].quota)
         if shouldEvaluate {
@@ -983,6 +1020,7 @@ struct AccountPoolState {
             oauthIDToken: source.oauthIDToken,
             oauthLastRefreshAt: source.oauthLastRefreshAt,
             isPaid: source.isPaid,
+            planType: source.planType,
             isUsageSyncExcluded: source.isUsageSyncExcluded,
             usageSyncError: source.usageSyncError
         )
@@ -1042,6 +1080,7 @@ struct AccountPoolState {
                 accounts[index].oauthLastRefreshAt = synced.oauthLastRefreshAt
             }
             accounts[index].isPaid = synced.isPaid
+            accounts[index].planType = synced.planType
             accounts[index].isUsageSyncExcluded = synced.isUsageSyncExcluded
             accounts[index].usageSyncError = synced.usageSyncError
             didUpdate = true

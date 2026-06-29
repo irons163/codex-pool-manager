@@ -17,6 +17,8 @@ struct PoolAccountUpsertCoordinator {
         let resolvedUsedUnits = usage?.usedUnits
         let resolvedWindowName = usage?.usageWindowName
         let resolvedWindowResetAt = usage?.usageWindowResetAt
+        let resolvedIsPaid = usage?.isPaid
+        let resolvedPlanType = usage?.planType
         let resolvedIdentityScope = AgentAccount.normalizedIdentityScope(identityScope)
 
         if let usage {
@@ -64,6 +66,8 @@ struct PoolAccountUpsertCoordinator {
                 oauthRefreshToken: tokens.refreshToken,
                 oauthIDToken: tokens.idToken,
                 oauthLastRefreshAt: now,
+                isPaid: resolvedIsPaid,
+                planType: resolvedPlanType,
                 now: now
             )
             return L10n.text("auth.sign_in_success_updated")
@@ -83,6 +87,8 @@ struct PoolAccountUpsertCoordinator {
             oauthRefreshToken: tokens.refreshToken,
             oauthIDToken: tokens.idToken,
             oauthLastRefreshAt: now,
+            isPaid: resolvedIsPaid ?? false,
+            planType: resolvedPlanType,
             now: now
         )
         state.updateAccount(
@@ -93,6 +99,8 @@ struct PoolAccountUpsertCoordinator {
             identityScope: resolvedIdentityScope,
             usageWindowName: resolvedWindowName,
             usageWindowResetAt: resolvedWindowResetAt,
+            isPaid: resolvedIsPaid,
+            planType: resolvedPlanType,
             now: now
         )
         return L10n.text("auth.sign_in_success_added")
@@ -133,6 +141,8 @@ struct PoolAccountUpsertCoordinator {
                 oauthRefreshToken: tokens.refreshToken,
                 oauthIDToken: tokens.idToken,
                 oauthLastRefreshAt: now,
+                isPaid: usage.isPaid,
+                planType: usage.planType,
                 now: now
             )
             return
@@ -147,6 +157,8 @@ struct PoolAccountUpsertCoordinator {
             identityScope: resolvedIdentityScope,
             usageWindowName: usage.usageWindowName,
             usageWindowResetAt: usage.usageWindowResetAt,
+            isPaid: usage.isPaid,
+            planType: usage.planType,
             now: now
         )
         state.updateAccount(
@@ -160,6 +172,8 @@ struct PoolAccountUpsertCoordinator {
             oauthRefreshToken: tokens.refreshToken,
             oauthIDToken: tokens.idToken,
             oauthLastRefreshAt: now,
+            isPaid: usage.isPaid,
+            planType: usage.planType,
             now: now
         )
     }

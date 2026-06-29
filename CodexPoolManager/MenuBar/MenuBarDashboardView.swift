@@ -378,6 +378,15 @@ private struct AccountRowView: View {
                             .background(Color.secondary.opacity(0.14), in: Capsule())
                     }
 
+                    if let planBadgeText = row.planBadgeText {
+                        Text(planBadgeText)
+                            .font(.caption2.weight(.semibold))
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 6)
+                            .background(Color.accentColor.opacity(0.16), in: Capsule())
+                            .foregroundStyle(Color.accentColor)
+                    }
+
                     accountWarningIndicator
 
                     Spacer(minLength: 8)

@@ -32,6 +32,7 @@ struct MenuBarDashboardPresenterTests {
         quota: Int = 100,
         groupName: String = "Default",
         isPaid: Bool = true,
+        planType: String? = nil,
         weeklyResetAt: Date? = Date(timeIntervalSince1970: 1_800),
         fiveHourWindowResetAt: Date? = Date(timeIntervalSince1970: 1_200),
         fiveHourUsedPercent: Int? = 25,
@@ -51,6 +52,7 @@ struct MenuBarDashboardPresenterTests {
             primaryUsagePercent: fiveHourUsedPercent,
             primaryUsageResetAt: fiveHourWindowResetAt,
             isPaid: isPaid,
+            planType: planType,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -113,12 +115,100 @@ struct MenuBarDashboardPresenterTests {
             from: state,
             isSyncing: false,
             lastSyncError: nil,
-            now: Date(timeIntervalSince1970: 1_030)
+            now: Date(timeIntervalSince1970: 1_030),
+            accountOrderSettings: MenuBarAccountOrderSettings(
+                activeAccountFirst: false,
+                paidAccountFirst: false,
+                apiKeyAccountLast: false
+            )
         )
 
         #expect(snapshot.accountGroupNames == [AgentAccount.defaultGroupName, "Work"])
         #expect(snapshot.accountRows.map(\.groupName) == [AgentAccount.defaultGroupName, "Work"])
         #expect(snapshot.activeAccount?.groupName == "Work")
+    }
+
+    @Test
+    func presenterSortsMenuBarAccountsUsingDashboardAccountUsageSettings() {
+        let freeID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let relayID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let proID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let activePlusID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        var state = AccountPoolState(
+            accounts: [
+                makeAccount(id: freeID, name: "free@example.com", isPaid: false),
+                makeAccount(id: relayID, name: "relay", isPaid: false, credentialType: .relayAPIKey),
+                makeAccount(id: proID, name: "pro@example.com", isPaid: true, planType: "pro"),
+                makeAccount(id: activePlusID, name: "plus@example.com", isPaid: true, planType: "plus")
+            ],
+            mode: .manual
+        )
+        state.markActiveAccountForSwitchLaunch(activePlusID, now: Date(timeIntervalSince1970: 1_010))
+
+        let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: nil,
+            now: Date(timeIntervalSince1970: 1_030),
+            accountOrderSettings: MenuBarAccountOrderSettings(
+                activeAccountFirst: true,
+                paidAccountFirst: true,
+                apiKeyAccountLast: true
+            )
+        )
+
+        #expect(snapshot.accountRows.map(\.name) == [
+            "plus@example.com",
+            "pro@example.com",
+            "free@example.com",
+            "relay"
+        ])
+    }
+
+    @Test
+    func presenterSurfacesPlanBadgesForMenuBarAccountRows() {
+        let plusID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let proID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let relayID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let state = AccountPoolState(
+            accounts: [
+                makeAccount(id: plusID, name: "plus@example.com", isPaid: true, planType: "plus"),
+                makeAccount(id: proID, name: "pro@example.com", isPaid: true, planType: "pro"),
+                makeAccount(id: relayID, name: "relay", isPaid: false, credentialType: .relayAPIKey)
+            ],
+            mode: .manual
+        )
+
+        let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: nil,
+            now: Date(timeIntervalSince1970: 1_030)
+        )
+
+        #expect(snapshot.accountRows.first(where: { $0.id == plusID })?.planBadgeText == "Plus")
+        #expect(snapshot.accountRows.first(where: { $0.id == proID })?.planBadgeText == "Pro")
+        #expect(snapshot.accountRows.first(where: { $0.id == relayID })?.credentialLabel == L10n.text("account.api_key_badge"))
+        #expect(snapshot.accountRows.first(where: { $0.id == relayID })?.planBadgeText == nil)
+    }
+
+    @Test
+    func accountOrderSettingsReadsExplicitFalseValuesFromDashboardDefaults() throws {
+        let suiteName = "MenuBarAccountOrderSettingsTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        defaults.set(false, forKey: MenuBarAccountOrderSettings.activeAccountFirstKey)
+        defaults.set(true, forKey: MenuBarAccountOrderSettings.paidAccountFirstKey)
+        defaults.set(false, forKey: MenuBarAccountOrderSettings.apiKeyAccountLastKey)
+
+        let settings = MenuBarAccountOrderSettings.fromDashboardDefaults(defaults)
+
+        #expect(settings.activeAccountFirst == false)
+        #expect(settings.paidAccountFirst)
+        #expect(settings.apiKeyAccountLast == false)
     }
 
     @Test

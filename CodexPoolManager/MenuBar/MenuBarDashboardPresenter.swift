@@ -16,6 +16,41 @@ struct MenuBarDashboardSnapshot: Equatable {
     let lastSyncError: String?
 }
 
+struct MenuBarAccountOrderSettings: Equatable {
+    static let activeAccountFirstKey = "pool_dashboard.account_usage.active_first"
+    static let paidAccountFirstKey = "pool_dashboard.account_usage.paid_first"
+    static let apiKeyAccountLastKey = "pool_dashboard.account_usage.api_key_last"
+
+    let activeAccountFirst: Bool
+    let paidAccountFirst: Bool
+    let apiKeyAccountLast: Bool
+
+    static func fromDashboardDefaults(_ defaults: UserDefaults = .standard) -> MenuBarAccountOrderSettings {
+        MenuBarAccountOrderSettings(
+            activeAccountFirst: bool(
+                forKey: activeAccountFirstKey,
+                in: defaults,
+                defaultValue: true
+            ),
+            paidAccountFirst: bool(
+                forKey: paidAccountFirstKey,
+                in: defaults,
+                defaultValue: false
+            ),
+            apiKeyAccountLast: bool(
+                forKey: apiKeyAccountLastKey,
+                in: defaults,
+                defaultValue: true
+            )
+        )
+    }
+
+    private static func bool(forKey key: String, in defaults: UserDefaults, defaultValue: Bool) -> Bool {
+        guard defaults.object(forKey: key) != nil else { return defaultValue }
+        return defaults.bool(forKey: key)
+    }
+}
+
 struct MenuBarAccountRow: Identifiable, Equatable {
     let id: UUID
     let name: String
@@ -23,6 +58,7 @@ struct MenuBarAccountRow: Identifiable, Equatable {
     let isActive: Bool
     let isPaid: Bool
     let credentialLabel: String?
+    let planBadgeText: String?
     let weeklyRemainingText: String
     let fiveHourRemainingText: String?
     let resetText: String
@@ -49,9 +85,15 @@ enum MenuBarDashboardPresenter {
         from state: AccountPoolState,
         isSyncing: Bool,
         lastSyncError: String?,
-        now: Date = Date()
+        now: Date = Date(),
+        accountOrderSettings: MenuBarAccountOrderSettings = .fromDashboardDefaults()
     ) -> MenuBarDashboardSnapshot {
-        let accountRows = state.accounts.map { account in
+        let orderedAccounts = orderedAccounts(
+            state.accounts,
+            activeAccountID: state.activeAccountID,
+            settings: accountOrderSettings
+        )
+        let accountRows = orderedAccounts.map { account in
             makeAccountRow(account, activeAccountID: state.activeAccountID)
         }
         let activeAccount = state.activeAccount.flatMap { active in
@@ -121,6 +163,7 @@ enum MenuBarDashboardPresenter {
             isActive: account.id == activeAccountID,
             isPaid: account.isPaid,
             credentialLabel: account.isRelayAPIKeyAccount ? L10n.text("account.api_key_badge") : nil,
+            planBadgeText: account.planBadgeText,
             weeklyRemainingText: percentText(account.remainingRatio),
             fiveHourRemainingText: account.isPaid
                 ? remainingPercent(fromUsagePercent: account.primaryUsagePercent).map { "\($0)%" }
@@ -129,6 +172,31 @@ enum MenuBarDashboardPresenter {
             fiveHourResetText: account.isPaid ? resetText(for: account.primaryUsageResetAt) : nil,
             warningText: account.usageSyncError
         )
+    }
+
+    private static func orderedAccounts(
+        _ accounts: [AgentAccount],
+        activeAccountID: UUID?,
+        settings: MenuBarAccountOrderSettings
+    ) -> [AgentAccount] {
+        var ordered = accounts
+
+        if settings.paidAccountFirst {
+            ordered = ordered.stablePartitioned { $0.isPaid }
+        }
+
+        if settings.apiKeyAccountLast {
+            ordered = ordered.stablePartitioned { !$0.isRelayAPIKeyAccount }
+        }
+
+        if settings.activeAccountFirst,
+           let activeAccountID,
+           let activeIndex = ordered.firstIndex(where: { $0.id == activeAccountID }) {
+            let activeAccount = ordered.remove(at: activeIndex)
+            ordered.insert(activeAccount, at: 0)
+        }
+
+        return ordered
     }
 
     private static func accountGroupNames(
@@ -271,5 +339,24 @@ enum MenuBarDashboardPresenter {
 
     private static func remainingPercent(fromUsagePercent usagePercent: Int?) -> Int? {
         usagePercent.map { max(0, min(100, 100 - $0)) }
+    }
+}
+
+private extension Array {
+    func stablePartitioned(by predicate: (Element) -> Bool) -> [Element] {
+        var matching: [Element] = []
+        var nonMatching: [Element] = []
+        matching.reserveCapacity(count)
+        nonMatching.reserveCapacity(count)
+
+        for element in self {
+            if predicate(element) {
+                matching.append(element)
+            } else {
+                nonMatching.append(element)
+            }
+        }
+
+        return matching + nonMatching
     }
 }

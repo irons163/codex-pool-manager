@@ -39,6 +39,7 @@ struct CodexUsage: Equatable {
     let secondaryUsagePercent: Int?
     let secondaryUsageResetAt: Date?
     let isPaid: Bool
+    let planType: String?
 
     init(
         usedUnits: Int,
@@ -51,7 +52,8 @@ struct CodexUsage: Equatable {
         primaryUsageResetAt: Date? = nil,
         secondaryUsagePercent: Int? = nil,
         secondaryUsageResetAt: Date? = nil,
-        isPaid: Bool = false
+        isPaid: Bool = false,
+        planType: String? = nil
     ) {
         self.usedUnits = usedUnits
         self.quota = quota
@@ -64,6 +66,7 @@ struct CodexUsage: Equatable {
         self.secondaryUsagePercent = secondaryUsagePercent
         self.secondaryUsageResetAt = secondaryUsageResetAt
         self.isPaid = isPaid
+        self.planType = AgentAccount.normalizedPlanType(planType)
     }
 }
 
@@ -129,6 +132,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     secondaryUsagePercent: usage.secondaryUsagePercent,
                     secondaryUsageResetAt: usage.secondaryUsageResetAt,
                     isPaid: usage.isPaid,
+                    planType: usage.planType,
                     now: now,
                     shouldEvaluate: false
                 )
@@ -161,6 +165,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                                 oauthIDToken: refreshed.idToken,
                                 oauthLastRefreshAt: now,
                                 isPaid: refreshed.usage.isPaid,
+                                planType: refreshed.usage.planType,
                                 now: now,
                                 shouldEvaluate: false
                             )
@@ -338,6 +343,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)
         let isPaid = inferPaidStatus(from: payload)
+        let planType = AgentAccount.normalizedPlanType(payload.planType)
         let primaryWindow = payload.rateLimit?.primaryWindow
         let secondaryWindow = payload.rateLimit?.secondaryWindow
         let resolvedWindows = resolveUsageWindows(
@@ -368,7 +374,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 primaryUsageResetAt: resolvedWindows.fiveHourWindow?.resetAt,
                 secondaryUsagePercent: secondaryUsagePercent,
                 secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
-                isPaid: isPaid
+                isPaid: isPaid,
+                planType: planType
             )
         }
         if let usedPercent = selectedWindow?.usedPercent
@@ -386,7 +393,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 primaryUsageResetAt: resolvedWindows.fiveHourWindow?.resetAt,
                 secondaryUsagePercent: secondaryUsagePercent,
                 secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
-                isPaid: isPaid
+                isPaid: isPaid,
+                planType: planType
             )
         }
         throw CodexSyncError.unknown
