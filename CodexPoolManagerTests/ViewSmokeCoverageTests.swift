@@ -522,6 +522,9 @@ struct ViewSmokeCoverageTests {
         #expect(source.contains(".help(warningText)"))
         #expect(source.contains("isAccountWarningPopoverPresented"))
         #expect(source.contains(".popover(isPresented: $isAccountWarningPopoverPresented"))
+        #expect(source.contains("accountUsageResetLine"))
+        #expect(source.contains("accountUsageResetPair"))
+        #expect(!source.contains("private var accountMetricLine"))
     }
 
     @Test

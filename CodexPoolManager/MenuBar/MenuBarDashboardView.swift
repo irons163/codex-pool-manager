@@ -245,6 +245,7 @@ private struct AccountRowView: View {
                         .font(.callout.weight(.semibold))
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .layoutPriority(0)
 
                     if row.isPaid {
                         Image(systemName: "sparkles")
@@ -265,10 +266,12 @@ private struct AccountRowView: View {
                     Spacer(minLength: 8)
 
                     accountAction
+                        .fixedSize()
                 }
 
-                accountMetricLine
+                accountUsageResetLine
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
@@ -306,28 +309,52 @@ private struct AccountRowView: View {
         }
     }
 
-    private var accountMetricLine: some View {
-        HStack(spacing: 6) {
-            Label("W \(row.weeklyRemainingText)", systemImage: "calendar")
+    private var accountUsageResetLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            accountUsageResetPair(
+                scope: "W",
+                remainingText: row.weeklyRemainingText,
+                resetText: row.resetText
+            )
 
             if let fiveHourRemainingText = row.fiveHourRemainingText {
-                Label("5h \(fiveHourRemainingText)", systemImage: "timer")
-            }
+                Text("·")
+                    .foregroundStyle(.tertiary)
 
-            Text("·")
-                .foregroundStyle(.tertiary)
-
-            Label("W \(row.resetText)", systemImage: "arrow.counterclockwise")
-
-            if let fiveHourResetText = row.fiveHourResetText {
-                Text("5h \(fiveHourResetText)")
+                accountUsageResetPair(
+                    scope: "5h",
+                    remainingText: fiveHourRemainingText,
+                    resetText: row.fiveHourResetText ?? "—"
+                )
             }
         }
         .font(.caption2.weight(.semibold))
         .foregroundStyle(.secondary)
         .monospacedDigit()
         .lineLimit(1)
-        .minimumScaleFactor(0.74)
+        .minimumScaleFactor(0.78)
+        .layoutPriority(1)
+    }
+
+    private func accountUsageResetPair(
+        scope: String,
+        remainingText: String,
+        resetText: String
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(scope)
+                .foregroundStyle(.tertiary)
+                .frame(minWidth: scope == "5h" ? 15 : 10, alignment: .leading)
+
+            Text(remainingText)
+                .foregroundStyle(.secondary)
+
+            Text(resetText)
+                .foregroundStyle(.secondary)
+                .layoutPriority(1)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.78)
     }
 
     @ViewBuilder

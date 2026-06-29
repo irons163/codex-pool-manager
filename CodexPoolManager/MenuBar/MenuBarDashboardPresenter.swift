@@ -233,7 +233,10 @@ enum MenuBarDashboardPresenter {
 
     private static func resetText(for date: Date?) -> String {
         guard let date else { return "—" }
-        return date.formatted(.dateTime.locale(L10n.locale()).month().day().hour().minute())
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        formatter.dateFormat = "M/d HH:mm"
+        return formatter.string(from: date)
     }
 
     private static func durationText(from start: Date, to end: Date) -> String {

@@ -2,6 +2,27 @@ import Foundation
 import Testing
 @testable import CodexPoolManager
 
+private let menuBarLanguageOverrideMutationLock = NSLock()
+
+private func withMenuBarLanguageOverride(_ languageCode: String, _ body: () throws -> Void) rethrows {
+    menuBarLanguageOverrideMutationLock.lock()
+    defer { menuBarLanguageOverrideMutationLock.unlock() }
+
+    let defaults = UserDefaults.standard
+    let key = L10n.languageOverrideKey
+    let previous = defaults.object(forKey: key)
+    defer {
+        if let previous {
+            defaults.set(previous, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    defaults.set(languageCode, forKey: key)
+    try body()
+}
+
 @MainActor
 struct MenuBarDashboardPresenterTests {
     private func makeAccount(
@@ -71,6 +92,45 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.activeAccount?.fiveHourResetText?.contains(":") == true)
         #expect(snapshot.accountRows.map(\.name) == ["paid@example.com", "backup@example.com"])
         #expect(snapshot.accountRows.last?.fiveHourRemainingText == nil)
+    }
+
+    @Test
+    func presenterUsesCompactTwentyFourHourResetTimes() {
+        withMenuBarLanguageOverride("zh-Hant") {
+            let activeID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+            var state = AccountPoolState(
+                accounts: [
+                    makeAccount(
+                        id: activeID,
+                        weeklyResetAt: Date(timeIntervalSince1970: 1_800),
+                        fiveHourWindowResetAt: Date(timeIntervalSince1970: 1_200)
+                    )
+                ],
+                mode: .manual
+            )
+            state.markActiveAccountForSwitchLaunch(activeID, now: Date(timeIntervalSince1970: 1_010))
+
+            let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+                from: state,
+                isSyncing: false,
+                lastSyncError: nil,
+                now: Date(timeIntervalSince1970: 1_030)
+            )
+
+            let resetText = snapshot.activeAccount?.resetText ?? ""
+            let fiveHourResetText = snapshot.activeAccount?.fiveHourResetText ?? ""
+
+            #expect(resetText.contains("/") == true)
+            #expect(fiveHourResetText.contains("/") == true)
+            #expect(!resetText.contains("上午"))
+            #expect(!resetText.contains("下午"))
+            #expect(!resetText.contains("月"))
+            #expect(!resetText.contains("日"))
+            #expect(!fiveHourResetText.contains("上午"))
+            #expect(!fiveHourResetText.contains("下午"))
+            #expect(!fiveHourResetText.contains("月"))
+            #expect(!fiveHourResetText.contains("日"))
+        }
     }
 
     @Test
