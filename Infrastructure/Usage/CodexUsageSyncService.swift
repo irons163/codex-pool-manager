@@ -40,6 +40,7 @@ struct CodexUsage: Equatable {
     let secondaryUsageResetAt: Date?
     let isPaid: Bool
     let planType: String?
+    let rateLimitResetCreditsAvailableCount: Int?
 
     init(
         usedUnits: Int,
@@ -53,7 +54,8 @@ struct CodexUsage: Equatable {
         secondaryUsagePercent: Int? = nil,
         secondaryUsageResetAt: Date? = nil,
         isPaid: Bool = false,
-        planType: String? = nil
+        planType: String? = nil,
+        rateLimitResetCreditsAvailableCount: Int? = nil
     ) {
         self.usedUnits = usedUnits
         self.quota = quota
@@ -67,6 +69,7 @@ struct CodexUsage: Equatable {
         self.secondaryUsageResetAt = secondaryUsageResetAt
         self.isPaid = isPaid
         self.planType = AgentAccount.normalizedPlanType(planType)
+        self.rateLimitResetCreditsAvailableCount = rateLimitResetCreditsAvailableCount.map { max(0, $0) }
     }
 }
 
@@ -375,7 +378,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 secondaryUsagePercent: secondaryUsagePercent,
                 secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
                 isPaid: isPaid,
-                planType: planType
+                planType: planType,
+                rateLimitResetCreditsAvailableCount: payload.rateLimitResetCredits?.availableCount
             )
         }
         if let usedPercent = selectedWindow?.usedPercent
@@ -394,7 +398,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 secondaryUsagePercent: secondaryUsagePercent,
                 secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
                 isPaid: isPaid,
-                planType: planType
+                planType: planType,
+                rateLimitResetCreditsAvailableCount: payload.rateLimitResetCredits?.availableCount
             )
         }
         throw CodexSyncError.unknown
@@ -516,6 +521,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let email: String?
         let planType: String?
         let credits: Credits?
+        let rateLimitResetCredits: RateLimitResetCredits?
 
         private enum CodingKeys: String, CodingKey {
             case usedUnits = "used_units"
@@ -525,6 +531,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
             case email
             case planType = "plan_type"
             case credits
+            case rateLimitResetCredits = "rate_limit_reset_credits"
         }
     }
 
@@ -555,6 +562,14 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         private enum CodingKeys: String, CodingKey {
             case hasCredits = "has_credits"
             case unlimited
+        }
+    }
+
+    private struct RateLimitResetCredits: Decodable {
+        let availableCount: Int?
+
+        private enum CodingKeys: String, CodingKey {
+            case availableCount = "available_count"
         }
     }
 

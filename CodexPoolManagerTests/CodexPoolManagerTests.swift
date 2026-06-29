@@ -3587,6 +3587,57 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func openAICodexUsageClientParsesAvailableResetCredits() async throws {
+        let responseJSON = """
+        {
+          "plan_type": "pro",
+          "rate_limit": {
+            "primary_window": { "used_percent": 12 }
+          },
+          "rate_limit_reset_credits": {
+            "available_count": 2
+          }
+        }
+        """
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=reset-credits"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: Data(responseJSON.utf8)
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token", accountID: "acct")
+
+        #expect(usage.rateLimitResetCreditsAvailableCount == 2)
+    }
+
+    @Test
+    func openAICodexUsageClientClampsNegativeResetCreditsToZero() async throws {
+        let responseJSON = """
+        {
+          "rate_limit": {
+            "primary_window": { "used_percent": 12 }
+          },
+          "rate_limit_reset_credits": {
+            "available_count": -3
+          }
+        }
+        """
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=negative-reset-credits"))
+        let session = makeMockedURLSession(
+            endpoint: endpoint,
+            statusCode: 200,
+            data: Data(responseJSON.utf8)
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(accessToken: "token", accountID: "acct")
+
+        #expect(usage.rateLimitResetCreditsAvailableCount == 0)
+    }
+
+    @Test
     func openAICodexUsageClientNormalizesPaidWindowRolesWhenAPIOrderIsReversed() async throws {
         let responseJSON = """
         {
