@@ -3,9 +3,12 @@ import SwiftUI
 struct MenuBarDashboardView: View {
     @ObservedObject var runtimeModel: AppPoolRuntimeModel
     @State private var isWarningPopoverPresented = false
+    @State private var selectedAccountGroupName: String?
 
     let openDashboard: () -> Void
     let switchAccount: (UUID) -> Void
+
+    private static let allAccountGroupsSelection = ""
 
     private var snapshot: MenuBarDashboardSnapshot {
         runtimeModel.menuBarSnapshot
@@ -141,12 +144,100 @@ struct MenuBarDashboardView: View {
 
     private var accountsSection: some View {
         SectionCard(title: L10n.text("menu_bar.section.accounts")) {
+            accountGroupSwitcher
+        } content: {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(snapshot.accountRows) { row in
+                ForEach(filteredAccountRows) { row in
                     AccountRowView(row: row, switchAccount: switchAccount)
                 }
             }
         }
+    }
+
+    private var filteredAccountRows: [MenuBarAccountRow] {
+        guard let groupName = selectedAccountGroupFilter else {
+            return snapshot.accountRows
+        }
+        return snapshot.accountRows.filter { $0.groupName == groupName }
+    }
+
+    private var selectedAccountGroupFilter: String? {
+        if selectedAccountGroupName == Self.allAccountGroupsSelection {
+            return nil
+        }
+
+        if let selectedAccountGroupName,
+           snapshot.accountGroupNames.contains(selectedAccountGroupName) {
+            return selectedAccountGroupName
+        }
+
+        if let activeGroupName = snapshot.activeAccount?.groupName,
+           snapshot.accountGroupNames.contains(activeGroupName) {
+            return activeGroupName
+        }
+
+        return snapshot.accountGroupNames.first
+    }
+
+    private var selectedAccountGroupLabel: String {
+        guard selectedAccountGroupName != Self.allAccountGroupsSelection else {
+            return L10n.text("group.all")
+        }
+        return selectedAccountGroupFilter ?? L10n.text("group.all")
+    }
+
+    @ViewBuilder
+    private var accountGroupSwitcher: some View {
+        if snapshot.accountGroupNames.count > 1 {
+            Menu {
+                accountGroupOption(
+                    title: L10n.text("group.all"),
+                    selection: Self.allAccountGroupsSelection
+                )
+
+                Divider()
+
+                ForEach(snapshot.accountGroupNames, id: \.self) { groupName in
+                    accountGroupOption(title: groupName, selection: groupName)
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "folder")
+                    Text(selectedAccountGroupLabel)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Color.secondary.opacity(0.12), in: Capsule())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize(horizontal: true, vertical: false)
+            .help(L10n.text("group.title"))
+            .accessibilityLabel(L10n.text("group.title"))
+        }
+    }
+
+    private func accountGroupOption(title: String, selection: String) -> some View {
+        Button {
+            selectedAccountGroupName = selection
+        } label: {
+            if selectedAccountGroupNameForMenu == selection {
+                Label(title, systemImage: "checkmark")
+            } else {
+                Text(title)
+            }
+        }
+    }
+
+    private var selectedAccountGroupNameForMenu: String {
+        selectedAccountGroupFilter ?? Self.allAccountGroupsSelection
     }
 
     private var emptyState: some View {
@@ -205,17 +296,43 @@ struct MenuBarDashboardView: View {
     }
 }
 
-private struct SectionCard<Content: View>: View {
+private struct SectionCard<HeaderAccessory: View, Content: View>: View {
     let title: String
-    @ViewBuilder let content: Content
+    let headerAccessory: HeaderAccessory
+    let content: Content
+
+    init(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) where HeaderAccessory == EmptyView {
+        self.title = title
+        self.headerAccessory = EmptyView()
+        self.content = content()
+    }
+
+    init(
+        title: String,
+        @ViewBuilder headerAccessory: () -> HeaderAccessory,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.headerAccessory = headerAccessory()
+        self.content = content()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.6)
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.6)
+
+                Spacer(minLength: 8)
+
+                headerAccessory
+            }
 
             content
         }

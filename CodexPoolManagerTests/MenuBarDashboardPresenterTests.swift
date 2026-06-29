@@ -30,6 +30,7 @@ struct MenuBarDashboardPresenterTests {
         name: String = "paid@example.com",
         usedUnits: Int = 20,
         quota: Int = 100,
+        groupName: String = "Default",
         isPaid: Bool = true,
         weeklyResetAt: Date? = Date(timeIntervalSince1970: 1_800),
         fiveHourWindowResetAt: Date? = Date(timeIntervalSince1970: 1_200),
@@ -41,6 +42,7 @@ struct MenuBarDashboardPresenterTests {
         AgentAccount(
             id: id,
             name: name,
+            groupName: groupName,
             usedUnits: usedUnits,
             quota: quota,
             credentialType: credentialType,
@@ -92,6 +94,31 @@ struct MenuBarDashboardPresenterTests {
         #expect(snapshot.activeAccount?.fiveHourResetText?.contains(":") == true)
         #expect(snapshot.accountRows.map(\.name) == ["paid@example.com", "backup@example.com"])
         #expect(snapshot.accountRows.last?.fiveHourRemainingText == nil)
+    }
+
+    @Test
+    func presenterKeepsAccountGroupsForMenuBarFiltering() {
+        let defaultID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let workID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        var state = AccountPoolState(
+            accounts: [
+                makeAccount(id: defaultID, name: "personal@example.com"),
+                makeAccount(id: workID, name: "work@example.com", groupName: "Work")
+            ],
+            mode: .manual
+        )
+        state.markActiveAccountForSwitchLaunch(workID, now: Date(timeIntervalSince1970: 1_010))
+
+        let snapshot = MenuBarDashboardPresenter.makeSnapshot(
+            from: state,
+            isSyncing: false,
+            lastSyncError: nil,
+            now: Date(timeIntervalSince1970: 1_030)
+        )
+
+        #expect(snapshot.accountGroupNames == [AgentAccount.defaultGroupName, "Work"])
+        #expect(snapshot.accountRows.map(\.groupName) == [AgentAccount.defaultGroupName, "Work"])
+        #expect(snapshot.activeAccount?.groupName == "Work")
     }
 
     @Test

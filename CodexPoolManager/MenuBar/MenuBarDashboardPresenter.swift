@@ -9,6 +9,7 @@ struct MenuBarDashboardSnapshot: Equatable {
     let headerSummaryText: String
     let updatedText: String
     let activeAccount: MenuBarAccountRow?
+    let accountGroupNames: [String]
     let accountRows: [MenuBarAccountRow]
     let warningRows: [MenuBarWarningRow]
     let isSyncing: Bool
@@ -18,6 +19,7 @@ struct MenuBarDashboardSnapshot: Equatable {
 struct MenuBarAccountRow: Identifiable, Equatable {
     let id: UUID
     let name: String
+    let groupName: String
     let isActive: Bool
     let isPaid: Bool
     let credentialLabel: String?
@@ -85,6 +87,7 @@ enum MenuBarDashboardPresenter {
             ),
             updatedText: updatedText(since: state.lastUsageSyncAt, now: now),
             activeAccount: activeAccount,
+            accountGroupNames: accountGroupNames(from: state, accountRows: accountRows),
             accountRows: accountRows,
             warningRows: warningRows(from: state, lastSyncError: lastSyncError),
             isSyncing: isSyncing,
@@ -114,6 +117,7 @@ enum MenuBarDashboardPresenter {
         MenuBarAccountRow(
             id: account.id,
             name: account.name,
+            groupName: account.groupName,
             isActive: account.id == activeAccountID,
             isPaid: account.isPaid,
             credentialLabel: account.isRelayAPIKeyAccount ? L10n.text("account.api_key_badge") : nil,
@@ -125,6 +129,14 @@ enum MenuBarDashboardPresenter {
             fiveHourResetText: account.isPaid ? resetText(for: account.primaryUsageResetAt) : nil,
             warningText: account.usageSyncError
         )
+    }
+
+    private static func accountGroupNames(
+        from state: AccountPoolState,
+        accountRows: [MenuBarAccountRow]
+    ) -> [String] {
+        let rowGroupNames = Set(accountRows.map(\.groupName))
+        return state.groups.filter { rowGroupNames.contains($0) }
     }
 
     private static func warningRows(

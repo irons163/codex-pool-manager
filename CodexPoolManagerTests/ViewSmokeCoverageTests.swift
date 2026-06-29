@@ -528,6 +528,19 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func richMenuBarDashboardOffersAccountGroupSwitcher() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let viewSourceURL = repositoryRoot.appendingPathComponent("CodexPoolManager/MenuBar/MenuBarDashboardView.swift")
+        let source = try String(contentsOf: viewSourceURL, encoding: .utf8)
+
+        #expect(source.contains("selectedAccountGroupName"))
+        #expect(source.contains("accountGroupSwitcher"))
+        #expect(source.contains("filteredAccountRows"))
+        #expect(source.contains("snapshot.accountGroupNames"))
+    }
+
+    @Test
     @MainActor
     func accountUsagePanelViewRendersFullAndMinimalLayouts() {
         let defaults = UserDefaults.standard
