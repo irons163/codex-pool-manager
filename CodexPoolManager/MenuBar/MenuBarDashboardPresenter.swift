@@ -70,7 +70,6 @@ struct MenuBarAccountRow: Identifiable, Equatable {
 }
 
 private struct ResetCreditPresentation {
-    let badgeText: String
     let detailText: String
     let accessibilityLabel: String
 }
@@ -175,7 +174,7 @@ enum MenuBarDashboardPresenter {
             isPaid: account.isPaid,
             credentialLabel: account.isRelayAPIKeyAccount ? L10n.text("account.api_key_badge") : nil,
             planBadgeText: account.planBadgeText,
-            resetCreditBadgeText: resetCredit?.badgeText,
+            resetCreditBadgeText: nil,
             resetCreditDetailText: resetCredit?.detailText,
             resetCreditAccessibilityLabel: resetCredit?.accessibilityLabel,
             weeklyRemainingText: percentText(account.remainingRatio),
@@ -197,20 +196,34 @@ enum MenuBarDashboardPresenter {
             return nil
         }
 
-        let compactFormatter = DateFormatter()
-        compactFormatter.locale = L10n.locale()
-        compactFormatter.dateFormat = "M/d"
-        let fullFormatter = DateFormatter()
-        fullFormatter.locale = L10n.locale()
-        fullFormatter.dateFormat = "yyyy/M/d HH:mm"
-        let compactDate = compactFormatter.string(from: expiry)
-        let fullDate = fullFormatter.string(from: expiry)
+        let fullDate = preciseExpiryText(for: expiry)
 
         return ResetCreditPresentation(
-            badgeText: L10n.text("menu_bar.reset_credit.badge_format", count, compactDate),
             detailText: L10n.text("menu_bar.reset_credit.detail_format", count, fullDate),
             accessibilityLabel: L10n.text("menu_bar.reset_credit.accessibility_format", count, fullDate)
         )
+    }
+
+    private static func preciseExpiryText(for expiry: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy/M/d HH:mm:ss"
+        return "\(formatter.string(from: expiry)) \(gmtOffsetText(for: formatter.timeZone, at: expiry))"
+    }
+
+    private static func gmtOffsetText(for timeZone: TimeZone, at date: Date) -> String {
+        let secondsFromGMT = timeZone.secondsFromGMT(for: date)
+        let sign = secondsFromGMT >= 0 ? "+" : "-"
+        let absoluteSeconds = abs(secondsFromGMT)
+        let hours = absoluteSeconds / 3_600
+        let minutes = (absoluteSeconds % 3_600) / 60
+
+        if minutes == 0 {
+            return "GMT\(sign)\(hours)"
+        }
+
+        return String(format: "GMT%@%d:%02d", sign, hours, minutes)
     }
 
     private static func orderedAccounts(

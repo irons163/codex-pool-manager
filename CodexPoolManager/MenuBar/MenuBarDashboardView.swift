@@ -338,7 +338,6 @@ private struct SectionCard<HeaderAccessory: View, Content: View>: View {
 
 private struct AccountRowView: View {
     @State private var isAccountWarningPopoverPresented = false
-    @State private var isResetCreditPopoverPresented = false
 
     let row: MenuBarAccountRow
     let switchAccount: (UUID) -> Void
@@ -378,8 +377,6 @@ private struct AccountRowView: View {
                             .foregroundStyle(Color.accentColor)
                     }
 
-                    resetCreditIndicator
-
                     accountWarningIndicator
 
                     Spacer(minLength: 8)
@@ -389,6 +386,8 @@ private struct AccountRowView: View {
                 }
 
                 accountUsageResetLine
+
+                resetCreditDetailLines
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -398,41 +397,31 @@ private struct AccountRowView: View {
     }
 
     @ViewBuilder
-    private var resetCreditIndicator: some View {
-        if let badgeText = row.resetCreditBadgeText,
-           let detailText = row.resetCreditDetailText {
-            Button {
-                isResetCreditPopoverPresented.toggle()
-            } label: {
-                Label {
-                    Text(badgeText)
+    private var resetCreditDetailLines: some View {
+        let detailLines = resetCreditDetailLineTexts
+
+        if !detailLines.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(detailLines.enumerated()), id: \.offset) { index, line in
+                    Text(line)
                         .lineLimit(1)
-                } icon: {
-                    Image(systemName: "arrow.counterclockwise.circle")
+                        .minimumScaleFactor(0.78)
+                        .foregroundStyle(index == 0 ? Color.accentColor : Color.secondary)
                 }
-                .font(.caption2.weight(.semibold))
-                .padding(.vertical, 2)
-                .padding(.horizontal, 6)
-                .foregroundStyle(Color.accentColor)
-                .background(Color.accentColor.opacity(0.12), in: Capsule())
             }
-            .buttonStyle(.plain)
-            .fixedSize()
-            .help(detailText)
-            .accessibilityLabel(row.resetCreditAccessibilityLabel ?? detailText)
-            .popover(isPresented: $isResetCreditPopoverPresented, arrowEdge: .bottom) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L10n.text("menu_bar.reset_credit.detail.title"))
-                        .font(.headline)
-                    Text(detailText)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(12)
-                .frame(width: 280, alignment: .leading)
-            }
+            .font(.caption2.weight(.semibold))
+            .monospacedDigit()
+            .padding(.top, 1)
+            .help(row.resetCreditDetailText ?? detailLines.joined(separator: "\n"))
+            .accessibilityLabel(row.resetCreditAccessibilityLabel ?? detailLines.joined(separator: ", "))
         }
+    }
+
+    private var resetCreditDetailLineTexts: [String] {
+        row.resetCreditDetailText?
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
     }
 
     private var activeIndicator: some View {

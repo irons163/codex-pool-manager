@@ -23,6 +23,32 @@ private func withMenuBarLanguageOverride(_ languageCode: String, _ body: () thro
     try body()
 }
 
+private func withMenuBarLanguageAndTimeZoneOverride(
+    _ languageCode: String,
+    timeZone: TimeZone,
+    _ body: () throws -> Void
+) rethrows {
+    menuBarLanguageOverrideMutationLock.lock()
+    defer { menuBarLanguageOverrideMutationLock.unlock() }
+
+    let defaults = UserDefaults.standard
+    let key = L10n.languageOverrideKey
+    let previousLanguage = defaults.object(forKey: key)
+    let previousTimeZone = NSTimeZone.default
+    defer {
+        if let previousLanguage {
+            defaults.set(previousLanguage, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+        NSTimeZone.default = previousTimeZone
+    }
+
+    defaults.set(languageCode, forKey: key)
+    NSTimeZone.default = timeZone
+    try body()
+}
+
 @MainActor
 struct MenuBarDashboardPresenterTests {
     private func makeAccount(
@@ -198,7 +224,10 @@ struct MenuBarDashboardPresenterTests {
 
     @Test
     func presenterFormatsEstimatedResetCreditExpiry() throws {
-        try withMenuBarLanguageOverride("zh-Hant") {
+        try withMenuBarLanguageAndTimeZoneOverride(
+            "zh-Hant",
+            timeZone: try #require(TimeZone(secondsFromGMT: 8 * 60 * 60))
+        ) {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .current
             let expiry = try #require(calendar.date(from: DateComponents(
@@ -206,7 +235,8 @@ struct MenuBarDashboardPresenterTests {
                 month: 7,
                 day: 29,
                 hour: 23,
-                minute: 15
+                minute: 15,
+                second: 42
             )))
             let accountID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
             let state = AccountPoolState(
@@ -228,11 +258,13 @@ struct MenuBarDashboardPresenterTests {
                 now: expiry
             ).accountRows.first)
 
-            #expect(row.resetCreditBadgeText?.contains("2") == true)
-            #expect(row.resetCreditBadgeText?.contains("約") == true)
-            #expect(row.resetCreditBadgeText?.contains("7/29") == true)
-            #expect(row.resetCreditDetailText?.contains("30 天") == true)
-            #expect(row.resetCreditAccessibilityLabel?.contains("2") == true)
+            #expect(row.resetCreditBadgeText == nil)
+            #expect(row.resetCreditDetailText?.components(separatedBy: "\n") == [
+                "可重置 2 次",
+                "推估到期：2026/7/29 23:15:42 GMT+8",
+                "依前次成功同步時間加 30 天推估，實際期限可能不同。"
+            ])
+            #expect(row.resetCreditAccessibilityLabel == "可重置 2 次，推估 2026/7/29 23:15:42 GMT+8 到期")
         }
     }
 
