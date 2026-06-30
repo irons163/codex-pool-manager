@@ -40,6 +40,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var planType: String?
     var rateLimitResetCreditsAvailableCount: Int?
     var rateLimitResetCreditsEstimatedExpiresAt: Date?
+    var rateLimitResetCreditEstimatedExpiries: [Date]
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
 
@@ -73,6 +74,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         planType: String? = nil,
         rateLimitResetCreditsAvailableCount: Int? = nil,
         rateLimitResetCreditsEstimatedExpiresAt: Date? = nil,
+        rateLimitResetCreditEstimatedExpiries: [Date] = [],
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
     ) {
@@ -105,9 +107,15 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.isPaid = isPaid
         self.planType = AgentAccount.normalizedPlanType(planType)
         let normalizedResetCount = rateLimitResetCreditsAvailableCount.map { max(0, $0) }
+        let normalizedResetExpiries = Self.normalizedResetCreditEstimatedExpiries(
+            availableCount: normalizedResetCount,
+            estimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
+            estimatedExpiries: rateLimitResetCreditEstimatedExpiries
+        )
         self.rateLimitResetCreditsAvailableCount = normalizedResetCount
+        self.rateLimitResetCreditEstimatedExpiries = normalizedResetExpiries
         self.rateLimitResetCreditsEstimatedExpiresAt = (normalizedResetCount ?? 0) > 0
-            ? rateLimitResetCreditsEstimatedExpiresAt
+            ? (normalizedResetExpiries.first ?? rateLimitResetCreditsEstimatedExpiresAt)
             : nil
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
@@ -151,8 +159,14 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         planType = AgentAccount.normalizedPlanType(try container.decodeIfPresent(String.self, forKey: .planType))
         let decodedResetCount = try container.decodeIfPresent(Int.self, forKey: .rateLimitResetCreditsAvailableCount)
         rateLimitResetCreditsAvailableCount = decodedResetCount.map { max(0, $0) }
+        let decodedResetExpiry = try container.decodeIfPresent(Date.self, forKey: .rateLimitResetCreditsEstimatedExpiresAt)
+        rateLimitResetCreditEstimatedExpiries = AgentAccount.normalizedResetCreditEstimatedExpiries(
+            availableCount: rateLimitResetCreditsAvailableCount,
+            estimatedExpiresAt: decodedResetExpiry,
+            estimatedExpiries: try container.decodeIfPresent([Date].self, forKey: .rateLimitResetCreditEstimatedExpiries) ?? []
+        )
         rateLimitResetCreditsEstimatedExpiresAt = (rateLimitResetCreditsAvailableCount ?? 0) > 0
-            ? try container.decodeIfPresent(Date.self, forKey: .rateLimitResetCreditsEstimatedExpiresAt)
+            ? (rateLimitResetCreditEstimatedExpiries.first ?? decodedResetExpiry)
             : nil
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
@@ -211,6 +225,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             planType: planType,
             rateLimitResetCreditsAvailableCount: rateLimitResetCreditsAvailableCount,
             rateLimitResetCreditsEstimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
+            rateLimitResetCreditEstimatedExpiries: rateLimitResetCreditEstimatedExpiries,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -229,6 +244,25 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     static func normalizedPlanType(_ value: String?) -> String? {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func normalizedResetCreditEstimatedExpiries(
+        availableCount: Int?,
+        estimatedExpiresAt: Date?,
+        estimatedExpiries: [Date]
+    ) -> [Date] {
+        let count = max(0, availableCount ?? 0)
+        guard count > 0 else { return [] }
+
+        var normalized = Array(estimatedExpiries.prefix(count))
+        if normalized.count < count,
+           let estimatedExpiresAt {
+            normalized.append(contentsOf: Array(repeating: estimatedExpiresAt, count: count - normalized.count))
+        } else if normalized.count < count,
+                  let lastExpiry = normalized.last {
+            normalized.append(contentsOf: Array(repeating: lastExpiry, count: count - normalized.count))
+        }
+        return normalized
     }
 }
 
@@ -1039,6 +1073,7 @@ struct AccountPoolState {
             planType: source.planType,
             rateLimitResetCreditsAvailableCount: source.rateLimitResetCreditsAvailableCount,
             rateLimitResetCreditsEstimatedExpiresAt: source.rateLimitResetCreditsEstimatedExpiresAt,
+            rateLimitResetCreditEstimatedExpiries: source.rateLimitResetCreditEstimatedExpiries,
             isUsageSyncExcluded: source.isUsageSyncExcluded,
             usageSyncError: source.usageSyncError
         )
@@ -1084,23 +1119,41 @@ struct AccountPoolState {
         guard let availableCount else {
             accounts[index].rateLimitResetCreditsAvailableCount = nil
             accounts[index].rateLimitResetCreditsEstimatedExpiresAt = nil
+            accounts[index].rateLimitResetCreditEstimatedExpiries = []
             return
         }
 
         let normalizedCount = max(0, availableCount)
-        let hadPositiveCount = (accounts[index].rateLimitResetCreditsAvailableCount ?? 0) > 0
-        accounts[index].rateLimitResetCreditsAvailableCount = normalizedCount
+        let existingCount = max(
+            0,
+            accounts[index].rateLimitResetCreditsAvailableCount
+                ?? accounts[index].rateLimitResetCreditEstimatedExpiries.count
+        )
+        var estimatedExpiries = accounts[index].rateLimitResetCreditEstimatedExpiries
+        if estimatedExpiries.isEmpty,
+           existingCount > 0,
+           let existingExpiry = accounts[index].rateLimitResetCreditsEstimatedExpiresAt {
+            estimatedExpiries = Array(repeating: existingExpiry, count: existingCount)
+        }
 
         guard normalizedCount > 0 else {
+            accounts[index].rateLimitResetCreditsAvailableCount = normalizedCount
             accounts[index].rateLimitResetCreditsEstimatedExpiresAt = nil
-            return
-        }
-        guard !hadPositiveCount || accounts[index].rateLimitResetCreditsEstimatedExpiresAt == nil else {
+            accounts[index].rateLimitResetCreditEstimatedExpiries = []
             return
         }
 
         let baseline = min(previousSuccessfulSyncAt ?? now, now)
-        accounts[index].rateLimitResetCreditsEstimatedExpiresAt = baseline.addingTimeInterval(30 * 24 * 60 * 60)
+        let newExpiry = baseline.addingTimeInterval(30 * 24 * 60 * 60)
+        if estimatedExpiries.count > normalizedCount {
+            estimatedExpiries = Array(estimatedExpiries.suffix(normalizedCount))
+        } else if estimatedExpiries.count < normalizedCount {
+            estimatedExpiries.append(contentsOf: Array(repeating: newExpiry, count: normalizedCount - estimatedExpiries.count))
+        }
+
+        accounts[index].rateLimitResetCreditsAvailableCount = normalizedCount
+        accounts[index].rateLimitResetCreditEstimatedExpiries = estimatedExpiries
+        accounts[index].rateLimitResetCreditsEstimatedExpiresAt = estimatedExpiries.first
     }
 
     mutating func mergeUsageSyncState(from syncedState: AccountPoolState, now: Date = .now) {
@@ -1130,6 +1183,7 @@ struct AccountPoolState {
             accounts[index].planType = synced.planType
             accounts[index].rateLimitResetCreditsAvailableCount = synced.rateLimitResetCreditsAvailableCount
             accounts[index].rateLimitResetCreditsEstimatedExpiresAt = synced.rateLimitResetCreditsEstimatedExpiresAt
+            accounts[index].rateLimitResetCreditEstimatedExpiries = synced.rateLimitResetCreditEstimatedExpiries
             accounts[index].isUsageSyncExcluded = synced.isUsageSyncExcluded
             accounts[index].usageSyncError = synced.usageSyncError
             didUpdate = true

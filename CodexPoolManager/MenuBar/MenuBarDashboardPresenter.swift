@@ -193,9 +193,13 @@ enum MenuBarDashboardPresenter {
     private static func resetCreditPresentation(for account: AgentAccount) -> ResetCreditPresentation? {
         guard account.supportsCodexUsageSync,
               let count = account.rateLimitResetCreditsAvailableCount,
-              count > 0,
-              let expiry = account.rateLimitResetCreditsEstimatedExpiresAt
+              count > 0
         else {
+            return nil
+        }
+
+        let estimatedExpiries = resetCreditEstimatedExpiries(for: account, count: count)
+        guard let expiry = estimatedExpiries.first else {
             return nil
         }
 
@@ -205,7 +209,14 @@ enum MenuBarDashboardPresenter {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         let visibleDetailText = detailLines.prefix(2).joined(separator: "\n")
-        let noteText = detailLines.dropFirst(2).joined(separator: "\n")
+        let perCreditExpiryLines = estimatedExpiries.enumerated().map { index, expiry in
+            L10n.text(
+                "menu_bar.reset_credit.per_credit_expiry_format",
+                index + 1,
+                preciseExpiryText(for: expiry)
+            )
+        }
+        let noteText = (perCreditExpiryLines + Array(detailLines.dropFirst(2))).joined(separator: "\n")
 
         return ResetCreditPresentation(
             detailText: visibleDetailText.isEmpty
@@ -214,6 +225,20 @@ enum MenuBarDashboardPresenter {
             noteText: noteText.isEmpty ? nil : noteText,
             accessibilityLabel: L10n.text("menu_bar.reset_credit.accessibility_format", count, fullDate)
         )
+    }
+
+    private static func resetCreditEstimatedExpiries(for account: AgentAccount, count: Int) -> [Date] {
+        guard count > 0 else { return [] }
+
+        var expiries = Array(account.rateLimitResetCreditEstimatedExpiries.prefix(count))
+        if expiries.isEmpty,
+           let legacyExpiry = account.rateLimitResetCreditsEstimatedExpiresAt {
+            expiries = Array(repeating: legacyExpiry, count: count)
+        } else if expiries.count < count,
+                  let lastExpiry = expiries.last ?? account.rateLimitResetCreditsEstimatedExpiresAt {
+            expiries.append(contentsOf: Array(repeating: lastExpiry, count: count - expiries.count))
+        }
+        return expiries
     }
 
     private static func preciseExpiryText(for expiry: Date) -> String {

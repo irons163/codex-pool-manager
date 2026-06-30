@@ -64,6 +64,7 @@ struct MenuBarDashboardPresenterTests {
         fiveHourUsedPercent: Int? = 25,
         rateLimitResetCreditsAvailableCount: Int? = nil,
         rateLimitResetCreditsEstimatedExpiresAt: Date? = nil,
+        rateLimitResetCreditEstimatedExpiries: [Date] = [],
         usageSyncError: String? = nil,
         isUsageSyncExcluded: Bool = false,
         credentialType: AgentAccountCredentialType = .chatGPTOAuth
@@ -83,6 +84,7 @@ struct MenuBarDashboardPresenterTests {
             planType: planType,
             rateLimitResetCreditsAvailableCount: rateLimitResetCreditsAvailableCount,
             rateLimitResetCreditsEstimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
+            rateLimitResetCreditEstimatedExpiries: rateLimitResetCreditEstimatedExpiries,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -230,13 +232,21 @@ struct MenuBarDashboardPresenterTests {
         ) {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = .current
-            let expiry = try #require(calendar.date(from: DateComponents(
+            let firstExpiry = try #require(calendar.date(from: DateComponents(
                 year: 2026,
                 month: 7,
                 day: 29,
                 hour: 23,
                 minute: 15,
                 second: 42
+            )))
+            let secondExpiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 5,
+                hour: 12,
+                minute: 34,
+                second: 56
             )))
             let accountID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
             let state = AccountPoolState(
@@ -245,7 +255,8 @@ struct MenuBarDashboardPresenterTests {
                         id: accountID,
                         planType: "pro",
                         rateLimitResetCreditsAvailableCount: 2,
-                        rateLimitResetCreditsEstimatedExpiresAt: expiry
+                        rateLimitResetCreditsEstimatedExpiresAt: firstExpiry,
+                        rateLimitResetCreditEstimatedExpiries: [firstExpiry, secondExpiry]
                     )
                 ],
                 mode: .manual
@@ -255,7 +266,7 @@ struct MenuBarDashboardPresenterTests {
                 from: state,
                 isSyncing: false,
                 lastSyncError: nil,
-                now: expiry
+                now: firstExpiry
             ).accountRows.first)
 
             #expect(row.resetCreditBadgeText == nil)
@@ -263,7 +274,11 @@ struct MenuBarDashboardPresenterTests {
                 "可重置 2 次",
                 "推估到期：2026/7/29 23:15:42 GMT+8"
             ])
-            #expect(row.resetCreditNoteText == "依前次成功同步時間加 30 天推估，實際期限可能不同。")
+            #expect(row.resetCreditNoteText?.components(separatedBy: "\n") == [
+                "第 1 次：2026/7/29 23:15:42 GMT+8",
+                "第 2 次：2026/8/5 12:34:56 GMT+8",
+                "依前次成功同步時間加 30 天推估，實際期限可能不同。"
+            ])
             #expect(row.resetCreditAccessibilityLabel == "可重置 2 次，推估 2026/7/29 23:15:42 GMT+8 到期")
         }
     }

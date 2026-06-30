@@ -633,4 +633,5 @@
 "menu_bar.reset_credit.badge_format" = "%d回 · 約%@まで";
 "menu_bar.reset_credit.detail.title" = "利用可能なリセット";
 "menu_bar.reset_credit.detail_format" = "利用可能なリセット：%d回\n推定有効期限：%@\n前回の同期成功時刻に30日を加えて推定しているため、実際の期限とは異なる場合があります。";
+"menu_bar.reset_credit.per_credit_expiry_format" = "リセット%d回目：%@";
 "menu_bar.reset_credit.accessibility_format" = "利用可能なリセット%d回、推定有効期限%@";

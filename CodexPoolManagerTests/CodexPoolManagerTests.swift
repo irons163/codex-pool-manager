@@ -1665,6 +1665,7 @@ struct CodexPoolManagerTests {
         let duplicated = state.accounts.first(where: { $0.id == duplicatedID })
         #expect(duplicated?.rateLimitResetCreditsAvailableCount == 2)
         #expect(duplicated?.rateLimitResetCreditsEstimatedExpiresAt == expiry)
+        #expect(duplicated?.rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
     }
 
     @Test
@@ -2687,6 +2688,29 @@ struct CodexPoolManagerTests {
 
         #expect(account.rateLimitResetCreditsAvailableCount == nil)
         #expect(account.rateLimitResetCreditsEstimatedExpiresAt == nil)
+        #expect(account.rateLimitResetCreditEstimatedExpiries.isEmpty)
+    }
+
+    @Test
+    func agentAccountDecodesLegacySingleResetCreditExpiryIntoPerCreditList() throws {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000113")!
+        let expiry = Date(timeIntervalSince1970: 1_700_000_000)
+        let json = """
+        {
+          "id": "\(id.uuidString)",
+          "name": "legacy@example.com",
+          "usedUnits": 1,
+          "quota": 100,
+          "rateLimitResetCreditsAvailableCount": 2,
+          "rateLimitResetCreditsEstimatedExpiresAt": \(expiry.timeIntervalSinceReferenceDate)
+        }
+        """
+
+        let account = try JSONDecoder().decode(AgentAccount.self, from: Data(json.utf8))
+
+        #expect(account.rateLimitResetCreditsAvailableCount == 2)
+        #expect(account.rateLimitResetCreditsEstimatedExpiresAt == expiry)
+        #expect(account.rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
     }
 
     @Test
@@ -2735,6 +2759,7 @@ struct CodexPoolManagerTests {
         #expect(redacted.apiToken == "")
         #expect(redacted.rateLimitResetCreditsAvailableCount == 2)
         #expect(redacted.rateLimitResetCreditsEstimatedExpiresAt == expiry)
+        #expect(redacted.rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
     }
 
     @Test
@@ -2880,6 +2905,10 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 2)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == previousSync.addingTimeInterval(30 * 24 * 60 * 60))
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            previousSync.addingTimeInterval(30 * 24 * 60 * 60),
+            previousSync.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
     }
 
     @Test
@@ -2909,6 +2938,9 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 1)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == currentSync.addingTimeInterval(30 * 24 * 60 * 60))
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            currentSync.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
     }
 
     @Test
@@ -2924,7 +2956,8 @@ struct CodexPoolManagerTests {
                     quota: 1000,
                     apiToken: "token-a",
                     rateLimitResetCreditsAvailableCount: 1,
-                    rateLimitResetCreditsEstimatedExpiresAt: firstEstimate
+                    rateLimitResetCreditsEstimatedExpiresAt: firstEstimate,
+                    rateLimitResetCreditEstimatedExpiries: [firstEstimate]
                 )
             ],
             mode: .manual
@@ -2947,6 +2980,63 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 3)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == firstEstimate)
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            firstEstimate,
+            Date(timeIntervalSince1970: 1_000).addingTimeInterval(30 * 24 * 60 * 60),
+            Date(timeIntervalSince1970: 1_000).addingTimeInterval(30 * 24 * 60 * 60)
+        ])
+    }
+
+    @Test
+    func updateRateLimitResetCreditsTracksEachObservedCreditExpiry() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 10, quota: 1000)
+            ],
+            mode: .manual
+        )
+
+        let firstPreviousSync = Date(timeIntervalSince1970: 1_000)
+        let secondPreviousSync = Date(timeIntervalSince1970: 2_000)
+
+        state.updateRateLimitResetCredits(
+            for: a,
+            availableCount: 1,
+            previousSuccessfulSyncAt: firstPreviousSync,
+            now: Date(timeIntervalSince1970: 1_500)
+        )
+
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            firstPreviousSync.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
+
+        state.updateRateLimitResetCredits(
+            for: a,
+            availableCount: 3,
+            previousSuccessfulSyncAt: secondPreviousSync,
+            now: Date(timeIntervalSince1970: 2_500)
+        )
+
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            firstPreviousSync.addingTimeInterval(30 * 24 * 60 * 60),
+            secondPreviousSync.addingTimeInterval(30 * 24 * 60 * 60),
+            secondPreviousSync.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == firstPreviousSync.addingTimeInterval(30 * 24 * 60 * 60))
+
+        state.updateRateLimitResetCredits(
+            for: a,
+            availableCount: 2,
+            previousSuccessfulSyncAt: Date(timeIntervalSince1970: 3_000),
+            now: Date(timeIntervalSince1970: 3_500)
+        )
+
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            secondPreviousSync.addingTimeInterval(30 * 24 * 60 * 60),
+            secondPreviousSync.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == secondPreviousSync.addingTimeInterval(30 * 24 * 60 * 60))
     }
 
     @Test
@@ -2983,6 +3073,7 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 0)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == nil)
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries.isEmpty)
     }
 
     @Test
@@ -3015,6 +3106,7 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == nil)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == nil)
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries.isEmpty)
     }
 
     @Test
@@ -3087,7 +3179,8 @@ struct CodexPoolManagerTests {
                     quota: 1000,
                     apiToken: "bad-token",
                     rateLimitResetCreditsAvailableCount: 2,
-                    rateLimitResetCreditsEstimatedExpiresAt: expiry
+                    rateLimitResetCreditsEstimatedExpiresAt: expiry,
+                    rateLimitResetCreditEstimatedExpiries: [expiry, expiry]
                 )
             ],
             mode: .manual
@@ -3100,6 +3193,7 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 2)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == expiry)
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
     }
 
     @Test
@@ -3123,6 +3217,9 @@ struct CodexPoolManagerTests {
 
         #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 1)
         #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == now.addingTimeInterval(30 * 24 * 60 * 60))
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            now.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
     }
 
     @Test
@@ -3750,6 +3847,7 @@ struct CodexPoolManagerTests {
         let account = state.accounts[0]
         #expect(account.rateLimitResetCreditsAvailableCount == 2)
         #expect(account.rateLimitResetCreditsEstimatedExpiresAt == expiry)
+        #expect(account.rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
     }
 
     @Test
