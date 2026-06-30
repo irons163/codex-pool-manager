@@ -338,6 +338,7 @@ private struct SectionCard<HeaderAccessory: View, Content: View>: View {
 
 private struct AccountRowView: View {
     @State private var isAccountWarningPopoverPresented = false
+    @State private var isResetCreditNotePopoverPresented = false
 
     let row: MenuBarAccountRow
     let switchAccount: (UUID) -> Void
@@ -401,13 +402,17 @@ private struct AccountRowView: View {
         let detailLines = resetCreditDetailLineTexts
 
         if !detailLines.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(detailLines.enumerated()), id: \.offset) { index, line in
-                    Text(line)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                        .foregroundStyle(index == 0 ? Color.accentColor : Color.secondary)
+            HStack(alignment: .top, spacing: 5) {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(detailLines.enumerated()), id: \.offset) { index, line in
+                        Text(line)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+                            .foregroundStyle(index == 0 ? Color.accentColor : Color.secondary)
+                    }
                 }
+
+                resetCreditNoteButton
             }
             .font(.caption2.weight(.semibold))
             .monospacedDigit()
@@ -415,6 +420,40 @@ private struct AccountRowView: View {
             .help(row.resetCreditDetailText ?? detailLines.joined(separator: "\n"))
             .accessibilityLabel(row.resetCreditAccessibilityLabel ?? detailLines.joined(separator: ", "))
         }
+    }
+
+    @ViewBuilder
+    private var resetCreditNoteButton: some View {
+        if let noteText = resetCreditNoteText {
+            Button {
+                isResetCreditNotePopoverPresented.toggle()
+            } label: {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.orange)
+                    .padding(.top, 1)
+            }
+            .buttonStyle(.plain)
+            .help(noteText)
+            .accessibilityLabel(noteText)
+            .popover(isPresented: $isResetCreditNotePopoverPresented, arrowEdge: .bottom) {
+                Text(noteText)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(12)
+                    .frame(width: 260, alignment: .leading)
+            }
+        }
+    }
+
+    private var resetCreditNoteText: String? {
+        guard let noteText = row.resetCreditNoteText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !noteText.isEmpty else {
+            return nil
+        }
+
+        return noteText
     }
 
     private var resetCreditDetailLineTexts: [String] {

@@ -61,6 +61,7 @@ struct MenuBarAccountRow: Identifiable, Equatable {
     let planBadgeText: String?
     let resetCreditBadgeText: String?
     let resetCreditDetailText: String?
+    let resetCreditNoteText: String?
     let resetCreditAccessibilityLabel: String?
     let weeklyRemainingText: String
     let fiveHourRemainingText: String?
@@ -71,6 +72,7 @@ struct MenuBarAccountRow: Identifiable, Equatable {
 
 private struct ResetCreditPresentation {
     let detailText: String
+    let noteText: String?
     let accessibilityLabel: String
 }
 
@@ -176,6 +178,7 @@ enum MenuBarDashboardPresenter {
             planBadgeText: account.planBadgeText,
             resetCreditBadgeText: nil,
             resetCreditDetailText: resetCredit?.detailText,
+            resetCreditNoteText: resetCredit?.noteText,
             resetCreditAccessibilityLabel: resetCredit?.accessibilityLabel,
             weeklyRemainingText: percentText(account.remainingRatio),
             fiveHourRemainingText: account.isPaid
@@ -197,9 +200,18 @@ enum MenuBarDashboardPresenter {
         }
 
         let fullDate = preciseExpiryText(for: expiry)
+        let detailLines = L10n.text("menu_bar.reset_credit.detail_format", count, fullDate)
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let visibleDetailText = detailLines.prefix(2).joined(separator: "\n")
+        let noteText = detailLines.dropFirst(2).joined(separator: "\n")
 
         return ResetCreditPresentation(
-            detailText: L10n.text("menu_bar.reset_credit.detail_format", count, fullDate),
+            detailText: visibleDetailText.isEmpty
+                ? L10n.text("menu_bar.reset_credit.detail_format", count, fullDate)
+                : visibleDetailText,
+            noteText: noteText.isEmpty ? nil : noteText,
             accessibilityLabel: L10n.text("menu_bar.reset_credit.accessibility_format", count, fullDate)
         )
     }

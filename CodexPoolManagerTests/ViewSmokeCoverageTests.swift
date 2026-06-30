@@ -539,6 +539,11 @@ struct ViewSmokeCoverageTests {
         #expect(!source.contains("isResetCreditPopoverPresented"))
         #expect(source.contains("resetCreditDetailLines"))
         #expect(source.contains("resetCreditDetailLineTexts"))
+        #expect(source.contains("resetCreditNoteButton"))
+        #expect(source.contains("row.resetCreditNoteText"))
+        #expect(source.contains("isResetCreditNotePopoverPresented"))
+        #expect(source.contains(".popover(isPresented: $isResetCreditNotePopoverPresented"))
+        #expect(source.contains("exclamationmark.circle.fill"))
         #expect(source.contains("components(separatedBy: \"\\n\")"))
         #expect(source.contains("row.resetCreditAccessibilityLabel"))
     }

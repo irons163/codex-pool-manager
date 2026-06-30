@@ -261,9 +261,9 @@ struct MenuBarDashboardPresenterTests {
             #expect(row.resetCreditBadgeText == nil)
             #expect(row.resetCreditDetailText?.components(separatedBy: "\n") == [
                 "可重置 2 次",
-                "推估到期：2026/7/29 23:15:42 GMT+8",
-                "依前次成功同步時間加 30 天推估，實際期限可能不同。"
+                "推估到期：2026/7/29 23:15:42 GMT+8"
             ])
+            #expect(row.resetCreditNoteText == "依前次成功同步時間加 30 天推估，實際期限可能不同。")
             #expect(row.resetCreditAccessibilityLabel == "可重置 2 次，推估 2026/7/29 23:15:42 GMT+8 到期")
         }
     }
@@ -295,6 +295,7 @@ struct MenuBarDashboardPresenterTests {
 
         #expect(row.resetCreditBadgeText == nil)
         #expect(row.resetCreditDetailText == nil)
+        #expect(row.resetCreditNoteText == nil)
     }
 
     @Test
