@@ -633,5 +633,5 @@
 "menu_bar.reset_credit.badge_format" = "%d회 · 약 %@ 만료";
 "menu_bar.reset_credit.detail.title" = "사용 가능한 초기화";
 "menu_bar.reset_credit.detail_format" = "사용 가능한 초기화 %d회\n예상 만료: %@\n이전 동기화 성공 시각에 30일을 더해 추정하므로 실제 만료 시각과 다를 수 있습니다.";
-"menu_bar.reset_credit.per_credit_expiry_format" = "%d번째 초기화: %@";
+"menu_bar.reset_credit.per_credit_expiry_format" = "%d번째 초기화 만료: %@";
 "menu_bar.reset_credit.accessibility_format" = "사용 가능한 초기화 %d회, 예상 만료 %@";

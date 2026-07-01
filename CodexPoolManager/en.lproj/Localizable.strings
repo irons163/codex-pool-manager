@@ -642,5 +642,5 @@
 "menu_bar.reset_credit.badge_format" = "%d · est. %@";
 "menu_bar.reset_credit.detail.title" = "Banked resets";
 "menu_bar.reset_credit.detail_format" = "%d resets available\nEstimated expiry: %@\nEstimated from the previous successful sync plus 30 days; the actual expiry may differ.";
-"menu_bar.reset_credit.per_credit_expiry_format" = "Reset %d: %@";
+"menu_bar.reset_credit.per_credit_expiry_format" = "Reset %d expiry: %@";
 "menu_bar.reset_credit.accessibility_format" = "%d banked resets, estimated expiry %@";

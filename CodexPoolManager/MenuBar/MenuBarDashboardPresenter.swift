@@ -208,7 +208,6 @@ enum MenuBarDashboardPresenter {
             .components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-        let visibleDetailText = detailLines.prefix(2).joined(separator: "\n")
         let perCreditExpiryLines = estimatedExpiries.enumerated().map { index, expiry in
             L10n.text(
                 "menu_bar.reset_credit.per_credit_expiry_format",
@@ -216,7 +215,9 @@ enum MenuBarDashboardPresenter {
                 preciseExpiryText(for: expiry)
             )
         }
-        let noteText = (perCreditExpiryLines + Array(detailLines.dropFirst(2))).joined(separator: "\n")
+        let visibleDetailLines = Array(detailLines.prefix(1)) + perCreditExpiryLines
+        let visibleDetailText = visibleDetailLines.joined(separator: "\n")
+        let noteText = detailLines.dropFirst(2).joined(separator: "\n")
 
         return ResetCreditPresentation(
             detailText: visibleDetailText.isEmpty

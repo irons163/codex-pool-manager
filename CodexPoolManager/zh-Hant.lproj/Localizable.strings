@@ -634,5 +634,5 @@
 "menu_bar.reset_credit.badge_format" = "%d 次 · 約 %@ 到期";
 "menu_bar.reset_credit.detail.title" = "可用重置額度";
 "menu_bar.reset_credit.detail_format" = "可重置 %d 次\n推估到期：%@\n依前次成功同步時間加 30 天推估，實際期限可能不同。";
-"menu_bar.reset_credit.per_credit_expiry_format" = "第 %d 次：%@";
+"menu_bar.reset_credit.per_credit_expiry_format" = "第 %d 次期限：%@";
 "menu_bar.reset_credit.accessibility_format" = "可重置 %d 次，推估 %@ 到期";
