@@ -549,6 +549,19 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func richMenuBarDashboardAlwaysShowsSwitchButtonForAccountRows() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let viewSourceURL = repositoryRoot.appendingPathComponent("CodexPoolManager/MenuBar/MenuBarDashboardView.swift")
+        let source = try String(contentsOf: viewSourceURL, encoding: .utf8)
+
+        #expect(source.contains("private var accountAction"))
+        #expect(source.contains("Button(L10n.text(\"menu_bar.action.switch\"))"))
+        #expect(!source.contains("} else {\n            Button(L10n.text(\"menu_bar.action.switch\"))"))
+        #expect(source.contains("switchAccount(row.id)"))
+    }
+
+    @Test
     func richMenuBarDashboardOffersAccountGroupSwitcher() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()

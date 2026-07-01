@@ -544,12 +544,14 @@ private struct AccountRowView: View {
 
     @ViewBuilder
     private var accountAction: some View {
-        if row.isActive {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.headline)
-                .foregroundStyle(Color.accentColor)
-                .accessibilityLabel(L10n.text("menu_bar.section.active"))
-        } else {
+        HStack(spacing: 6) {
+            if row.isActive {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityLabel(L10n.text("menu_bar.section.active"))
+            }
+
             Button(L10n.text("menu_bar.action.switch")) {
                 switchAccount(row.id)
             }
