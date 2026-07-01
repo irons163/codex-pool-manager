@@ -85,6 +85,7 @@ struct AccountUsagePanelView: View {
     @State private var isGroupRenameEditorVisible = false
     @State private var deleteConfirmationTarget: DeleteConfirmationTarget?
     @State private var draftAccountNames: [UUID: String] = [:]
+    @State private var resetCreditNotePopoverAccountID: UUID?
     @State private var panelWidth: CGFloat = 0
     @State private var gridContainerWidth: CGFloat = 0
     @FocusState private var focusedAccountNameID: UUID?
@@ -858,6 +859,8 @@ struct AccountUsagePanelView: View {
                     .foregroundStyle(PoolDashboardTheme.textMuted)
             }
         }
+
+        accountResetCreditDetails(account, compact: false)
     }
 
     @ViewBuilder
@@ -910,6 +913,8 @@ struct AccountUsagePanelView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
             }
+
+            accountResetCreditDetails(account, compact: true)
         }
 
         if account.isUsageSyncExcluded {
@@ -1239,6 +1244,70 @@ struct AccountUsagePanelView: View {
     private func fiveHourResetRecordText(for account: AgentAccount) -> String {
         let resetText = account.primaryUsageResetAt.map(localizedMonthDayHourMinuteText) ?? "--"
         return L10n.text("account.five_hour_resets_format", resetText)
+    }
+
+    @ViewBuilder
+    private func accountResetCreditDetails(_ account: AgentAccount, compact: Bool) -> some View {
+        if let presentation = ResetCreditPresentationFormatter.presentation(for: account) {
+            let detailLines = compact
+                ? Array(presentation.detailLines.prefix(1))
+                : presentation.detailLines
+            let contentAlignment: Alignment = compact ? .center : .leading
+            let textAlignment: TextAlignment = compact ? .center : .leading
+
+            if !detailLines.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    VStack(alignment: compact ? .center : .leading, spacing: 2) {
+                        ForEach(Array(detailLines.enumerated()), id: \.offset) { index, line in
+                            Text(line)
+                                .font(compact ? .caption2.weight(.semibold) : .caption.weight(.semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(index == 0 ? PoolDashboardTheme.glowA : PoolDashboardTheme.textMuted)
+                                .lineLimit(1)
+                                .minimumScaleFactor(compact ? 0.74 : 0.82)
+                                .multilineTextAlignment(textAlignment)
+                        }
+                    }
+
+                    if let noteText = presentation.noteText {
+                        resetCreditNoteButton(for: account, noteText: noteText)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: contentAlignment)
+                .padding(.top, compact ? 0 : 2)
+                .help(presentation.detailText)
+                .accessibilityLabel(presentation.accessibilityLabel)
+            }
+        }
+    }
+
+    private func resetCreditNoteButton(for account: AgentAccount, noteText: String) -> some View {
+        let isResetCreditNotePopoverPresented = Binding<Bool>(
+            get: { resetCreditNotePopoverAccountID == account.id },
+            set: { isPresented in
+                resetCreditNotePopoverAccountID = isPresented ? account.id : nil
+            }
+        )
+
+        return Button {
+            resetCreditNotePopoverAccountID = isResetCreditNotePopoverPresented.wrappedValue ? nil : account.id
+        } label: {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(PoolDashboardTheme.warning)
+                .padding(.top, 1)
+        }
+        .buttonStyle(.plain)
+        .help(noteText)
+        .accessibilityLabel(noteText)
+        .popover(isPresented: isResetCreditNotePopoverPresented, arrowEdge: .bottom) {
+            Text(noteText)
+                .font(.callout)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(12)
+                .frame(width: 280, alignment: .leading)
+        }
     }
 
     private func localizedMonthDayHourMinuteText(_ date: Date) -> String {

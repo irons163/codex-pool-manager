@@ -785,6 +785,20 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    func accountUsagePanelRendersResetCreditDetailsInAccountCards() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let viewSourceURL = repositoryRoot.appendingPathComponent("Features/PoolDashboard/Components/AccountUsagePanelView.swift")
+        let source = try String(contentsOf: viewSourceURL, encoding: .utf8)
+
+        #expect(source.contains("accountResetCreditDetails(account, compact: false)"))
+        #expect(source.contains("accountResetCreditDetails(account, compact: true)"))
+        #expect(source.contains("ResetCreditPresentationFormatter.presentation(for: account)"))
+        #expect(source.contains("isResetCreditNotePopoverPresented"))
+        #expect(source.contains("exclamationmark.circle.fill"))
+    }
+
+    @Test
     @MainActor
     func oauthLoginPanelViewRendersSigningIdleManualAndErrorStates() {
         let issuerBox = BindingBox("https://auth.openai.com")
