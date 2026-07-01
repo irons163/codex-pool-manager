@@ -89,7 +89,7 @@ All screenshots below use mock or non-sensitive test data.
 ### 5) Desktop integration
 
 - Native macOS notifications for key events (sync failure/recovery, low usage, auto-switch outcomes).
-- Menu Bar extra that shows live remaining usage summary.
+- Menu Bar extra with compact account list, group filtering, plan badges, warning popovers, and reset-credit expiry details.
 - macOS Widget extension for quick status glance.
 
 ### 6) Backup and restore
@@ -181,7 +181,11 @@ These are intentionally independent.
 ### Menu Bar
 
 - Menu bar title contains compact status (remaining %, paid 5h left, update age).
-- Menu content shows active account details, reset times, and update age.
+- The popover mirrors main-window account ordering settings, including current account first, paid accounts first, and API Key accounts last.
+- Account list supports group filtering, shows Plus/Pro/API Key badges, and keeps `Switch` available even on the current account.
+- Rows show weekly and 5-hour remaining usage with exact reset times when available.
+- Reset credits are shown inline as `N resets available`, with one estimated expiry line per reset credit. Estimates use the previous successful sync time plus 30 days, so a warning popover explains that actual expiry may differ.
+- Account warnings are collapsed behind a compact exclamation popover to save vertical space.
 - Refreshes periodically (every ~15s) and supports manual refresh.
 
 ## In-app Update Checks

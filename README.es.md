@@ -89,7 +89,7 @@ Todas las capturas usan datos mock o no sensibles.
 ### 5) Integración de escritorio
 
 - Notificaciones nativas macOS (fallo/recuperación de sync, low usage, auto-switch).
-- Extra de barra de menú con resumen en vivo del restante.
+- Barra de menú con lista compacta de cuentas, filtro por grupo, badges de plan, popovers de aviso y expiración estimada de cada reset credit.
 - Widget de macOS para vistazo rápido.
 
 ### 6) Backup y restore
@@ -178,7 +178,11 @@ Hay dos umbrales independientes:
 ### Barra de menú
 
 - Título compacto con estado (restante %, paid 5h left, edad de actualización).
-- Menú con detalles de cuenta activa, resets y edad de actualización.
+- El popover respeta las preferencias de orden del panel principal: cuenta actual primero, cuentas pagadas delante y cuentas API Key al final.
+- La lista de cuentas permite filtrar por grupo, muestra badges Plus/Pro/API Key y mantiene `Switch` disponible incluso en la cuenta actual.
+- Cada fila muestra restante semanal y de 5 horas, con hora exacta de reset cuando está disponible.
+- Los reset credits se muestran como `N resets available`, con una línea de expiración estimada por cada credit. La estimación usa el último sync exitoso anterior + 30 días, por eso un popover de aviso aclara que la expiración real puede diferir.
+- Los avisos de cuenta se colapsan detrás de un popover compacto con signo de exclamación para ahorrar espacio vertical.
 - Refresh periódico (~15s) y refresh manual.
 
 ## Comprobación de actualizaciones integrada
