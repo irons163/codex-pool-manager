@@ -1,0 +1,86 @@
+import Foundation
+
+struct ResetCreditPresentation: Equatable {
+    let detailLines: [String]
+    let detailText: String
+    let noteText: String?
+    let accessibilityLabel: String
+}
+
+enum ResetCreditPresentationFormatter {
+    static func presentation(for account: AgentAccount) -> ResetCreditPresentation? {
+        guard account.supportsCodexUsageSync,
+              let count = account.rateLimitResetCreditsAvailableCount,
+              count > 0
+        else {
+            return nil
+        }
+
+        let estimatedExpiries = resetCreditEstimatedExpiries(for: account, count: count)
+        guard let expiry = estimatedExpiries.first else {
+            return nil
+        }
+
+        let fullDate = preciseExpiryText(for: expiry)
+        let baseDetailLines = L10n.text("menu_bar.reset_credit.detail_format", count, fullDate)
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let perCreditExpiryLines = estimatedExpiries.enumerated().map { index, expiry in
+            L10n.text(
+                "menu_bar.reset_credit.per_credit_expiry_format",
+                index + 1,
+                preciseExpiryText(for: expiry)
+            )
+        }
+        let visibleDetailLines = Array(baseDetailLines.prefix(1)) + perCreditExpiryLines
+        let fallbackDetailText = L10n.text("menu_bar.reset_credit.detail_format", count, fullDate)
+        let visibleDetailText = visibleDetailLines.isEmpty
+            ? fallbackDetailText
+            : visibleDetailLines.joined(separator: "\n")
+        let noteText = baseDetailLines.dropFirst(2).joined(separator: "\n")
+
+        return ResetCreditPresentation(
+            detailLines: visibleDetailLines.isEmpty ? [fallbackDetailText] : visibleDetailLines,
+            detailText: visibleDetailText,
+            noteText: noteText.isEmpty ? nil : noteText,
+            accessibilityLabel: L10n.text("menu_bar.reset_credit.accessibility_format", count, fullDate)
+        )
+    }
+
+    private static func resetCreditEstimatedExpiries(for account: AgentAccount, count: Int) -> [Date] {
+        guard count > 0 else { return [] }
+
+        var expiries = Array(account.rateLimitResetCreditEstimatedExpiries.prefix(count))
+        if expiries.isEmpty,
+           let legacyExpiry = account.rateLimitResetCreditsEstimatedExpiresAt {
+            expiries = Array(repeating: legacyExpiry, count: count)
+        } else if expiries.count < count,
+                  let lastExpiry = expiries.last ?? account.rateLimitResetCreditsEstimatedExpiresAt {
+            expiries.append(contentsOf: Array(repeating: lastExpiry, count: count - expiries.count))
+        }
+        return expiries
+    }
+
+    private static func preciseExpiryText(for expiry: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy/M/d HH:mm:ss"
+        return "\(formatter.string(from: expiry)) \(gmtOffsetText(for: formatter.timeZone, at: expiry))"
+    }
+
+    private static func gmtOffsetText(for timeZone: TimeZone, at date: Date) -> String {
+        let secondsFromGMT = timeZone.secondsFromGMT(for: date)
+        let sign = secondsFromGMT >= 0 ? "+" : "-"
+        let absoluteSeconds = abs(secondsFromGMT)
+        let hours = absoluteSeconds / 3_600
+        let minutes = (absoluteSeconds % 3_600) / 60
+
+        if minutes == 0 {
+            return "GMT\(sign)\(hours)"
+        }
+
+        return String(format: "GMT%@%d:%02d", sign, hours, minutes)
+    }
+}

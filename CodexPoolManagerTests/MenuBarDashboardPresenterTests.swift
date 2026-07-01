@@ -313,6 +313,98 @@ struct MenuBarDashboardPresenterTests {
     }
 
     @Test
+    func resetCreditFormatterBuildsPerCreditDetailLines() throws {
+        try withMenuBarLanguageAndTimeZoneOverride(
+            "zh-Hant",
+            timeZone: try #require(TimeZone(secondsFromGMT: 8 * 60 * 60))
+        ) {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let firstExpiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 7,
+                day: 30,
+                hour: 20,
+                minute: 3,
+                second: 24
+            )))
+            let secondExpiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 1,
+                hour: 9,
+                minute: 10,
+                second: 11
+            )))
+            let account = makeAccount(
+                rateLimitResetCreditsAvailableCount: 2,
+                rateLimitResetCreditsEstimatedExpiresAt: firstExpiry,
+                rateLimitResetCreditEstimatedExpiries: [firstExpiry, secondExpiry]
+            )
+
+            let presentation = try #require(ResetCreditPresentationFormatter.presentation(for: account))
+
+            #expect(presentation.detailLines == [
+                "可重置 2 次",
+                "第 1 次期限：2026/7/30 20:03:24 GMT+8",
+                "第 2 次期限：2026/8/1 09:10:11 GMT+8"
+            ])
+            #expect(presentation.noteText == "依前次成功同步時間加 30 天推估，實際期限可能不同。")
+            #expect(presentation.accessibilityLabel == "可重置 2 次，推估 2026/7/30 20:03:24 GMT+8 到期")
+        }
+    }
+
+    @Test
+    func resetCreditFormatterRepeatsLegacyExpiryWhenPerCreditListIsMissing() throws {
+        try withMenuBarLanguageAndTimeZoneOverride(
+            "zh-Hant",
+            timeZone: try #require(TimeZone(secondsFromGMT: 8 * 60 * 60))
+        ) {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let expiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 7,
+                day: 30,
+                hour: 20,
+                minute: 3,
+                second: 24
+            )))
+            let account = makeAccount(
+                rateLimitResetCreditsAvailableCount: 2,
+                rateLimitResetCreditsEstimatedExpiresAt: expiry
+            )
+
+            let presentation = try #require(ResetCreditPresentationFormatter.presentation(for: account))
+
+            #expect(presentation.detailLines == [
+                "可重置 2 次",
+                "第 1 次期限：2026/7/30 20:03:24 GMT+8",
+                "第 2 次期限：2026/7/30 20:03:24 GMT+8"
+            ])
+        }
+    }
+
+    @Test
+    func resetCreditFormatterHidesUnsupportedOrIncompleteAccounts() {
+        let expiry = Date(timeIntervalSince1970: 1_800_000_000)
+
+        #expect(ResetCreditPresentationFormatter.presentation(for: makeAccount(
+            rateLimitResetCreditsAvailableCount: 0,
+            rateLimitResetCreditsEstimatedExpiresAt: expiry
+        )) == nil)
+
+        #expect(ResetCreditPresentationFormatter.presentation(for: makeAccount(
+            rateLimitResetCreditsAvailableCount: 2,
+            credentialType: .relayAPIKey
+        )) == nil)
+
+        #expect(ResetCreditPresentationFormatter.presentation(for: makeAccount(
+            rateLimitResetCreditsAvailableCount: 2
+        )) == nil)
+    }
+
+    @Test
     func accountOrderSettingsReadsExplicitFalseValuesFromDashboardDefaults() throws {
         let suiteName = "MenuBarAccountOrderSettingsTests-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
