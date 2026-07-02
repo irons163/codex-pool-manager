@@ -45,7 +45,7 @@ Toutes les captures ci-dessous utilisent des données de test ou non sensibles.
 
 ### Barre de menu (données de test)
 
-![État de la barre de menu (données de test)](docs/images/menu-bar.fr.png)
+![État de la barre de menu (données de test)](docs/images/menu-bar.png)
 
 ### Widget (état vide, données de test)
 

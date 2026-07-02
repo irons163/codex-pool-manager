@@ -45,7 +45,7 @@ Todas las capturas usan datos de prueba o no sensibles.
 
 ### Estado en barra de menú (datos de prueba)
 
-![Estado de la barra de menú (datos de prueba)](docs/images/menu-bar.es.png)
+![Estado de la barra de menú (datos de prueba)](docs/images/menu-bar.png)
 
 ### Widget (estado vacío, datos de prueba)
 

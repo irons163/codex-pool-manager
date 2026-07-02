@@ -45,7 +45,7 @@ Codex Pool Manager は、Codex/OpenAI OAuth アカウントのプールを 1 つ
 
 ### メニューバー表示（モックデータ）
 
-![メニューバー表示（モックデータ）](docs/images/menu-bar.ja.png)
+![メニューバー表示（モックデータ）](docs/images/menu-bar.png)
 
 ### Widget（空状態サンプル / モックデータ）
 
