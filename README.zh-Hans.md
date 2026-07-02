@@ -45,7 +45,7 @@ Codex Pool Manager 是一款 macOS 工具，让你在同一个控制面板里管
 
 ### 菜单栏状态（模拟数据）
 
-![菜单栏状态（模拟数据）](docs/images/menu-bar.png)
+![菜单栏状态（模拟数据）](docs/images/menu-bar.zh-Hans.png)
 
 ### Widget（空状态示例，模拟状态）
 
