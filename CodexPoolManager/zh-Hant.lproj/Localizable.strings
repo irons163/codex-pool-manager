@@ -186,6 +186,15 @@
 "update.prompt.matrix_title" = "建置版本包含：";
 "update.prompt.notes_title" = "更新說明";
 "update.prompt.notes_unavailable" = "此版本尚未提供更新說明。";
+"whats_new.title_format" = "%@ 新功能";
+"whats_new.subtitle" = "快速看看這個版本改了什麼。";
+"whats_new.later" = "稍後提醒";
+"whats_new.dismiss" = "知道了";
+"whats_new.settings.show" = "查看最新功能";
+"whats_new.reset_credit.title" = "主視窗帳號卡";
+"whats_new.reset_credit.body" = "主視窗帳號卡現在會顯示可重置額度資訊。";
+"whats_new.reset_credit.full_mode" = "一般模式：顯示每次可重置期限";
+"whats_new.reset_credit.compact_mode" = "極簡模式：以「可重置 2 次 · 7/30, 8/1」精簡顯示";
 
 "overview.title" = "池總覽";
 "overview.subtitle" = "監控整體容量，並在維護時段重置用量。";

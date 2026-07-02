@@ -276,6 +276,7 @@ struct ViewSmokeCoverageTests {
         let autoCheckUpdateBox = BindingBox(true)
 
         var checkCount = 0
+        var showWhatsNewCount = 0
         let view = WorkspaceSettingsPanelView(
             switchWithoutLaunchingBinding: binding(switchWithoutLaunchBox),
             launchTargetBinding: binding(launchTargetBox),
@@ -288,11 +289,13 @@ struct ViewSmokeCoverageTests {
             appUpdateAutoCheckEnabledBinding: binding(autoCheckUpdateBox),
             isCheckingForUpdates: false,
             appUpdateStatusMessage: "Up to date",
-            onCheckForUpdates: { checkCount += 1 }
+            onCheckForUpdates: { checkCount += 1 },
+            onShowWhatsNew: { showWhatsNewCount += 1 }
         )
 
         let _ = view.body
         #expect(checkCount == 0)
+        #expect(showWhatsNewCount == 0)
     }
 
     @Test
@@ -797,6 +800,22 @@ struct ViewSmokeCoverageTests {
         #expect(source.contains("presentation.compactDetailLine"))
         #expect(source.contains("isResetCreditNotePopoverPresented"))
         #expect(source.contains("exclamationmark.circle.fill"))
+    }
+
+    @Test
+    func poolDashboardRendersWhatsNewPromptAndSettingsEntry() throws {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
+        let dashboardSourceURL = repositoryRoot.appendingPathComponent("Features/PoolDashboard/PoolDashboardView.swift")
+        let settingsSourceURL = repositoryRoot.appendingPathComponent("Features/PoolDashboard/Components/WorkspaceSettingsPanelView.swift")
+        let dashboardSource = try String(contentsOf: dashboardSourceURL, encoding: .utf8)
+        let settingsSource = try String(contentsOf: settingsSourceURL, encoding: .utf8)
+
+        #expect(dashboardSource.contains("whatsNewOverlay(announcement:"))
+        #expect(dashboardSource.contains("showWhatsNewIfNeeded()"))
+        #expect(dashboardSource.contains("markWhatsNewSeen("))
+        #expect(settingsSource.contains("onShowWhatsNew"))
+        #expect(settingsSource.contains("whats_new.settings.show"))
     }
 
     @Test

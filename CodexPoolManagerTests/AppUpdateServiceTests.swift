@@ -2,6 +2,27 @@ import Foundation
 import Testing
 @testable import CodexPoolManager
 
+private let appUpdateLanguageOverrideMutationLock = NSLock()
+
+private func withAppUpdateLanguageOverride(_ languageCode: String, _ body: () throws -> Void) rethrows {
+    appUpdateLanguageOverrideMutationLock.lock()
+    defer { appUpdateLanguageOverrideMutationLock.unlock() }
+
+    let defaults = UserDefaults.standard
+    let key = L10n.languageOverrideKey
+    let previous = defaults.object(forKey: key)
+    defer {
+        if let previous {
+            defaults.set(previous, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    defaults.set(languageCode, forKey: key)
+    try body()
+}
+
 @MainActor
 struct AppUpdateServiceTests {
     @Test
@@ -54,6 +75,32 @@ struct AppUpdateServiceTests {
         let lastCheckedAt = now.timeIntervalSince1970 - AppUpdateAutoCheckPolicy.intervalSeconds
 
         #expect(AppUpdateAutoCheckPolicy.shouldRun(lastCheckedAt: lastCheckedAt, now: now))
+    }
+
+    @Test
+    func whatsNewPolicyUsesVersionAndBuildToDecideVisibility() {
+        let currentID = WhatsNewPromptPolicy.versionID(version: "v1.0.14-rc.18", build: "118")
+
+        #expect(currentID == "1.0.14-rc.18+118")
+        #expect(WhatsNewPromptPolicy.shouldShow(currentVersionID: currentID, lastSeenVersionID: ""))
+        #expect(!WhatsNewPromptPolicy.shouldShow(currentVersionID: currentID, lastSeenVersionID: currentID))
+        #expect(WhatsNewPromptPolicy.shouldShow(currentVersionID: currentID, lastSeenVersionID: "1.0.14-rc.18+117"))
+        #expect(WhatsNewPromptPolicy.shouldShow(currentVersionID: currentID, lastSeenVersionID: "1.0.14-rc.17+118"))
+    }
+
+    @Test
+    func whatsNewAnnouncementUsesApprovedResetCreditCopy() {
+        withAppUpdateLanguageOverride("zh-Hant") {
+            let announcement = WhatsNewAnnouncement.current(version: "1.0.14-rc.18", build: "118")
+
+            #expect(announcement.id == "1.0.14-rc.18+118")
+            #expect(announcement.displayVersion == "1.0.14-rc.18")
+            #expect(announcement.sections.contains { section in
+                section.bodyLines.contains { line in
+                    line.contains("可重置 2 次 · 7/30, 8/1")
+                }
+            })
+        }
     }
 
     @Test

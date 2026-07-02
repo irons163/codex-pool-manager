@@ -13,6 +13,7 @@ struct WorkspaceSettingsPanelView: View {
     let isCheckingForUpdates: Bool
     let appUpdateStatusMessage: String?
     let onCheckForUpdates: () -> Void
+    let onShowWhatsNew: () -> Void
 
     private var switchAndLaunchBinding: Binding<Bool> {
         Binding(
@@ -153,6 +154,11 @@ struct WorkspaceSettingsPanelView: View {
                                 .controlSize(.small)
                         }
                     }
+
+                    Button(L10n.text("whats_new.settings.show")) {
+                        onShowWhatsNew()
+                    }
+                    .buttonStyle(.bordered)
 
                     if let appUpdateStatusMessage, !appUpdateStatusMessage.isEmpty {
                         Text(appUpdateStatusMessage)

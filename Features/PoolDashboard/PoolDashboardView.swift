@@ -226,6 +226,7 @@ struct PoolDashboardView: View {
     private static let appUpdateAutoCheckEnabledKey = "pool_dashboard.app_update.auto_check_enabled"
     private static let appUpdateSkippedVersionKey = "pool_dashboard.app_update.skipped_version"
     private static let appUpdateLastCheckedAtKey = "pool_dashboard.app_update.last_checked_at"
+    private static let whatsNewLastSeenVersionIDKey = "pool_dashboard.whats_new.last_seen_version_id"
     private static let authenticationMethodKey = "pool_dashboard.authentication.method"
     private static let relayPreserveOfficialAuthKey = "pool_dashboard.relay.preserve_official_auth"
     private struct PendingManualOAuthContext {
@@ -321,6 +322,7 @@ struct PoolDashboardView: View {
     @AppStorage(Self.appUpdateAutoCheckEnabledKey) private var appUpdateAutoCheckEnabled = true
     @AppStorage(Self.appUpdateSkippedVersionKey) private var appUpdateSkippedVersion = ""
     @AppStorage(Self.appUpdateLastCheckedAtKey) private var appUpdateLastCheckedAt = 0.0
+    @AppStorage(Self.whatsNewLastSeenVersionIDKey) private var whatsNewLastSeenVersionID = ""
     @AppStorage(Self.authenticationMethodKey) private var selectedAuthMethodRaw = AuthMethod.oauth.rawValue
     @AppStorage(Self.relayPreserveOfficialAuthKey) private var relayPreserveOfficialAuth = false
     @Environment(\.colorScheme) private var colorScheme
@@ -350,6 +352,7 @@ struct PoolDashboardView: View {
     @State private var usageAnalyticsStateLoaded = false
     @State private var appUpdateAvailablePrompt: AppUpdatePrompt?
     @State private var appUpdatePrompt: AppUpdatePrompt?
+    @State private var whatsNewPrompt: WhatsNewAnnouncement?
     @State private var isCheckingForAppUpdate = false
     @State private var appUpdateStatusMessage: String?
     private let store: AccountPoolStoring
@@ -556,6 +559,9 @@ struct PoolDashboardView: View {
             if let appUpdatePrompt {
                 appUpdateOverlay(prompt: appUpdatePrompt)
                     .zIndex(10)
+            } else if let whatsNewPrompt {
+                whatsNewOverlay(announcement: whatsNewPrompt)
+                    .zIndex(10)
             }
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
@@ -563,6 +569,7 @@ struct PoolDashboardView: View {
             syncThemePaletteIfNeeded()
             refreshRelayAPIKeyReadiness()
             handleOnAppear()
+            showWhatsNewIfNeeded()
         }
         .onChange(of: state.snapshot) { previousSnapshot, snapshot in
             let isRuntimeStateUpdate = isApplyingRuntimeStateUpdate
@@ -1413,6 +1420,9 @@ struct PoolDashboardView: View {
                 } else {
                     Task { await checkForAppUpdates(force: true) }
                 }
+            },
+            onShowWhatsNew: {
+                showWhatsNewManually()
             }
         )
     }
@@ -3129,6 +3139,35 @@ struct PoolDashboardView: View {
         appUpdateStatusMessage = L10n.text("update.status.direct_unavailable")
     }
 
+    private func currentWhatsNewAnnouncement() -> WhatsNewAnnouncement {
+        WhatsNewAnnouncement.current(version: appVersionText(), build: appBuildText())
+    }
+
+    private func showWhatsNewIfNeeded() {
+        let announcement = currentWhatsNewAnnouncement()
+        guard WhatsNewPromptPolicy.shouldShow(
+            currentVersionID: announcement.id,
+            lastSeenVersionID: whatsNewLastSeenVersionID
+        ) else {
+            return
+        }
+
+        whatsNewPrompt = announcement
+    }
+
+    private func showWhatsNewManually() {
+        whatsNewPrompt = currentWhatsNewAnnouncement()
+    }
+
+    private func dismissWhatsNewReminder() {
+        whatsNewPrompt = nil
+    }
+
+    private func markWhatsNewSeen(_ announcement: WhatsNewAnnouncement) {
+        whatsNewLastSeenVersionID = announcement.id
+        whatsNewPrompt = nil
+    }
+
     private func openExternalURL(_ url: URL) {
         #if canImport(AppKit)
         NSWorkspace.shared.open(url)
@@ -3229,6 +3268,109 @@ struct PoolDashboardView: View {
             }
             .padding(16)
             .frame(maxWidth: 640, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PoolDashboardTheme.modalSolidFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(PoolDashboardTheme.glowA.opacity(0.35), lineWidth: 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 16)
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity)
+    }
+
+    @ViewBuilder
+    private func whatsNewOverlay(announcement: WhatsNewAnnouncement) -> some View {
+        ZStack {
+            Color.black.opacity(PoolDashboardTheme.isLightPalette ? 0.2 : 0.45)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismissWhatsNewReminder()
+                }
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(announcement.title)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+                        Text(announcement.subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Button {
+                        dismissWhatsNewReminder()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(PoolDashboardTheme.panelMutedFill)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ForEach(announcement.sections) { section in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(section.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(PoolDashboardTheme.textPrimary)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(section.bodyLines, id: \.self) { line in
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Circle()
+                                        .fill(PoolDashboardTheme.glowA)
+                                        .frame(width: 5, height: 5)
+                                    Text(line)
+                                        .font(.callout)
+                                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(PoolDashboardTheme.panelMutedFill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(PoolDashboardTheme.panelInnerStroke, lineWidth: 1)
+                            )
+                    )
+                }
+
+                HStack(spacing: 8) {
+                    Button(L10n.text("whats_new.later")) {
+                        dismissWhatsNewReminder()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(L10n.text("whats_new.dismiss")) {
+                        markWhatsNewSeen(announcement)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(PoolDashboardTheme.glowA)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .padding(16)
+            .frame(maxWidth: 560, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(PoolDashboardTheme.modalSolidFill)
@@ -3478,6 +3620,59 @@ enum AppUpdateChannel {
         case .unknown:
             return "\(prefix)-arm64.xml"
         }
+    }
+}
+
+struct WhatsNewAnnouncementSection: Equatable, Identifiable {
+    let id: String
+    let title: String
+    let bodyLines: [String]
+}
+
+struct WhatsNewAnnouncement: Equatable, Identifiable {
+    let id: String
+    let displayVersion: String
+    let title: String
+    let subtitle: String
+    let sections: [WhatsNewAnnouncementSection]
+
+    static func current(version: String, build: String) -> WhatsNewAnnouncement {
+        let displayVersion = AppUpdateVersioning.normalizedVersion(from: version)
+        return WhatsNewAnnouncement(
+            id: WhatsNewPromptPolicy.versionID(version: displayVersion, build: build),
+            displayVersion: displayVersion,
+            title: L10n.text("whats_new.title_format", displayVersion),
+            subtitle: L10n.text("whats_new.subtitle"),
+            sections: [
+                WhatsNewAnnouncementSection(
+                    id: "reset-credit-main-account-card",
+                    title: L10n.text("whats_new.reset_credit.title"),
+                    bodyLines: [
+                        L10n.text("whats_new.reset_credit.body"),
+                        L10n.text("whats_new.reset_credit.full_mode"),
+                        L10n.text("whats_new.reset_credit.compact_mode")
+                    ]
+                )
+            ]
+        )
+    }
+}
+
+enum WhatsNewPromptPolicy {
+    static func versionID(version: String, build: String) -> String {
+        let normalizedVersion = AppUpdateVersioning.normalizedVersion(from: version)
+        let trimmedBuild = build.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBuild.isEmpty else {
+            return normalizedVersion
+        }
+        return "\(normalizedVersion)+\(trimmedBuild)"
+    }
+
+    static func shouldShow(currentVersionID: String, lastSeenVersionID: String) -> Bool {
+        let current = currentVersionID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else { return false }
+        let lastSeen = lastSeenVersionID.trimmingCharacters(in: .whitespacesAndNewlines)
+        return current != lastSeen
     }
 }
 

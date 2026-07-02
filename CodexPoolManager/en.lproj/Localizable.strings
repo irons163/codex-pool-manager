@@ -186,6 +186,15 @@
 "update.prompt.matrix_title" = "Build matrix includes:";
 "update.prompt.notes_title" = "Release notes";
 "update.prompt.notes_unavailable" = "No release notes were provided for this version.";
+"whats_new.title_format" = "What's new in %@";
+"whats_new.subtitle" = "A quick look at what changed in this version.";
+"whats_new.later" = "Remind me later";
+"whats_new.dismiss" = "Got it";
+"whats_new.settings.show" = "View latest features";
+"whats_new.reset_credit.title" = "Main window account cards";
+"whats_new.reset_credit.body" = "Account cards now show reset credit information.";
+"whats_new.reset_credit.full_mode" = "Regular mode: shows each reset credit expiry.";
+"whats_new.reset_credit.compact_mode" = "Minimal mode: summarizes it as “2 resets · 7/30, 8/1”.";
 
 "overview.title" = "Pool Overview";
 "overview.subtitle" = "Monitor aggregate capacity and reset usage during controlled maintenance windows.";
