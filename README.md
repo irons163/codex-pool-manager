@@ -65,6 +65,7 @@ All screenshots below use mock or non-sensitive test data.
 - Sort and layout controls for large pools.
 - `Minimal` layout uses adaptive card sizing so column count responds to window width.
 - Dedup-aware pool statistics (`Accounts`, `Available`, `Pool Usage`) to avoid counting duplicated identities multiple times.
+- Main-window account cards show reset credits: regular mode lists each estimated expiry, while `Minimal` mode summarizes them as compact date chips such as `2 resets · 7/30, 8/1`.
 
 ### 2) Multiple switch modes
 
@@ -103,6 +104,7 @@ All screenshots below use mock or non-sensitive test data.
 - Dark mode + light mode.
 - Language switching via app settings.
 - Locale-aware time formatting for app/widget texts.
+- Version-specific `What's New` prompts are localized across all supported app languages.
 
 ### 8) Usage analytics and schedule planning
 
@@ -194,6 +196,7 @@ These are intentionally independent.
 - Supports normalized version parsing (for example `v1.8.0` and `1.8.0`).
 - Auto-selects preferred installer by architecture (`Apple Silicon` / `Intel`) when available.
 - Provides `Install now`, `Manual download`, and `Skip this version` actions in update dialog.
+- Shows a localized `What's New` prompt after version/build changes, and lets users reopen the latest feature notes from Settings.
 
 ## Authentication and Account Import
 

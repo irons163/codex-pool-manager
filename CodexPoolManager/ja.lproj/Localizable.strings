@@ -454,6 +454,15 @@
 "update.prompt.skip" = "このバージョンをスキップ";
 "update.prompt.subtitle_format" = "現在のバージョン %@。今すぐ更新するか、後で対応できます。";
 "update.prompt.title_format" = "新しいバージョン %@ が見つかりました";
+"whats_new.title_format" = "%@ の新機能";
+"whats_new.subtitle" = "このバージョンの変更点をすばやく確認できます。";
+"whats_new.later" = "後で通知";
+"whats_new.dismiss" = "了解";
+"whats_new.settings.show" = "最新機能を見る";
+"whats_new.reset_credit.title" = "メインウィンドウのアカウントカード";
+"whats_new.reset_credit.body" = "メインウィンドウのアカウントカードに、利用可能なリセット情報が表示されるようになりました。";
+"whats_new.reset_credit.full_mode" = "通常モード：各リセットの期限を表示します。";
+"whats_new.reset_credit.compact_mode" = "最小モード：「リセット 2回 · 7/30, 8/1」のように簡潔に表示します。";
 "update.status.direct_unavailable" = "アプリ内更新は現在利用できません。後でもう一度試すか、手動ダウンロードを使用してください。";
 "update.status.failure_format" = "更新確認に失敗しました: %@";
 "update.status.new_version_format" = "新しいバージョン %@ が利用可能です。";

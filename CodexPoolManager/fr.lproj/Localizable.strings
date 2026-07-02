@@ -454,6 +454,15 @@
 "update.prompt.skip" = "Ignorer cette version";
 "update.prompt.subtitle_format" = "Version actuelle %@. Vous pouvez mettre à jour maintenant ou le faire plus tard.";
 "update.prompt.title_format" = "Nouvelle version %@ trouvée";
+"whats_new.title_format" = "Nouveautés de %@";
+"whats_new.subtitle" = "Un aperçu rapide des changements de cette version.";
+"whats_new.later" = "Me le rappeler plus tard";
+"whats_new.dismiss" = "Compris";
+"whats_new.settings.show" = "Voir les nouveautés";
+"whats_new.reset_credit.title" = "Cartes de compte de la fenêtre principale";
+"whats_new.reset_credit.body" = "Les cartes de compte de la fenêtre principale affichent maintenant les informations de crédits de réinitialisation.";
+"whats_new.reset_credit.full_mode" = "Mode normal : affiche l’expiration de chaque crédit de réinitialisation.";
+"whats_new.reset_credit.compact_mode" = "Mode minimal : résumé sous la forme « 2 réinitialisations · 7/30, 8/1 ».";
 "update.status.direct_unavailable" = "La mise à jour intégrée est momentanément indisponible. Réessayez plus tard ou utilisez Téléchargement manuel.";
 "update.status.failure_format" = "Échec de la vérification des mises à jour : %@";
 "update.status.new_version_format" = "Une nouvelle version %@ est disponible.";

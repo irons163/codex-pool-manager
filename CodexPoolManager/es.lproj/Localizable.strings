@@ -454,6 +454,15 @@
 "update.prompt.skip" = "Omitir esta versión";
 "update.prompt.subtitle_format" = "Versión actual %@. Puedes actualizar ahora o hacerlo más tarde.";
 "update.prompt.title_format" = "Nueva versión %@ encontrada";
+"whats_new.title_format" = "Novedades de %@";
+"whats_new.subtitle" = "Un vistazo rápido a los cambios de esta versión.";
+"whats_new.later" = "Recordármelo luego";
+"whats_new.dismiss" = "Entendido";
+"whats_new.settings.show" = "Ver novedades";
+"whats_new.reset_credit.title" = "Tarjetas de cuenta de la ventana principal";
+"whats_new.reset_credit.body" = "Las tarjetas de cuenta de la ventana principal ahora muestran información de créditos de restablecimiento.";
+"whats_new.reset_credit.full_mode" = "Modo normal: muestra el vencimiento de cada crédito de restablecimiento.";
+"whats_new.reset_credit.compact_mode" = "Modo mínimo: lo resume como “2 restablecimientos · 7/30, 8/1”.";
 "update.status.direct_unavailable" = "La actualización dentro de la app no está disponible por ahora. Inténtalo de nuevo más tarde o usa Descarga manual.";
 "update.status.failure_format" = "Falló la comprobación de actualizaciones: %@";
 "update.status.new_version_format" = "Hay una nueva versión disponible: %@.";

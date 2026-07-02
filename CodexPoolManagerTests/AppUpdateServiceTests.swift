@@ -104,6 +104,36 @@ struct AppUpdateServiceTests {
     }
 
     @Test
+    func whatsNewCopyExistsForEverySupportedLanguage() {
+        let supportedCodes = L10n.languageOptions
+            .map(\.code)
+            .filter { $0 != L10n.systemLanguageCode }
+        let keys = [
+            "whats_new.title_format",
+            "whats_new.subtitle",
+            "whats_new.later",
+            "whats_new.dismiss",
+            "whats_new.settings.show",
+            "whats_new.reset_credit.title",
+            "whats_new.reset_credit.body",
+            "whats_new.reset_credit.full_mode",
+            "whats_new.reset_credit.compact_mode"
+        ]
+
+        for code in supportedCodes {
+            let path = Bundle.main.path(forResource: code, ofType: "lproj")
+            #expect(path != nil, "Missing localization bundle for \(code)")
+            guard let path, let bundle = Bundle(path: path) else { continue }
+
+            for key in keys {
+                let localized = bundle.localizedString(forKey: key, value: nil, table: nil)
+                #expect(localized != key, "\(code) is missing \(key)")
+                #expect(!localized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+
+    @Test
     func preferredInstallerSelectsArchitectureSpecificAsset() {
         let release = AppUpdateRelease(
             tagName: "v1.7.5",

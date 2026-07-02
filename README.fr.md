@@ -65,6 +65,7 @@ Toutes les captures ci-dessous utilisent des données mock ou non sensibles.
 - Tri et layout pour les pools de grande taille.
 - Le layout `Minimal` utilise une largeur de carte adaptative et ajuste automatiquement le nombre de colonnes selon la largeur de fenêtre.
 - Statistiques (`Accounts`, `Available`, `Pool Usage`) dédupliquées pour éviter les doubles comptages.
+- Les cartes de compte de la fenêtre principale affichent les crédits de réinitialisation : le mode normal liste chaque expiration estimée, tandis que `Minimal` les résume en dates compactes comme `2 réinitialisations · 7/30, 8/1`.
 
 ### 2) Plusieurs modes de switch
 
@@ -103,6 +104,7 @@ Toutes les captures ci-dessous utilisent des données mock ou non sensibles.
 - Dark mode + Light mode.
 - Changement de langue dans les settings.
 - Formatage des dates selon la locale (app/widget).
+- Les prompts `Nouveautés` après mise à jour sont localisés dans toutes les langues supportées par l'app.
 
 ### 8) Analytique d'usage et planification Schedule
 
@@ -193,6 +195,7 @@ Ces deux seuils sont indépendants.
 - Gère la normalisation de version (par exemple `v1.8.0` et `1.8.0`).
 - Sélectionne l'installeur préféré selon l'architecture (`Apple Silicon` / `Intel`) quand disponible.
 - La fenêtre de mise à jour propose `Install now`, `Manual download` et `Skip this version`.
+- Affiche un prompt `Nouveautés` localisé après un changement de version/build, avec possibilité de rouvrir les dernières notes depuis Settings.
 
 ## Authentification et import de comptes
 

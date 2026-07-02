@@ -454,6 +454,15 @@
 "update.prompt.skip" = "이 버전 건너뛰기";
 "update.prompt.subtitle_format" = "현재 버전 %@. 지금 업데이트하거나 나중에 처리할 수 있습니다.";
 "update.prompt.title_format" = "새 버전 %@ 발견";
+"whats_new.title_format" = "%@의 새로운 기능";
+"whats_new.subtitle" = "이번 버전에서 바뀐 내용을 빠르게 확인하세요.";
+"whats_new.later" = "나중에 알림";
+"whats_new.dismiss" = "확인";
+"whats_new.settings.show" = "최신 기능 보기";
+"whats_new.reset_credit.title" = "메인 창 계정 카드";
+"whats_new.reset_credit.body" = "메인 창 계정 카드에 사용 가능한 초기화 정보가 표시됩니다.";
+"whats_new.reset_credit.full_mode" = "일반 모드: 각 초기화의 만료 시각을 표시합니다.";
+"whats_new.reset_credit.compact_mode" = "최소 모드: “초기화 2회 · 7/30, 8/1”처럼 간단히 표시합니다.";
 "update.status.direct_unavailable" = "앱 내 업데이트를 현재 사용할 수 없습니다. 잠시 후 다시 시도하거나 수동 다운로드를 사용하세요.";
 "update.status.failure_format" = "업데이트 확인 실패: %@";
 "update.status.new_version_format" = "새 버전 %@을(를) 사용할 수 있습니다.";
