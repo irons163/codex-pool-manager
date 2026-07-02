@@ -1250,7 +1250,7 @@ struct AccountUsagePanelView: View {
     private func accountResetCreditDetails(_ account: AgentAccount, compact: Bool) -> some View {
         if let presentation = ResetCreditPresentationFormatter.presentation(for: account) {
             let detailLines = compact
-                ? Array(presentation.detailLines.prefix(1))
+                ? [presentation.compactDetailLine]
                 : presentation.detailLines
             let contentAlignment: Alignment = compact ? .center : .leading
             let textAlignment: TextAlignment = compact ? .center : .leading

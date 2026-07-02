@@ -2,6 +2,7 @@ import Foundation
 
 struct ResetCreditPresentation: Equatable {
     let detailLines: [String]
+    let compactDetailLine: String
     let detailText: String
     let noteText: String?
     let accessibilityLabel: String
@@ -39,9 +40,17 @@ enum ResetCreditPresentationFormatter {
             ? fallbackDetailText
             : visibleDetailLines.joined(separator: "\n")
         let noteText = baseDetailLines.dropFirst(2).joined(separator: "\n")
+        let compactExpiryText = estimatedExpiries
+            .map { expiry in shortExpiryText(for: expiry) }
+            .joined(separator: ", ")
+        let countDetailLine = baseDetailLines.first ?? fallbackDetailText
+        let compactDetailLine = compactExpiryText.isEmpty
+            ? countDetailLine
+            : "\(countDetailLine) · \(compactExpiryText)"
 
         return ResetCreditPresentation(
             detailLines: visibleDetailLines.isEmpty ? [fallbackDetailText] : visibleDetailLines,
+            compactDetailLine: compactDetailLine,
             detailText: visibleDetailText,
             noteText: noteText.isEmpty ? nil : noteText,
             accessibilityLabel: L10n.text("menu_bar.reset_credit.accessibility_format", count, fullDate)
@@ -68,6 +77,14 @@ enum ResetCreditPresentationFormatter {
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy/M/d HH:mm:ss"
         return "\(formatter.string(from: expiry)) \(gmtOffsetText(for: formatter.timeZone, at: expiry))"
+    }
+
+    private static func shortExpiryText(for expiry: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = L10n.locale()
+        formatter.timeZone = .current
+        formatter.dateFormat = "M/d"
+        return formatter.string(from: expiry)
     }
 
     private static func gmtOffsetText(for timeZone: TimeZone, at date: Date) -> String {

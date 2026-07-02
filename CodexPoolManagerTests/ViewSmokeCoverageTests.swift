@@ -794,6 +794,7 @@ struct ViewSmokeCoverageTests {
         #expect(source.contains("accountResetCreditDetails(account, compact: false)"))
         #expect(source.contains("accountResetCreditDetails(account, compact: true)"))
         #expect(source.contains("ResetCreditPresentationFormatter.presentation(for: account)"))
+        #expect(source.contains("presentation.compactDetailLine"))
         #expect(source.contains("isResetCreditNotePopoverPresented"))
         #expect(source.contains("exclamationmark.circle.fill"))
     }
