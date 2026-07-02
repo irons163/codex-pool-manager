@@ -7,6 +7,7 @@ DerivedData/
 .build/
 .superpowers/
 .worktrees/
+.generate-readme-menu-bar-screenshots
 
 # macOS
 .DS_Store
