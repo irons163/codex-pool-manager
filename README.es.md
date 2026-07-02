@@ -33,27 +33,27 @@ Idiomas: [English](README.md) · [繁體中文](README.zh-Hant.md) · [简体中
 
 ## Capturas
 
-Todas las capturas usan datos mock o no sensibles.
+Todas las capturas usan datos de prueba o no sensibles.
 
-### Dashboard principal (Dark, Mock)
+### Dashboard principal (Dark, datos de prueba)
 
-![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)
+![Panel principal (Dark, datos de prueba)](docs/images/app-screenshot.png)
 
-### Resumen superior (Light, Mock)
+### Resumen superior (Light, datos de prueba)
 
-![Header Overview (Light, Mock Data)](docs/images/dashboard-light.png)
+![Resumen del encabezado (Light, datos de prueba)](docs/images/dashboard-light.png)
 
-### Estado en barra de menú (Mock)
+### Estado en barra de menú (datos de prueba)
 
-![Menu Bar Status](docs/images/menu-bar.png)
+![Estado de la barra de menú (datos de prueba)](docs/images/menu-bar.png)
 
-### Widget (estado vacío, Mock)
+### Widget (estado vacío, datos de prueba)
 
-![Widget Empty State](docs/images/widget-empty-state.png)
+![Estado vacío del Widget](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert (Mock)
+### OpenAI Reset Alert (datos de prueba)
 
-![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+![OpenAI Reset Alert (datos de prueba)](docs/images/openai-reset-alert.png)
 
 ## Funciones clave
 

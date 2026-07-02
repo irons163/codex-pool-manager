@@ -33,27 +33,27 @@ Codex Pool Manager は、Codex/OpenAI OAuth アカウントのプールを 1 つ
 
 ## スクリーンショット
 
-以下は mock または非機密のテストデータです。
+以下はモックまたは非機密のテストデータです。
 
-### メインダッシュボード（Dark / Mock）
+### メインダッシュボード（Dark / モックデータ）
 
-![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)
+![メインダッシュボード（Dark / モックデータ）](docs/images/app-screenshot.png)
 
-### ヘッダー概要（Light / Mock）
+### ヘッダー概要（Light / モックデータ）
 
-![Header Overview (Light, Mock Data)](docs/images/dashboard-light.png)
+![ヘッダー概要（Light / モックデータ）](docs/images/dashboard-light.png)
 
-### メニューバー表示（Mock）
+### メニューバー表示（モックデータ）
 
-![Menu Bar Status](docs/images/menu-bar.png)
+![メニューバー表示（モックデータ）](docs/images/menu-bar.png)
 
-### Widget（空状態サンプル / Mock）
+### Widget（空状態サンプル / モックデータ）
 
-![Widget Empty State](docs/images/widget-empty-state.png)
+![Widget（空状態サンプル）](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert（Mock）
+### OpenAI Reset Alert（モックデータ）
 
-![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+![OpenAI Reset Alert（モックデータ）](docs/images/openai-reset-alert.png)
 
 ## 主要機能
 

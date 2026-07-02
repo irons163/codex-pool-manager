@@ -33,27 +33,27 @@ Codex Pool Manager 是一款 macOS 工具，让你在同一个控制面板里管
 
 ## 截图
 
-以下截图均使用 mock 或非敏感测试数据。
+以下截图均使用模拟或非敏感测试数据。
 
-### 主仪表板（深色，Mock 数据）
+### 主仪表板（深色，模拟数据）
 
-![Main Dashboard (Dark, Mock Data)](docs/images/app-screenshot.png)
+![主仪表板（深色，模拟数据）](docs/images/app-screenshot.png)
 
-### 顶部总览（浅色，Mock 数据）
+### 顶部总览（浅色，模拟数据）
 
-![Header Overview (Light, Mock Data)](docs/images/dashboard-light.png)
+![顶部总览（浅色，模拟数据）](docs/images/dashboard-light.png)
 
-### 菜单栏状态（Mock 数据）
+### 菜单栏状态（模拟数据）
 
-![Menu Bar Status](docs/images/menu-bar.png)
+![菜单栏状态（模拟数据）](docs/images/menu-bar.png)
 
-### Widget（空状态示例，Mock 状态）
+### Widget（空状态示例，模拟状态）
 
-![Widget Empty State](docs/images/widget-empty-state.png)
+![Widget 空状态示例](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert（Mock 数据）
+### OpenAI Reset Alert（模拟数据）
 
-![OpenAI Reset Alert](docs/images/openai-reset-alert.png)
+![OpenAI Reset Alert（模拟数据）](docs/images/openai-reset-alert.png)
 
 ## 主要功能
 
