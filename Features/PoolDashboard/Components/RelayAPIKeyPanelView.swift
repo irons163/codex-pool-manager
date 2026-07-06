@@ -200,5 +200,23 @@ struct RelayAPIKeyPanelView: View {
 extension RelayAPIKeyPanelView {
     static let debugPrimaryFieldIDs: [FieldID] = [.accountName, .baseURL, .apiKey]
     static let debugAdvancedFieldIDs: [FieldID] = [.providerID, .providerName, .wireAPI]
+
+    @MainActor
+    static func debugWireAPIHelpPopoverView() -> some View {
+        RelayAPIKeyPanelView(
+            accountName: .constant("debug"),
+            providerID: .constant("debug-provider"),
+            providerName: .constant("Debug Provider"),
+            baseURL: .constant("https://example.com"),
+            wireAPI: .constant(AgentAccount.defaultRelayWireAPI),
+            apiKey: .constant("sk-debug"),
+            preserveOfficialAuth: .constant(false),
+            canAddRelayAccount: true,
+            successMessage: nil,
+            errorMessage: nil,
+            onAddRelayAccount: {}
+        )
+        .wireAPIHelpPopover
+    }
 }
 #endif

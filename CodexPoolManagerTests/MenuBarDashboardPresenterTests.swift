@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import Testing
 @testable import CodexPoolManager
 
@@ -49,6 +50,41 @@ private func withMenuBarLanguageAndTimeZoneOverride(
     try body()
 }
 
+private func withMenuBarLanguageAndCurrentTimeZoneIdentifierOverride(
+    _ languageCode: String,
+    timeZoneIdentifier: String,
+    _ body: () throws -> Void
+) rethrows {
+    menuBarLanguageOverrideMutationLock.lock()
+    defer { menuBarLanguageOverrideMutationLock.unlock() }
+
+    let defaults = UserDefaults.standard
+    let key = L10n.languageOverrideKey
+    let previousLanguage = defaults.object(forKey: key)
+    let previousTimeZoneEnvironment = getenv("TZ").map { String(cString: $0) }
+    defer {
+        if let previousLanguage {
+            defaults.set(previousLanguage, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+        if let previousTimeZoneEnvironment {
+            setenv("TZ", previousTimeZoneEnvironment, 1)
+        } else {
+            unsetenv("TZ")
+        }
+        tzset()
+        NSTimeZone.resetSystemTimeZone()
+    }
+
+    defaults.set(languageCode, forKey: key)
+    setenv("TZ", timeZoneIdentifier, 1)
+    tzset()
+    NSTimeZone.resetSystemTimeZone()
+    try body()
+}
+
+@Suite(.serialized)
 @MainActor
 struct MenuBarDashboardPresenterTests {
     private func makeAccount(
@@ -384,6 +420,58 @@ struct MenuBarDashboardPresenterTests {
                 "第 2 次期限：2026/7/30 20:03:24 GMT+8"
             ])
             #expect(presentation.compactDetailLine == "可重置 2 次 · 7/30, 7/30")
+        }
+    }
+
+    @Test
+    func resetCreditFormatterRepeatsPartialExpiryList() throws {
+        let expiry = Date(timeIntervalSince1970: 1_800_000_000)
+        var account = makeAccount(
+            rateLimitResetCreditsAvailableCount: 3,
+            rateLimitResetCreditsEstimatedExpiresAt: nil,
+            rateLimitResetCreditEstimatedExpiries: [expiry]
+        )
+        account.rateLimitResetCreditsEstimatedExpiresAt = nil
+        account.rateLimitResetCreditEstimatedExpiries = [expiry]
+
+        let presentation = try #require(ResetCreditPresentationFormatter.presentation(for: account))
+        let compactParts = presentation.compactDetailLine.components(separatedBy: " · ")
+        let compactDates = try #require(compactParts.last?.components(separatedBy: ", "))
+
+        #expect(presentation.detailLines.count == 4)
+        #expect(compactDates.count == 3)
+        #expect(Set(compactDates).count == 1)
+    }
+
+    @Test
+    func resetCreditFormatterUsesCurrentGMTOffsetWithMinuteComponent() throws {
+        try withMenuBarLanguageAndCurrentTimeZoneIdentifierOverride(
+            "en",
+            timeZoneIdentifier: "Asia/Kathmandu"
+        ) {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let expiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 7,
+                day: 30,
+                hour: 20,
+                minute: 3,
+                second: 24
+            )))
+            let account = makeAccount(
+                rateLimitResetCreditsAvailableCount: 1,
+                rateLimitResetCreditsEstimatedExpiresAt: expiry
+            )
+
+            let presentation = try #require(ResetCreditPresentationFormatter.presentation(for: account))
+
+            #expect(presentation.detailLines == [
+                "1 resets available",
+                "Reset 1 expiry: 2026/7/30 20:03:24 GMT+5:45"
+            ])
+            #expect(presentation.compactDetailLine == "1 resets available · 7/30")
+            #expect(presentation.accessibilityLabel == "1 banked resets, estimated expiry 2026/7/30 20:03:24 GMT+5:45")
         }
     }
 

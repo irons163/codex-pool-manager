@@ -426,6 +426,106 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func usageAnalyticsSummaryAggregatesWasteIdlePeaksAndTodayWindow() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 4,
+            hour: 15,
+            minute: 0,
+            second: 0
+        )))
+        let todayRecordDate = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 4,
+            hour: 9,
+            minute: 30,
+            second: 0
+        )))
+        let weekRecordDate = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 2,
+            hour: 10,
+            minute: 0,
+            second: 0
+        )))
+        let negativeRecordDate = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 4,
+            hour: 11,
+            minute: 0,
+            second: 0
+        )))
+        let oldRecordDate = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 6,
+            day: 25,
+            hour: 8,
+            minute: 0,
+            second: 0
+        )))
+        let records = [
+            UsageAnalyticsRecord(
+                timestamp: todayRecordDate,
+                accountKey: "a",
+                weeklyDeltaPercent: 12,
+                fiveHourDeltaPercent: 7,
+                weeklyWastedPercent: 3,
+                fiveHourWastedPercent: 2,
+                weeklyIdleDelayMinutes: 15
+            ),
+            UsageAnalyticsRecord(
+                timestamp: weekRecordDate,
+                accountKey: "b",
+                weeklyDeltaPercent: 20,
+                fiveHourDeltaPercent: 4,
+                weeklyWastedPercent: 5,
+                weeklyIdleDelayMinutes: 30
+            ),
+            UsageAnalyticsRecord(
+                timestamp: negativeRecordDate,
+                accountKey: "c",
+                weeklyDeltaPercent: -4,
+                fiveHourDeltaPercent: -2
+            ),
+            UsageAnalyticsRecord(
+                timestamp: oldRecordDate,
+                accountKey: "old",
+                weeklyDeltaPercent: 99,
+                fiveHourDeltaPercent: 99,
+                weeklyWastedPercent: 99,
+                fiveHourWastedPercent: 99,
+                weeklyIdleDelayMinutes: 99
+            )
+        ]
+        let state = UsageAnalyticsState(records: records, snapshots: [], lastUpdatedAt: now)
+
+        let summary = UsageAnalyticsEngine.summary(for: state, now: now, calendar: calendar)
+
+        #expect(summary.todayWeeklyPercent == 12)
+        #expect(summary.weekWeeklyPercent == 32)
+        #expect(summary.todayFiveHourPercent == 7)
+        #expect(summary.weekFiveHourPercent == 11)
+        #expect(summary.todayWastedWeeklyPercent == 3)
+        #expect(summary.weekWastedWeeklyPercent == 8)
+        #expect(summary.todayWastedFiveHourPercent == 2)
+        #expect(summary.weekWastedFiveHourPercent == 2)
+        #expect(summary.weekWastedResetEvents == 3)
+        #expect(summary.todayIdleDelayMinutes == 15)
+        #expect(summary.weekIdleDelayMinutes == 45)
+        #expect(summary.weekIdleDelayEvents == 2)
+        #expect(summary.peakHour == 10)
+        #expect(summary.peakWeekday == 5)
+        #expect(summary.topAccountKey == "b")
+        #expect(summary.topAccountWeeklyPercent == 20)
+    }
+
+    @Test
     func usageAnalyticsSummaryCapturesWastedUsageWhenResetAdvances() {
         let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E5")!
         let now = Date(timeIntervalSince1970: 1_700_000_000)
@@ -1144,6 +1244,62 @@ struct CodexPoolManagerTests {
         #expect(updated.thresholdEvents.count == 2)
         #expect(updated.thresholdEvents.contains { $0.kind == .weekly && $0.thresholdPercent == 50 })
         #expect(updated.thresholdEvents.contains { $0.kind == .fiveHour && $0.thresholdPercent == 50 })
+    }
+
+    @Test
+    func usageAnalyticsUpdateRecordsSwitchEventWhenActiveAccountChanges() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let previousAccount = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D7")!,
+            name: "Previous",
+            usedUnits: 20,
+            quota: 100,
+            chatGPTAccountID: "previous",
+            primaryUsagePercent: 90,
+            isPaid: true
+        )
+        let currentAccount = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D8")!,
+            name: "Current",
+            usedUnits: 20,
+            quota: 100,
+            chatGPTAccountID: "current",
+            primaryUsagePercent: 25,
+            isPaid: true
+        )
+        let previousKey = previousAccount.usageAnalyticsAccountKey
+        let currentKey = currentAccount.usageAnalyticsAccountKey
+        let existingSwitchEvent = UsageAnalyticsSwitchEvent(
+            timestamp: now.addingTimeInterval(-60),
+            fromAccountKey: "account:old-a",
+            toAccountKey: "account:old-b",
+            fromRemainingPercent: 40,
+            toRemainingPercent: 70,
+            trigger: "sync"
+        )
+        let state = UsageAnalyticsState(
+            switchEvents: [existingSwitchEvent],
+            lastActiveAccountKey: previousKey,
+            lastUpdatedAt: now.addingTimeInterval(-120)
+        )
+
+        let updated = UsageAnalyticsEngine.update(
+            state: state,
+            accounts: [previousAccount, currentAccount],
+            activeAccountKey: currentKey,
+            now: now
+        )
+
+        #expect(updated.switchEvents.count == 2)
+        let switchEvent = updated.switchEvents[0]
+        #expect(switchEvent.timestamp == now)
+        #expect(switchEvent.fromAccountKey == previousKey)
+        #expect(switchEvent.toAccountKey == currentKey)
+        #expect(switchEvent.fromRemainingPercent == 10)
+        #expect(switchEvent.toRemainingPercent == 75)
+        #expect(switchEvent.trigger == "sync")
+        #expect(updated.switchEvents[1] == existingSwitchEvent)
+        #expect(updated.lastActiveAccountKey == currentKey)
     }
 
     @Test
@@ -1986,6 +2142,66 @@ struct CodexPoolManagerTests {
 
         #expect(state.canIntelligentSwitch(now: Date(timeIntervalSince1970: 300)))
         #expect(state.intelligentSwitchCooldownRemaining(now: Date(timeIntervalSince1970: 300)) == 0)
+    }
+
+    @Test
+    func intelligentModeCanSwitchHandlesMissingCandidateAndMissingActiveAccount() {
+        let exhaustedID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let availableID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let exhaustedState = AccountPoolState(
+            accounts: [
+                AgentAccount(id: exhaustedID, name: "Exhausted", usedUnits: 100, quota: 100)
+            ],
+            mode: .intelligent
+        )
+        let noActiveState = AccountPoolState(
+            accounts: [
+                AgentAccount(id: availableID, name: "Available", usedUnits: 10, quota: 100)
+            ],
+            mode: .intelligent
+        )
+
+        #expect(!exhaustedState.canIntelligentSwitch(now: Date(timeIntervalSince1970: 10)))
+        #expect(noActiveState.canIntelligentSwitch(now: Date(timeIntervalSince1970: 10)))
+    }
+
+    @Test
+    func intelligentModeCanSwitchChecksCurrentRemainingThresholdAndImprovement() {
+        let currentID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let candidateID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+
+        var exhaustedCurrentState = AccountPoolState(
+            accounts: [
+                AgentAccount(id: currentID, name: "Current", usedUnits: 100, quota: 100),
+                AgentAccount(id: candidateID, name: "Candidate", usedUnits: 20, quota: 100)
+            ],
+            mode: .intelligent
+        )
+        exhaustedCurrentState.markActiveAccountForSwitchLaunch(currentID, now: Date(timeIntervalSince1970: 0))
+
+        var healthyCurrentState = AccountPoolState(
+            accounts: [
+                AgentAccount(id: currentID, name: "Current", usedUnits: 20, quota: 100),
+                AgentAccount(id: candidateID, name: "Candidate", usedUnits: 10, quota: 100)
+            ],
+            mode: .intelligent,
+            lowUsageThresholdRatio: 0.15
+        )
+        healthyCurrentState.markActiveAccountForSwitchLaunch(currentID, now: Date(timeIntervalSince1970: 0))
+
+        var equalRemainingState = AccountPoolState(
+            accounts: [
+                AgentAccount(id: currentID, name: "Current", usedUnits: 90, quota: 100),
+                AgentAccount(id: candidateID, name: "Candidate", usedUnits: 180, quota: 200)
+            ],
+            mode: .intelligent,
+            lowUsageThresholdRatio: 0.15
+        )
+        equalRemainingState.markActiveAccountForSwitchLaunch(currentID, now: Date(timeIntervalSince1970: 0))
+
+        #expect(exhaustedCurrentState.canIntelligentSwitch(now: Date(timeIntervalSince1970: 10)))
+        #expect(!healthyCurrentState.canIntelligentSwitch(now: Date(timeIntervalSince1970: 10)))
+        #expect(!equalRemainingState.canIntelligentSwitch(now: Date(timeIntervalSince1970: 10)))
     }
 
     @Test
@@ -3618,6 +3834,45 @@ struct CodexPoolManagerTests {
         try? await sync.sync(state: &state)
 
         #expect(refreshRequests.value.isEmpty)
+        #expect(state.accounts[0].isUsageSyncExcluded)
+        #expect(state.accounts[0].usageSyncError == L10n.text("usage.sync.error.oauth_login_expired"))
+    }
+
+    @Test
+    func codexSyncShowsOAuthLoginExpiredWhenRefreshTokenFails() async {
+        let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: UUID(),
+                    name: "OAuth",
+                    usedUnits: 0,
+                    quota: 1000,
+                    apiToken: "expired-access-token",
+                    oauthRefreshToken: "stale-refresh-token"
+                )
+            ],
+            mode: .manual
+        )
+        if let accountID = state.accounts.first?.id {
+            state.updateAccount(accountID, chatGPTAccountID: "acct-oauth")
+        }
+        let client = MockCodexUsageClient(
+            responseByToken: [:],
+            shouldThrowError: CodexClientHTTPError(statusCode: 401)
+        )
+        let sync = CodexUsageSyncService(
+            client: client,
+            oauthRefreshClient: StubOAuthTokenRefreshClient(
+                requests: refreshRequests,
+                result: .failure(URLError(.userAuthenticationRequired))
+            ),
+            oauthConfiguration: .codexDefault
+        )
+
+        try? await sync.sync(state: &state)
+
+        #expect(refreshRequests.value.map(\.refreshToken) == ["stale-refresh-token"])
         #expect(state.accounts[0].isUsageSyncExcluded)
         #expect(state.accounts[0].usageSyncError == L10n.text("usage.sync.error.oauth_login_expired"))
     }

@@ -502,6 +502,144 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    @MainActor
+    func richMenuBarDashboardRendersEmptyStateAndMultipleGroups() {
+        let emptyRuntimeModel = AppPoolRuntimeModel(
+            store: ViewSmokeStore(snapshot: nil),
+            initialState: AccountPoolState(accounts: [], mode: .manual),
+            widgetPublisher: { _ in }
+        )
+        let emptyView = MenuBarDashboardView(
+            runtimeModel: emptyRuntimeModel,
+            openDashboard: {},
+            switchAccount: { _ in }
+        )
+        renderInHostingView(emptyView, size: CGSize(width: 420, height: 620))
+        #expect(emptyRuntimeModel.menuBarSnapshot.accountRows.isEmpty)
+
+        let baseDate = Date(timeIntervalSince1970: 1_750_100_000)
+        let personalID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let workID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        var groupedState = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: personalID,
+                    createdAt: baseDate,
+                    name: "personal@example.com",
+                    groupName: "Personal",
+                    usedUnits: 11,
+                    quota: 100,
+                    apiToken: "token-personal",
+                    email: "personal@example.com",
+                    chatGPTAccountID: "acct-personal",
+                    identityScope: AgentAccount.personalIdentityScope,
+                    primaryUsagePercent: 20,
+                    primaryUsageResetAt: baseDate.addingTimeInterval(600),
+                    secondaryUsagePercent: 30,
+                    secondaryUsageResetAt: baseDate.addingTimeInterval(1_200),
+                    isPaid: true
+                ),
+                AgentAccount(
+                    id: workID,
+                    createdAt: baseDate.addingTimeInterval(10),
+                    name: "work@example.com",
+                    groupName: "Work",
+                    usedUnits: 44,
+                    quota: 100,
+                    apiToken: "token-work",
+                    email: "work@example.com",
+                    chatGPTAccountID: "acct-work",
+                    identityScope: AgentAccount.personalIdentityScope,
+                    primaryUsagePercent: 55,
+                    primaryUsageResetAt: baseDate.addingTimeInterval(900),
+                    secondaryUsagePercent: 66,
+                    secondaryUsageResetAt: baseDate.addingTimeInterval(1_800),
+                    isPaid: true
+                )
+            ],
+            mode: .manual
+        )
+        groupedState.markActiveAccountForSwitchLaunch(personalID, now: baseDate)
+        groupedState.markUsageSynced(at: baseDate)
+        let groupedRuntimeModel = AppPoolRuntimeModel(
+            store: ViewSmokeStore(snapshot: nil),
+            initialState: groupedState,
+            widgetPublisher: { _ in }
+        )
+        let groupedView = MenuBarDashboardView(
+            runtimeModel: groupedRuntimeModel,
+            openDashboard: {},
+            switchAccount: { _ in }
+        )
+        renderInHostingView(groupedView, size: CGSize(width: 420, height: 620))
+        #expect(groupedRuntimeModel.menuBarSnapshot.accountGroupNames == ["Personal", "Work"])
+    }
+
+    @Test
+    @MainActor
+    func menuBarPrivateRowsRenderWarningsAndResetCreditDetailsThroughDebugHooks() {
+        let rowID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+        let accountRow = MenuBarAccountRow(
+            id: rowID,
+            name: "reset-credit@example.com",
+            groupName: "Default",
+            isActive: true,
+            isPaid: true,
+            credentialLabel: nil,
+            planBadgeText: "Pro",
+            resetCreditBadgeText: nil,
+            resetCreditDetailText: "2 resets available\nReset 1 expires: 2026/7/30 20:03 GMT+8\nReset 2 expires: 2026/8/1 20:03 GMT+8",
+            resetCreditNoteText: "Estimated from previous successful sync plus 30 days.",
+            resetCreditAccessibilityLabel: "2 resets available",
+            weeklyRemainingText: "91%",
+            fiveHourRemainingText: "94%",
+            resetText: "7/7 09:55",
+            fiveHourResetText: "7/1 12:09",
+            warningText: "Login expired"
+        )
+
+        var switchedIDs: [UUID] = []
+        let rowView = MenuBarDashboardView.debugAccountRowView(
+            row: accountRow,
+            switchAccount: { switchedIDs.append($0) }
+        )
+        renderInHostingView(rowView, size: CGSize(width: 420, height: 220))
+
+        let warningRows = [
+            MenuBarWarningRow(id: "oauth", kind: .oauthExpired, title: "OAuth", message: "Login expired"),
+            MenuBarWarningRow(id: "relay", kind: .relayUsageUnavailable, title: "Relay", message: "Usage unavailable"),
+            MenuBarWarningRow(id: "sync", kind: .syncFailed, title: "Sync", message: "Sync failed"),
+            MenuBarWarningRow(id: "excluded", kind: .excluded, title: "Excluded", message: "Manually excluded")
+        ]
+        let warningsView = MenuBarDashboardView.debugWarningsPopoverView(rows: warningRows)
+        renderInHostingView(warningsView, size: CGSize(width: 360, height: 420))
+
+        let warningState = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: rowID,
+                    name: "expired@example.com",
+                    usedUnits: 10,
+                    quota: 100,
+                    apiToken: "token-expired",
+                    usageSyncError: L10n.text("usage.sync.error.oauth_login_expired")
+                )
+            ],
+            mode: .manual
+        )
+        let warningRuntimeModel = AppPoolRuntimeModel(
+            store: ViewSmokeStore(snapshot: nil),
+            initialState: warningState,
+            widgetPublisher: { _ in }
+        )
+        let warningButton = MenuBarDashboardView.debugWarningPopoverButtonView(runtimeModel: warningRuntimeModel)
+        renderInHostingView(warningButton, size: CGSize(width: 96, height: 96))
+        #expect(!warningRuntimeModel.menuBarSnapshot.warningRows.isEmpty)
+
+        #expect(switchedIDs.isEmpty)
+    }
+
+    @Test
     func richMenuBarDashboardUsesCompactWarningPopoverInsteadOfInlineSection() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
@@ -788,6 +926,93 @@ struct ViewSmokeCoverageTests {
     }
 
     @Test
+    @MainActor
+    func accountUsagePanelDebugHooksCoverDeleteConfirmationAndRenameControls() {
+        let accountID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
+        let probe = AccountUsagePanelView.debugDeleteConfirmationProbe(
+            groupName: "Ops",
+            accountID: accountID,
+            accountName: "ops@example.com"
+        )
+
+        #expect(probe.groupID == "group:Ops")
+        #expect(probe.accountID == "account:\(accountID.uuidString)")
+        #expect(probe.groupTitle == L10n.text("group.delete_confirm_title"))
+        #expect(probe.accountTitle == L10n.text("account.delete_confirm_title"))
+        #expect(probe.deletedGroups == ["Ops"])
+        #expect(probe.removedAccountIDs == [accountID])
+
+        let renameControls = AccountUsagePanelView.debugRenameGroupControlsView(selectedGroupName: "Ops")
+        renderInHostingView(renameControls, size: CGSize(width: 420, height: 80))
+
+        let baseDate = Date(timeIntervalSince1970: 1_760_000_000)
+        let active = AgentAccount(
+            id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!,
+            createdAt: baseDate.addingTimeInterval(10),
+            name: "active@example.com",
+            groupName: "Ops",
+            usedUnits: 20,
+            quota: 100,
+            apiToken: "token-active",
+            email: "active@example.com",
+            chatGPTAccountID: "acct-active",
+            isPaid: true
+        )
+        let lowRemaining = AgentAccount(
+            id: UUID(uuidString: "88888888-8888-8888-8888-888888888888")!,
+            createdAt: baseDate.addingTimeInterval(20),
+            name: "z-low@example.com",
+            groupName: "Ops",
+            usedUnits: 95,
+            quota: 100,
+            apiToken: "token-low",
+            email: "z-low@example.com",
+            chatGPTAccountID: "acct-low",
+            isPaid: false
+        )
+        let highExcluded = AgentAccount(
+            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
+            createdAt: baseDate.addingTimeInterval(30),
+            name: "a-excluded@example.com",
+            groupName: "Ops",
+            usedUnits: 1,
+            quota: 100,
+            apiToken: "token-excluded",
+            email: "a-excluded@example.com",
+            chatGPTAccountID: "acct-excluded",
+            isPaid: false,
+            isUsageSyncExcluded: true
+        )
+        let relay = AgentAccount(
+            id: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+            createdAt: baseDate.addingTimeInterval(40),
+            name: "relay@example.com",
+            groupName: "Ops",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-relay",
+            credentialType: .relayAPIKey
+        )
+
+        let stateProbe = AccountUsagePanelView.debugStateMutationProbe(
+            accounts: [active, lowRemaining, highExcluded, relay],
+            selectedGroupName: "Ops",
+            activeAccountID: active.id
+        )
+
+        #expect(stateProbe.sortTitles.count == 3)
+        #expect(stateProbe.sortedAccountNamesByMode["joinedAt"]?.first == "relay@example.com")
+        #expect(stateProbe.sortedAccountNamesByMode["name"]?.first == "a-excluded@example.com")
+        #expect(stateProbe.sortedAccountNamesByMode["remainingHigh"]?.first == "relay@example.com")
+        #expect(stateProbe.sortedAccountNamesByMode["remainingHigh"]?.last == "a-excluded@example.com")
+        #expect(stateProbe.prioritySortedAccountNames.first == "active@example.com")
+        #expect(stateProbe.prioritySortedAccountNames.last == "relay@example.com")
+        #expect(stateProbe.savedAccountName == "renamed@example.com")
+        #expect(stateProbe.canceledDraftFallbackName == "active@example.com")
+        #expect(stateProbe.requestedDeleteGroupID == "group:Ops")
+    }
+
+    @Test
     func accountUsagePanelRendersResetCreditDetailsInAccountCards() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let repositoryRoot = testFile.deletingLastPathComponent().deletingLastPathComponent()
@@ -936,6 +1161,14 @@ struct ViewSmokeCoverageTests {
     func relayAPIKeyPanelKeepsRequiredBaseURLInPrimaryFields() {
         #expect(RelayAPIKeyPanelView.debugPrimaryFieldIDs == [.accountName, .baseURL, .apiKey])
         #expect(RelayAPIKeyPanelView.debugAdvancedFieldIDs == [.providerID, .providerName, .wireAPI])
+    }
+
+    @Test
+    @MainActor
+    func relayAPIKeyWireAPIHelpPopoverDebugViewRenders() {
+        let popover = RelayAPIKeyPanelView.debugWireAPIHelpPopoverView()
+
+        renderInHostingView(popover, size: CGSize(width: 520, height: 260))
     }
 
     @Test
@@ -1302,6 +1535,22 @@ struct ViewSmokeCoverageTests {
         )
         renderInHostingView(dailyPlanView, size: CGSize(width: 1650, height: 1200))
 
+        let notificationBodies = PoolDashboardView.debugDailyUsagePlanningNotificationBodies(account: paid)
+        #expect(notificationBodies.keys.sorted() == ["exceeded", "none", "warning"])
+        #expect(Set(notificationBodies.values).count == 3)
+        #expect(notificationBodies.values.allSatisfy { !$0.isEmpty })
+        let notificationTitles = PoolDashboardView.debugDailyUsagePlanningNotificationTitles(account: paid)
+        #expect(notificationTitles.keys.sorted() == ["exceeded", "none", "warning"])
+        #expect(notificationTitles["none"] == notificationTitles["exceeded"])
+        #expect(notificationTitles["warning"] != notificationTitles["exceeded"])
+        #expect(notificationTitles.values.allSatisfy { !$0.isEmpty })
+        let budgetPersistence = PoolDashboardView.debugDailyUsagePlanningBudgetPersistenceProbe(account: paid)
+        #expect(budgetPersistence.afterSetBudget == 35)
+        #expect(budgetPersistence.afterClearBudget == nil)
+        #expect(budgetPersistence.notifiedLevel == "warning")
+        let planStatusCallouts = PoolDashboardView.debugDailyUsagePlanningStatusCallouts(account: paid)
+        renderInHostingView(planStatusCallouts, size: CGSize(width: 900, height: 420))
+
         var clearIdleDelayCalls = 0
         let analyticsEmpty = PoolDashboardView.debugUsageAnalyticsWorkspacePanelView(
             analyticsState: emptyState,
@@ -1318,6 +1567,439 @@ struct ViewSmokeCoverageTests {
         renderInHostingView(analyticsPopulated, size: CGSize(width: 1800, height: 1300))
 
         #expect(clearIdleDelayCalls == 0)
+    }
+
+    @Test
+    @MainActor
+    func scheduleWorkspaceEventDebugHookCoversRepeatingWeeklyAndFiveHourEvents() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let paidID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let blankNameID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B1")!
+        let paid = AgentAccount(
+            id: paidID,
+            name: " paid@example.com ",
+            usedUnits: 10,
+            quota: 100,
+            usageWindowResetAt: start.addingTimeInterval(3_600),
+            primaryUsageResetAt: start.addingTimeInterval(1_800),
+            isPaid: true
+        )
+        let blankName = AgentAccount(
+            id: blankNameID,
+            name: "   ",
+            usedUnits: 10,
+            quota: 100,
+            usageWindowResetAt: start.addingTimeInterval(3_600),
+            isPaid: false
+        )
+
+        let events = PoolDashboardView.debugScheduleEventSummaries(
+            accounts: [blankName, paid],
+            start: start,
+            end: start.addingTimeInterval(6 * 3_600)
+        )
+
+        #expect(events.map(\.kindID) == ["fiveHour", "weekly", "weekly", "fiveHour"])
+        #expect(events.map(\.accountID) == [paidID, paidID, blankNameID, paidID])
+        #expect(events.map(\.accountName) == [
+            "paid@example.com",
+            "paid@example.com",
+            L10n.text("account.unknown"),
+            "paid@example.com"
+        ])
+        #expect(events.map(\.date) == [
+            start.addingTimeInterval(1_800),
+            start.addingTimeInterval(3_600),
+            start.addingTimeInterval(3_600),
+            start.addingTimeInterval(19_800)
+        ])
+    }
+
+    @Test
+    @MainActor
+    func usageAnalyticsWorkspaceDebugProbeCoversSeriesSortingAndBasisVariants() {
+        let now = Date()
+        let alpha = AgentAccount(
+            id: UUID(),
+            name: "alpha-pro@example.com",
+            usedUnits: 18,
+            quota: 100,
+            apiToken: "token-alpha",
+            email: "alpha-pro@example.com",
+            chatGPTAccountID: "acct-alpha-pro",
+            primaryUsagePercent: 82,
+            primaryUsageResetAt: now.addingTimeInterval(3_600),
+            secondaryUsagePercent: 18,
+            secondaryUsageResetAt: now.addingTimeInterval(86_400),
+            isPaid: true
+        )
+        let bravo = AgentAccount(
+            id: UUID(),
+            name: "bravo-pro@example.com",
+            usedUnits: 47,
+            quota: 100,
+            apiToken: "token-bravo",
+            email: "bravo-pro@example.com",
+            chatGPTAccountID: "acct-bravo-pro",
+            primaryUsagePercent: 21,
+            primaryUsageResetAt: now.addingTimeInterval(7_200),
+            secondaryUsagePercent: 47,
+            secondaryUsageResetAt: now.addingTimeInterval(120_000),
+            isPaid: true
+        )
+        let free = AgentAccount(
+            id: UUID(),
+            name: "charlie-free@example.com",
+            usedUnits: 9,
+            quota: 100,
+            apiToken: "token-charlie",
+            email: "charlie-free@example.com",
+            chatGPTAccountID: "acct-charlie-free",
+            primaryUsagePercent: nil,
+            primaryUsageResetAt: nil,
+            secondaryUsagePercent: 9,
+            secondaryUsageResetAt: now.addingTimeInterval(180_000),
+            isPaid: false
+        )
+
+        let alphaKey = alpha.usageAnalyticsAccountKey
+        let bravoKey = bravo.usageAnalyticsAccountKey
+        let freeKey = free.usageAnalyticsAccountKey
+        let internalHistoryKey = "account:legacy|scope:debug"
+        let records = [
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(-900),
+                accountKey: alphaKey,
+                weeklyDeltaPercent: 7,
+                fiveHourDeltaPercent: 5,
+                weeklyAbsolutePercent: 74,
+                fiveHourAbsolutePercent: 80,
+                weeklyRemainingPercent: 26,
+                fiveHourRemainingPercent: 20,
+                weeklyWastedPercent: 1,
+                fiveHourWastedPercent: 0,
+                weeklyIdleDelayMinutes: 2,
+                weeklyResetAt: alpha.secondaryUsageResetAt,
+                fiveHourResetAt: alpha.primaryUsageResetAt,
+                activeAccountKeyAtSync: alphaKey
+            ),
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(-300),
+                accountKey: alphaKey,
+                weeklyDeltaPercent: 12,
+                fiveHourDeltaPercent: 8,
+                weeklyAbsolutePercent: 82,
+                fiveHourAbsolutePercent: 88,
+                weeklyRemainingPercent: 18,
+                fiveHourRemainingPercent: 12,
+                weeklyWastedPercent: 4,
+                fiveHourWastedPercent: 2,
+                weeklyIdleDelayMinutes: 6,
+                weeklyResetAt: alpha.secondaryUsageResetAt,
+                fiveHourResetAt: alpha.primaryUsageResetAt,
+                activeAccountKeyAtSync: bravoKey
+            ),
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(-240),
+                accountKey: bravoKey,
+                weeklyDeltaPercent: 9,
+                fiveHourDeltaPercent: 3,
+                weeklyAbsolutePercent: 55,
+                fiveHourAbsolutePercent: 24,
+                weeklyRemainingPercent: 45,
+                fiveHourRemainingPercent: 76,
+                weeklyWastedPercent: 5,
+                fiveHourWastedPercent: 1,
+                weeklyIdleDelayMinutes: 7,
+                weeklyResetAt: bravo.secondaryUsageResetAt,
+                fiveHourResetAt: bravo.primaryUsageResetAt,
+                activeAccountKeyAtSync: alphaKey
+            ),
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(-180),
+                accountKey: freeKey,
+                weeklyDeltaPercent: 2,
+                fiveHourDeltaPercent: 0,
+                weeklyAbsolutePercent: 9,
+                fiveHourAbsolutePercent: nil,
+                weeklyRemainingPercent: 91,
+                fiveHourRemainingPercent: nil,
+                weeklyWastedPercent: 0,
+                fiveHourWastedPercent: 0,
+                weeklyIdleDelayMinutes: 0,
+                weeklyResetAt: free.secondaryUsageResetAt,
+                fiveHourResetAt: nil,
+                activeAccountKeyAtSync: alphaKey
+            ),
+            UsageAnalyticsRecord(
+                timestamp: now.addingTimeInterval(-120),
+                accountKey: internalHistoryKey,
+                weeklyDeltaPercent: 1,
+                fiveHourDeltaPercent: 0,
+                weeklyAbsolutePercent: 10,
+                fiveHourAbsolutePercent: nil,
+                weeklyRemainingPercent: 90,
+                fiveHourRemainingPercent: nil,
+                weeklyWastedPercent: 3,
+                fiveHourWastedPercent: 0,
+                weeklyIdleDelayMinutes: 4,
+                weeklyResetAt: nil,
+                fiveHourResetAt: nil,
+                activeAccountKeyAtSync: alphaKey
+            )
+        ]
+        let state = UsageAnalyticsState(
+            records: records,
+            snapshots: [
+                UsageAnalyticsAccountSnapshot(
+                    accountKey: alphaKey,
+                    lastWeeklyPercent: 82,
+                    lastFiveHourPercent: 88,
+                    lastWeeklyResetAt: alpha.secondaryUsageResetAt,
+                    lastFiveHourResetAt: alpha.primaryUsageResetAt,
+                    lastSeenAt: now.addingTimeInterval(-60)
+                )
+            ],
+            thresholdEvents: [
+                UsageAnalyticsThresholdEvent(
+                    timestamp: now.addingTimeInterval(-200),
+                    accountKey: alphaKey,
+                    kind: .weekly,
+                    thresholdPercent: 20,
+                    previousRemainingPercent: 26,
+                    currentRemainingPercent: 18
+                ),
+                UsageAnalyticsThresholdEvent(
+                    timestamp: now.addingTimeInterval(-100),
+                    accountKey: bravoKey,
+                    kind: .fiveHour,
+                    thresholdPercent: 25,
+                    previousRemainingPercent: 30,
+                    currentRemainingPercent: 20
+                )
+            ],
+            switchEvents: [
+                UsageAnalyticsSwitchEvent(
+                    timestamp: now.addingTimeInterval(-150),
+                    fromAccountKey: alphaKey,
+                    toAccountKey: bravoKey,
+                    fromRemainingPercent: 18,
+                    toRemainingPercent: 45,
+                    trigger: "debug"
+                )
+            ],
+            lastActiveAccountKey: alphaKey,
+            lastUpdatedAt: now
+        )
+
+        let probe = PoolDashboardView.debugUsageAnalyticsWorkspaceProbe(
+            analyticsState: state,
+            accounts: [alpha, bravo, free],
+            selectedAccountKey: alphaKey,
+            days: 3,
+            weeks: 3
+        )
+
+        #expect(probe.dailyRemainingSelected.count == 3)
+        #expect(probe.weeklyRemainingAll.count == 3)
+        #expect(probe.dailyRemainingSelected.last == 18)
+        #expect(probe.dailyWastedSelected.last == 5)
+        #expect(probe.dailyIdleDelaySelected.last == 8)
+        #expect(probe.weeklyWastedAll.last ?? 0 >= 13)
+        #expect(probe.sortedAccountKeysByMode["weeklyUsage"]?.prefix(2).elementsEqual([bravoKey, alphaKey]) == true)
+        #expect(probe.sortedAccountKeysByMode["fiveHourRemaining"]?.prefix(2).elementsEqual([bravoKey, alphaKey]) == true)
+        #expect(probe.sortedAccountKeysByMode["name"]?.contains(internalHistoryKey) == false)
+        #expect(probe.analysisDescriptions.keys.sorted() == ["delay", "remaining", "usage", "wasted"])
+        #expect(probe.chartEntryCounts["remaining-weekly"] == 8)
+        #expect(probe.chartValueLabels["delay"]?.contains("8") == true)
+        #expect(probe.etaValueTexts.contains { !$0.isEmpty })
+        #expect(probe.accountMetricSamples["account"] == [1, 18, 82, 82, 18])
+        #expect(probe.accountMetricSamples["snapshot"] == [0, 100, -1, 0, -1])
+        #expect(probe.accountMetricSamples["record"] == [0, 0, 100, 100, 0])
+        #expect(probe.accountMetricSamples["unknown"] == [0, 0, -1, 0, -1])
+        let idleDelayProbe = PoolDashboardView.debugClearUsageAnalyticsIdleDelayProbe(records: records)
+        #expect(idleDelayProbe.targeted == [0, 0, 7, 0, 4])
+        #expect(idleDelayProbe.all == [0, 0, 0, 0, 0])
+
+        for basis in ["remaining", "wasted", "delay"] {
+            for granularity in ["daily", "weekly"] {
+                let variant = PoolDashboardView.debugUsageAnalyticsWorkspaceVariantView(
+                    analyticsState: state,
+                    accounts: [alpha, bravo, free],
+                    analysisBasisID: basis,
+                    chartGranularityID: granularity,
+                    accountSortModeID: "fiveHourRemaining",
+                    selectedAccountKey: alphaKey
+                )
+                renderInHostingView(variant, size: CGSize(width: 1800, height: 1300))
+            }
+        }
+
+        let privateDetails = PoolDashboardView.debugUsageAnalyticsWorkspacePrivateDetailViews(
+            analyticsState: state,
+            accounts: [alpha, bravo, free],
+            selectedAccountKey: alphaKey
+        )
+        renderInHostingView(privateDetails, size: CGSize(width: 1600, height: 1200))
+
+        let privateCoverageDetails = PoolDashboardView.debugUsageAnalyticsWorkspacePrivateCoverageViews(
+            analyticsState: state,
+            accounts: [alpha, bravo, free],
+            selectedAccountKey: alphaKey
+        )
+        renderInHostingView(privateCoverageDetails, size: CGSize(width: 1600, height: 700))
+
+        let emptyPrivateDetails = PoolDashboardView.debugUsageAnalyticsWorkspacePrivateDetailViews(
+            analyticsState: UsageAnalyticsState(
+                records: [],
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: nil,
+                lastUpdatedAt: nil
+            ),
+            accounts: [],
+            selectedAccountKey: nil
+        )
+        renderInHostingView(emptyPrivateDetails, size: CGSize(width: 1600, height: 1000))
+
+        let emptyPrivateCoverageDetails = PoolDashboardView.debugUsageAnalyticsWorkspacePrivateCoverageViews(
+            analyticsState: UsageAnalyticsState(
+                records: [],
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: nil,
+                lastUpdatedAt: nil
+            ),
+            accounts: [],
+            selectedAccountKey: nil
+        )
+        renderInHostingView(emptyPrivateCoverageDetails, size: CGSize(width: 1600, height: 700))
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardPrivateOverlaysRenderThroughDebugHooks() {
+        let state = AccountPoolState(
+            accounts: [
+                makeSmokeAccount(name: "special-reset@example.com", usedUnits: 12, quota: 100, isPaid: true)
+            ],
+            mode: .manual
+        )
+        let store = ViewSmokeStore(snapshot: state.snapshot)
+
+        let appUpdateWithNotes = PoolDashboardView.debugAppUpdateOverlayView(releaseNotes: "Added better reset-credit visibility.")
+        renderInHostingView(appUpdateWithNotes, size: CGSize(width: 900, height: 760))
+
+        let appUpdateWithoutNotes = PoolDashboardView.debugAppUpdateOverlayView(releaseNotes: nil)
+        renderInHostingView(appUpdateWithoutNotes, size: CGSize(width: 900, height: 760))
+
+        let whatsNew = PoolDashboardView.debugWhatsNewOverlayView()
+        renderInHostingView(whatsNew, size: CGSize(width: 900, height: 760))
+
+        let specialReset = PoolDashboardView.debugSpecialResetWatchPanelView(store: store)
+        renderInHostingView(specialReset, size: CGSize(width: 1200, height: 760))
+    }
+
+    @Test
+    @MainActor
+    func populatedSpecialResetWatchPanelRendersRecordsAndLatestEvent() {
+        let specialReset = PoolDashboardView.debugPopulatedSpecialResetWatchPanelView()
+        renderInHostingView(specialReset, size: CGSize(width: 1200, height: 900))
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardDeleteGroupProbeRemovesGroupAccountsAndTokens() {
+        let probe = PoolDashboardView.debugDeleteGroupProbe()
+
+        #expect(probe.remainingAccountNames == ["default@example.com"])
+        #expect(probe.removedTokenAccountNames == ["red-a@example.com", "red-b@example.com"])
+        #expect(probe.selectedGroupName == AgentAccount.defaultGroupName)
+        #expect(!probe.missingGroupRemovedTokens)
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardAddAccountProbeTrimsNameAndResetsForm() {
+        let probe = PoolDashboardView.debugAddAccountProbe()
+
+        #expect(probe.addedAccountNames == ["new@example.com"])
+        #expect(probe.addedGroupName == "Ops")
+        #expect(probe.addedQuota == 250)
+        #expect(probe.blankInputWasIgnored)
+        #expect(probe.formNameWasReset)
+        #expect(probe.formQuotaWasReset)
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardDataModeReloadProbeLoadsSnapshotAndResetsSelection() {
+        let probe = PoolDashboardView.debugDataModeReloadProbe()
+
+        #expect(probe.loadedAccountNames == ["loaded@example.com"])
+        #expect(probe.loadedSelectedGroupName == "Loaded")
+        #expect(probe.fallbackAccountCount > 0)
+        #expect(probe.fallbackSelectedGroupName == AgentAccount.defaultGroupName)
+        #expect(probe.actualReloadWasExercised)
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardUsageSyncStuckProbeEndsOnlyMatchingRun() {
+        let probe = PoolDashboardView.debugUsageSyncStuckRecoveryProbe()
+
+        #expect(!probe.matchingRunIsSyncing)
+        #expect(probe.matchingRunIDWasCleared)
+        #expect(probe.matchingErrorContainsTimeout)
+        #expect(probe.staleRunStayedSyncing)
+        #expect(probe.staleRunIDWasPreserved)
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardDeveloperPanelsRenderThroughDebugHooks() {
+        let account = makeSmokeAccount(name: "debug@example.com", usedUnits: 41, quota: 100, isPaid: true)
+        let state = AccountPoolState(
+            accounts: [
+                account
+            ],
+            mode: .manual
+        )
+        var snapshot = state.snapshot
+        snapshot.activeAccountID = account.id
+        snapshot.activities = [
+            PoolActivity(id: UUID(), timestamp: Date(timeIntervalSince1970: 1_800_000_000), message: "Debug activity")
+        ]
+        let store = ViewSmokeStore(snapshot: snapshot)
+
+        let developerContext = PoolDashboardView.debugDeveloperContextPanelView(store: store)
+        renderInHostingView(developerContext, size: CGSize(width: 900, height: 760))
+
+        let debugTools = PoolDashboardView.debugDebugToolsPanelView(store: store)
+        renderInHostingView(debugTools, size: CGSize(width: 900, height: 760))
+
+        let privatePanels = PoolDashboardView.debugPrivateSettingsPanelViews(store: store)
+        renderInHostingView(privatePanels, size: CGSize(width: 1100, height: 900))
+
+        let dashboardPanels = PoolDashboardView.debugPrivateDashboardPanelViews(store: store)
+        renderInHostingView(dashboardPanels, size: CGSize(width: 1400, height: 1000))
+
+        let metrics = PoolDashboardView.debugDiagnosticsSnapshot(store: store)
+        #expect(metrics.first(where: { $0.id == "accounts" })?.value == "1")
+        #expect(metrics.first(where: { $0.id == "activities" })?.value == "1")
+        #expect(metrics.contains(where: { $0.id == "analytics_records" }))
+        #expect(metrics.contains(where: { $0.id == "backup_json" }))
+    }
+
+    @Test
+    @MainActor
+    func poolDashboardPairedPanelsDebugViewRendersHorizontalAndStackedFallback() {
+        let pairedPanels = PoolDashboardView.debugPairedPanelsView()
+
+        renderInHostingView(pairedPanels, size: CGSize(width: 900, height: 360))
+        renderInHostingView(pairedPanels, size: CGSize(width: 240, height: 640))
     }
 
     @Test

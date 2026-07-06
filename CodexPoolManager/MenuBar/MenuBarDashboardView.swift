@@ -637,3 +637,30 @@ private struct WarningsPopoverView: View {
         .frame(maxHeight: 360, alignment: .topLeading)
     }
 }
+
+#if DEBUG
+extension MenuBarDashboardView {
+    @MainActor
+    static func debugAccountRowView(
+        row: MenuBarAccountRow,
+        switchAccount: @escaping (UUID) -> Void = { _ in }
+    ) -> some View {
+        AccountRowView(row: row, switchAccount: switchAccount)
+    }
+
+    @MainActor
+    static func debugWarningsPopoverView(rows: [MenuBarWarningRow]) -> some View {
+        WarningsPopoverView(rows: rows)
+    }
+
+    @MainActor
+    static func debugWarningPopoverButtonView(runtimeModel: AppPoolRuntimeModel) -> some View {
+        MenuBarDashboardView(
+            runtimeModel: runtimeModel,
+            openDashboard: {},
+            switchAccount: { _ in }
+        )
+        .warningPopoverButton
+    }
+}
+#endif

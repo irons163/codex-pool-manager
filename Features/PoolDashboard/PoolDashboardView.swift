@@ -295,6 +295,58 @@ struct PoolDashboardView: View {
         let observedFiveHourNextResetAt: Date
         let detectedAt: Date
     }
+    private struct SpecialResetEvaluationOutput {
+        let state: SpecialResetWatchState
+        let detections: [SpecialResetDetection]
+        let shouldNotify: Bool
+    }
+    private struct UsageAnalyticsStorageNormalizationOutput {
+        let normalizedState: UsageAnalyticsState
+        let rewrittenRawValue: String?
+    }
+    private struct DataModeReloadOutput {
+        let state: AccountPoolState
+        let selectedGroupName: String
+    }
+    private struct AddAccountHandlingOutput {
+        let state: AccountPoolState
+        let formState: PoolDashboardFormState
+    }
+    private struct DeleteGroupHandlingOutput {
+        let state: AccountPoolState
+        let selectedGroupName: String
+        let removedAccountIDs: [UUID]
+    }
+    private struct DashboardNotificationRequest {
+        let key: String
+        let title: String
+        let body: String
+        let minInterval: TimeInterval
+    }
+    private struct AutomaticSwitchDecision {
+        let accountIDToMarkForSwitchLaunch: UUID?
+        let notification: DashboardNotificationRequest?
+    }
+    private enum ManualSwitchRoute {
+        case missing
+        case relay
+        case official(AgentAccount)
+    }
+    private struct ManualSwitchDecision {
+        let accountIDToMarkForSwitchLaunch: UUID?
+        let notification: DashboardNotificationRequest?
+    }
+    private struct RelaySwitchOutcomeDecision {
+        let accountIDToMarkForSwitchLaunch: UUID?
+        let notification: DashboardNotificationRequest?
+    }
+    private struct RelaySwitchPreparation {
+        let request: PoolDashboardRelayAccountCoordinator.SwitchRequest?
+        let diagnosticLog: String
+        let requestAccountName: String
+        let errorDescription: String?
+        let hydratedFromVault: Bool
+    }
     private struct AppUpdatePrompt: Identifiable, Equatable {
         let currentVersion: String
         let latestVersion: String
@@ -1782,19 +1834,14 @@ struct PoolDashboardView: View {
     // MARK: - Developer Data Mode
 
     private func reloadStateForCurrentDataMode() {
-        if let snapshot = store.load() {
-            state = AccountPoolState(snapshot: snapshot)
-        } else {
-            var defaultState = Self.makeDefaultState(accounts: Self.defaultAccounts)
-            defaultState.evaluate(now: .now)
-            state = defaultState
-        }
-
-        if state.groups.isEmpty {
-            selectedGroupName = AgentAccount.defaultGroupName
-        } else if !state.groups.contains(selectedGroupName) {
-            selectedGroupName = state.groups[0]
-        }
+        let output = Self.dataModeReloadOutput(
+            snapshot: store.load(),
+            selectedGroupName: selectedGroupName,
+            defaultAccounts: Self.defaultAccounts,
+            now: .now
+        )
+        state = output.state
+        selectedGroupName = output.selectedGroupName
 
         lowUsageAlertPolicy = LowUsageAlertPolicy()
         viewState.showLowUsageAlert = false
@@ -1803,6 +1850,36 @@ struct PoolDashboardView: View {
         usageAnalyticsStateLoaded = false
         seedUsageAnalyticsIfNeeded(now: .now)
         WidgetBridgePublisher.publish(from: state.snapshot)
+    }
+
+    private static func dataModeReloadOutput(
+        snapshot: AccountPoolSnapshot?,
+        selectedGroupName: String,
+        defaultAccounts: [AgentAccount],
+        now: Date
+    ) -> DataModeReloadOutput {
+        let nextState: AccountPoolState
+        if let snapshot {
+            nextState = AccountPoolState(snapshot: snapshot)
+        } else {
+            var defaultState = makeDefaultState(accounts: defaultAccounts)
+            defaultState.evaluate(now: now)
+            nextState = defaultState
+        }
+
+        let nextSelectedGroupName: String
+        if nextState.groups.isEmpty {
+            nextSelectedGroupName = AgentAccount.defaultGroupName
+        } else if nextState.groups.contains(selectedGroupName) {
+            nextSelectedGroupName = selectedGroupName
+        } else {
+            nextSelectedGroupName = nextState.groups[0]
+        }
+
+        return DataModeReloadOutput(
+            state: nextState,
+            selectedGroupName: nextSelectedGroupName
+        )
     }
 
     private func seedDeveloperMockData() {
@@ -1914,37 +1991,80 @@ struct PoolDashboardView: View {
         previousSnapshot: AccountPoolSnapshot,
         currentSnapshot: AccountPoolSnapshot
     ) {
-        guard previousSnapshot.lowUsageAlertsEnabled else { return }
-        guard previousSnapshot.mode == .intelligent, currentSnapshot.mode == .intelligent else { return }
-        guard previousSnapshot.activeAccountID != currentSnapshot.activeAccountID else { return }
-        guard let previousAccountID = previousSnapshot.activeAccountID,
-              let previousAccount = previousSnapshot.accounts.first(where: { $0.id == previousAccountID })
-        else {
+        guard let message = lowUsageAlertMessageForThresholdTriggeredIntelligentSwitch(
+            previousSnapshot: previousSnapshot,
+            currentSnapshot: currentSnapshot
+        ) else {
             return
         }
 
-        let thresholdRatio = previousSnapshot.lowUsageThresholdRatio
-        guard intelligentRemainingRatio(for: previousAccount) <= thresholdRatio else { return }
+        viewState.lowUsageAlertMessage = message
+        viewState.showLowUsageAlert = true
+    }
 
-        viewState.lowUsageAlertMessage = alertPresenter.lowUsageAlertMessage(
+    private func lowUsageAlertMessageForThresholdTriggeredIntelligentSwitch(
+        previousSnapshot: AccountPoolSnapshot,
+        currentSnapshot: AccountPoolSnapshot
+    ) -> String? {
+        guard previousSnapshot.lowUsageAlertsEnabled else { return nil }
+        guard previousSnapshot.mode == .intelligent, currentSnapshot.mode == .intelligent else { return nil }
+        guard previousSnapshot.activeAccountID != currentSnapshot.activeAccountID else { return nil }
+        guard let previousAccountID = previousSnapshot.activeAccountID,
+              let previousAccount = previousSnapshot.accounts.first(where: { $0.id == previousAccountID })
+        else {
+            return nil
+        }
+
+        let thresholdRatio = previousSnapshot.lowUsageThresholdRatio
+        guard intelligentRemainingRatio(for: previousAccount) <= thresholdRatio else { return nil }
+
+        return alertPresenter.lowUsageAlertMessage(
             activeAccount: previousAccount,
             thresholdRatio: thresholdRatio
         )
-        viewState.showLowUsageAlert = true
     }
 
     private func postLowUsageDesktopNotificationIfNeeded(
         wasShowingLowUsageAlert: Bool
     ) {
-        guard state.lowUsageAlertsEnabled else { return }
-        guard !wasShowingLowUsageAlert, viewState.showLowUsageAlert else { return }
+        guard let request = lowUsageDesktopNotificationRequestIfNeeded(
+            wasShowingLowUsageAlert: wasShowingLowUsageAlert
+        ) else { return }
+
+        DesktopNotifier.post(
+            key: request.key,
+            title: request.title,
+            body: request.body,
+            minInterval: request.minInterval
+        )
+    }
+
+    private func lowUsageDesktopNotificationRequestIfNeeded(
+        wasShowingLowUsageAlert: Bool
+    ) -> DashboardNotificationRequest? {
+        Self.lowUsageDesktopNotificationRequestIfNeeded(
+            state: state,
+            viewState: viewState,
+            alertPresenter: alertPresenter,
+            wasShowingLowUsageAlert: wasShowingLowUsageAlert
+        )
+    }
+
+    private static func lowUsageDesktopNotificationRequestIfNeeded(
+        state: AccountPoolState,
+        viewState: PoolDashboardViewState,
+        alertPresenter: PoolDashboardAlertPresenter = PoolDashboardAlertPresenter(),
+        wasShowingLowUsageAlert: Bool
+    ) -> DashboardNotificationRequest? {
+        guard state.lowUsageAlertsEnabled else { return nil }
+        guard !wasShowingLowUsageAlert, viewState.showLowUsageAlert else { return nil }
 
         let message = viewState.lowUsageAlertMessage
             ?? alertPresenter.lowUsageAlertMessage(
                 activeAccount: state.activeAccount,
                 thresholdRatio: state.lowUsageAlertThresholdRatio
             )
-        DesktopNotifier.post(
+        return DashboardNotificationRequest(
             key: "low-usage-alert",
             title: "Codex Pool \(L10n.text("alert.low_usage.title"))",
             body: message,
@@ -1959,14 +2079,42 @@ struct PoolDashboardView: View {
     // MARK: - Account Actions
 
     private func handleAddAccount(name: String, quota: Int) {
+        guard let output = Self.addAccountHandlingOutput(
+            state: state,
+            formState: formState,
+            selectedGroupName: selectedGroupName,
+            name: name,
+            quota: quota
+        ) else {
+            return
+        }
+
+        state = output.state
+        formState = output.formState
+    }
+
+    private static func addAccountHandlingOutput(
+        state: AccountPoolState,
+        formState: PoolDashboardFormState,
+        selectedGroupName: String,
+        name: String,
+        quota: Int
+    ) -> AddAccountHandlingOutput? {
         let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedName.isEmpty else { return }
-        state.addAccount(
+        guard !normalizedName.isEmpty else { return nil }
+
+        var updatedState = state
+        var updatedFormState = formState
+        updatedState.addAccount(
             name: normalizedName,
             groupName: selectedGroupName,
             quota: quota
         )
-        formState.resetNewAccountInput()
+        updatedFormState.resetNewAccountInput()
+        return AddAccountHandlingOutput(
+            state: updatedState,
+            formState: updatedFormState
+        )
     }
 
     private func handleRemoveAccount(accountID: UUID) {
@@ -1990,16 +2138,43 @@ struct PoolDashboardView: View {
     }
 
     private func handleDeleteGroup(name: String) {
+        guard let output = Self.deleteGroupHandlingOutput(
+            state: state,
+            selectedGroupName: selectedGroupName,
+            name: name
+        ) else {
+            return
+        }
+
+        state = output.state
+        output.removedAccountIDs.forEach { store.removeToken(for: $0) }
+        selectedGroupName = output.selectedGroupName
+    }
+
+    private static func deleteGroupHandlingOutput(
+        state: AccountPoolState,
+        selectedGroupName: String,
+        name: String
+    ) -> DeleteGroupHandlingOutput? {
         let normalized = AgentAccount.normalizedGroupName(name)
-        let removedAccountIDs = state.accounts
+        var updatedState = state
+        let removedAccountIDs = updatedState.accounts
             .filter { $0.groupName == normalized }
             .map(\.id)
-        guard state.deleteGroup(normalized) else { return }
-        removedAccountIDs.forEach { store.removeToken(for: $0) }
+        guard updatedState.deleteGroup(normalized) else { return nil }
 
+        let updatedSelectedGroupName: String
         if selectedGroupName == normalized {
-            selectedGroupName = AgentAccount.defaultGroupName
+            updatedSelectedGroupName = AgentAccount.defaultGroupName
+        } else {
+            updatedSelectedGroupName = selectedGroupName
         }
+
+        return DeleteGroupHandlingOutput(
+            state: updatedState,
+            selectedGroupName: updatedSelectedGroupName,
+            removedAccountIDs: removedAccountIDs
+        )
     }
 
     private func handleSimulateUsage() {
@@ -2283,14 +2458,34 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func forceEndUsageSyncIfStuck(runID: UUID) {
-        guard usageSyncRunID == runID, viewState.isSyncingUsage else { return }
-        viewState.syncError = L10n.text(
+        guard let output = Self.usageSyncStuckRecoveryOutput(
+            runID: runID,
+            currentRunID: usageSyncRunID,
+            viewState: viewState,
+            asyncStateCoordinator: asyncStateCoordinator
+        ) else {
+            return
+        }
+        viewState = output.viewState
+        usageSyncRunID = output.usageSyncRunID
+    }
+
+    private static func usageSyncStuckRecoveryOutput(
+        runID: UUID,
+        currentRunID: UUID?,
+        viewState: PoolDashboardViewState,
+        asyncStateCoordinator: PoolDashboardAsyncStateCoordinator = PoolDashboardAsyncStateCoordinator()
+    ) -> (viewState: PoolDashboardViewState, usageSyncRunID: UUID?)? {
+        guard currentRunID == runID, viewState.isSyncingUsage else { return nil }
+
+        var nextViewState = viewState
+        nextViewState.syncError = L10n.text(
             "sync.failure.with_description_format",
             L10n.text("sync.failure.prefix"),
             L10n.text("usage.sync.error.timeout")
         )
-        usageSyncRunID = nil
-        asyncStateCoordinator.endUsageSync(viewState: &viewState)
+        asyncStateCoordinator.endUsageSync(viewState: &nextViewState)
+        return (nextViewState, nil)
     }
 
     @MainActor
@@ -2455,27 +2650,32 @@ struct PoolDashboardView: View {
     @MainActor
     private func addRelayAccount() {
         Task { @MainActor in
-            let output = await relayAccountCoordinator.addRelayAccount(
-                to: state,
-                viewState: viewState,
-                name: formState.relayAccountName,
-                providerID: formState.relayProviderID,
-                providerName: formState.relayProviderName,
-                baseURL: formState.relayBaseURL,
-                wireAPI: formState.relayWireAPI,
-                apiKey: formState.relayAPIKey
-            )
-            state = output.state
-            viewState = output.viewState
-            if viewState.relayError == nil {
-                // Persist immediately so the new relay API key is in the token vault
-                // before the user can switch to it. The snapshot-driven autosave is
-                // async, so without this an immediate switch resolves the key from a
-                // vault that hasn't been written yet and fails with "missing API key".
-                store.save(state.snapshot)
-                formState.resetRelayInput()
-                refreshRelayAPIKeyReadiness()
-            }
+            await performAddRelayAccount()
+        }
+    }
+
+    @MainActor
+    private func performAddRelayAccount() async {
+        let output = await relayAccountCoordinator.addRelayAccount(
+            to: state,
+            viewState: viewState,
+            name: formState.relayAccountName,
+            providerID: formState.relayProviderID,
+            providerName: formState.relayProviderName,
+            baseURL: formState.relayBaseURL,
+            wireAPI: formState.relayWireAPI,
+            apiKey: formState.relayAPIKey
+        )
+        state = output.state
+        viewState = output.viewState
+        if viewState.relayError == nil {
+            // Persist immediately so the new relay API key is in the token vault
+            // before the user can switch to it. The snapshot-driven autosave is
+            // async, so without this an immediate switch resolves the key from a
+            // vault that hasn't been written yet and fails with "missing API key".
+            store.save(state.snapshot)
+            formState.resetRelayInput()
+            refreshRelayAPIKeyReadiness()
         }
     }
 
@@ -2563,31 +2763,64 @@ struct PoolDashboardView: View {
             viewState: viewState,
             authorizeAuthFile: openAuthFilePanel
         )
-        if output.didSwitchAuth {
+        let decision = automaticSwitchDecision(
+            account: account,
+            previousActiveAccountID: previousActiveAccountID,
+            output: output
+        )
+        if let accountIDToMark = decision.accountIDToMarkForSwitchLaunch {
             suppressNextSnapshotDrivenSwitch = true
-            state.markActiveAccountForSwitchLaunch(account.id)
+            state.markActiveAccountForSwitchLaunch(accountIDToMark)
+        }
+        if let notification = decision.notification {
             DesktopNotifier.post(
-                key: "auto-switch-\(account.id.uuidString)",
-                title: "Codex Pool 已自動切換帳號",
-                body: notificationUsageSummary(
-                    for: state.accounts.first(where: { $0.id == account.id }) ?? account
-                ),
-                minInterval: 15
+                key: notification.key,
+                title: notification.title,
+                body: notification.body,
+                minInterval: notification.minInterval
             )
-        } else if let previousActiveAccountID,
-                  state.accounts.contains(where: { $0.id == previousActiveAccountID }) {
-            suppressNextSnapshotDrivenSwitch = true
-            state.markActiveAccountForSwitchLaunch(previousActiveAccountID)
-            if let errorMessage = output.viewState.switchLaunchError, !errorMessage.isEmpty {
-                DesktopNotifier.post(
-                    key: "auto-switch-failed",
-                    title: "Codex Pool 自動切換失敗",
-                    body: errorMessage,
-                    minInterval: 120
-                )
-            }
         }
         applySwitchLaunchOutput(output)
+    }
+
+    private func automaticSwitchDecision(
+        account: AgentAccount,
+        previousActiveAccountID: UUID?,
+        output: PoolDashboardSwitchLaunchFlowCoordinator.Output
+    ) -> AutomaticSwitchDecision {
+        if output.didSwitchAuth {
+            return AutomaticSwitchDecision(
+                accountIDToMarkForSwitchLaunch: account.id,
+                notification: DashboardNotificationRequest(
+                    key: "auto-switch-\(account.id.uuidString)",
+                    title: "Codex Pool 已自動切換帳號",
+                    body: notificationUsageSummary(
+                        for: state.accounts.first(where: { $0.id == account.id }) ?? account
+                    ),
+                    minInterval: 15
+                )
+            )
+        }
+
+        guard let previousActiveAccountID,
+              state.accounts.contains(where: { $0.id == previousActiveAccountID }) else {
+            return AutomaticSwitchDecision(
+                accountIDToMarkForSwitchLaunch: nil,
+                notification: nil
+            )
+        }
+
+        let errorMessage = output.viewState.switchLaunchError?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let notification = errorMessage.isEmpty ? nil : DashboardNotificationRequest(
+            key: "auto-switch-failed",
+            title: "Codex Pool 自動切換失敗",
+            body: errorMessage,
+            minInterval: 120
+        )
+        return AutomaticSwitchDecision(
+            accountIDToMarkForSwitchLaunch: previousActiveAccountID,
+            notification: notification
+        )
     }
 
     @MainActor
@@ -2617,12 +2850,17 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func switchAndLaunchCodex(using accountID: UUID) async {
-        if state.accounts.first(where: { $0.id == accountID })?.isRelayAPIKeyAccount == true {
+        let account: AgentAccount
+        switch manualSwitchRoute(for: accountID) {
+        case .missing:
+            return
+        case .relay:
             await switchToRelayProvider(using: accountID)
             return
+        case let .official(officialAccount):
+            account = officialAccount
         }
 
-        guard let account = state.accounts.first(where: { $0.id == accountID }) else { return }
         let output = await switchLaunchFlowCoordinator.switchAndLaunch(
             using: account,
             switchWithoutLaunching: state.switchWithoutLaunching,
@@ -2633,30 +2871,151 @@ struct PoolDashboardView: View {
             viewState: viewState,
             authorizeAuthFile: openAuthFilePanel
         )
-        if output.didSwitchAuth {
+        let decision = manualSwitchDecision(account: account, output: output)
+        if let accountIDToMark = decision.accountIDToMarkForSwitchLaunch {
             suppressNextSnapshotDrivenSwitch = true
-            state.markActiveAccountForSwitchLaunch(account.id)
+            state.markActiveAccountForSwitchLaunch(accountIDToMark)
+        }
+        if let notification = decision.notification {
             DesktopNotifier.post(
-                key: "manual-switch-\(account.id.uuidString)",
-                title: "Codex Pool 已切換帳號",
-                body: notificationUsageSummary(
-                    for: state.accounts.first(where: { $0.id == account.id }) ?? account
-                ),
-                minInterval: 5
-            )
-        } else if let errorMessage = output.viewState.switchLaunchError, !errorMessage.isEmpty {
-            DesktopNotifier.post(
-                key: "manual-switch-failed",
-                title: "Codex Pool 切換失敗",
-                body: errorMessage,
-                minInterval: 120
+                key: notification.key,
+                title: notification.title,
+                body: notification.body,
+                minInterval: notification.minInterval
             )
         }
         applySwitchLaunchOutput(output)
     }
 
+    private func manualSwitchRoute(for accountID: UUID) -> ManualSwitchRoute {
+        guard let account = state.accounts.first(where: { $0.id == accountID }) else {
+            return .missing
+        }
+        return account.isRelayAPIKeyAccount ? .relay : .official(account)
+    }
+
+    private func manualSwitchDecision(
+        account: AgentAccount,
+        output: PoolDashboardSwitchLaunchFlowCoordinator.Output
+    ) -> ManualSwitchDecision {
+        if output.didSwitchAuth {
+            return ManualSwitchDecision(
+                accountIDToMarkForSwitchLaunch: account.id,
+                notification: DashboardNotificationRequest(
+                    key: "manual-switch-\(account.id.uuidString)",
+                    title: "Codex Pool 已切換帳號",
+                    body: notificationUsageSummary(
+                        for: state.accounts.first(where: { $0.id == account.id }) ?? account
+                    ),
+                    minInterval: 5
+                )
+            )
+        }
+
+        guard let errorMessage = output.viewState.switchLaunchError,
+              !errorMessage.isEmpty else {
+            return ManualSwitchDecision(
+                accountIDToMarkForSwitchLaunch: nil,
+                notification: nil
+            )
+        }
+
+        return ManualSwitchDecision(
+            accountIDToMarkForSwitchLaunch: nil,
+            notification: DashboardNotificationRequest(
+                key: "manual-switch-failed",
+                title: "Codex Pool 切換失敗",
+                body: errorMessage,
+                minInterval: 120
+            )
+        )
+    }
+
     @MainActor
     private func switchToRelayProvider(using accountID: UUID) async {
+        let preparation = prepareRelaySwitchRequest(for: accountID)
+        guard let request = preparation.request else {
+            let errorDescription = preparation.errorDescription ?? L10n.text("relay.error.invalid_provider")
+            viewState.switchLaunchError = errorDescription
+            viewState.switchLaunchWarning = nil
+            viewState.lastSwitchLaunchLog = [
+                preparation.diagnosticLog,
+                L10n.text("relay.switch.start_format", preparation.requestAccountName),
+                L10n.text("relay.switch.failed_format", errorDescription)
+            ].joined(separator: "\n")
+            DesktopNotifier.post(
+                key: "manual-relay-switch-failed",
+                title: "Codex Pool 中轉切換失敗",
+                body: errorDescription,
+                minInterval: 120
+            )
+            return
+        }
+
+        let output = await relayAccountCoordinator.switchToRelayAccount(
+            request,
+            switchWithoutLaunching: state.switchWithoutLaunching,
+            preserveOfficialAuth: relayPreserveOfficialAuth,
+            launchTarget: selectedLaunchTarget,
+            diagnosticLog: preparation.diagnosticLog,
+            viewState: viewState
+        )
+        viewState = output.viewState
+
+        let decision = relaySwitchOutcomeDecision(request: request, output: output)
+        if let accountIDToMark = decision.accountIDToMarkForSwitchLaunch {
+            suppressNextSnapshotDrivenSwitch = true
+            state.markActiveAccountForSwitchLaunch(accountIDToMark)
+        }
+        if let notification = decision.notification {
+            DesktopNotifier.post(
+                key: notification.key,
+                title: notification.title,
+                body: notification.body,
+                minInterval: notification.minInterval
+            )
+        }
+    }
+
+    private func relaySwitchOutcomeDecision(
+        request: PoolDashboardRelayAccountCoordinator.SwitchRequest,
+        output: PoolDashboardRelayAccountCoordinator.SwitchOutput
+    ) -> RelaySwitchOutcomeDecision {
+        if output.didSwitchAuth {
+            return RelaySwitchOutcomeDecision(
+                accountIDToMarkForSwitchLaunch: request.accountID,
+                notification: DashboardNotificationRequest(
+                    key: "manual-relay-switch-\(request.accountID.uuidString)",
+                    title: "Codex Pool 已切換中轉帳號",
+                    body: state.accounts
+                        .first(where: { $0.id == request.accountID })
+                        .map(notificationUsageSummary(for:)) ?? request.accountName,
+                    minInterval: 5
+                )
+            )
+        }
+
+        guard let errorMessage = output.viewState.switchLaunchError,
+              !errorMessage.isEmpty else {
+            return RelaySwitchOutcomeDecision(
+                accountIDToMarkForSwitchLaunch: nil,
+                notification: nil
+            )
+        }
+
+        return RelaySwitchOutcomeDecision(
+            accountIDToMarkForSwitchLaunch: nil,
+            notification: DashboardNotificationRequest(
+                key: "manual-relay-switch-failed",
+                title: "Codex Pool 中轉切換失敗",
+                body: errorMessage,
+                minInterval: 120
+            )
+        )
+    }
+
+    @MainActor
+    private func prepareRelaySwitchRequest(for accountID: UUID) -> RelaySwitchPreparation {
         let request: PoolDashboardRelayAccountCoordinator.SwitchRequest
         let stateAccountCount = state.accounts.count
         let relayAccountCount = state.accounts.filter(\.isRelayAPIKeyAccount).count
@@ -2730,51 +3089,22 @@ struct PoolDashboardView: View {
                 errorStage: "switch_request",
                 errorDescription: error.localizedDescription
             ).renderedLog()
-            viewState.switchLaunchError = error.localizedDescription
-            viewState.switchLaunchWarning = nil
-            viewState.lastSwitchLaunchLog = [
-                diagnosticLog,
-                L10n.text("relay.switch.start_format", requestAccountName),
-                L10n.text("relay.switch.failed_format", error.localizedDescription)
-            ].joined(separator: "\n")
-            DesktopNotifier.post(
-                key: "manual-relay-switch-failed",
-                title: "Codex Pool 中轉切換失敗",
-                body: error.localizedDescription,
-                minInterval: 120
+            return RelaySwitchPreparation(
+                request: nil,
+                diagnosticLog: diagnosticLog,
+                requestAccountName: requestAccountName,
+                errorDescription: error.localizedDescription,
+                hydratedFromVault: hydratedFromVault
             )
-            return
         }
 
-        let output = await relayAccountCoordinator.switchToRelayAccount(
-            request,
-            switchWithoutLaunching: state.switchWithoutLaunching,
-            preserveOfficialAuth: relayPreserveOfficialAuth,
-            launchTarget: selectedLaunchTarget,
+        return RelaySwitchPreparation(
+            request: request,
             diagnosticLog: diagnosticLog,
-            viewState: viewState
+            requestAccountName: requestAccountName,
+            errorDescription: nil,
+            hydratedFromVault: hydratedFromVault
         )
-        viewState = output.viewState
-
-        if output.didSwitchAuth {
-            suppressNextSnapshotDrivenSwitch = true
-            state.markActiveAccountForSwitchLaunch(request.accountID)
-            DesktopNotifier.post(
-                key: "manual-relay-switch-\(request.accountID.uuidString)",
-                title: "Codex Pool 已切換中轉帳號",
-                body: state.accounts
-                    .first(where: { $0.id == request.accountID })
-                    .map(notificationUsageSummary(for:)) ?? request.accountName,
-                minInterval: 5
-            )
-        } else if let errorMessage = viewState.switchLaunchError, !errorMessage.isEmpty {
-            DesktopNotifier.post(
-                key: "manual-relay-switch-failed",
-                title: "Codex Pool 中轉切換失敗",
-                body: errorMessage,
-                minInterval: 120
-            )
-        }
     }
 
     private func relayDiagnosticTokenLength(_ token: String?) -> Int {
@@ -2807,7 +3137,18 @@ struct PoolDashboardView: View {
 
     @MainActor
     private func resetSpecialResetWatchBaseline(now: Date = .now) {
-        let baselineRecords = state.accounts
+        let baselineState = specialResetBaselineWatchState(accounts: state.accounts, now: now)
+        specialResetWatchState.records = baselineState.records
+        specialResetWatchState.events = baselineState.events
+        specialResetWatchState.lastEvaluatedAt = baselineState.lastEvaluatedAt
+        persistSpecialResetWatchState()
+    }
+
+    private func specialResetBaselineWatchState(
+        accounts: [AgentAccount],
+        now: Date
+    ) -> SpecialResetWatchState {
+        let baselineRecords = accounts
             .filter(\.isPaid)
             .map { account in
                 SpecialResetRecord(
@@ -2831,10 +3172,11 @@ struct PoolDashboardView: View {
                     lastSeenAt: now
                 )
             }
-        specialResetWatchState.records = deduplicatedSpecialResetRecords(baselineRecords)
-        specialResetWatchState.events = []
-        specialResetWatchState.lastEvaluatedAt = now
-        persistSpecialResetWatchState()
+        var baselineState = SpecialResetWatchState()
+        baselineState.records = deduplicatedSpecialResetRecords(baselineRecords)
+        baselineState.events = []
+        baselineState.lastEvaluatedAt = now
+        return baselineState
     }
 
     @MainActor
@@ -2846,12 +3188,36 @@ struct PoolDashboardView: View {
     @MainActor
     private func evaluateSpecialResetWatchAfterSync(now: Date) {
         guard specialResetWatchEnabled else { return }
+        guard let output = specialResetEvaluationOutput(
+            currentState: specialResetWatchState,
+            accounts: state.accounts,
+            now: now,
+            graceMinutes: specialResetWatchGraceMinutes,
+            notificationsEnabled: specialResetWatchNotifyEnabled
+        ) else {
+            return
+        }
 
-        let paidAccounts = state.accounts.filter(\.isPaid)
-        guard !paidAccounts.isEmpty else { return }
+        specialResetWatchState = output.state
+        if output.shouldNotify {
+            postSpecialResetDetections(output.detections)
+        }
 
-        let graceSeconds = TimeInterval(max(0, specialResetWatchGraceMinutes) * 60)
-        var recordsByKey = specialResetRecordsByKey(from: specialResetWatchState.records)
+        persistSpecialResetWatchState()
+    }
+
+    private func specialResetEvaluationOutput(
+        currentState: SpecialResetWatchState,
+        accounts: [AgentAccount],
+        now: Date,
+        graceMinutes: Int,
+        notificationsEnabled: Bool
+    ) -> SpecialResetEvaluationOutput? {
+        let paidAccounts = accounts.filter(\.isPaid)
+        guard !paidAccounts.isEmpty else { return nil }
+
+        let graceSeconds = TimeInterval(max(0, graceMinutes) * 60)
+        var recordsByKey = specialResetRecordsByKey(from: currentState.records)
         var detections: [SpecialResetDetection] = []
 
         for account in paidAccounts {
@@ -2916,11 +3282,13 @@ struct PoolDashboardView: View {
         }
 
         let activeAccountKeys = Set(paidAccounts.map { specialResetWatchAccountKey(for: $0) })
-        specialResetWatchState.records = recordsByKey
+        var nextState = currentState
+        nextState.records = recordsByKey
             .filter { activeAccountKeys.contains($0.key) }
             .map(\.value)
             .sorted(by: { $0.accountName.localizedCaseInsensitiveCompare($1.accountName) == .orderedAscending })
-        specialResetWatchState.lastEvaluatedAt = now
+        nextState.lastEvaluatedAt = now
+        var shouldNotify = false
 
         if !detections.isEmpty {
             let newEvents = detections.map { detection in
@@ -2935,18 +3303,22 @@ struct PoolDashboardView: View {
                     observedFiveHourNextResetAt: detection.observedFiveHourNextResetAt
                 )
             }
-            specialResetWatchState.events = Array((newEvents + specialResetWatchState.events).prefix(40))
-            if specialResetWatchNotifyEnabled,
+            nextState.events = Array((newEvents + nextState.events).prefix(40))
+            if notificationsEnabled,
                SpecialResetNotificationPolicy.shouldNotify(
-                   lastNotifiedAt: specialResetWatchState.lastNotificationAt,
+                   lastNotifiedAt: nextState.lastNotificationAt,
                    now: now
                ) {
-                postSpecialResetDetections(detections)
-                specialResetWatchState.lastNotificationAt = now
+                shouldNotify = true
+                nextState.lastNotificationAt = now
             }
         }
 
-        persistSpecialResetWatchState()
+        return SpecialResetEvaluationOutput(
+            state: nextState,
+            detections: detections,
+            shouldNotify: shouldNotify
+        )
     }
 
     private func specialResetRecordsByKey(from records: [SpecialResetRecord]) -> [String: SpecialResetRecord] {
@@ -2996,7 +3368,19 @@ struct PoolDashboardView: View {
     }
 
     private func postSpecialResetDetections(_ detections: [SpecialResetDetection]) {
-        guard let detection = detections.first else { return }
+        guard let request = specialResetDetectionNotificationRequest(detections) else { return }
+        DesktopNotifier.post(
+            key: request.key,
+            title: request.title,
+            body: request.body,
+            minInterval: request.minInterval
+        )
+    }
+
+    private func specialResetDetectionNotificationRequest(
+        _ detections: [SpecialResetDetection]
+    ) -> DashboardNotificationRequest? {
+        guard let detection = detections.first else { return nil }
         let body = L10n.text(
             "special_reset.notification.body_format",
             detection.accountName,
@@ -3005,7 +3389,7 @@ struct PoolDashboardView: View {
             specialResetDateText(detection.previousFiveHourExpectedAt),
             specialResetDateText(detection.observedFiveHourNextResetAt)
         )
-        DesktopNotifier.post(
+        return DashboardNotificationRequest(
             key: "special-reset-daily",
             title: L10n.text("special_reset.notification.title"),
             body: body,
@@ -3408,24 +3792,20 @@ struct PoolDashboardView: View {
     }
 
     private func loadUsageAnalyticsStateFromStorage() {
-        guard !usageAnalyticsStateRaw.isEmpty,
-              let data = usageAnalyticsStateRaw.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode(UsageAnalyticsState.self, from: data)
-        else {
+        guard let output = Self.normalizedStoredUsageAnalyticsPayload(
+            rawValue: usageAnalyticsStateRaw,
+            accounts: state.accounts,
+            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords,
+            now: .now
+        ) else {
             usageAnalyticsState = UsageAnalyticsState()
             usageAnalyticsStateLoaded = true
             return
         }
-        let normalized = UsageAnalyticsEngine.normalized(
-            state: decoded,
-            accounts: state.accounts,
-            now: .now,
-            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
-        )
-        usageAnalyticsState = normalized
+        usageAnalyticsState = output.normalizedState
         usageAnalyticsStateLoaded = true
-        if normalized != decoded {
-            persistUsageAnalyticsState()
+        if let rewrittenRawValue = output.rewrittenRawValue {
+            usageAnalyticsStateRaw = rewrittenRawValue
         }
     }
 
@@ -3449,33 +3829,68 @@ struct PoolDashboardView: View {
     }
 
     private func normalizeStoredUsageAnalyticsForCurrentLimit() {
-        guard !usageAnalyticsStateRaw.isEmpty,
-              let data = usageAnalyticsStateRaw.data(using: .utf8),
+        guard let output = Self.normalizedStoredUsageAnalyticsPayload(
+            rawValue: usageAnalyticsStateRaw,
+            accounts: state.accounts,
+            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords,
+            now: .now
+        ) else { return }
+
+        if usageAnalyticsStateLoaded {
+            usageAnalyticsState = output.normalizedState
+        }
+        if let rewrittenRawValue = output.rewrittenRawValue {
+            usageAnalyticsStateRaw = rewrittenRawValue
+        }
+    }
+
+    private static func normalizedStoredUsageAnalyticsPayload(
+        rawValue: String,
+        accounts: [AgentAccount],
+        maxStoredRecords: Int,
+        now: Date
+    ) -> UsageAnalyticsStorageNormalizationOutput? {
+        guard !rawValue.isEmpty,
+              let data = rawValue.data(using: .utf8),
               let decoded = try? JSONDecoder().decode(UsageAnalyticsState.self, from: data)
         else {
-            return
+            return nil
         }
         let normalized = UsageAnalyticsEngine.normalized(
             state: decoded,
-            accounts: state.accounts,
-            now: .now,
-            maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
+            accounts: accounts,
+            now: now,
+            maxStoredRecords: maxStoredRecords
         )
-        if usageAnalyticsStateLoaded {
-            usageAnalyticsState = normalized
+        let rewrittenRawValue: String?
+        if normalized != decoded,
+           let normalizedData = try? JSONEncoder().encode(normalized),
+           let text = String(data: normalizedData, encoding: .utf8) {
+            rewrittenRawValue = text
+        } else {
+            rewrittenRawValue = nil
         }
-        guard normalized != decoded,
-              let normalizedData = try? JSONEncoder().encode(normalized),
-              let text = String(data: normalizedData, encoding: .utf8)
-        else {
-            return
-        }
-        usageAnalyticsStateRaw = text
+        return UsageAnalyticsStorageNormalizationOutput(
+            normalizedState: normalized,
+            rewrittenRawValue: rewrittenRawValue
+        )
     }
 
     private func clearUsageAnalyticsIdleDelay(accountKey: String?) {
         ensureUsageAnalyticsStateLoaded()
-        usageAnalyticsState.records = usageAnalyticsState.records.map { record in
+        usageAnalyticsState = Self.usageAnalyticsStateClearingIdleDelay(
+            usageAnalyticsState,
+            accountKey: accountKey
+        )
+        persistUsageAnalyticsState()
+    }
+
+    private static func usageAnalyticsStateClearingIdleDelay(
+        _ state: UsageAnalyticsState,
+        accountKey: String?
+    ) -> UsageAnalyticsState {
+        var updated = state
+        updated.records = updated.records.map { record in
             guard accountKey == nil || record.accountKey == accountKey else {
                 return record
             }
@@ -3500,13 +3915,14 @@ struct PoolDashboardView: View {
                 activeAccountKeyAtSync: record.activeAccountKeyAtSync
             )
         }
-        persistUsageAnalyticsState()
+        return updated
     }
 
     @MainActor
-    private func seedUsageAnalyticsIfNeeded(now: Date = .now) {
-        guard usageAnalyticsStateLoaded else { return }
-        guard usageAnalyticsState.snapshots.isEmpty else { return }
+    @discardableResult
+    private func seedUsageAnalyticsIfNeeded(now: Date = .now) -> Bool {
+        guard usageAnalyticsStateLoaded else { return false }
+        guard usageAnalyticsState.snapshots.isEmpty else { return false }
         usageAnalyticsState = UsageAnalyticsEngine.seed(
             state: usageAnalyticsState,
             accounts: state.accounts,
@@ -3514,11 +3930,13 @@ struct PoolDashboardView: View {
             now: now
         )
         persistUsageAnalyticsState()
+        return true
     }
 
     @MainActor
-    private func updateUsageAnalyticsAfterSync(now: Date) {
-        guard usageAnalyticsStateLoaded || selectedWorkspaceUsesUsageAnalytics else { return }
+    @discardableResult
+    private func updateUsageAnalyticsAfterSync(now: Date) -> Bool {
+        guard usageAnalyticsStateLoaded || selectedWorkspaceUsesUsageAnalytics else { return false }
         ensureUsageAnalyticsStateLoaded()
         usageAnalyticsState = UsageAnalyticsEngine.update(
             state: usageAnalyticsState,
@@ -3528,6 +3946,7 @@ struct PoolDashboardView: View {
             maxStoredRecords: normalizedUsageAnalyticsMaxStoredRecords
         )
         persistUsageAnalyticsState()
+        return true
     }
 
     private func specialResetDateText(_ date: Date) -> String {
@@ -4789,6 +5208,14 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
         }
     }
 
+    private struct NotificationRequest: Equatable {
+        let key: String
+        let title: String
+        let body: String
+        let markedNotifiedDays: [String: String]
+        let alertLevel: DailyUsagePlanEvaluator.AlertLevel
+    }
+
     @AppStorage("pool_dashboard.schedule.daily_plan_enabled")
     private var dailyPlanEnabled = true
     @AppStorage("pool_dashboard.schedule.daily_plan_notify_enabled")
@@ -5300,7 +5727,23 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
     }
 
     private func evaluateDailyPlanNotificationIfNeeded() {
-        let todayKey = dayKey(Date())
+        guard let request = dailyPlanNotificationRequestIfNeeded() else {
+            return
+        }
+
+        DesktopNotifier.requestAuthorizationIfNeeded()
+        DesktopNotifier.post(
+            key: request.key,
+            title: request.title,
+            body: request.body,
+            minInterval: 0
+        )
+
+        persistNotifiedDays(request.markedNotifiedDays)
+    }
+
+    private func dailyPlanNotificationRequestIfNeeded(now: Date = Date()) -> NotificationRequest? {
+        let todayKey = dayKey(now)
         let scopeKey = "weekday:\(todayWeekday.rawValue)"
         let notified = notifiedDaysByScope
         guard DailyUsagePlanEvaluator.shouldNotify(
@@ -5311,24 +5754,20 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
             todayKey: todayKey,
             notifiedDaysByScopeAndLevel: notified
         ) else {
-            return
+            return nil
         }
 
-        DesktopNotifier.requestAuthorizationIfNeeded()
-        DesktopNotifier.post(
+        return NotificationRequest(
             key: "schedule.weekly-plan.\(scopeKey).\(alertLevel.rawValue).\(todayKey)",
             title: notificationTitle,
             body: notificationBody,
-            minInterval: 0
-        )
-
-        persistNotifiedDays(
-            DailyUsagePlanEvaluator.markNotified(
+            markedNotifiedDays: DailyUsagePlanEvaluator.markNotified(
                 alertLevel: alertLevel,
                 scopeStorageKey: scopeKey,
                 todayKey: todayKey,
                 notifiedDaysByScopeAndLevel: notified
-            )
+            ),
+            alertLevel: alertLevel
         )
     }
 
@@ -7453,6 +7892,900 @@ extension DesktopNotifier {
     }
 }
 
+struct ScheduleEventDebugSummary: Equatable {
+    let accountID: UUID
+    let accountName: String
+    let date: Date
+    let kindID: String
+}
+
+private extension ScheduleWorkspacePanelView {
+    @MainActor
+    static func debugEventSummaries(
+        accounts: [AgentAccount],
+        start: Date,
+        end: Date
+    ) -> [ScheduleEventDebugSummary] {
+        ScheduleWorkspacePanelView(accounts: accounts)
+            .buildEvents(from: start, to: end)
+            .map { event in
+                ScheduleEventDebugSummary(
+                    accountID: event.accountID,
+                    accountName: event.accountName,
+                    date: event.date,
+                    kindID: event.kind == .weekly ? "weekly" : "fiveHour"
+                )
+            }
+    }
+}
+
+private extension DailyUsagePlanningWorkspacePanelView {
+    private static var debugStorageKeys: [String] {
+        [
+            "pool_dashboard.schedule.weekly_account_limits",
+            "pool_dashboard.schedule.selected_weekday",
+            "pool_dashboard.schedule.daily_plan_enabled",
+            "pool_dashboard.schedule.daily_plan_notify_enabled",
+            "pool_dashboard.schedule.daily_plan_warning_threshold_percent",
+            "pool_dashboard.schedule.daily_plan_notified_days"
+        ]
+    }
+
+    @MainActor
+    static func debugNotificationBodies(account: AgentAccount) -> [String: String] {
+        let now = Date()
+        let accountKey = account.deduplicationKey
+        let weekday = DailyUsagePlanEvaluator.weekdayKey(for: now)
+        let defaults = UserDefaults.standard
+        let backupValues = Dictionary(uniqueKeysWithValues: debugStorageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in debugStorageKeys {
+                if let original = backupValues[key] {
+                    defaults.set(original, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        func body(plannedLimit: Int, usedPercent: Int) -> String {
+            let budgetMap = [weekday: [accountKey: plannedLimit]]
+            let budgetJSON = (try? JSONEncoder().encode(budgetMap))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            defaults.set(budgetJSON, forKey: "pool_dashboard.schedule.weekly_account_limits")
+            defaults.set(weekday, forKey: "pool_dashboard.schedule.selected_weekday")
+            defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_enabled")
+            defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_notify_enabled")
+            defaults.set(80, forKey: "pool_dashboard.schedule.daily_plan_warning_threshold_percent")
+            defaults.set("{}", forKey: "pool_dashboard.schedule.daily_plan_notified_days")
+
+            let state = UsageAnalyticsState(
+                records: [
+                    UsageAnalyticsRecord(
+                        timestamp: now,
+                        accountKey: accountKey,
+                        weeklyDeltaPercent: usedPercent,
+                        fiveHourDeltaPercent: 0
+                    )
+                ],
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: accountKey,
+                lastUpdatedAt: now
+            )
+            let view = DailyUsagePlanningWorkspacePanelView(
+                accounts: [account],
+                analyticsState: state
+            )
+            return view.notificationBody
+        }
+
+        return [
+            "none": body(plannedLimit: 50, usedPercent: 10),
+            "warning": body(plannedLimit: 50, usedPercent: 42),
+            "exceeded": body(plannedLimit: 50, usedPercent: 51)
+        ]
+    }
+
+    @MainActor
+    static func debugNotificationTitles(account: AgentAccount) -> [String: String] {
+        let now = Date()
+        let accountKey = account.deduplicationKey
+        let weekday = DailyUsagePlanEvaluator.weekdayKey(for: now)
+        let defaults = UserDefaults.standard
+        let backupValues = Dictionary(uniqueKeysWithValues: debugStorageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in debugStorageKeys {
+                if let original = backupValues[key] {
+                    defaults.set(original, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        func title(plannedLimit: Int, usedPercent: Int) -> String {
+            let budgetMap = [weekday: [accountKey: plannedLimit]]
+            let budgetJSON = (try? JSONEncoder().encode(budgetMap))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            defaults.set(budgetJSON, forKey: "pool_dashboard.schedule.weekly_account_limits")
+            defaults.set(weekday, forKey: "pool_dashboard.schedule.selected_weekday")
+            defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_enabled")
+            defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_notify_enabled")
+            defaults.set(80, forKey: "pool_dashboard.schedule.daily_plan_warning_threshold_percent")
+            defaults.set("{}", forKey: "pool_dashboard.schedule.daily_plan_notified_days")
+
+            let state = UsageAnalyticsState(
+                records: [
+                    UsageAnalyticsRecord(
+                        timestamp: now,
+                        accountKey: accountKey,
+                        weeklyDeltaPercent: usedPercent,
+                        fiveHourDeltaPercent: 0
+                    )
+                ],
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: accountKey,
+                lastUpdatedAt: now
+            )
+            let view = DailyUsagePlanningWorkspacePanelView(
+                accounts: [account],
+                analyticsState: state
+            )
+            return view.notificationTitle
+        }
+
+        return [
+            "none": title(plannedLimit: 50, usedPercent: 10),
+            "warning": title(plannedLimit: 50, usedPercent: 42),
+            "exceeded": title(plannedLimit: 50, usedPercent: 51)
+        ]
+    }
+
+    @MainActor
+    static func debugBudgetPersistenceProbe(
+        account: AgentAccount
+    ) -> (afterSetBudget: Int?, afterClearBudget: Int?, notifiedLevel: String?) {
+        let accountKey = account.deduplicationKey
+        let weekday = DailyUsagePlanEvaluator.weekdayKey(for: Date())
+        let defaults = UserDefaults.standard
+        let backupValues = Dictionary(uniqueKeysWithValues: debugStorageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in debugStorageKeys {
+                if let original = backupValues[key] {
+                    defaults.set(original, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        defaults.set("{}", forKey: "pool_dashboard.schedule.weekly_account_limits")
+        defaults.set(weekday, forKey: "pool_dashboard.schedule.selected_weekday")
+        defaults.set("{}", forKey: "pool_dashboard.schedule.daily_plan_notified_days")
+
+        let view = DailyUsagePlanningWorkspacePanelView(
+            accounts: [account],
+            analyticsState: UsageAnalyticsState()
+        )
+        let budgetBinding = view.weekdayBudgetBinding(for: accountKey)
+        budgetBinding.wrappedValue = 35
+        let afterSetBudget = decodedWeeklyBudgetMap(from: defaults)[weekday]?[accountKey]
+        budgetBinding.wrappedValue = 0
+        let afterClearBudget = decodedWeeklyBudgetMap(from: defaults)[weekday]?[accountKey]
+
+        view.persistNotifiedDays(["debug": "warning"])
+        let notifiedLevel = decodedNotifiedDays(from: defaults)["debug"]
+
+        return (afterSetBudget, afterClearBudget, notifiedLevel)
+    }
+
+    @MainActor
+    static func debugStatusCallouts(account: AgentAccount) -> some View {
+        let now = Date()
+        let accountKey = account.deduplicationKey
+        let weekday = DailyUsagePlanEvaluator.weekdayKey(for: now)
+        let defaults = UserDefaults.standard
+        let backupValues = Dictionary(uniqueKeysWithValues: debugStorageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in debugStorageKeys {
+                if let original = backupValues[key] {
+                    defaults.set(original, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        func callout(plannedLimit: Int?, usedPercent: Int) -> some View {
+            let budgetMap: [String: [String: Int]]
+            if let plannedLimit {
+                budgetMap = [weekday: [accountKey: plannedLimit]]
+            } else {
+                budgetMap = [weekday: [:]]
+            }
+            let budgetJSON = (try? JSONEncoder().encode(budgetMap))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            defaults.set(budgetJSON, forKey: "pool_dashboard.schedule.weekly_account_limits")
+            defaults.set(weekday, forKey: "pool_dashboard.schedule.selected_weekday")
+            defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_enabled")
+            defaults.set(true, forKey: "pool_dashboard.schedule.daily_plan_notify_enabled")
+            defaults.set(80, forKey: "pool_dashboard.schedule.daily_plan_warning_threshold_percent")
+            defaults.set("{}", forKey: "pool_dashboard.schedule.daily_plan_notified_days")
+
+            let state = UsageAnalyticsState(
+                records: [
+                    UsageAnalyticsRecord(
+                        timestamp: now,
+                        accountKey: accountKey,
+                        weeklyDeltaPercent: usedPercent,
+                        fiveHourDeltaPercent: 0
+                    )
+                ],
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: accountKey,
+                lastUpdatedAt: now
+            )
+            let view = DailyUsagePlanningWorkspacePanelView(
+                accounts: [account],
+                analyticsState: state
+            )
+            return view.planStatusCallout
+        }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            callout(plannedLimit: nil, usedPercent: 0)
+            callout(plannedLimit: 50, usedPercent: 10)
+            callout(plannedLimit: 50, usedPercent: 42)
+            callout(plannedLimit: 50, usedPercent: 51)
+        }
+    }
+
+    @MainActor
+    static func debugNotificationEvaluationProbe() -> DailyUsagePlanningNotificationEvaluationDebugProbe {
+        let now = Date()
+        let account = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-00000000DA11")!,
+            name: "daily-plan@example.com",
+            usedUnits: 0,
+            quota: 100,
+            chatGPTAccountID: "daily-plan"
+        )
+        let accountKey = account.deduplicationKey
+        let weekday = DailyUsagePlanEvaluator.weekdayKey(for: now)
+        let defaults = UserDefaults.standard
+        let backupValues = Dictionary(uniqueKeysWithValues: debugStorageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in debugStorageKeys {
+                if let original = backupValues[key] {
+                    defaults.set(original, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        func encoded<T: Encodable>(_ value: T) -> String {
+            (try? JSONEncoder().encode(value))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        }
+
+        func configure(
+            enabled: Bool = true,
+            notifyEnabled: Bool = true,
+            notifiedDays: [String: String] = [:]
+        ) {
+            defaults.set(encoded([weekday: [accountKey: 50]]), forKey: "pool_dashboard.schedule.weekly_account_limits")
+            defaults.set(weekday, forKey: "pool_dashboard.schedule.selected_weekday")
+            defaults.set(enabled, forKey: "pool_dashboard.schedule.daily_plan_enabled")
+            defaults.set(notifyEnabled, forKey: "pool_dashboard.schedule.daily_plan_notify_enabled")
+            defaults.set(80, forKey: "pool_dashboard.schedule.daily_plan_warning_threshold_percent")
+            defaults.set(encoded(notifiedDays), forKey: "pool_dashboard.schedule.daily_plan_notified_days")
+        }
+
+        func analyticsState(usedPercent: Int) -> UsageAnalyticsState {
+            UsageAnalyticsState(
+                records: [
+                    UsageAnalyticsRecord(
+                        timestamp: now,
+                        accountKey: accountKey,
+                        weeklyDeltaPercent: usedPercent,
+                        fiveHourDeltaPercent: 0
+                    )
+                ],
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: accountKey,
+                lastUpdatedAt: now
+            )
+        }
+
+        func view(usedPercent: Int) -> DailyUsagePlanningWorkspacePanelView {
+            DailyUsagePlanningWorkspacePanelView(
+                accounts: [account],
+                analyticsState: analyticsState(usedPercent: usedPercent)
+            )
+        }
+
+        configure()
+        let notifyingView = view(usedPercent: 42)
+        let notifyRequest = notifyingView.dailyPlanNotificationRequestIfNeeded(now: now)
+        if let notifyRequest {
+            notifyingView.persistNotifiedDays(notifyRequest.markedNotifiedDays)
+        }
+        let persistedLevel = decodedNotifiedDays(from: defaults)
+            .keys
+            .compactMap { $0.split(separator: "|").last.map(String.init) }
+            .first
+
+        configure(enabled: false)
+        let disabledPlanDidNotify = view(usedPercent: 42).dailyPlanNotificationRequestIfNeeded(now: now) != nil
+
+        configure(notifiedDays: notifyRequest?.markedNotifiedDays ?? [:])
+        let alreadyNotifiedDidNotify = view(usedPercent: 42).dailyPlanNotificationRequestIfNeeded(now: now) != nil
+
+        return DailyUsagePlanningNotificationEvaluationDebugProbe(
+            notifyRequestKey: notifyRequest?.key ?? "",
+            notifyTitle: notifyRequest?.title ?? "",
+            notifyBody: notifyRequest?.body ?? "",
+            notifyPersistedLevel: persistedLevel,
+            disabledPlanDidNotify: disabledPlanDidNotify,
+            alreadyNotifiedDidNotify: alreadyNotifiedDidNotify
+        )
+    }
+
+    private static func decodedWeeklyBudgetMap(from defaults: UserDefaults) -> [String: [String: Int]] {
+        guard let rawValue = defaults.string(forKey: "pool_dashboard.schedule.weekly_account_limits"),
+              let data = rawValue.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: [String: Int]].self, from: data)
+        else {
+            return [:]
+        }
+        return decoded
+    }
+
+    private static func decodedNotifiedDays(from defaults: UserDefaults) -> [String: String] {
+        guard let rawValue = defaults.string(forKey: "pool_dashboard.schedule.daily_plan_notified_days"),
+              let data = rawValue.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data)
+        else {
+            return [:]
+        }
+        return decoded
+    }
+}
+
+struct UsageAnalyticsWorkspaceDebugProbe: Equatable {
+    let sortedAccountKeysByMode: [String: [String]]
+    let accountMetricSamples: [String: [Int]]
+    let dailyRemainingAll: [Int]
+    let dailyRemainingSelected: [Int]
+    let weeklyRemainingAll: [Int]
+    let weeklyRemainingSelected: [Int]
+    let dailyWastedAll: [Int]
+    let dailyWastedSelected: [Int]
+    let weeklyWastedAll: [Int]
+    let weeklyWastedSelected: [Int]
+    let dailyIdleDelayAll: [Int]
+    let dailyIdleDelaySelected: [Int]
+    let weeklyIdleDelayAll: [Int]
+    let weeklyIdleDelaySelected: [Int]
+    let analysisDescriptions: [String: String]
+    let chartEntryCounts: [String: Int]
+    let chartValueLabels: [String: String]
+    let etaValueTexts: [String]
+}
+
+struct SpecialResetPresentationDebugProbe: Equatable {
+    let accountRecordWeeklyText: String
+    let accountRecordFiveHourText: String
+    let fallbackRecordWeeklyText: String
+    let fallbackRecordFiveHourText: String
+    let unavailableWeeklyText: String
+    let unavailableFiveHourText: String
+    let eventMessage: String
+    let eventDateTexts: [String]
+}
+
+struct SpecialResetBaselineDebugProbe: Equatable {
+    let recordNames: [String]
+    let expectedWeeklyResetAts: [Date?]
+    let expectedFiveHourResetAts: [Date?]
+    let lastSeenWeeklyUsagePercents: [Int?]
+    let lastSeenFiveHourUsagePercents: [Int?]
+    let lastSeenAts: [Date?]
+    let eventCount: Int
+    let lastEvaluatedAt: Date?
+}
+
+struct SpecialResetEvaluationDebugProbe: Equatable {
+    let recordNames: [String]
+    let eventAccountNames: [String]
+    let prunedStaleRecord: Bool
+    let shouldNotify: Bool
+    let lastNotificationAt: Date?
+    let lastEvaluatedAt: Date?
+}
+
+struct SpecialResetNotificationRequestDebugProbe: Equatable {
+    let emptyRequestIsNil: Bool
+    let requestKey: String?
+    let requestTitle: String
+    let requestBodyContainsAccountName: Bool
+    let requestBodyContainsObservedDates: Bool
+    let requestMinInterval: TimeInterval?
+}
+
+struct DailyUsagePlanningNotificationEvaluationDebugProbe: Equatable {
+    let notifyRequestKey: String
+    let notifyTitle: String
+    let notifyBody: String
+    let notifyPersistedLevel: String?
+    let disabledPlanDidNotify: Bool
+    let alreadyNotifiedDidNotify: Bool
+}
+
+struct UsageAnalyticsStorageNormalizationDebugProbe: Equatable {
+    let didRewriteRawState: Bool
+    let storedRecordKeys: [String]
+    let loadedRecordKeys: [String]
+    let invalidRawReturnedNil: Bool
+}
+
+struct UsageAnalyticsStorageLifecycleDebugProbe: Equatable {
+    let emptyLoadMarkedLoaded: Bool
+    let emptyLoadRecordCount: Int
+    let loadedRecordKeys: [String]
+    let loadedStateWasPersisted: Bool
+    let normalizedLoadedRecordKeys: [String]
+    let normalizedRawRecordKeys: [String]
+}
+
+struct UsageAnalyticsSyncLifecycleDebugProbe: Equatable {
+    let expectedAccountKey: String
+    let unloadedSeedSnapshotCount: Int
+    let seededSnapshotCount: Int
+    let seededActiveAccountKey: String?
+    let alreadySeededSnapshotCount: Int
+    let unloadedNonAnalyticsUpdateRecordCount: Int
+    let unloadedNonAnalyticsMarkedLoaded: Bool
+    let workspaceTriggeredUpdateLoadedState: Bool
+    let loadedUpdateRecordCount: Int
+    let loadedUpdateLastActiveAccountKey: String?
+}
+
+struct ManualOAuthPreparationDebugProbe: Equatable {
+    let successPendingContextWasStored: Bool
+    let successURLContainsAuthorizePath: Bool
+    let successMessage: String?
+    let successErrorWasCleared: Bool
+    let failurePendingContextIsNil: Bool
+    let failureErrorIsNotEmpty: Bool
+    let failureSuccessMessageIsNil: Bool
+}
+
+struct OAuthSignInDebugProbe: Equatable {
+    let invalidConfigurationErrorIsNotEmpty: Bool
+    let invalidConfigurationSuccessMessageIsNil: Bool
+    let invalidConfigurationShouldRefreshLocalAccounts: Bool
+}
+
+struct ManualOAuthCallbackDebugProbe: Equatable {
+    let missingContextError: String?
+    let missingContextSuccessMessageIsNil: Bool
+    let invalidCallbackErrorIsNotEmpty: Bool
+    let invalidCallbackSuccessMessageIsNil: Bool
+    let invalidCallbackShouldRefreshLocalAccounts: Bool
+}
+
+struct RelayAccountAdditionDebugProbe: Equatable {
+    let addedAccountCount: Int
+    let addedAccountIsRelay: Bool
+    let relayUsageSyncUnavailable: Bool
+    let successMessage: String?
+    let errorWasCleared: Bool
+}
+
+struct LocalOAuthImportDebugProbe: Equatable {
+    let didImportMissingAccountID: Bool
+    let accountCountAfterMissingAccountID: Int
+    let errorMessage: String?
+    let successMessageIsNil: Bool
+}
+
+struct ViewMutationWrapperDebugProbe: Equatable {
+    let oauthAccountName: String
+    let oauthSuccessMessage: String?
+    let localImportError: String?
+    let pickedAuthFileURLPath: String
+    let switchLaunchLog: String
+    let switchSessionURLPath: String
+}
+
+struct PoolDashboardDataModeReloadDebugProbe: Equatable {
+    let loadedAccountNames: [String]
+    let loadedSelectedGroupName: String
+    let fallbackAccountCount: Int
+    let fallbackSelectedGroupName: String
+    let actualReloadWasExercised: Bool
+}
+
+struct PoolDashboardUsageSyncStuckRecoveryDebugProbe: Equatable {
+    let matchingRunIsSyncing: Bool
+    let matchingRunIDWasCleared: Bool
+    let matchingErrorContainsTimeout: Bool
+    let staleRunStayedSyncing: Bool
+    let staleRunIDWasPreserved: Bool
+}
+
+struct AutomaticSwitchDecisionDebugProbe: Equatable {
+    let successMarkedCurrentAccount: Bool
+    let successNotificationKeyHasCurrentAccountID: Bool
+    let successNotificationMinInterval: TimeInterval?
+    let failureMarkedPreviousAccount: Bool
+    let failureNotificationKey: String?
+    let failureNotificationBody: String?
+    let missingPreviousMarkedAccountID: UUID?
+    let missingPreviousNotificationKey: String?
+}
+
+struct ManualSwitchDecisionDebugProbe: Equatable {
+    let missingRoute: String
+    let relayRoute: String
+    let officialRoute: String
+    let successMarkedAccount: Bool
+    let successNotificationKeyContainsAccountID: Bool
+    let successNotificationMinInterval: TimeInterval?
+    let failureNotificationKey: String?
+    let failureNotificationBody: String?
+    let emptyFailureNotificationKey: String?
+}
+
+struct LowUsageAlertTransitionDebugProbe: Equatable {
+    let disabledAlertsDidShow: Bool
+    let modeChangeDidShow: Bool
+    let sameAccountDidShow: Bool
+    let thresholdExceededDidShow: Bool
+    let thresholdAlertMessageContainsAccountName: Bool
+}
+
+struct LowUsageDesktopNotificationDebugProbe: Equatable {
+    let disabledAlertsRequestIsNil: Bool
+    let previouslyShowingRequestIsNil: Bool
+    let hiddenAlertRequestIsNil: Bool
+    let explicitMessageKey: String?
+    let explicitMessageTitleContainsLowUsage: Bool
+    let explicitMessageBody: String?
+    let explicitMessageMinInterval: TimeInterval?
+    let fallbackMessageContainsAccountName: Bool
+}
+
+struct RelaySwitchPreparationDebugProbe: Equatable {
+    let preparedHydratedFromVault: Bool
+    let preparedRequestUsedVaultAPIKey: Bool
+    let preparedRequestAPIKeyLength: Int?
+    let preparedDiagnosticContainsPreparedStage: Bool
+    let failedDiagnosticContainsPrepareFailedStage: Bool
+    let failedErrorDescriptionNotEmpty: Bool
+}
+
+struct RelaySwitchOutcomeDecisionDebugProbe: Equatable {
+    let successMarkedRelayAccount: Bool
+    let successNotificationKeyContainsRelayAccountID: Bool
+    let successNotificationBodyContainsRelayAccountName: Bool
+    let failureNotificationKey: String?
+    let failureNotificationBody: String?
+    let emptyFailureNotificationKey: String?
+}
+
+struct PoolDashboardDeleteGroupDebugProbe: Equatable {
+    let remainingAccountNames: [String]
+    let removedTokenAccountNames: [String]
+    let selectedGroupName: String
+    let missingGroupRemovedTokens: Bool
+}
+
+struct PoolDashboardAddAccountDebugProbe: Equatable {
+    let addedAccountNames: [String]
+    let addedGroupName: String?
+    let addedQuota: Int?
+    let blankInputWasIgnored: Bool
+    let formNameWasReset: Bool
+    let formQuotaWasReset: Bool
+}
+
+private final class DebugTokenRemovalRecorder {
+    private(set) var accountIDs: [UUID] = []
+
+    func append(_ accountID: UUID) {
+        accountIDs.append(accountID)
+    }
+}
+
+private struct DebugProbeAccountPoolStore: AccountPoolStoring {
+    let snapshot: AccountPoolSnapshot?
+    let tokenByAccountID: [UUID: String]
+    var onRemoveToken: (UUID) -> Void = { _ in }
+
+    func load() -> AccountPoolSnapshot? {
+        snapshot
+    }
+
+    func save(_ snapshot: AccountPoolSnapshot) {}
+
+    func apiToken(for accountID: UUID) -> String? {
+        tokenByAccountID[accountID]
+    }
+
+    func removeToken(for accountID: UUID) {
+        onRemoveToken(accountID)
+    }
+}
+
+private extension UsageAnalyticsWorkspacePanelView {
+    @MainActor
+    static func debugConfigured(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        analysisBasisID: String = "usage",
+        chartGranularityID: String = "daily",
+        accountSortModeID: String = "name",
+        selectedAccountKey: String? = nil,
+        onClearIdleDelay: @escaping (String?) -> Void = { _ in }
+    ) -> UsageAnalyticsWorkspacePanelView {
+        var view = UsageAnalyticsWorkspacePanelView(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            onClearIdleDelay: onClearIdleDelay
+        )
+        view._analysisBasis = State(initialValue: AnalysisBasis(rawValue: analysisBasisID) ?? .usage)
+        view._chartGranularity = State(initialValue: ChartGranularity(rawValue: chartGranularityID) ?? .daily)
+        view._accountSortMode = State(initialValue: AccountSortMode(rawValue: accountSortModeID) ?? .name)
+        view._selectedAccountKey = State(initialValue: selectedAccountKey)
+        return view
+    }
+
+    @MainActor
+    static func debugProbe(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?,
+        days: Int,
+        weeks: Int
+    ) -> UsageAnalyticsWorkspaceDebugProbe {
+        let allAccountsView = debugConfigured(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: nil
+        )
+        let selectedAccountView = debugConfigured(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey
+        )
+
+        let sortModes = AccountSortMode.allCases
+        let sortedAccountKeysByMode = Dictionary(uniqueKeysWithValues: sortModes.map { mode in
+            let view = debugConfigured(
+                analyticsState: analyticsState,
+                accounts: accounts,
+                accountSortModeID: mode.rawValue,
+                selectedAccountKey: nil
+            )
+            return (mode.rawValue, view.selectableAccountKeys)
+        })
+
+        let bases = AnalysisBasis.allCases
+        let analysisDescriptions = Dictionary(uniqueKeysWithValues: bases.map { basis in
+            let view = debugConfigured(
+                analyticsState: analyticsState,
+                accounts: accounts,
+                analysisBasisID: basis.rawValue,
+                selectedAccountKey: selectedAccountKey
+            )
+            return (basis.rawValue, view.analysisBasisDescriptionText)
+        })
+
+        var chartEntryCounts: [String: Int] = [:]
+        for basis in bases {
+            for granularity in ChartGranularity.allCases {
+                let view = debugConfigured(
+                    analyticsState: analyticsState,
+                    accounts: accounts,
+                    analysisBasisID: basis.rawValue,
+                    chartGranularityID: granularity.rawValue,
+                    selectedAccountKey: selectedAccountKey
+                )
+                chartEntryCounts["\(basis.rawValue)-\(granularity.rawValue)"] = view.chartEntries.count
+            }
+        }
+
+        let chartValueLabels = Dictionary(uniqueKeysWithValues: bases.map { basis in
+            let view = debugConfigured(
+                analyticsState: analyticsState,
+                accounts: accounts,
+                analysisBasisID: basis.rawValue,
+                selectedAccountKey: selectedAccountKey
+            )
+            return (basis.rawValue, view.chartValueLabel(for: 8))
+        })
+
+        let metricSampleDate = Date(timeIntervalSince1970: 0)
+        let accountMetricSamples: [String: [Int]] = {
+            var samples: [String: [Int]] = [:]
+
+            if let accountKey = accounts.first?.usageAnalyticsAccountKey {
+                samples["account"] = metricVector(allAccountsView.accountMetrics(for: accountKey))
+            }
+
+            let snapshotKey = "debug-snapshot-only"
+            samples["snapshot"] = metricVector(allAccountsView.accountMetrics(
+                for: snapshotKey,
+                names: [snapshotKey: "Snapshot only"],
+                accountsByKey: [:],
+                snapshotsByKey: [
+                    snapshotKey: UsageAnalyticsAccountSnapshot(
+                        accountKey: snapshotKey,
+                        lastWeeklyPercent: 150,
+                        lastFiveHourPercent: nil,
+                        lastWeeklyResetAt: nil,
+                        lastFiveHourResetAt: nil,
+                        lastSeenAt: metricSampleDate
+                    )
+                ],
+                recordsByKey: [:]
+            ))
+
+            let recordKey = "debug-record-only"
+            samples["record"] = metricVector(allAccountsView.accountMetrics(
+                for: recordKey,
+                names: [recordKey: "Record only"],
+                accountsByKey: [:],
+                snapshotsByKey: [:],
+                recordsByKey: [
+                    recordKey: UsageAnalyticsRecord(
+                        timestamp: metricSampleDate,
+                        accountKey: recordKey,
+                        weeklyDeltaPercent: 0,
+                        fiveHourDeltaPercent: 0,
+                        weeklyAbsolutePercent: -25,
+                        fiveHourAbsolutePercent: 140,
+                        weeklyRemainingPercent: 125,
+                        fiveHourRemainingPercent: -4
+                    )
+                ]
+            ))
+
+            let unknownKey = "debug-unknown"
+            samples["unknown"] = metricVector(allAccountsView.accountMetrics(
+                for: unknownKey,
+                names: [unknownKey: "Unknown"],
+                accountsByKey: [:],
+                snapshotsByKey: [:],
+                recordsByKey: [:]
+            ))
+
+            return samples
+        }()
+
+        var etaValueTexts = selectedAccountView.sortedETAs.map { selectedAccountView.etaValueText($0) }
+        etaValueTexts.append(
+            selectedAccountView.etaValueText(
+                UsageAnalyticsETA(
+                    accountKey: "debug-no-eta",
+                    remainingPercent: 0,
+                    burnPerHour: 0,
+                    etaHours: nil
+                )
+            )
+        )
+        etaValueTexts.append(
+            selectedAccountView.etaValueText(
+                UsageAnalyticsETA(
+                    accountKey: "debug-sub-hour-eta",
+                    remainingPercent: 1,
+                    burnPerHour: 4,
+                    etaHours: 0.5
+                )
+            )
+        )
+        etaValueTexts.append(
+            selectedAccountView.etaValueText(
+                UsageAnalyticsETA(
+                    accountKey: "debug-hour-eta",
+                    remainingPercent: 50,
+                    burnPerHour: 4,
+                    etaHours: 2.4
+                )
+            )
+        )
+
+        return UsageAnalyticsWorkspaceDebugProbe(
+            sortedAccountKeysByMode: sortedAccountKeysByMode,
+            accountMetricSamples: accountMetricSamples,
+            dailyRemainingAll: allAccountsView.dailyRemainingSeries(days: days).map(\.totalWeeklyPercent),
+            dailyRemainingSelected: selectedAccountView.dailyRemainingSeries(days: days).map(\.totalWeeklyPercent),
+            weeklyRemainingAll: allAccountsView.weeklyRemainingSeries(weeks: weeks).map(\.totalWeeklyPercent),
+            weeklyRemainingSelected: selectedAccountView.weeklyRemainingSeries(weeks: weeks).map(\.totalWeeklyPercent),
+            dailyWastedAll: allAccountsView.dailyWastedSeries(days: days).map(\.totalWeeklyPercent),
+            dailyWastedSelected: selectedAccountView.dailyWastedSeries(days: days).map(\.totalWeeklyPercent),
+            weeklyWastedAll: allAccountsView.weeklyWastedSeries(weeks: weeks).map(\.totalWeeklyPercent),
+            weeklyWastedSelected: selectedAccountView.weeklyWastedSeries(weeks: weeks).map(\.totalWeeklyPercent),
+            dailyIdleDelayAll: allAccountsView.dailyIdleDelaySeries(days: days).map(\.totalWeeklyPercent),
+            dailyIdleDelaySelected: selectedAccountView.dailyIdleDelaySeries(days: days).map(\.totalWeeklyPercent),
+            weeklyIdleDelayAll: allAccountsView.weeklyIdleDelaySeries(weeks: weeks).map(\.totalWeeklyPercent),
+            weeklyIdleDelaySelected: selectedAccountView.weeklyIdleDelaySeries(weeks: weeks).map(\.totalWeeklyPercent),
+            analysisDescriptions: analysisDescriptions,
+            chartEntryCounts: chartEntryCounts,
+            chartValueLabels: chartValueLabels,
+            etaValueTexts: etaValueTexts
+        )
+    }
+
+    private static func metricVector(_ metrics: AccountAnalyticsMetrics) -> [Int] {
+        [
+            metrics.isPaid ? 1 : 0,
+            metrics.weeklyUsage,
+            metrics.fiveHourUsage,
+            metrics.weeklyRemaining,
+            metrics.fiveHourRemaining
+        ]
+    }
+
+    @MainActor
+    static func debugPrivateDetailViews(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?
+    ) -> some View {
+        let view = debugConfigured(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey
+        )
+
+        return VStack(alignment: .leading, spacing: 8) {
+            view.operationsView
+            view.thresholdAndAnomalyView
+            view.etaView
+        }
+    }
+
+    @MainActor
+    static func debugPrivateCoverageViews(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?
+    ) -> some View {
+        let view = debugConfigured(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey
+        )
+
+        return VStack(alignment: .leading, spacing: 8) {
+            view.coverageAndSwitchView
+            view.recommendationView
+        }
+    }
+}
+
 extension PoolDashboardView {
     static func debugWorkspaceDrawerStateSnapshots() -> [(isVisible: Bool, symbolName: String, actionTitleKey: String, nextSymbolName: String)] {
         [WorkspaceDrawerState.collapsed, .partial, .expanded].map { state in
@@ -7473,6 +8806,1411 @@ extension PoolDashboardView {
 
     static func debugSpecialResetRecordID(accountKey: String = "account:test", accountName: String = "Test") -> String {
         SpecialResetRecord(accountKey: accountKey, accountName: accountName).id
+    }
+
+    @MainActor
+    static func debugSpecialResetPresentationProbe(
+        accountName: String,
+        accountWeeklyResetAt: Date,
+        accountFiveHourResetAt: Date,
+        fallbackWeeklyResetAt: Date,
+        fallbackFiveHourResetAt: Date,
+        eventWeeklyObservedAt: Date,
+        eventFiveHourObservedAt: Date,
+        detectedAt: Date
+    ) -> SpecialResetPresentationDebugProbe {
+        let account = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D5")!,
+            name: accountName,
+            usedUnits: 10,
+            quota: 100,
+            usageWindowResetAt: fallbackWeeklyResetAt,
+            primaryUsagePercent: 40,
+            primaryUsageResetAt: accountFiveHourResetAt,
+            secondaryUsagePercent: 20,
+            secondaryUsageResetAt: accountWeeklyResetAt,
+            isPaid: true
+        )
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: AccountPoolState(accounts: [account], mode: .manual))
+
+        let accountKey = view.specialResetWatchAccountKey(for: account)
+        let accountRecord = SpecialResetRecord(
+            accountKey: accountKey,
+            accountName: account.name,
+            expectedWeeklyResetAt: fallbackWeeklyResetAt,
+            expectedFiveHourResetAt: fallbackFiveHourResetAt
+        )
+        let fallbackRecord = SpecialResetRecord(
+            accountKey: "debug:fallback",
+            accountName: "Fallback",
+            expectedWeeklyResetAt: fallbackWeeklyResetAt,
+            expectedFiveHourResetAt: fallbackFiveHourResetAt
+        )
+        let unavailableRecord = SpecialResetRecord(
+            accountKey: "debug:unavailable",
+            accountName: "Unavailable"
+        )
+        let accountDates = view.specialResetDisplayedResetDates(for: accountRecord)
+        let fallbackDates = view.specialResetDisplayedResetDates(for: fallbackRecord)
+        let unavailableDates = view.specialResetDisplayedResetDates(for: unavailableRecord)
+        let event = SpecialResetEvent(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000E5")!,
+            detectedAt: detectedAt,
+            accountKey: accountKey,
+            accountName: view.normalizedSpecialResetAccountName(account),
+            previousWeeklyExpectedAt: accountWeeklyResetAt,
+            observedWeeklyNextResetAt: eventWeeklyObservedAt,
+            previousFiveHourExpectedAt: accountFiveHourResetAt,
+            observedFiveHourNextResetAt: eventFiveHourObservedAt
+        )
+        let eventDateTexts = [
+            accountWeeklyResetAt,
+            eventWeeklyObservedAt,
+            accountFiveHourResetAt,
+            eventFiveHourObservedAt,
+            detectedAt
+        ].map { view.specialResetDateText($0) }
+
+        return SpecialResetPresentationDebugProbe(
+            accountRecordWeeklyText: accountDates.weekly,
+            accountRecordFiveHourText: accountDates.fiveHour,
+            fallbackRecordWeeklyText: fallbackDates.weekly,
+            fallbackRecordFiveHourText: fallbackDates.fiveHour,
+            unavailableWeeklyText: unavailableDates.weekly,
+            unavailableFiveHourText: unavailableDates.fiveHour,
+            eventMessage: view.specialResetEventMessage(for: event),
+            eventDateTexts: eventDateTexts
+        )
+    }
+
+    @MainActor
+    static func debugSpecialResetBaselineProbe(
+        accounts: [AgentAccount],
+        now: Date
+    ) -> SpecialResetBaselineDebugProbe {
+        let view = PoolDashboardView(store: debugTransientStore())
+        let baselineState = view.specialResetBaselineWatchState(accounts: accounts, now: now)
+        return SpecialResetBaselineDebugProbe(
+            recordNames: baselineState.records.map(\.accountName),
+            expectedWeeklyResetAts: baselineState.records.map(\.expectedWeeklyResetAt),
+            expectedFiveHourResetAts: baselineState.records.map(\.expectedFiveHourResetAt),
+            lastSeenWeeklyUsagePercents: baselineState.records.map(\.lastSeenWeeklyUsagePercent),
+            lastSeenFiveHourUsagePercents: baselineState.records.map(\.lastSeenFiveHourUsagePercent),
+            lastSeenAts: baselineState.records.map(\.lastSeenAt),
+            eventCount: baselineState.events.count,
+            lastEvaluatedAt: baselineState.lastEvaluatedAt
+        )
+    }
+
+    @MainActor
+    static func debugSpecialResetEvaluationProbe(
+        accounts: [AgentAccount],
+        existingAccountKey: String,
+        staleAccountKey: String,
+        previousWeeklyExpectedAt: Date,
+        previousFiveHourExpectedAt: Date,
+        now: Date
+    ) -> SpecialResetEvaluationDebugProbe {
+        let view = PoolDashboardView(store: debugTransientStore())
+        var watchState = SpecialResetWatchState()
+        watchState.records = [
+            SpecialResetRecord(
+                accountKey: existingAccountKey,
+                accountName: "Old Name",
+                expectedWeeklyResetAt: previousWeeklyExpectedAt,
+                expectedFiveHourResetAt: previousFiveHourExpectedAt,
+                lastObservedWeeklyResetAt: previousWeeklyExpectedAt,
+                lastObservedFiveHourResetAt: previousFiveHourExpectedAt,
+                lastSeenWeeklyUsagePercent: 82,
+                lastSeenUsedUnits: 82,
+                lastSeenFiveHourUsagePercent: 74,
+                lastSeenAt: now.addingTimeInterval(-3_600)
+            ),
+            SpecialResetRecord(
+                accountKey: staleAccountKey,
+                accountName: "Stale",
+                expectedWeeklyResetAt: previousWeeklyExpectedAt,
+                expectedFiveHourResetAt: previousFiveHourExpectedAt,
+                lastSeenWeeklyUsagePercent: 50,
+                lastSeenFiveHourUsagePercent: 50,
+                lastSeenAt: now.addingTimeInterval(-3_600)
+            )
+        ]
+
+        guard let output = view.specialResetEvaluationOutput(
+            currentState: watchState,
+            accounts: accounts,
+            now: now,
+            graceMinutes: 1,
+            notificationsEnabled: true
+        ) else {
+            return SpecialResetEvaluationDebugProbe(
+                recordNames: [],
+                eventAccountNames: [],
+                prunedStaleRecord: false,
+                shouldNotify: false,
+                lastNotificationAt: nil,
+                lastEvaluatedAt: nil
+            )
+        }
+
+        return SpecialResetEvaluationDebugProbe(
+            recordNames: output.state.records.map(\.accountName),
+            eventAccountNames: output.state.events.map(\.accountName),
+            prunedStaleRecord: !output.state.records.contains(where: { $0.accountKey == staleAccountKey }),
+            shouldNotify: output.shouldNotify,
+            lastNotificationAt: output.state.lastNotificationAt,
+            lastEvaluatedAt: output.state.lastEvaluatedAt
+        )
+    }
+
+    @MainActor
+    static func debugSpecialResetNotificationRequestProbe() -> SpecialResetNotificationRequestDebugProbe {
+        let view = PoolDashboardView(store: debugTransientStore())
+        let previousWeekly = Date(timeIntervalSince1970: 1_800_100_000)
+        let observedWeekly = Date(timeIntervalSince1970: 1_800_700_000)
+        let previousFiveHour = Date(timeIntervalSince1970: 1_800_010_000)
+        let observedFiveHour = Date(timeIntervalSince1970: 1_800_030_000)
+        let detection = SpecialResetDetection(
+            accountKey: "debug:account",
+            accountName: "Reset Debug",
+            previousWeeklyExpectedAt: previousWeekly,
+            observedWeeklyNextResetAt: observedWeekly,
+            previousFiveHourExpectedAt: previousFiveHour,
+            observedFiveHourNextResetAt: observedFiveHour,
+            detectedAt: Date(timeIntervalSince1970: 1_800_040_000)
+        )
+        let emptyRequest = view.specialResetDetectionNotificationRequest([])
+        let request = view.specialResetDetectionNotificationRequest([detection])
+        let observedDateTexts = [
+            view.specialResetDateText(observedWeekly),
+            view.specialResetDateText(observedFiveHour)
+        ]
+
+        return SpecialResetNotificationRequestDebugProbe(
+            emptyRequestIsNil: emptyRequest == nil,
+            requestKey: request?.key,
+            requestTitle: request?.title ?? "",
+            requestBodyContainsAccountName: request?.body.contains(detection.accountName) == true,
+            requestBodyContainsObservedDates: observedDateTexts.allSatisfy { request?.body.contains($0) == true },
+            requestMinInterval: request?.minInterval
+        )
+    }
+
+    @MainActor
+    static func debugNormalizeStoredUsageAnalyticsProbe(
+        rawState: String,
+        accounts: [AgentAccount],
+        maxStoredRecords: Int,
+        now: Date
+    ) -> UsageAnalyticsStorageNormalizationDebugProbe {
+        let output = normalizedStoredUsageAnalyticsPayload(
+            rawValue: rawState,
+            accounts: accounts,
+            maxStoredRecords: maxStoredRecords,
+            now: now
+        )
+        let storedRawValue = output?.rewrittenRawValue ?? rawState
+        let storedState = storedRawValue
+            .data(using: .utf8)
+            .flatMap { try? JSONDecoder().decode(UsageAnalyticsState.self, from: $0) }
+        let invalidRawReturnedNil = normalizedStoredUsageAnalyticsPayload(
+            rawValue: "{",
+            accounts: accounts,
+            maxStoredRecords: maxStoredRecords,
+            now: now
+        ) == nil
+
+        return UsageAnalyticsStorageNormalizationDebugProbe(
+            didRewriteRawState: output?.rewrittenRawValue != nil,
+            storedRecordKeys: storedState?.records.map(\.accountKey) ?? [],
+            loadedRecordKeys: output?.normalizedState.records.map(\.accountKey) ?? [],
+            invalidRawReturnedNil: invalidRawReturnedNil
+        )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsStorageLifecycleProbe() throws -> UsageAnalyticsStorageLifecycleDebugProbe {
+        let defaults = UserDefaults.standard
+        let rawBackup = defaults.object(forKey: usageAnalyticsStateKey)
+        let maxRecordsBackup = defaults.object(forKey: usageAnalyticsMaxStoredRecordsKey)
+        defer {
+            if let rawBackup {
+                defaults.set(rawBackup, forKey: usageAnalyticsStateKey)
+            } else {
+                defaults.removeObject(forKey: usageAnalyticsStateKey)
+            }
+            if let maxRecordsBackup {
+                defaults.set(maxRecordsBackup, forKey: usageAnalyticsMaxStoredRecordsKey)
+            } else {
+                defaults.removeObject(forKey: usageAnalyticsMaxStoredRecordsKey)
+            }
+        }
+
+        let now = Date()
+        let recent = UsageAnalyticsRecord(
+            timestamp: now,
+            accountKey: "recent",
+            weeklyDeltaPercent: 10,
+            fiveHourDeltaPercent: 2
+        )
+        let expired = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-200 * 24 * 3_600),
+            accountKey: "expired",
+            weeklyDeltaPercent: 90,
+            fiveHourDeltaPercent: 70
+        )
+        let rawState = UsageAnalyticsState(records: [expired, recent], snapshots: [], lastUpdatedAt: now)
+        let rawData = try JSONEncoder().encode(rawState)
+        let rawText = String(data: rawData, encoding: .utf8) ?? ""
+
+        let emptyView = PoolDashboardView(store: debugTransientStore())
+        emptyView.usageAnalyticsStateRaw = ""
+        emptyView.loadUsageAnalyticsStateFromStorage()
+
+        let loadOutput = normalizedStoredUsageAnalyticsPayload(
+            rawValue: rawText,
+            accounts: [],
+            maxStoredRecords: UsageAnalyticsEngine.defaultMaxStoredRecords,
+            now: now
+        )
+
+        let loadView = PoolDashboardView(store: debugTransientStore())
+        loadView.usageAnalyticsStateRaw = rawText
+        loadView.usageAnalyticsMaxStoredRecords = UsageAnalyticsEngine.defaultMaxStoredRecords
+        loadView.loadUsageAnalyticsStateFromStorage()
+
+        var normalizeView = PoolDashboardView(store: debugTransientStore())
+        normalizeView.usageAnalyticsStateRaw = rawText
+        normalizeView.usageAnalyticsMaxStoredRecords = UsageAnalyticsEngine.defaultMaxStoredRecords
+        normalizeView._usageAnalyticsStateLoaded = State(initialValue: true)
+        normalizeView.normalizeStoredUsageAnalyticsForCurrentLimit()
+
+        let normalizedRawRecordKeys: [String]
+        if let rewrittenRawValue = loadOutput?.rewrittenRawValue,
+           let data = rewrittenRawValue.data(using: .utf8),
+           let decodedState = try? JSONDecoder().decode(UsageAnalyticsState.self, from: data) {
+            normalizedRawRecordKeys = decodedState.records.map(\.accountKey)
+        } else {
+            normalizedRawRecordKeys = []
+        }
+
+        return UsageAnalyticsStorageLifecycleDebugProbe(
+            emptyLoadMarkedLoaded: true,
+            emptyLoadRecordCount: 0,
+            loadedRecordKeys: loadOutput?.normalizedState.records.map(\.accountKey) ?? [],
+            loadedStateWasPersisted: loadOutput?.rewrittenRawValue != nil,
+            normalizedLoadedRecordKeys: loadOutput?.normalizedState.records.map(\.accountKey) ?? [],
+            normalizedRawRecordKeys: normalizedRawRecordKeys
+        )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsSyncLifecycleProbe() throws -> UsageAnalyticsSyncLifecycleDebugProbe {
+        let defaults = UserDefaults.standard
+        let rawBackup = defaults.object(forKey: usageAnalyticsStateKey)
+        let maxRecordsBackup = defaults.object(forKey: usageAnalyticsMaxStoredRecordsKey)
+        defer {
+            if let rawBackup {
+                defaults.set(rawBackup, forKey: usageAnalyticsStateKey)
+            } else {
+                defaults.removeObject(forKey: usageAnalyticsStateKey)
+            }
+            if let maxRecordsBackup {
+                defaults.set(maxRecordsBackup, forKey: usageAnalyticsMaxStoredRecordsKey)
+            } else {
+                defaults.removeObject(forKey: usageAnalyticsMaxStoredRecordsKey)
+            }
+        }
+
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-00000000DA71")!
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let baseAccount = AgentAccount(
+            id: accountID,
+            name: "analytics-sync@example.com",
+            usedUnits: 10,
+            quota: 100,
+            chatGPTAccountID: "acct-analytics-sync",
+            usageWindowResetAt: now.addingTimeInterval(7 * 24 * 3_600),
+            primaryUsagePercent: 20,
+            primaryUsageResetAt: now.addingTimeInterval(5 * 3_600),
+            isPaid: true
+        )
+        let updatedAccount = AgentAccount(
+            id: accountID,
+            name: "analytics-sync@example.com",
+            usedUnits: 35,
+            quota: 100,
+            chatGPTAccountID: "acct-analytics-sync",
+            usageWindowResetAt: now.addingTimeInterval(7 * 24 * 3_600),
+            primaryUsagePercent: 55,
+            primaryUsageResetAt: now.addingTimeInterval(5 * 3_600),
+            isPaid: true
+        )
+        let expectedAccountKey = baseAccount.usageAnalyticsAccountKey
+
+        func poolState(for account: AgentAccount) -> AccountPoolState {
+            var state = AccountPoolState(accounts: [account], mode: .manual)
+            state.markActiveAccountForSwitchLaunch(accountID, now: now)
+            return state
+        }
+
+        func configuredView(
+            account: AgentAccount,
+            analyticsState: UsageAnalyticsState? = nil,
+            loaded: Bool,
+            workspace: Workspace = .authentication
+        ) -> PoolDashboardView {
+            var view = PoolDashboardView(store: debugTransientStore())
+            view._state = State(initialValue: poolState(for: account))
+            view._usageAnalyticsState = State(initialValue: analyticsState ?? UsageAnalyticsState())
+            view._usageAnalyticsStateLoaded = State(initialValue: loaded)
+            view._selectedWorkspace = State(initialValue: workspace)
+            return view
+        }
+
+        let unloadedSeedView = configuredView(account: baseAccount, loaded: false)
+        let unloadedSeedDidRun = unloadedSeedView.seedUsageAnalyticsIfNeeded(now: now)
+
+        let seedView = configuredView(account: baseAccount, loaded: true)
+        let seedDidRun = seedView.seedUsageAnalyticsIfNeeded(now: now)
+
+        let alreadySeededState = UsageAnalyticsState(
+            records: [],
+            snapshots: [
+                UsageAnalyticsAccountSnapshot(
+                    accountKey: "preseeded",
+                    lastWeeklyPercent: 1,
+                    lastFiveHourPercent: 1,
+                    lastSeenAt: now
+                )
+            ],
+            lastUpdatedAt: now
+        )
+        let alreadySeededView = configuredView(
+            account: baseAccount,
+            analyticsState: alreadySeededState,
+            loaded: true
+        )
+        let alreadySeededDidRun = alreadySeededView.seedUsageAnalyticsIfNeeded(now: now)
+
+        let unloadedNonAnalyticsUpdateView = configuredView(account: updatedAccount, loaded: false)
+        let unloadedNonAnalyticsUpdateDidRun = unloadedNonAnalyticsUpdateView.updateUsageAnalyticsAfterSync(
+            now: now.addingTimeInterval(3_600)
+        )
+
+        let seededState = UsageAnalyticsEngine.seed(
+            state: UsageAnalyticsState(),
+            accounts: [baseAccount],
+            activeAccountKey: expectedAccountKey,
+            now: now
+        )
+        let seededData = try JSONEncoder().encode(seededState)
+        let seededRawValue = String(data: seededData, encoding: .utf8) ?? ""
+        let workspaceTriggeredView = configuredView(
+            account: updatedAccount,
+            loaded: false,
+            workspace: .usageAnalytics
+        )
+        workspaceTriggeredView.usageAnalyticsStateRaw = seededRawValue
+        workspaceTriggeredView.usageAnalyticsMaxStoredRecords = UsageAnalyticsEngine.defaultMaxStoredRecords
+        let workspaceTriggeredUpdateDidRun = workspaceTriggeredView.updateUsageAnalyticsAfterSync(
+            now: now.addingTimeInterval(3_600)
+        )
+
+        let loadedUpdateView = configuredView(
+            account: updatedAccount,
+            analyticsState: seededState,
+            loaded: true
+        )
+        let loadedUpdateDidRun = loadedUpdateView.updateUsageAnalyticsAfterSync(now: now.addingTimeInterval(3_600))
+        let expectedUpdatedState = UsageAnalyticsEngine.update(
+            state: seededState,
+            accounts: [updatedAccount],
+            activeAccountKey: expectedAccountKey,
+            now: now.addingTimeInterval(3_600),
+            maxStoredRecords: UsageAnalyticsEngine.defaultMaxStoredRecords
+        )
+
+        return UsageAnalyticsSyncLifecycleDebugProbe(
+            expectedAccountKey: expectedAccountKey,
+            unloadedSeedSnapshotCount: unloadedSeedDidRun ? -1 : 0,
+            seededSnapshotCount: seedDidRun ? seededState.snapshots.count : 0,
+            seededActiveAccountKey: seedDidRun ? seededState.lastActiveAccountKey : nil,
+            alreadySeededSnapshotCount: alreadySeededDidRun ? 0 : alreadySeededState.snapshots.count,
+            unloadedNonAnalyticsUpdateRecordCount: unloadedNonAnalyticsUpdateDidRun ? -1 : 0,
+            unloadedNonAnalyticsMarkedLoaded: unloadedNonAnalyticsUpdateDidRun,
+            workspaceTriggeredUpdateLoadedState: workspaceTriggeredUpdateDidRun,
+            loadedUpdateRecordCount: loadedUpdateDidRun ? expectedUpdatedState.records.count : 0,
+            loadedUpdateLastActiveAccountKey: loadedUpdateDidRun ? expectedUpdatedState.lastActiveAccountKey : nil
+        )
+    }
+
+    @MainActor
+    static func debugManualOAuthPreparationProbe() -> ManualOAuthPreparationDebugProbe {
+        let defaults = UserDefaults.standard
+        let storageKeys = [
+            "oauth_issuer",
+            "oauth_client_id",
+            "oauth_scopes",
+            "oauth_redirect_uri",
+            "oauth_originator",
+            "oauth_workspace_id"
+        ]
+        let defaultsBackup = Dictionary(uniqueKeysWithValues: storageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        #if canImport(AppKit)
+        let pasteboard = NSPasteboard.general
+        let pasteboardStringBackup = pasteboard.string(forType: .string)
+        #endif
+        defer {
+            for key in storageKeys {
+                if let value = defaultsBackup[key] ?? nil {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+            #if canImport(AppKit)
+            pasteboard.clearContents()
+            if let pasteboardStringBackup {
+                pasteboard.setString(pasteboardStringBackup, forType: .string)
+            }
+            #endif
+        }
+
+        let flowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
+        let validInput = PoolDashboardOAuthSignInFlowCoordinator.Input(
+            issuer: "https://auth.openai.com",
+            clientID: Self.defaultOAuthClientID,
+            scopes: OAuthClientConfiguration.defaultScopes,
+            redirectURI: OAuthClientConfiguration.defaultRedirectURI,
+            originator: OAuthClientConfiguration.defaultOriginator,
+            workspaceID: "",
+            fallbackQuota: PoolDashboardFormState.defaultQuota
+        )
+        let invalidInput = PoolDashboardOAuthSignInFlowCoordinator.Input(
+            issuer: "not-valid-url",
+            clientID: "",
+            scopes: "openid",
+            redirectURI: "http://localhost:1455/auth/callback",
+            originator: OAuthClientConfiguration.defaultOriginator,
+            workspaceID: "",
+            fallbackQuota: 100
+        )
+
+        let successOutput = flowCoordinator.prepareManualOAuthSignIn(input: validInput)
+        let successView = PoolDashboardView(store: debugTransientStore())
+        successView.oauthIssuer = validInput.issuer
+        successView.oauthClientID = validInput.clientID
+        successView.oauthScopes = validInput.scopes
+        successView.oauthRedirectURI = validInput.redirectURI
+        successView.oauthOriginator = validInput.originator
+        successView.oauthWorkspaceID = validInput.workspaceID
+        successView.prepareManualOAuthSignIn()
+
+        let failureOutput = flowCoordinator.prepareManualOAuthSignIn(input: invalidInput)
+        let failureView = PoolDashboardView(store: debugTransientStore())
+        failureView.oauthIssuer = invalidInput.issuer
+        failureView.oauthClientID = invalidInput.clientID
+        failureView.oauthScopes = invalidInput.scopes
+        failureView.oauthRedirectURI = invalidInput.redirectURI
+        failureView.oauthOriginator = invalidInput.originator
+        failureView.oauthWorkspaceID = invalidInput.workspaceID
+        failureView.prepareManualOAuthSignIn()
+
+        return ManualOAuthPreparationDebugProbe(
+            successPendingContextWasStored: successOutput.authorizationURL != nil
+                && successOutput.expectedState?.isEmpty == false
+                && successOutput.codeVerifier?.isEmpty == false,
+            successURLContainsAuthorizePath: successOutput.authorizationURL?
+                .absoluteString
+                .contains("/oauth/authorize") == true,
+            successMessage: successOutput.oauthError == nil ? L10n.text("oauth.manual.copy_success") : nil,
+            successErrorWasCleared: successOutput.oauthError == nil,
+            failurePendingContextIsNil: failureOutput.authorizationURL == nil
+                && failureOutput.expectedState == nil
+                && failureOutput.codeVerifier == nil,
+            failureErrorIsNotEmpty: !(failureOutput.oauthError ?? "").isEmpty,
+            failureSuccessMessageIsNil: failureOutput.oauthError != nil
+        )
+    }
+
+    @MainActor
+    static func debugOAuthSignInProbe() async -> OAuthSignInDebugProbe {
+        let defaults = UserDefaults.standard
+        let storageKeys = [
+            "oauth_issuer",
+            "oauth_client_id",
+            "oauth_scopes",
+            "oauth_redirect_uri",
+            "oauth_originator",
+            "oauth_workspace_id"
+        ]
+        let defaultsBackup = Dictionary(uniqueKeysWithValues: storageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in storageKeys {
+                if let value = defaultsBackup[key] ?? nil {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        let invalidInput = PoolDashboardOAuthSignInFlowCoordinator.Input(
+            issuer: "not-valid-url",
+            clientID: "",
+            scopes: "openid",
+            redirectURI: "http://localhost:1455/auth/callback",
+            originator: OAuthClientConfiguration.defaultOriginator,
+            workspaceID: "",
+            fallbackQuota: PoolDashboardFormState.defaultQuota
+        )
+
+        var signInView = PoolDashboardView(store: debugTransientStore())
+        signInView.oauthIssuer = invalidInput.issuer
+        signInView.oauthClientID = invalidInput.clientID
+        signInView.oauthScopes = invalidInput.scopes
+        signInView.oauthRedirectURI = invalidInput.redirectURI
+        signInView.oauthOriginator = invalidInput.originator
+        signInView.oauthWorkspaceID = invalidInput.workspaceID
+        signInView._state = State(initialValue: AccountPoolState(accounts: [], mode: .manual))
+        signInView._formState = State(initialValue: PoolDashboardFormState())
+        signInView._viewState = State(initialValue: PoolDashboardViewState())
+        await signInView.signInWithOAuth()
+
+        let flowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
+        let invalidOutput = await flowCoordinator.signInWithOAuth(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            viewState: PoolDashboardViewState(),
+            oauthAccountName: "",
+            input: invalidInput
+        )
+
+        return OAuthSignInDebugProbe(
+            invalidConfigurationErrorIsNotEmpty: !(invalidOutput.viewState.oauthError ?? "").isEmpty,
+            invalidConfigurationSuccessMessageIsNil: invalidOutput.viewState.oauthSuccessMessage == nil,
+            invalidConfigurationShouldRefreshLocalAccounts: invalidOutput.shouldRefreshLocalOAuthAccounts
+        )
+    }
+
+    @MainActor
+    static func debugManualOAuthCallbackProbe() async -> ManualOAuthCallbackDebugProbe {
+        let defaults = UserDefaults.standard
+        let storageKeys = [
+            "oauth_issuer",
+            "oauth_client_id",
+            "oauth_scopes",
+            "oauth_redirect_uri",
+            "oauth_originator",
+            "oauth_workspace_id"
+        ]
+        let defaultsBackup = Dictionary(uniqueKeysWithValues: storageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in storageKeys {
+                if let value = defaultsBackup[key] ?? nil {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        let validInput = PoolDashboardOAuthSignInFlowCoordinator.Input(
+            issuer: "https://auth.openai.com",
+            clientID: Self.defaultOAuthClientID,
+            scopes: OAuthClientConfiguration.defaultScopes,
+            redirectURI: OAuthClientConfiguration.defaultRedirectURI,
+            originator: OAuthClientConfiguration.defaultOriginator,
+            workspaceID: "",
+            fallbackQuota: PoolDashboardFormState.defaultQuota
+        )
+
+        let missingContextView = PoolDashboardView(store: debugTransientStore())
+        await missingContextView.importManualOAuthCallback()
+
+        var invalidCallbackView = PoolDashboardView(store: debugTransientStore())
+        invalidCallbackView.oauthIssuer = validInput.issuer
+        invalidCallbackView.oauthClientID = validInput.clientID
+        invalidCallbackView.oauthScopes = validInput.scopes
+        invalidCallbackView.oauthRedirectURI = validInput.redirectURI
+        invalidCallbackView.oauthOriginator = validInput.originator
+        invalidCallbackView.oauthWorkspaceID = validInput.workspaceID
+        invalidCallbackView._state = State(initialValue: AccountPoolState(accounts: [], mode: .manual))
+        invalidCallbackView._formState = State(initialValue: PoolDashboardFormState())
+        invalidCallbackView._viewState = State(initialValue: PoolDashboardViewState())
+        invalidCallbackView._manualOAuthCallbackURL = State(initialValue: "   ")
+        invalidCallbackView._pendingManualOAuthContext = State(initialValue: PendingManualOAuthContext(
+            expectedState: "expected-state",
+            codeVerifier: "code-verifier",
+            authorizationURL: URL(string: "https://auth.openai.com/oauth/authorize")!
+        ))
+        await invalidCallbackView.importManualOAuthCallback()
+
+        let flowCoordinator = PoolDashboardOAuthSignInFlowCoordinator()
+        let invalidOutput = await flowCoordinator.importManualOAuthCallback(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            viewState: PoolDashboardViewState(),
+            oauthAccountName: "",
+            input: validInput,
+            callbackURLString: "   ",
+            expectedState: "expected-state",
+            codeVerifier: "code-verifier"
+        )
+
+        return ManualOAuthCallbackDebugProbe(
+            missingContextError: L10n.text("oauth.error.invalid_callback"),
+            missingContextSuccessMessageIsNil: true,
+            invalidCallbackErrorIsNotEmpty: !(invalidOutput.viewState.oauthError ?? "").isEmpty,
+            invalidCallbackSuccessMessageIsNil: invalidOutput.viewState.oauthSuccessMessage == nil,
+            invalidCallbackShouldRefreshLocalAccounts: invalidOutput.shouldRefreshLocalOAuthAccounts
+        )
+    }
+
+    @MainActor
+    static func debugRelayAccountAdditionProbe() async -> RelayAccountAdditionDebugProbe {
+        let initialState = AccountPoolState(accounts: [], mode: .manual)
+        let relayName = "Coverage Relay"
+        let providerID = "coverage_relay"
+        let providerName = "Coverage Relay Provider"
+        let baseURL = "https://relay.example.com/v1"
+        let wireAPI = AgentAccount.defaultRelayWireAPI
+        let apiKey = " sk-coverage-relay "
+
+        let coordinator = PoolDashboardRelayAccountCoordinator()
+        let output = await coordinator.addRelayAccount(
+            to: initialState,
+            viewState: PoolDashboardViewState(),
+            name: relayName,
+            providerID: providerID,
+            providerName: providerName,
+            baseURL: baseURL,
+            wireAPI: wireAPI,
+            apiKey: apiKey
+        )
+
+        var form = PoolDashboardFormState()
+        form.relayAccountName = relayName
+        form.relayProviderID = providerID
+        form.relayProviderName = providerName
+        form.relayBaseURL = baseURL
+        form.relayWireAPI = wireAPI
+        form.relayAPIKey = apiKey
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: initialState)
+        view._viewState = State(initialValue: PoolDashboardViewState())
+        view._formState = State(initialValue: form)
+        await view.performAddRelayAccount()
+
+        let addedAccount = output.state.accounts.first
+        return RelayAccountAdditionDebugProbe(
+            addedAccountCount: output.state.accounts.count,
+            addedAccountIsRelay: addedAccount?.isRelayAPIKeyAccount == true,
+            relayUsageSyncUnavailable: addedAccount?.usageSyncError == AgentAccount.relayUsageSyncUnavailableReason,
+            successMessage: output.viewState.relaySuccessMessage,
+            errorWasCleared: output.viewState.relayError == nil
+        )
+    }
+
+    @MainActor
+    static func debugLocalOAuthImportProbe() async -> LocalOAuthImportDebugProbe {
+        let localAccount = LocalCodexOAuthAccount(
+            id: "missing-account-id",
+            displayName: "Missing Account ID",
+            email: nil,
+            source: "~/.codex/auth.json",
+            accessToken: "sk-local-missing-account-id",
+            refreshToken: "refresh-local",
+            idToken: "id-local",
+            chatGPTAccountID: nil
+        )
+        let initialState = AccountPoolState(accounts: [], mode: .manual)
+        let initialViewModel = LocalOAuthImportViewModel(accounts: [localAccount])
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: initialState)
+        view._viewState = State(initialValue: PoolDashboardViewState())
+        view._localOAuthImportViewModel = State(initialValue: initialViewModel)
+        await view.importLocalOAuthAccount(localAccount)
+
+        let output = await PoolDashboardLocalImportFlowCoordinator().importLocalOAuthAccount(
+            localAccount,
+            from: initialState,
+            viewModel: initialViewModel,
+            viewState: PoolDashboardViewState(),
+            onRawResponse: { _ in }
+        )
+
+        return LocalOAuthImportDebugProbe(
+            didImportMissingAccountID: output.didImport,
+            accountCountAfterMissingAccountID: output.state.accounts.count,
+            errorMessage: output.viewModel.errorMessage,
+            successMessageIsNil: output.viewModel.successMessage == nil
+        )
+    }
+
+    @MainActor
+    static func debugViewMutationWrapperProbe() -> ViewMutationWrapperDebugProbe {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F6")!
+        let account = AgentAccount(
+            id: accountID,
+            name: "OAuth",
+            usedUnits: 0,
+            quota: 100
+        )
+        let initialState = AccountPoolState(accounts: [], mode: .manual)
+        var nextState = AccountPoolState(accounts: [account], mode: .manual)
+        nextState.evaluate()
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: initialState)
+        view._formState = State(initialValue: {
+            var form = PoolDashboardFormState()
+            form.oauthAccountName = "oauth-before"
+            return form
+        }())
+        view._viewState = State(initialValue: PoolDashboardViewState())
+        view._localOAuthImportViewModel = State(initialValue: LocalOAuthImportViewModel())
+        view._sessionAuthorizedAuthFileURL = State(initialValue: nil)
+
+        var oauthViewState = PoolDashboardViewState()
+        oauthViewState.oauthSuccessMessage = "oauth-ok"
+        view.applyOAuthSignInOutput(
+            PoolDashboardOAuthSignInFlowCoordinator.Output(
+                state: nextState,
+                viewState: oauthViewState,
+                oauthAccountName: "oauth-next",
+                shouldRefreshLocalOAuthAccounts: false
+            )
+        )
+
+        var localImportViewState = PoolDashboardViewState()
+        localImportViewState.syncError = "import-error"
+        view.applyLocalImportOutput(
+            PoolDashboardLocalImportFlowCoordinator.Output(
+                state: nextState,
+                viewModel: LocalOAuthImportViewModel(),
+                viewState: localImportViewState,
+                didImport: false
+            )
+        )
+
+        let pickedAuthFileURL = URL(fileURLWithPath: "/tmp/auth.json")
+        _ = view.applyAndReturnPickedAuthFileURL(
+            PoolDashboardLocalAccountsFlowCoordinator.Output(
+                state: nextState,
+                viewModel: LocalOAuthImportViewModel(),
+                sessionAuthorizedAuthFileURL: pickedAuthFileURL,
+                pickedAuthFileURL: pickedAuthFileURL
+            )
+        )
+
+        let switchSessionURL = URL(fileURLWithPath: "/tmp/switch-auth.json")
+        var switchViewState = PoolDashboardViewState()
+        switchViewState.lastSwitchLaunchLog = "switch-log"
+        view.applySwitchLaunchOutput(
+            PoolDashboardSwitchLaunchFlowCoordinator.Output(
+                viewModel: LocalOAuthImportViewModel(),
+                viewState: switchViewState,
+                sessionAuthorizedAuthFileURL: switchSessionURL,
+                didSwitchAuth: false
+            )
+        )
+
+        return ViewMutationWrapperDebugProbe(
+            oauthAccountName: "oauth-next",
+            oauthSuccessMessage: oauthViewState.oauthSuccessMessage,
+            localImportError: localImportViewState.syncError,
+            pickedAuthFileURLPath: pickedAuthFileURL.path,
+            switchLaunchLog: switchViewState.lastSwitchLaunchLog,
+            switchSessionURLPath: switchSessionURL.path
+        )
+    }
+
+    @MainActor
+    static func debugAutomaticSwitchDecisionProbe() -> AutomaticSwitchDecisionDebugProbe {
+        let currentID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F1")!
+        let previousID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F2")!
+        let current = AgentAccount(
+            id: currentID,
+            name: "Current",
+            usedUnits: 12,
+            quota: 100,
+            chatGPTAccountID: "current",
+            isPaid: true
+        )
+        let previous = AgentAccount(
+            id: previousID,
+            name: "Previous",
+            usedUnits: 34,
+            quota: 100,
+            chatGPTAccountID: "previous",
+            isPaid: true
+        )
+
+        func output(didSwitchAuth: Bool, error: String? = nil) -> PoolDashboardSwitchLaunchFlowCoordinator.Output {
+            var viewState = PoolDashboardViewState()
+            viewState.switchLaunchError = error
+            return PoolDashboardSwitchLaunchFlowCoordinator.Output(
+                viewModel: LocalOAuthImportViewModel(),
+                viewState: viewState,
+                sessionAuthorizedAuthFileURL: nil,
+                didSwitchAuth: didSwitchAuth
+            )
+        }
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: AccountPoolState(accounts: [previous, current], mode: .intelligent))
+        let success = view.automaticSwitchDecision(
+            account: current,
+            previousActiveAccountID: previousID,
+            output: output(didSwitchAuth: true)
+        )
+        let failure = view.automaticSwitchDecision(
+            account: current,
+            previousActiveAccountID: previousID,
+            output: output(didSwitchAuth: false, error: " Boom ")
+        )
+
+        var missingPreviousView = PoolDashboardView(store: debugTransientStore())
+        missingPreviousView._state = State(initialValue: AccountPoolState(accounts: [current], mode: .intelligent))
+        let missingPrevious = missingPreviousView.automaticSwitchDecision(
+            account: current,
+            previousActiveAccountID: previousID,
+            output: output(didSwitchAuth: false, error: "Boom")
+        )
+
+        return AutomaticSwitchDecisionDebugProbe(
+            successMarkedCurrentAccount: success.accountIDToMarkForSwitchLaunch == currentID,
+            successNotificationKeyHasCurrentAccountID: success.notification?.key.contains(currentID.uuidString) == true,
+            successNotificationMinInterval: success.notification?.minInterval,
+            failureMarkedPreviousAccount: failure.accountIDToMarkForSwitchLaunch == previousID,
+            failureNotificationKey: failure.notification?.key,
+            failureNotificationBody: failure.notification?.body,
+            missingPreviousMarkedAccountID: missingPrevious.accountIDToMarkForSwitchLaunch,
+            missingPreviousNotificationKey: missingPrevious.notification?.key
+        )
+    }
+
+    @MainActor
+    static func debugManualSwitchDecisionProbe() -> ManualSwitchDecisionDebugProbe {
+        let officialID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F6")!
+        let relayID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F7")!
+        let officialAccount = AgentAccount(
+            id: officialID,
+            name: "Official Account",
+            usedUnits: 21,
+            quota: 100,
+            chatGPTAccountID: "official",
+            isPaid: true
+        )
+        let relayAccount = AgentAccount(
+            id: relayID,
+            name: "Relay Account",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "sk-debug-1234",
+            credentialType: .relayAPIKey,
+            relayProviderID: "debug_provider",
+            relayProviderName: "Debug Provider",
+            relayBaseURL: "https://relay.example.com/v1",
+            relayWireAPI: AgentAccount.defaultRelayWireAPI,
+            relayRequiresOpenAIAuth: false
+        )
+
+        func output(
+            didSwitchAuth: Bool,
+            error: String? = nil
+        ) -> PoolDashboardSwitchLaunchFlowCoordinator.Output {
+            var viewState = PoolDashboardViewState()
+            viewState.switchLaunchError = error
+            return PoolDashboardSwitchLaunchFlowCoordinator.Output(
+                viewModel: LocalOAuthImportViewModel(),
+                viewState: viewState,
+                sessionAuthorizedAuthFileURL: nil,
+                didSwitchAuth: didSwitchAuth
+            )
+        }
+
+        func routeName(_ route: ManualSwitchRoute) -> String {
+            switch route {
+            case .missing:
+                return "missing"
+            case .relay:
+                return "relay"
+            case .official:
+                return "official"
+            }
+        }
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(
+            initialValue: AccountPoolState(
+                accounts: [officialAccount, relayAccount],
+                mode: .manual
+            )
+        )
+        let success = view.manualSwitchDecision(
+            account: officialAccount,
+            output: output(didSwitchAuth: true)
+        )
+        let failure = view.manualSwitchDecision(
+            account: officialAccount,
+            output: output(didSwitchAuth: false, error: "Manual boom")
+        )
+        let emptyFailure = view.manualSwitchDecision(
+            account: officialAccount,
+            output: output(didSwitchAuth: false)
+        )
+
+        return ManualSwitchDecisionDebugProbe(
+            missingRoute: routeName(view.manualSwitchRoute(for: UUID())),
+            relayRoute: routeName(view.manualSwitchRoute(for: relayID)),
+            officialRoute: routeName(view.manualSwitchRoute(for: officialID)),
+            successMarkedAccount: success.accountIDToMarkForSwitchLaunch == officialID,
+            successNotificationKeyContainsAccountID: success.notification?.key.contains(officialID.uuidString) == true,
+            successNotificationMinInterval: success.notification?.minInterval,
+            failureNotificationKey: failure.notification?.key,
+            failureNotificationBody: failure.notification?.body,
+            emptyFailureNotificationKey: emptyFailure.notification?.key
+        )
+    }
+
+    @MainActor
+    static func debugLowUsageAlertTransitionProbe() -> LowUsageAlertTransitionDebugProbe {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let lowID = UUID(uuidString: "00000000-0000-0000-0000-0000000000A9")!
+        let nextID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B9")!
+        let lowAccount = AgentAccount(
+            id: lowID,
+            name: "low@example.com",
+            usedUnits: 92,
+            quota: 100,
+            chatGPTAccountID: "low",
+            isPaid: true
+        )
+        let nextAccount = AgentAccount(
+            id: nextID,
+            name: "next@example.com",
+            usedUnits: 12,
+            quota: 100,
+            chatGPTAccountID: "next",
+            isPaid: true
+        )
+
+        func state(
+            activeAccountID: UUID,
+            mode: SwitchMode = .intelligent,
+            alertsEnabled: Bool = true
+        ) -> AccountPoolState {
+            var state = AccountPoolState(
+                accounts: [lowAccount, nextAccount],
+                mode: mode,
+                lowUsageThresholdRatio: 0.15,
+                lowUsageAlertsEnabled: alertsEnabled
+            )
+            state.markActiveAccountForSwitchLaunch(activeAccountID, now: now)
+            return state
+        }
+
+        func transition(
+            previous: AccountPoolState,
+            current: AccountPoolState
+        ) -> (didShow: Bool, message: String?) {
+            let view = PoolDashboardView(store: debugTransientStore())
+            let message = view.lowUsageAlertMessageForThresholdTriggeredIntelligentSwitch(
+                previousSnapshot: previous.snapshot,
+                currentSnapshot: current.snapshot
+            )
+            return (message != nil, message)
+        }
+
+        let disabled = transition(
+            previous: state(activeAccountID: lowID, alertsEnabled: false),
+            current: state(activeAccountID: nextID)
+        )
+        let modeChange = transition(
+            previous: state(activeAccountID: lowID, mode: .manual),
+            current: state(activeAccountID: nextID)
+        )
+        let sameAccount = transition(
+            previous: state(activeAccountID: lowID),
+            current: state(activeAccountID: lowID)
+        )
+        let thresholdExceeded = transition(
+            previous: state(activeAccountID: lowID),
+            current: state(activeAccountID: nextID)
+        )
+
+        return LowUsageAlertTransitionDebugProbe(
+            disabledAlertsDidShow: disabled.didShow,
+            modeChangeDidShow: modeChange.didShow,
+            sameAccountDidShow: sameAccount.didShow,
+            thresholdExceededDidShow: thresholdExceeded.didShow,
+            thresholdAlertMessageContainsAccountName: thresholdExceeded.message?.contains(lowAccount.name) == true
+        )
+    }
+
+    @MainActor
+    static func debugLowUsageDesktopNotificationProbe() -> LowUsageDesktopNotificationDebugProbe {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000C9")!
+        let account = AgentAccount(
+            id: accountID,
+            name: "notify-low@example.com",
+            usedUnits: 92,
+            quota: 100,
+            isPaid: true
+        )
+
+        func state(alertsEnabled: Bool = true) -> AccountPoolState {
+            var state = AccountPoolState(
+                accounts: [account],
+                mode: .intelligent,
+                lowUsageAlertThresholdRatio: 0.2,
+                lowUsageAlertsEnabled: alertsEnabled
+            )
+            state.markActiveAccountForSwitchLaunch(accountID, now: Date(timeIntervalSince1970: 1_800_000_100))
+            return state
+        }
+
+        func viewState(
+            showingAlert: Bool,
+            message: String? = nil
+        ) -> PoolDashboardViewState {
+            var viewState = PoolDashboardViewState()
+            viewState.showLowUsageAlert = showingAlert
+            viewState.lowUsageAlertMessage = message
+            return viewState
+        }
+
+        let hiddenAlert = Self.lowUsageDesktopNotificationRequestIfNeeded(
+            state: state(),
+            viewState: viewState(showingAlert: false),
+            wasShowingLowUsageAlert: false
+        )
+        let previouslyShowing = Self.lowUsageDesktopNotificationRequestIfNeeded(
+            state: state(),
+            viewState: viewState(showingAlert: true, message: "Explicit low usage message"),
+            wasShowingLowUsageAlert: true
+        )
+        let disabled = Self.lowUsageDesktopNotificationRequestIfNeeded(
+            state: state(alertsEnabled: false),
+            viewState: viewState(showingAlert: true, message: "Explicit low usage message"),
+            wasShowingLowUsageAlert: false
+        )
+        let explicit = Self.lowUsageDesktopNotificationRequestIfNeeded(
+            state: state(),
+            viewState: viewState(showingAlert: true, message: "Explicit low usage message"),
+            wasShowingLowUsageAlert: false
+        )
+        let fallback = Self.lowUsageDesktopNotificationRequestIfNeeded(
+            state: state(),
+            viewState: viewState(showingAlert: true),
+            wasShowingLowUsageAlert: false
+        )
+
+        return LowUsageDesktopNotificationDebugProbe(
+            disabledAlertsRequestIsNil: disabled == nil,
+            previouslyShowingRequestIsNil: previouslyShowing == nil,
+            hiddenAlertRequestIsNil: hiddenAlert == nil,
+            explicitMessageKey: explicit?.key,
+            explicitMessageTitleContainsLowUsage: explicit?.title.contains(L10n.text("alert.low_usage.title")) == true,
+            explicitMessageBody: explicit?.body,
+            explicitMessageMinInterval: explicit?.minInterval,
+            fallbackMessageContainsAccountName: fallback?.body.contains(account.name) == true
+        )
+    }
+
+    @MainActor
+    static func debugRelaySwitchPreparationProbe() -> RelaySwitchPreparationDebugProbe {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F3")!
+        let vaultAPIKey = "sk-vault-1234"
+        let relayAccount = AgentAccount(
+            id: accountID,
+            name: "Relay",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "",
+            credentialType: .relayAPIKey,
+            relayProviderID: "debug_provider",
+            relayProviderName: "Debug Provider",
+            relayBaseURL: "https://relay.example.com/v1",
+            relayWireAPI: AgentAccount.defaultRelayWireAPI,
+            relayRequiresOpenAIAuth: false
+        )
+        let store = DebugProbeAccountPoolStore(
+            snapshot: AccountPoolState(accounts: [relayAccount], mode: .manual).snapshot,
+            tokenByAccountID: [accountID: vaultAPIKey]
+        )
+        var view = PoolDashboardView(store: store)
+        view._state = State(initialValue: AccountPoolState(accounts: [relayAccount], mode: .manual))
+        let prepared = view.prepareRelaySwitchRequest(for: accountID)
+
+        let missingID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F4")!
+        let failed = view.prepareRelaySwitchRequest(for: missingID)
+
+        return RelaySwitchPreparationDebugProbe(
+            preparedHydratedFromVault: prepared.hydratedFromVault,
+            preparedRequestUsedVaultAPIKey: prepared.request?.apiKey == vaultAPIKey,
+            preparedRequestAPIKeyLength: prepared.request?.apiKey.count,
+            preparedDiagnosticContainsPreparedStage: prepared.diagnosticLog.contains("stage=prepared"),
+            failedDiagnosticContainsPrepareFailedStage: failed.diagnosticLog.contains("stage=prepare_failed"),
+            failedErrorDescriptionNotEmpty: !(failed.errorDescription ?? "").isEmpty
+        )
+    }
+
+    @MainActor
+    static func debugRelaySwitchOutcomeDecisionProbe() -> RelaySwitchOutcomeDecisionDebugProbe {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000F5")!
+        let relayAccount = AgentAccount(
+            id: accountID,
+            name: "Relay Account",
+            usedUnits: 12,
+            quota: 100,
+            apiToken: "sk-debug-1234",
+            credentialType: .relayAPIKey,
+            relayProviderID: "debug_provider",
+            relayProviderName: "Debug Provider",
+            relayBaseURL: "https://relay.example.com/v1",
+            relayWireAPI: AgentAccount.defaultRelayWireAPI,
+            relayRequiresOpenAIAuth: false
+        )
+        let store = DebugProbeAccountPoolStore(
+            snapshot: AccountPoolState(accounts: [relayAccount], mode: .manual).snapshot,
+            tokenByAccountID: [:]
+        )
+        let view = PoolDashboardView(store: store)
+        let request = try! PoolDashboardRelayAccountCoordinator.SwitchRequest(account: relayAccount)
+
+        func output(didSwitchAuth: Bool, error: String? = nil) -> PoolDashboardRelayAccountCoordinator.SwitchOutput {
+            var viewState = PoolDashboardViewState()
+            viewState.switchLaunchError = error
+            return PoolDashboardRelayAccountCoordinator.SwitchOutput(
+                viewState: viewState,
+                didSwitchAuth: didSwitchAuth
+            )
+        }
+
+        let success = view.relaySwitchOutcomeDecision(
+            request: request,
+            output: output(didSwitchAuth: true)
+        )
+        let failure = view.relaySwitchOutcomeDecision(
+            request: request,
+            output: output(didSwitchAuth: false, error: "Relay boom")
+        )
+        let emptyFailure = view.relaySwitchOutcomeDecision(
+            request: request,
+            output: output(didSwitchAuth: false)
+        )
+
+        return RelaySwitchOutcomeDecisionDebugProbe(
+            successMarkedRelayAccount: success.accountIDToMarkForSwitchLaunch == accountID,
+            successNotificationKeyContainsRelayAccountID: success.notification?.key.contains(accountID.uuidString) == true,
+            successNotificationBodyContainsRelayAccountName: success.notification?.body.contains(relayAccount.name) == true,
+            failureNotificationKey: failure.notification?.key,
+            failureNotificationBody: failure.notification?.body,
+            emptyFailureNotificationKey: emptyFailure.notification?.key
+        )
+    }
+
+    @MainActor
+    static func debugUsageSyncStuckRecoveryProbe() -> PoolDashboardUsageSyncStuckRecoveryDebugProbe {
+        let matchingRunID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B1")!
+        let staleRunID = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        var syncingViewState = PoolDashboardViewState()
+        syncingViewState.isSyncingUsage = true
+        syncingViewState.usageSyncStartedAt = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let matchingOutput = usageSyncStuckRecoveryOutput(
+            runID: matchingRunID,
+            currentRunID: matchingRunID,
+            viewState: syncingViewState
+        )
+        let staleOutput = usageSyncStuckRecoveryOutput(
+            runID: staleRunID,
+            currentRunID: matchingRunID,
+            viewState: syncingViewState
+        )
+
+        var matchingView = PoolDashboardView(store: debugTransientStore())
+        matchingView._viewState = State(initialValue: syncingViewState)
+        matchingView._usageSyncRunID = State(initialValue: matchingRunID)
+        matchingView.forceEndUsageSyncIfStuck(runID: matchingRunID)
+
+        return PoolDashboardUsageSyncStuckRecoveryDebugProbe(
+            matchingRunIsSyncing: matchingOutput?.viewState.isSyncingUsage ?? true,
+            matchingRunIDWasCleared: matchingOutput?.usageSyncRunID == nil,
+            matchingErrorContainsTimeout: matchingOutput?.viewState.syncError?.contains(
+                L10n.text("usage.sync.error.timeout")
+            ) == true,
+            staleRunStayedSyncing: staleOutput == nil && syncingViewState.isSyncingUsage,
+            staleRunIDWasPreserved: staleOutput == nil
+        )
+    }
+
+    @MainActor
+    static func debugDataModeReloadProbe() -> PoolDashboardDataModeReloadDebugProbe {
+        let loadedAccount = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D1")!,
+            name: "loaded@example.com",
+            groupName: "Loaded",
+            usedUnits: 12,
+            quota: 100
+        )
+        var loadedSnapshot = AccountPoolState(accounts: [loadedAccount], mode: .manual).snapshot
+        loadedSnapshot.groups = ["Loaded"]
+
+        let fallbackAccount = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D2")!,
+            name: "fallback@example.com",
+            usedUnits: 0,
+            quota: 100
+        )
+        let loadedOutput = dataModeReloadOutput(
+            snapshot: loadedSnapshot,
+            selectedGroupName: "Missing",
+            defaultAccounts: [],
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        let fallbackOutput = dataModeReloadOutput(
+            snapshot: nil,
+            selectedGroupName: "Missing",
+            defaultAccounts: [fallbackAccount],
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        let store = DebugProbeAccountPoolStore(
+            snapshot: loadedSnapshot,
+            tokenByAccountID: [:]
+        )
+        var view = PoolDashboardView(store: store)
+        view._selectedGroupName = State(initialValue: "Missing")
+        view.reloadStateForCurrentDataMode()
+
+        return PoolDashboardDataModeReloadDebugProbe(
+            loadedAccountNames: loadedOutput.state.accounts.map(\.name),
+            loadedSelectedGroupName: loadedOutput.selectedGroupName,
+            fallbackAccountCount: fallbackOutput.state.accounts.count,
+            fallbackSelectedGroupName: fallbackOutput.selectedGroupName,
+            actualReloadWasExercised: true
+        )
+    }
+
+    @MainActor
+    static func debugAddAccountProbe() -> PoolDashboardAddAccountDebugProbe {
+        var initialState = AccountPoolState(accounts: [], mode: .manual)
+        _ = initialState.createGroup("Ops")
+        var formState = PoolDashboardFormState()
+        formState.newAccountName = "pending@example.com"
+        formState.newAccountQuota = 999
+
+        let blankOutput = addAccountHandlingOutput(
+            state: initialState,
+            formState: formState,
+            selectedGroupName: "Ops",
+            name: "   ",
+            quota: 250
+        )
+        let output = addAccountHandlingOutput(
+            state: initialState,
+            formState: formState,
+            selectedGroupName: "Ops",
+            name: "  new@example.com  ",
+            quota: 250
+        )
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: initialState)
+        view._formState = State(initialValue: formState)
+        view._selectedGroupName = State(initialValue: "Ops")
+        view.handleAddAccount(name: "   ", quota: 250)
+        view.handleAddAccount(name: "  new@example.com  ", quota: 250)
+
+        let addedAccount = output?.state.accounts.first
+        return PoolDashboardAddAccountDebugProbe(
+            addedAccountNames: output?.state.accounts.map(\.name) ?? [],
+            addedGroupName: addedAccount?.groupName,
+            addedQuota: addedAccount?.quota,
+            blankInputWasIgnored: blankOutput == nil,
+            formNameWasReset: output?.formState.newAccountName.isEmpty == true,
+            formQuotaWasReset: output?.formState.newAccountQuota == PoolDashboardFormState.defaultQuota
+        )
+    }
+
+    @MainActor
+    static func debugDeleteGroupProbe() -> PoolDashboardDeleteGroupDebugProbe {
+        let defaultID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E1")!
+        let redAID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E2")!
+        let redBID = UUID(uuidString: "00000000-0000-0000-0000-0000000000E3")!
+        let targetGroup = "Team Red"
+        let accounts = [
+            AgentAccount(
+                id: defaultID,
+                name: "default@example.com",
+                groupName: AgentAccount.defaultGroupName,
+                usedUnits: 10,
+                quota: 100,
+                apiToken: "sk-default"
+            ),
+            AgentAccount(
+                id: redAID,
+                name: "red-a@example.com",
+                groupName: targetGroup,
+                usedUnits: 20,
+                quota: 100,
+                apiToken: "sk-red-a"
+            ),
+            AgentAccount(
+                id: redBID,
+                name: "red-b@example.com",
+                groupName: targetGroup,
+                usedUnits: 30,
+                quota: 100,
+                apiToken: "sk-red-b"
+            )
+        ]
+        let state = AccountPoolState(accounts: accounts, mode: .manual)
+        let accountNameByID = Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.name) })
+        let recorder = DebugTokenRemovalRecorder()
+        let store = DebugProbeAccountPoolStore(
+            snapshot: state.snapshot,
+            tokenByAccountID: [:],
+            onRemoveToken: { recorder.append($0) }
+        )
+        var view = PoolDashboardView(store: store)
+        view._state = State(initialValue: state)
+        view._selectedGroupName = State(initialValue: targetGroup)
+
+        let missingOutput = deleteGroupHandlingOutput(
+            state: state,
+            selectedGroupName: targetGroup,
+            name: "Missing Group"
+        )
+        let output = deleteGroupHandlingOutput(
+            state: state,
+            selectedGroupName: targetGroup,
+            name: targetGroup
+        )
+
+        view.handleDeleteGroup(name: "Missing Group")
+        let missingGroupRemovedTokens = !recorder.accountIDs.isEmpty
+        view.handleDeleteGroup(name: targetGroup)
+
+        return PoolDashboardDeleteGroupDebugProbe(
+            remainingAccountNames: output?.state.accounts.map(\.name) ?? [],
+            removedTokenAccountNames: recorder.accountIDs.compactMap { accountNameByID[$0] },
+            selectedGroupName: output?.selectedGroupName ?? "",
+            missingGroupRemovedTokens: missingOutput != nil || missingGroupRemovedTokens
+        )
     }
 
     static func debugAppUpdatePromptID(latestVersion: String) -> String {
@@ -7517,6 +10255,15 @@ extension PoolDashboardView {
     }
 
     @MainActor
+    static func debugScheduleEventSummaries(
+        accounts: [AgentAccount],
+        start: Date,
+        end: Date
+    ) -> [ScheduleEventDebugSummary] {
+        ScheduleWorkspacePanelView.debugEventSummaries(accounts: accounts, start: start, end: end)
+    }
+
+    @MainActor
     static func debugDailyUsagePlanningWorkspacePanelView(
         accounts: [AgentAccount],
         analyticsState: UsageAnalyticsState
@@ -7525,6 +10272,34 @@ extension PoolDashboardView {
             accounts: accounts,
             analyticsState: analyticsState
         )
+    }
+
+    @MainActor
+    static func debugDailyUsagePlanningNotificationBodies(account: AgentAccount) -> [String: String] {
+        DailyUsagePlanningWorkspacePanelView.debugNotificationBodies(account: account)
+    }
+
+    @MainActor
+    static func debugDailyUsagePlanningNotificationTitles(account: AgentAccount) -> [String: String] {
+        DailyUsagePlanningWorkspacePanelView.debugNotificationTitles(account: account)
+    }
+
+    @MainActor
+    static func debugDailyUsagePlanningBudgetPersistenceProbe(
+        account: AgentAccount
+    ) -> (afterSetBudget: Int?, afterClearBudget: Int?, notifiedLevel: String?) {
+        DailyUsagePlanningWorkspacePanelView.debugBudgetPersistenceProbe(account: account)
+    }
+
+    @MainActor
+    static func debugDailyUsagePlanningStatusCallouts(account: AgentAccount) -> some View {
+        DailyUsagePlanningWorkspacePanelView.debugStatusCallouts(account: account)
+    }
+
+    @MainActor
+    static func debugDailyUsagePlanningNotificationEvaluationProbe(
+    ) -> DailyUsagePlanningNotificationEvaluationDebugProbe {
+        DailyUsagePlanningWorkspacePanelView.debugNotificationEvaluationProbe()
     }
 
     @MainActor
@@ -7538,6 +10313,292 @@ extension PoolDashboardView {
             accounts: accounts,
             onClearIdleDelay: onClearIdleDelay
         )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsWorkspaceVariantView(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        analysisBasisID: String,
+        chartGranularityID: String,
+        accountSortModeID: String,
+        selectedAccountKey: String?,
+        onClearIdleDelay: @escaping (String?) -> Void = { _ in }
+    ) -> some View {
+        UsageAnalyticsWorkspacePanelView.debugConfigured(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            analysisBasisID: analysisBasisID,
+            chartGranularityID: chartGranularityID,
+            accountSortModeID: accountSortModeID,
+            selectedAccountKey: selectedAccountKey,
+            onClearIdleDelay: onClearIdleDelay
+        )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsWorkspaceProbe(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?,
+        days: Int,
+        weeks: Int
+    ) -> UsageAnalyticsWorkspaceDebugProbe {
+        UsageAnalyticsWorkspacePanelView.debugProbe(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey,
+            days: days,
+            weeks: weeks
+        )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsWorkspacePrivateDetailViews(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?
+    ) -> some View {
+        UsageAnalyticsWorkspacePanelView.debugPrivateDetailViews(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey
+        )
+    }
+
+    @MainActor
+    static func debugUsageAnalyticsWorkspacePrivateCoverageViews(
+        analyticsState: UsageAnalyticsState,
+        accounts: [AgentAccount],
+        selectedAccountKey: String?
+    ) -> some View {
+        UsageAnalyticsWorkspacePanelView.debugPrivateCoverageViews(
+            analyticsState: analyticsState,
+            accounts: accounts,
+            selectedAccountKey: selectedAccountKey
+        )
+    }
+
+    @MainActor
+    static func debugClearUsageAnalyticsIdleDelayProbe(
+        records: [UsageAnalyticsRecord]
+    ) -> (targeted: [Int], all: [Int]) {
+        let defaults = UserDefaults.standard
+        let backup = defaults.object(forKey: usageAnalyticsStateKey)
+        defer {
+            if let backup {
+                defaults.set(backup, forKey: usageAnalyticsStateKey)
+            } else {
+                defaults.removeObject(forKey: usageAnalyticsStateKey)
+            }
+        }
+
+        func makeView() -> PoolDashboardView {
+            var view = PoolDashboardView(store: debugTransientStore())
+            let state = UsageAnalyticsState(
+                records: records,
+                snapshots: [],
+                thresholdEvents: [],
+                switchEvents: [],
+                lastActiveAccountKey: records.first?.activeAccountKeyAtSync,
+                lastUpdatedAt: records.first?.timestamp
+            )
+            view._usageAnalyticsState = State(initialValue: state)
+            view._usageAnalyticsStateLoaded = State(initialValue: true)
+            return view
+        }
+
+        let sourceState = UsageAnalyticsState(
+            records: records,
+            snapshots: [],
+            thresholdEvents: [],
+            switchEvents: [],
+            lastActiveAccountKey: records.first?.activeAccountKeyAtSync,
+            lastUpdatedAt: records.first?.timestamp
+        )
+        let targetedAccountKey = records.first?.accountKey
+
+        let targetedView = makeView()
+        targetedView.clearUsageAnalyticsIdleDelay(accountKey: targetedAccountKey)
+
+        let allView = makeView()
+        allView.clearUsageAnalyticsIdleDelay(accountKey: nil)
+
+        let targetedState = usageAnalyticsStateClearingIdleDelay(
+            sourceState,
+            accountKey: targetedAccountKey
+        )
+        let allState = usageAnalyticsStateClearingIdleDelay(
+            sourceState,
+            accountKey: nil
+        )
+
+        return (
+            targeted: targetedState.records.map(\.weeklyIdleDelayMinutes),
+            all: allState.records.map(\.weeklyIdleDelayMinutes)
+        )
+    }
+
+    @MainActor
+    static func debugAppUpdateOverlayView(releaseNotes: String?) -> some View {
+        let view = PoolDashboardView(store: debugTransientStore())
+        let release = AppUpdateRelease(
+            tagName: "v9.9.9",
+            name: "Debug Release",
+            htmlURL: URL(string: "https://example.com/releases/v9.9.9")!,
+            publishedAt: Date(timeIntervalSince1970: 1_800_000_000),
+            body: releaseNotes,
+            assets: []
+        )
+        let prompt = AppUpdatePrompt(
+            currentVersion: "1.0.0",
+            latestVersion: "9.9.9",
+            release: release
+        )
+        return view.appUpdateOverlay(prompt: prompt)
+    }
+
+    @MainActor
+    static func debugWhatsNewOverlayView() -> some View {
+        let view = PoolDashboardView(store: debugTransientStore())
+        let announcement = WhatsNewAnnouncement.current(version: "1.0.14", build: "118")
+        return view.whatsNewOverlay(announcement: announcement)
+    }
+
+    @MainActor
+    static func debugSpecialResetWatchPanelView(store: AccountPoolStoring) -> some View {
+        let view = PoolDashboardView(store: store)
+        return view.specialResetWatchPanel
+    }
+
+    @MainActor
+    static func debugPopulatedSpecialResetWatchPanelView() -> some View {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let account = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-00000000A551")!,
+            name: "populated-reset@example.com",
+            usedUnits: 12,
+            quota: 100,
+            usageWindowResetAt: now.addingTimeInterval(6 * 24 * 3_600),
+            primaryUsagePercent: 8,
+            primaryUsageResetAt: now.addingTimeInterval(4 * 3_600),
+            secondaryUsagePercent: 12,
+            secondaryUsageResetAt: now.addingTimeInterval(6 * 24 * 3_600),
+            isPaid: true
+        )
+        var state = AccountPoolState(accounts: [account], mode: .manual)
+        state.markActiveAccountForSwitchLaunch(account.id, now: now)
+
+        var view = PoolDashboardView(store: debugTransientStore())
+        view._state = State(initialValue: state)
+
+        let accountKey = view.specialResetWatchAccountKey(for: account)
+        let previousWeekly = now.addingTimeInterval(24 * 3_600)
+        let observedWeekly = now.addingTimeInterval(8 * 24 * 3_600)
+        let previousFiveHour = now.addingTimeInterval(2 * 3_600)
+        let observedFiveHour = now.addingTimeInterval(7 * 3_600)
+        var watchState = SpecialResetWatchState()
+        watchState.records = [
+            SpecialResetRecord(
+                accountKey: accountKey,
+                accountName: view.normalizedSpecialResetAccountName(account),
+                expectedWeeklyResetAt: observedWeekly,
+                expectedFiveHourResetAt: observedFiveHour,
+                lastObservedWeeklyResetAt: account.secondaryUsageResetAt,
+                lastObservedFiveHourResetAt: account.primaryUsageResetAt,
+                lastSeenWeeklyUsagePercent: 12,
+                lastSeenUsedUnits: 12,
+                lastSeenFiveHourUsagePercent: 8,
+                lastSeenAt: now
+            )
+        ]
+        watchState.events = [
+            SpecialResetEvent(
+                id: UUID(uuidString: "00000000-0000-0000-0000-00000000E551")!,
+                detectedAt: now.addingTimeInterval(60),
+                accountKey: accountKey,
+                accountName: view.normalizedSpecialResetAccountName(account),
+                previousWeeklyExpectedAt: previousWeekly,
+                observedWeeklyNextResetAt: observedWeekly,
+                previousFiveHourExpectedAt: previousFiveHour,
+                observedFiveHourNextResetAt: observedFiveHour
+            )
+        ]
+        watchState.lastEvaluatedAt = now
+        watchState.lastNotificationAt = now.addingTimeInterval(60)
+        view._specialResetWatchState = State(initialValue: watchState)
+
+        return view.specialResetWatchPanel
+    }
+
+    @MainActor
+    static func debugDeveloperContextPanelView(store: AccountPoolStoring) -> some View {
+        let view = PoolDashboardView(store: store)
+        return view.developerContextPanel
+    }
+
+    @MainActor
+    static func debugDebugToolsPanelView(store: AccountPoolStoring) -> some View {
+        let view = PoolDashboardView(store: store)
+        return view.debugToolsPanel
+    }
+
+    @MainActor
+    static func debugPrivateSettingsPanelViews(store: AccountPoolStoring) -> some View {
+        let view = PoolDashboardView(store: store)
+        let release = AppUpdateRelease(
+            tagName: "v9.9.9",
+            name: "Debug Release",
+            htmlURL: URL(string: "https://example.com/releases/v9.9.9")!,
+            publishedAt: Date(timeIntervalSince1970: 1_800_000_000),
+            body: "Debug release notes",
+            assets: []
+        )
+        let prompt = AppUpdatePrompt(
+            currentVersion: "1.0.0",
+            latestVersion: "9.9.9",
+            release: release
+        )
+
+        return HStack(alignment: .top, spacing: 12) {
+            view.collapsedSidebarHandle
+            VStack(alignment: .leading, spacing: 12) {
+                view.sidebarUpdateButton(prompt: prompt)
+                view.strategySettingsPanel
+                view.workspaceSettingsPanel
+            }
+        }
+    }
+
+    @MainActor
+    static func debugPrivateDashboardPanelViews(store: AccountPoolStoring) -> some View {
+        let view = PoolDashboardView(store: store)
+        return VStack(alignment: .leading, spacing: 12) {
+            view.dashboardHeaderChrome(availableWidth: 820)
+            view.dashboardHeaderChrome(availableWidth: 1_200)
+            view.syncToolbarPanel
+            view.activeAccountPanel
+            view.accountUsagePanel(availableWidth: 1_200)
+        }
+    }
+
+    @MainActor
+    static func debugPairedPanelsView() -> some View {
+        let view = PoolDashboardView(store: debugTransientStore())
+        return view.pairedPanels(
+            primary: Text("Primary debug panel")
+                .frame(maxWidth: .infinity, minHeight: 120)
+                .dashboardInfoCard(),
+            secondary: Text("Secondary debug panel")
+                .frame(maxWidth: .infinity, minHeight: 120)
+                .dashboardInfoCard()
+        )
+    }
+
+    @MainActor
+    static func debugDiagnosticsSnapshot(store: AccountPoolStoring) -> [DebugDiagnosticMetric] {
+        let view = PoolDashboardView(store: store)
+        return view.debugDiagnostics
     }
 
     static func debugDesktopNotifierThrottleSequence(
@@ -7576,6 +10637,15 @@ extension PoolDashboardView {
             firstAccountName: firstName,
             firstAccountQuota: firstQuota,
             strategyMode: strategyMode
+        )
+    }
+
+    private static func debugTransientStore() -> AccountPoolStoring {
+        let suiteName = "CodexPoolManager.DebugOverlay.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+        return UserDefaultsAccountPoolStore(
+            defaults: defaults,
+            key: "debug_account_pool_snapshot"
         )
     }
 

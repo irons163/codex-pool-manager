@@ -4,6 +4,23 @@ import Testing
 
 struct CodexProviderConfigServiceTests {
     @Test
+    func providerConfigErrorsExposeLocalizedDescriptions() {
+        #expect(CodexProviderConfigError.invalidProviderID.errorDescription == L10n.text("relay.error.invalid_provider_id"))
+        #expect(CodexProviderConfigError.invalidBaseURL.errorDescription == L10n.text("relay.error.invalid_base_url"))
+        #expect(
+            CodexProviderConfigError.writeFailed("disk blocked").errorDescription
+                == L10n.text("relay.error.config_write_failed_format", "disk blocked")
+        )
+    }
+
+    @Test
+    func providerConfigDefaultURLPointsAtCodexConfigTOML() {
+        let service = CodexProviderConfigService()
+
+        #expect(service.configURLProvider().path.hasSuffix("/.codex/config.toml"))
+    }
+
+    @Test
     func providerConfigRendersMirrorTable() throws {
         let config = try CodexProviderConfig(
             providerID: "mirror",
@@ -23,6 +40,26 @@ struct CodexProviderConfigServiceTests {
     }
 
     @Test
+    func providerConfigRendersEscapedTrimmedAPIKeyWhenProvided() throws {
+        let config = try CodexProviderConfig(
+            providerID: "relay_1",
+            name: "Relay \"Prod\"",
+            baseURL: "https://relay.example.com/api/\\codex",
+            wireAPI: " responses ",
+            requiresOpenAIAuth: false
+        )
+
+        let rendered = config.renderTOMLBlock(apiKey: " \tsk-\"quoted\"\\key\n ")
+
+        #expect(rendered.contains("[model_providers.relay_1]"))
+        #expect(rendered.contains("name = \"Relay \\\"Prod\\\"\""))
+        #expect(rendered.contains("base_url = \"https://relay.example.com/api/%5Ccodex\""))
+        #expect(rendered.contains("wire_api = \"responses\""))
+        #expect(rendered.contains("requires_openai_auth = false"))
+        #expect(rendered.contains("experimental_bearer_token = \"sk-\\\"quoted\\\"\\\\key\""))
+    }
+
+    @Test
     func configMergeInsertsModelProviderIntoEmptyConfig() throws {
         let config = try CodexProviderConfig(
             providerID: "mirror",
@@ -36,6 +73,24 @@ struct CodexProviderConfigServiceTests {
 
         #expect(merged.hasPrefix("model_provider = \"mirror\""))
         #expect(merged.contains("[model_providers.mirror]"))
+    }
+
+    @Test
+    func configMergeInsertsModelProviderBeforeExistingTablesWhenTopLevelIsMissing() throws {
+        let existing = """
+        [profiles.work]
+        model_provider = "openai"
+        """
+        let config = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://ai.liaryai.com/api/codex"
+        )
+
+        let merged = CodexProviderConfigMerger.merge(existing: existing, provider: config)
+
+        #expect(merged.hasPrefix("model_provider = \"mirror\"\n"))
+        #expect(merged.contains("[profiles.work]\nmodel_provider = \"openai\""))
     }
 
     @Test
@@ -117,6 +172,43 @@ struct CodexProviderConfigServiceTests {
     }
 
     @Test
+    func enhancedConfigMergeAppendsOpenAIBaseURLWhenNoTableExists() throws {
+        let existing = """
+        model = "gpt-5.1-codex"
+        """
+        let config = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://relay.example.com/v1"
+        )
+
+        let merged = CodexProviderConfigMerger.mergePreservingOfficialAuth(
+            existing: existing,
+            provider: config,
+            apiKey: "ignored"
+        )
+
+        #expect(merged == "model = \"gpt-5.1-codex\"\nopenai_base_url = \"https://relay.example.com/v1\"\n")
+    }
+
+    @Test
+    func enhancedConfigMergeCreatesOpenAIBaseURLFromEmptyConfig() throws {
+        let config = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://relay.example.com/v1"
+        )
+
+        let merged = CodexProviderConfigMerger.mergePreservingOfficialAuth(
+            existing: "",
+            provider: config,
+            apiKey: "ignored"
+        )
+
+        #expect(merged == "openai_base_url = \"https://relay.example.com/v1\"\n")
+    }
+
+    @Test
     func configResetRemovesOnlyTopLevelModelProvider() {
         let existing = """
         model = "gpt-5.1-codex"
@@ -172,6 +264,43 @@ struct CodexProviderConfigServiceTests {
     }
 
     @Test
+    func configResetReadsSingleQuotedActiveProviderAndRemovesItsBearerToken() {
+        let existing = """
+        model_provider = 'mirror'
+
+        [model_providers.mirror]
+        name = "mirror"
+        experimental_bearer_token = "sk-active"
+
+        [model_providers.other]
+        name = "other"
+        experimental_bearer_token = "sk-other"
+        """
+
+        let reset = CodexProviderConfigMerger.resetModelProvider(existing: existing)
+
+        #expect(!reset.contains("model_provider = 'mirror'"))
+        #expect(!reset.contains("experimental_bearer_token = \"sk-active\""))
+        #expect(reset.contains("experimental_bearer_token = \"sk-other\""))
+    }
+
+    @Test
+    func configResetWithUnquotedModelProviderDoesNotRemoveProviderBearerToken() {
+        let existing = """
+        model_provider = mirror
+
+        [model_providers.mirror]
+        name = "mirror"
+        experimental_bearer_token = "sk-active"
+        """
+
+        let reset = CodexProviderConfigMerger.resetModelProvider(existing: existing)
+
+        #expect(!reset.contains("model_provider = mirror"))
+        #expect(reset.contains("experimental_bearer_token = \"sk-active\""))
+    }
+
+    @Test
     func configServiceResetWritesDefaultProviderConfigToDisk() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-provider-reset-\(UUID().uuidString)", isDirectory: true)
@@ -198,6 +327,58 @@ struct CodexProviderConfigServiceTests {
         #expect(!reset.contains("openai_base_url"))
         #expect(reset.contains("model = \"gpt-5.1-codex\""))
         #expect(reset.contains("[model_providers.mirror]"))
+    }
+
+    @Test
+    func configServiceApplyCreatesConfigWhenFileIsMissing() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-provider-apply-missing-\(UUID().uuidString)", isDirectory: true)
+        let configURL = directory.appendingPathComponent("nested/config.toml")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let provider = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://relay.example.com/v1"
+        )
+        let service = CodexProviderConfigService(configURLProvider: { configURL })
+
+        try service.apply(provider)
+
+        let contents = try String(contentsOf: configURL, encoding: .utf8)
+        #expect(contents.contains("model_provider = \"mirror\""))
+        #expect(contents.contains("[model_providers.mirror]"))
+    }
+
+    @Test
+    func configServiceApplyPreservingOfficialAuthCreatesConfigWhenFileIsMissing() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-provider-enhanced-missing-\(UUID().uuidString)", isDirectory: true)
+        let configURL = directory.appendingPathComponent("config.toml")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let provider = try CodexProviderConfig(
+            providerID: "mirror",
+            name: "mirror",
+            baseURL: "https://relay.example.com/v1"
+        )
+        let service = CodexProviderConfigService(configURLProvider: { configURL })
+
+        try service.applyPreservingOfficialAuth(provider, apiKey: "ignored")
+
+        let contents = try String(contentsOf: configURL, encoding: .utf8)
+        #expect(contents == "openai_base_url = \"https://relay.example.com/v1\"\n")
+    }
+
+    @Test
+    func configServiceResetReturnsWhenConfigFileIsMissing() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-provider-reset-missing-\(UUID().uuidString)", isDirectory: true)
+        let configURL = directory.appendingPathComponent("config.toml")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let service = CodexProviderConfigService(configURLProvider: { configURL })
+
+        try service.resetToDefaultModelProvider()
+
+        #expect(!FileManager.default.fileExists(atPath: configURL.path))
     }
 
     @Test
@@ -263,6 +444,24 @@ struct CodexProviderConfigServiceTests {
 
 struct CodexAPIKeyLoginServiceTests {
     @Test
+    func loginErrorsCompareOnlyUserVisibleMessage() {
+        let first = CodexAPIKeyLoginError.loginFailed("same message", diagnosticLog: "first diagnostic")
+        let second = CodexAPIKeyLoginError.loginFailed("same message", diagnosticLog: "second diagnostic")
+        let different = CodexAPIKeyLoginError.loginFailed("different message", diagnosticLog: "first diagnostic")
+
+        #expect(first == second)
+        #expect(first != different)
+        #expect(first.diagnosticLog == "first diagnostic")
+    }
+
+    @Test
+    func loginErrorDescriptionIncludesUserVisibleMessage() {
+        let error = CodexAPIKeyLoginError.loginFailed("visible failure", diagnosticLog: "diagnostic")
+
+        #expect(error.errorDescription?.contains("visible failure") == true)
+    }
+
+    @Test
     func loginWithAPIKeyStringWritesTrimmedAuthJSONAndSanitizedDiagnostic() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-api-key-login-string-\(UUID().uuidString)", isDirectory: true)
@@ -312,6 +511,45 @@ struct CodexAPIKeyLoginServiceTests {
     }
 
     @Test
+    func loginMissingAPIKeyDiagnosticUsesTildeForHomeAuthPath() async {
+        let homeURL = FileManager.default.homeDirectoryForCurrentUser
+        let service = CodexAPIKeyLoginService(
+            authFileURLProvider: { homeURL }
+        )
+
+        do {
+            _ = try await service.login(trimmedAPIKeyData: Data())
+            Issue.record("Expected empty API key data to fail before writing auth.json.")
+        } catch let error as CodexAPIKeyLoginError {
+            #expect(error.diagnosticLog?.contains("auth_file_path=~") == true)
+            #expect(error.diagnosticLog?.contains("auth_write_stage=missing_api_key") == true)
+            #expect(error.diagnosticLog?.contains("error_description=nil") == true)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func loginMissingAPIKeyDiagnosticUsesHomeRelativeAuthPath() async {
+        let authURL = FileManager.default.homeDirectoryForCurrentUser
+            .appending(path: ".codex/auth.json")
+        let service = CodexAPIKeyLoginService(
+            authFileURLProvider: { authURL }
+        )
+
+        do {
+            _ = try await service.login(trimmedAPIKeyData: Data())
+            Issue.record("Expected empty API key data to fail before writing auth.json.")
+        } catch let error as CodexAPIKeyLoginError {
+            #expect(error.diagnosticLog?.contains("auth_file_path=~/.codex/auth.json") == true)
+            #expect(error.diagnosticLog?.contains("auth_write_stage=missing_api_key") == true)
+            #expect(error.diagnosticLog?.contains("error_description=nil") == true)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
     func loginWithPreparedAPIKeyDataWritesAuthJSONDirectly() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-api-key-login-\(UUID().uuidString)", isDirectory: true)
@@ -352,6 +590,35 @@ struct CodexAPIKeyLoginServiceTests {
             #expect(error.diagnosticLog?.contains("api_key_data_len=4") == true)
             #expect(error.diagnosticLog?.contains("trimmed_api_key_len=0") == true)
             #expect(error.diagnosticLog?.contains("auth_write_stage=missing_api_key") == true)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+        #expect(!FileManager.default.fileExists(atPath: authURL.path))
+    }
+
+    @Test
+    func loginReportsWriteFailureDiagnosticWithoutLeakingAPIKey() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-api-key-login-blocked-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let blockedParentURL = directory.appendingPathComponent("blocked-parent")
+        try Data("not a directory".utf8).write(to: blockedParentURL)
+        let authURL = blockedParentURL.appendingPathComponent("auth.json")
+        let service = CodexAPIKeyLoginService(
+            authFileURLProvider: { authURL }
+        )
+        let apiKey = "blocked-key-\(UUID().uuidString)"
+
+        do {
+            _ = try await service.login(apiKey: apiKey)
+            Issue.record("Expected API key login to fail when auth parent path is a file.")
+        } catch let error as CodexAPIKeyLoginError {
+            #expect(error.diagnosticLog?.contains("Relay API key auth diagnostic:") == true)
+            #expect(error.diagnosticLog?.contains("auth_write_stage=write_failed") == true)
+            #expect(error.diagnosticLog?.contains("trimmed_api_key_len=\(apiKey.count)") == true)
+            #expect(error.diagnosticLog?.contains("error_description=nil") == false)
+            #expect(error.diagnosticLog?.contains(apiKey) == false)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }

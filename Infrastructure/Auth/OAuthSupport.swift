@@ -382,6 +382,19 @@ final class OAuthLoginService: NSObject {
         self.session = session
     }
 
+    static func webAuthenticationCallbackResult(
+        callbackURL: URL?,
+        error: Error?
+    ) -> Result<URL, Error> {
+        if let error {
+            return .failure(error)
+        }
+        guard let callbackURL else {
+            return .failure(OAuthLoginError.invalidCallback)
+        }
+        return .success(callbackURL)
+    }
+
     func signIn(configuration: OAuthClientConfiguration) async throws -> OAuthTokens {
         try await withTaskCancellationHandler {
             let manualPreparation = try prepareManualSignIn(configuration: configuration)
@@ -480,15 +493,12 @@ final class OAuthLoginService: NSObject {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     self.webAuthenticationSession = nil
-                    if let error {
-                        self.webAuthenticationContinuation?(.failure(error))
-                        return
-                    }
-                    guard let callbackURL else {
-                        self.webAuthenticationContinuation?(.failure(OAuthLoginError.invalidCallback))
-                        return
-                    }
-                    self.webAuthenticationContinuation?(.success(callbackURL))
+                    self.webAuthenticationContinuation?(
+                        Self.webAuthenticationCallbackResult(
+                            callbackURL: callbackURL,
+                            error: error
+                        )
+                    )
                 }
             }
 

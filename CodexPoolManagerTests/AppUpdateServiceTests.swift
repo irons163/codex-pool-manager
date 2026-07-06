@@ -78,6 +78,30 @@ struct AppUpdateServiceTests {
     }
 
     @Test
+    func sparkleFeedAssetNameFollowsUpdateChannelAndArchitecture() {
+        let defaults = UserDefaults.standard
+        let key = AppUpdateChannel.prereleaseUpdatesEnabledKey
+        let previous = defaults.object(forKey: key)
+        defer {
+            if let previous {
+                defaults.set(previous, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+
+        defaults.set(false, forKey: key)
+        #expect(AppUpdateChannel.sparkleFeedAssetName(for: .appleSilicon) == "appcast-arm64.xml")
+        #expect(AppUpdateChannel.sparkleFeedAssetName(for: .intel) == "appcast-x86_64.xml")
+        #expect(AppUpdateChannel.sparkleFeedAssetName(for: .unknown) == "appcast-arm64.xml")
+
+        defaults.set(true, forKey: key)
+        #expect(AppUpdateChannel.sparkleFeedAssetName(for: .appleSilicon) == "appcast-dev-arm64.xml")
+        #expect(AppUpdateChannel.sparkleFeedAssetName(for: .intel) == "appcast-dev-x86_64.xml")
+        #expect(AppUpdateChannel.sparkleFeedAssetName(for: .unknown) == "appcast-dev-arm64.xml")
+    }
+
+    @Test
     func whatsNewPolicyUsesVersionAndBuildToDecideVisibility() {
         let currentID = WhatsNewPromptPolicy.versionID(version: "v1.0.14-rc.18", build: "118")
 

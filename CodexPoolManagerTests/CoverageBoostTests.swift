@@ -437,6 +437,21 @@ struct CodexAuthSwitchServiceDebugHelperTests {
         #expect(!didLaunch)
     }
 
+    @Test
+    func launchRetryHelperReturnsFalseForMissingBundleAndAppPath() async throws {
+        let service = CodexAuthSwitchService()
+        let didLaunch = try await service.debugLaunchCodexAppWithRetry(
+            launchBundleIDs: ["com.irons.missing.\(UUID().uuidString)"],
+            launchAppPaths: [
+                FileManager.default.temporaryDirectory
+                    .appendingPathComponent("Missing-\(UUID().uuidString).app", isDirectory: true)
+            ],
+            maxAttempts: 1
+        )
+
+        #expect(!didLaunch)
+    }
+
     #if canImport(AppKit)
     @Test
     func closeHelperReturnsFalseForRunningAppInSandboxMode() async {
@@ -1093,6 +1108,33 @@ struct OAuthSupportCoverageBoostTests {
             #expect(task.isCancelled)
         }
     }
+
+    @Test
+    @MainActor
+    func oauthWebAuthenticationCallbackResultCoversSuccessErrorAndMissingURL() throws {
+        let callbackURL = try #require(URL(string: "aiaagentpool://oauth/callback?code=abc&state=s1"))
+
+        let success = OAuthLoginService.webAuthenticationCallbackResult(
+            callbackURL: callbackURL,
+            error: nil
+        )
+        let explicitFailure = OAuthLoginService.webAuthenticationCallbackResult(
+            callbackURL: callbackURL,
+            error: CoverageBoostMockError.expected
+        )
+        let missingURL = OAuthLoginService.webAuthenticationCallbackResult(
+            callbackURL: nil,
+            error: nil
+        )
+
+        #expect(try success.get() == callbackURL)
+        #expect(throws: CoverageBoostMockError.self) {
+            _ = try explicitFailure.get()
+        }
+        #expect(throws: OAuthLoginError.self) {
+            _ = try missingURL.get()
+        }
+    }
 }
 
 struct PoolDashboardDebugCoverageHookTests {
@@ -1129,6 +1171,395 @@ struct PoolDashboardDebugCoverageHookTests {
 
         #expect(PoolDashboardView.debugSpecialResetRecordID(accountKey: "account:abc") == "account:abc")
         #expect(PoolDashboardView.debugAppUpdatePromptID(latestVersion: "1.2.3") == "1.2.3")
+    }
+
+    @Test
+    @MainActor
+    func specialResetPresentationHookCoversDisplayedDatesAndEventMessage() {
+        let accountWeekly = Date(timeIntervalSince1970: 1_800_100_000)
+        let accountFiveHour = Date(timeIntervalSince1970: 1_800_020_000)
+        let fallbackWeekly = Date(timeIntervalSince1970: 1_800_300_000)
+        let fallbackFiveHour = Date(timeIntervalSince1970: 1_800_040_000)
+        let eventWeeklyObserved = Date(timeIntervalSince1970: 1_800_500_000)
+        let eventFiveHourObserved = Date(timeIntervalSince1970: 1_800_060_000)
+        let detectedAt = Date(timeIntervalSince1970: 1_800_070_000)
+
+        let probe = PoolDashboardView.debugSpecialResetPresentationProbe(
+            accountName: " debug@example.com ",
+            accountWeeklyResetAt: accountWeekly,
+            accountFiveHourResetAt: accountFiveHour,
+            fallbackWeeklyResetAt: fallbackWeekly,
+            fallbackFiveHourResetAt: fallbackFiveHour,
+            eventWeeklyObservedAt: eventWeeklyObserved,
+            eventFiveHourObservedAt: eventFiveHourObserved,
+            detectedAt: detectedAt
+        )
+
+        #expect(probe.accountRecordWeeklyText != probe.fallbackRecordWeeklyText)
+        #expect(probe.accountRecordFiveHourText != probe.fallbackRecordFiveHourText)
+        #expect(probe.unavailableWeeklyText == L10n.text("schedule.summary.not_available"))
+        #expect(probe.unavailableFiveHourText == L10n.text("schedule.summary.not_available"))
+        #expect(probe.eventMessage.contains("debug@example.com"))
+        for text in probe.eventDateTexts {
+            #expect(probe.eventMessage.contains(text))
+        }
+    }
+
+    @Test
+    @MainActor
+    func specialResetBaselineProbeCoversPaidAccountFilteringAndDateNormalization() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        let paidPastWeekly = now.addingTimeInterval(-24 * 3_600)
+        let paidPastFiveHour = now.addingTimeInterval(-3_600)
+        let paidFutureWeekly = now.addingTimeInterval(3_600)
+        let paidA = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000A7")!,
+            name: "Alpha",
+            usedUnits: 34,
+            quota: 100,
+            usageWindowResetAt: paidPastWeekly,
+            primaryUsagePercent: 65,
+            primaryUsageResetAt: paidPastFiveHour,
+            secondaryUsagePercent: 34,
+            secondaryUsageResetAt: nil,
+            isPaid: true
+        )
+        let paidBlank = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000B7")!,
+            name: "   ",
+            usedUnits: 22,
+            quota: 100,
+            usageWindowResetAt: paidFutureWeekly,
+            primaryUsagePercent: nil,
+            primaryUsageResetAt: nil,
+            secondaryUsagePercent: nil,
+            secondaryUsageResetAt: paidFutureWeekly,
+            isPaid: true
+        )
+        let free = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000C7")!,
+            name: "Free",
+            usedUnits: 10,
+            quota: 100,
+            usageWindowResetAt: now.addingTimeInterval(600),
+            isPaid: false
+        )
+
+        let probe = PoolDashboardView.debugSpecialResetBaselineProbe(
+            accounts: [paidA, free, paidBlank],
+            now: now
+        )
+
+        let alphaIndex = probe.recordNames.firstIndex(of: "Alpha")
+        let unknownIndex = probe.recordNames.firstIndex(of: L10n.text("account.unknown"))
+        #expect(Set(probe.recordNames) == Set(["Alpha", L10n.text("account.unknown")]))
+        if let alphaIndex, let unknownIndex {
+            #expect(
+                probe.expectedWeeklyResetAts[alphaIndex] ==
+                    paidPastWeekly.addingTimeInterval(7 * 24 * 3_600)
+            )
+            #expect(
+                probe.expectedFiveHourResetAts[alphaIndex] ==
+                    paidPastFiveHour.addingTimeInterval(5 * 3_600)
+            )
+            #expect(probe.lastSeenWeeklyUsagePercents[alphaIndex] == 34)
+            #expect(probe.lastSeenFiveHourUsagePercents[alphaIndex] == 65)
+
+            #expect(probe.expectedWeeklyResetAts[unknownIndex] == paidFutureWeekly)
+            #expect(probe.expectedFiveHourResetAts[unknownIndex] == nil)
+            #expect(probe.lastSeenWeeklyUsagePercents[unknownIndex] == nil)
+            #expect(probe.lastSeenFiveHourUsagePercents[unknownIndex] == nil)
+        }
+        #expect(probe.lastSeenAts == [now, now])
+        #expect(probe.eventCount == 0)
+        #expect(probe.lastEvaluatedAt == now)
+    }
+
+    @Test
+    @MainActor
+    func specialResetEvaluationProbeCoversDetectionRecordPruningAndNotificationDecision() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000D7")!
+        let account = AgentAccount(
+            id: accountID,
+            name: "Beta",
+            usedUnits: 0,
+            quota: 100,
+            usageWindowResetAt: now.addingTimeInterval(8 * 24 * 3_600),
+            primaryUsagePercent: 0,
+            primaryUsageResetAt: now.addingTimeInterval(7 * 3_600),
+            secondaryUsagePercent: 0,
+            secondaryUsageResetAt: nil,
+            isPaid: true
+        )
+        let free = AgentAccount(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!,
+            name: "Free",
+            usedUnits: 1,
+            quota: 100,
+            usageWindowResetAt: now.addingTimeInterval(8 * 24 * 3_600),
+            isPaid: false
+        )
+
+        let probe = PoolDashboardView.debugSpecialResetEvaluationProbe(
+            accounts: [free, account],
+            existingAccountKey: "id:\(accountID.uuidString.lowercased())",
+            staleAccountKey: "id:stale",
+            previousWeeklyExpectedAt: now.addingTimeInterval(24 * 3_600),
+            previousFiveHourExpectedAt: now.addingTimeInterval(90 * 60),
+            now: now
+        )
+
+        #expect(probe.recordNames == ["Beta"])
+        #expect(probe.eventAccountNames == ["Beta"])
+        #expect(probe.prunedStaleRecord)
+        #expect(probe.shouldNotify)
+        #expect(probe.lastNotificationAt == now)
+        #expect(probe.lastEvaluatedAt == now)
+    }
+
+    @Test
+    @MainActor
+    func specialResetNotificationRequestProbeCoversEmptyAndDetectionRequest() {
+        let probe = PoolDashboardView.debugSpecialResetNotificationRequestProbe()
+
+        #expect(probe.emptyRequestIsNil)
+        #expect(probe.requestKey == "special-reset-daily")
+        #expect(!probe.requestTitle.isEmpty)
+        #expect(probe.requestBodyContainsAccountName)
+        #expect(probe.requestBodyContainsObservedDates)
+        #expect(probe.requestMinInterval == 30)
+    }
+
+    @Test
+    @MainActor
+    func usageAnalyticsStorageNormalizationProbeCoversLoadedAndStoredBranches() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let recent = UsageAnalyticsRecord(
+            timestamp: now,
+            accountKey: "recent",
+            weeklyDeltaPercent: 10,
+            fiveHourDeltaPercent: 2
+        )
+        let expired = UsageAnalyticsRecord(
+            timestamp: now.addingTimeInterval(-200 * 24 * 3_600),
+            accountKey: "expired",
+            weeklyDeltaPercent: 90,
+            fiveHourDeltaPercent: 70
+        )
+        let rawState = UsageAnalyticsState(records: [expired, recent], snapshots: [], lastUpdatedAt: now)
+        let rawData = try JSONEncoder().encode(rawState)
+        let rawText = try #require(String(data: rawData, encoding: .utf8))
+
+        let probe = PoolDashboardView.debugNormalizeStoredUsageAnalyticsProbe(
+            rawState: rawText,
+            accounts: [],
+            maxStoredRecords: UsageAnalyticsEngine.defaultMaxStoredRecords,
+            now: now
+        )
+
+        #expect(probe.didRewriteRawState)
+        #expect(probe.storedRecordKeys == ["recent"])
+        #expect(probe.loadedRecordKeys == ["recent"])
+        #expect(probe.invalidRawReturnedNil)
+    }
+
+    @Test
+    @MainActor
+    func usageAnalyticsStorageLifecycleProbeLoadsAndNormalizesStoredState() throws {
+        let probe = try PoolDashboardView.debugUsageAnalyticsStorageLifecycleProbe()
+
+        #expect(probe.emptyLoadMarkedLoaded)
+        #expect(probe.emptyLoadRecordCount == 0)
+        #expect(probe.loadedRecordKeys == ["recent"])
+        #expect(probe.loadedStateWasPersisted)
+        #expect(probe.normalizedLoadedRecordKeys == ["recent"])
+        #expect(probe.normalizedRawRecordKeys == ["recent"])
+    }
+
+    @Test
+    @MainActor
+    func usageAnalyticsSyncLifecycleProbeCoversSeedAndUpdateGuards() throws {
+        let probe = try PoolDashboardView.debugUsageAnalyticsSyncLifecycleProbe()
+
+        #expect(probe.unloadedSeedSnapshotCount == 0)
+        #expect(probe.seededSnapshotCount == 1)
+        #expect(probe.seededActiveAccountKey == probe.expectedAccountKey)
+        #expect(probe.alreadySeededSnapshotCount == 1)
+        #expect(probe.unloadedNonAnalyticsUpdateRecordCount == 0)
+        #expect(!probe.unloadedNonAnalyticsMarkedLoaded)
+        #expect(probe.workspaceTriggeredUpdateLoadedState)
+        #expect(probe.loadedUpdateRecordCount == 1)
+        #expect(probe.loadedUpdateLastActiveAccountKey == probe.expectedAccountKey)
+    }
+
+    @Test
+    @MainActor
+    func manualOAuthPreparationProbeCoversSuccessAndInvalidConfiguration() {
+        let probe = PoolDashboardView.debugManualOAuthPreparationProbe()
+
+        #expect(probe.successPendingContextWasStored)
+        #expect(probe.successURLContainsAuthorizePath)
+        #expect(probe.successMessage == L10n.text("oauth.manual.copy_success"))
+        #expect(probe.successErrorWasCleared)
+        #expect(probe.failurePendingContextIsNil)
+        #expect(probe.failureErrorIsNotEmpty)
+        #expect(probe.failureSuccessMessageIsNil)
+    }
+
+    @Test
+    @MainActor
+    func oauthSignInProbeCoversInvalidConfigurationFailure() async {
+        let probe = await PoolDashboardView.debugOAuthSignInProbe()
+
+        #expect(probe.invalidConfigurationErrorIsNotEmpty)
+        #expect(probe.invalidConfigurationSuccessMessageIsNil)
+        #expect(probe.invalidConfigurationShouldRefreshLocalAccounts == false)
+    }
+
+    @Test
+    @MainActor
+    func manualOAuthCallbackProbeCoversMissingContextAndInvalidCallback() async {
+        let probe = await PoolDashboardView.debugManualOAuthCallbackProbe()
+
+        #expect(probe.missingContextError == L10n.text("oauth.error.invalid_callback"))
+        #expect(probe.missingContextSuccessMessageIsNil)
+        #expect(probe.invalidCallbackErrorIsNotEmpty)
+        #expect(probe.invalidCallbackSuccessMessageIsNil)
+        #expect(probe.invalidCallbackShouldRefreshLocalAccounts == false)
+    }
+
+    @Test
+    @MainActor
+    func relayAccountAdditionProbeCoversSuccessfulAdd() async {
+        let probe = await PoolDashboardView.debugRelayAccountAdditionProbe()
+
+        #expect(probe.addedAccountCount == 1)
+        #expect(probe.addedAccountIsRelay)
+        #expect(probe.relayUsageSyncUnavailable)
+        #expect(probe.successMessage == L10n.text("relay.status.added"))
+        #expect(probe.errorWasCleared)
+    }
+
+    @Test
+    @MainActor
+    func localOAuthImportProbeCoversMissingAccountIDFailure() async {
+        let probe = await PoolDashboardView.debugLocalOAuthImportProbe()
+
+        #expect(probe.didImportMissingAccountID == false)
+        #expect(probe.accountCountAfterMissingAccountID == 0)
+        #expect(probe.errorMessage == L10n.text("auth.missing_chatgpt_account_id"))
+        #expect(probe.successMessageIsNil)
+    }
+
+    @Test
+    @MainActor
+    func dailyUsagePlanningNotificationEvaluationProbeCoversNotifyAndSuppressedBranches() {
+        let probe = PoolDashboardView.debugDailyUsagePlanningNotificationEvaluationProbe()
+
+        #expect(probe.notifyRequestKey.contains("schedule.weekly-plan.weekday:"))
+        #expect(!probe.notifyTitle.isEmpty)
+        #expect(!probe.notifyBody.isEmpty)
+        #expect(probe.notifyPersistedLevel == "warning")
+        #expect(probe.disabledPlanDidNotify == false)
+        #expect(probe.alreadyNotifiedDidNotify == false)
+    }
+
+    @Test
+    @MainActor
+    func viewMutationWrapperProbeCoversSynchronousApplyHelpers() {
+        let probe = PoolDashboardView.debugViewMutationWrapperProbe()
+
+        #expect(probe.oauthAccountName == "oauth-next")
+        #expect(probe.oauthSuccessMessage == "oauth-ok")
+        #expect(probe.localImportError == "import-error")
+        #expect(probe.pickedAuthFileURLPath.hasSuffix("auth.json"))
+        #expect(probe.switchLaunchLog == "switch-log")
+        #expect(probe.switchSessionURLPath.hasSuffix("switch-auth.json"))
+    }
+
+    @Test
+    @MainActor
+    func automaticSwitchDecisionProbeCoversSuccessFailureAndMissingPreviousAccount() {
+        let probe = PoolDashboardView.debugAutomaticSwitchDecisionProbe()
+
+        #expect(probe.successMarkedCurrentAccount)
+        #expect(probe.successNotificationKeyHasCurrentAccountID)
+        #expect(probe.successNotificationMinInterval == 15)
+        #expect(probe.failureMarkedPreviousAccount)
+        #expect(probe.failureNotificationKey == "auto-switch-failed")
+        #expect(probe.failureNotificationBody == "Boom")
+        #expect(probe.missingPreviousMarkedAccountID == nil)
+        #expect(probe.missingPreviousNotificationKey == nil)
+    }
+
+    @Test
+    @MainActor
+    func manualSwitchDecisionProbeCoversRouteSuccessAndFailureNotifications() {
+        let probe = PoolDashboardView.debugManualSwitchDecisionProbe()
+
+        #expect(probe.missingRoute == "missing")
+        #expect(probe.relayRoute == "relay")
+        #expect(probe.officialRoute == "official")
+        #expect(probe.successMarkedAccount)
+        #expect(probe.successNotificationKeyContainsAccountID)
+        #expect(probe.successNotificationMinInterval == 5)
+        #expect(probe.failureNotificationKey == "manual-switch-failed")
+        #expect(probe.failureNotificationBody == "Manual boom")
+        #expect(probe.emptyFailureNotificationKey == nil)
+    }
+
+    @Test
+    @MainActor
+    func lowUsageAlertTransitionProbeCoversGuardBranchesAndAlertMessage() {
+        let probe = PoolDashboardView.debugLowUsageAlertTransitionProbe()
+
+        #expect(probe.disabledAlertsDidShow == false)
+        #expect(probe.modeChangeDidShow == false)
+        #expect(probe.sameAccountDidShow == false)
+        #expect(probe.thresholdExceededDidShow)
+        #expect(probe.thresholdAlertMessageContainsAccountName)
+    }
+
+    @Test
+    @MainActor
+    func lowUsageDesktopNotificationProbeCoversGuardBranchesAndFallbackMessage() {
+        let probe = PoolDashboardView.debugLowUsageDesktopNotificationProbe()
+
+        #expect(probe.disabledAlertsRequestIsNil)
+        #expect(probe.previouslyShowingRequestIsNil)
+        #expect(probe.hiddenAlertRequestIsNil)
+        #expect(probe.explicitMessageKey == "low-usage-alert")
+        #expect(probe.explicitMessageTitleContainsLowUsage)
+        #expect(probe.explicitMessageBody == "Explicit low usage message")
+        #expect(probe.explicitMessageMinInterval == 60)
+        #expect(probe.fallbackMessageContainsAccountName)
+    }
+
+    @Test
+    @MainActor
+    func relaySwitchPreparationProbeCoversVaultHydrationAndPrepareFailureDiagnostic() {
+        let probe = PoolDashboardView.debugRelaySwitchPreparationProbe()
+
+        #expect(probe.preparedHydratedFromVault)
+        #expect(probe.preparedRequestUsedVaultAPIKey)
+        #expect(probe.preparedRequestAPIKeyLength == 13)
+        #expect(probe.preparedDiagnosticContainsPreparedStage)
+        #expect(probe.failedDiagnosticContainsPrepareFailedStage)
+        #expect(probe.failedErrorDescriptionNotEmpty)
+    }
+
+    @Test
+    @MainActor
+    func relaySwitchOutcomeDecisionProbeCoversSuccessAndFailureNotifications() {
+        let probe = PoolDashboardView.debugRelaySwitchOutcomeDecisionProbe()
+
+        #expect(probe.successMarkedRelayAccount)
+        #expect(probe.successNotificationKeyContainsRelayAccountID)
+        #expect(probe.successNotificationBodyContainsRelayAccountName)
+        #expect(probe.failureNotificationKey == "manual-relay-switch-failed")
+        #expect(probe.failureNotificationBody == "Relay boom")
+        #expect(probe.emptyFailureNotificationKey == nil)
     }
 
     @Test

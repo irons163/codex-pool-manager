@@ -1405,6 +1405,26 @@ struct AccountUsagePanelView: View {
 }
 
 #if DEBUG
+struct AccountUsagePanelDeleteDebugProbe: Equatable {
+    let groupID: String
+    let accountID: String
+    let groupTitle: String
+    let accountTitle: String
+    let groupMessage: String
+    let accountMessage: String
+    let deletedGroups: [String]
+    let removedAccountIDs: [UUID]
+}
+
+struct AccountUsagePanelStateDebugProbe: Equatable {
+    let sortTitles: [String]
+    let sortedAccountNamesByMode: [String: [String]]
+    let prioritySortedAccountNames: [String]
+    let savedAccountName: String
+    let canceledDraftFallbackName: String
+    let requestedDeleteGroupID: String?
+}
+
 extension AccountUsagePanelView {
     static func debugUsesStackedHeaderControls(availableWidth: CGFloat) -> Bool {
         usesStackedHeaderControls(availableWidth: availableWidth)
@@ -1420,6 +1440,237 @@ extension AccountUsagePanelView {
 
     static func debugAccountsWithAPIKeyLast(_ accounts: [AgentAccount]) -> [AgentAccount] {
         accountsWithAPIKeyLast(accounts)
+    }
+
+    @MainActor
+    static func debugStateMutationProbe(
+        accounts: [AgentAccount],
+        selectedGroupName: String,
+        activeAccountID: UUID?
+    ) -> AccountUsagePanelStateDebugProbe {
+        let defaults = UserDefaults.standard
+        let storageKeys = [
+            "pool_dashboard.account_usage.sort_mode",
+            "pool_dashboard.account_usage.active_first",
+            "pool_dashboard.account_usage.paid_first",
+            "pool_dashboard.account_usage.api_key_last",
+            "pool_dashboard.account_usage.layout_mode"
+        ]
+        let backupValues = Dictionary(uniqueKeysWithValues: storageKeys.map { key in
+            (key, defaults.object(forKey: key))
+        })
+        defer {
+            for key in storageKeys {
+                if let value = backupValues[key] {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        var selectedGroupValue = selectedGroupName
+        var accountNames = Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.name) })
+        var accountQuotas = Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.quota) })
+        var accountUsed = Dictionary(uniqueKeysWithValues: accounts.map { ($0.id, $0.usedUnits) })
+        let groups = Array(Set(accounts.map(\.groupName) + [selectedGroupName, AgentAccount.defaultGroupName])).sorted()
+
+        func makeView() -> AccountUsagePanelView {
+            AccountUsagePanelView(
+                newAccountName: .constant(""),
+                newAccountQuota: .constant(100),
+                selectedGroupName: Binding(
+                    get: { selectedGroupValue },
+                    set: { selectedGroupValue = $0 }
+                ),
+                availableWidth: 900,
+                accounts: accounts,
+                groups: groups,
+                activeAccountID: activeAccountID,
+                switchLaunchError: nil,
+                switchLaunchWarning: nil,
+                showAddAccountControls: true,
+                onAddAccount: { _, _ in },
+                onSwitchAndLaunch: { _ in },
+                onRemoveAccount: { _ in },
+                onMoveAccountToGroup: { _, _ in },
+                onCreateGroup: { _ in },
+                onRenameGroup: { _, _ in },
+                onDeleteGroup: { _ in },
+                accountNameBinding: { id in
+                    Binding(
+                        get: { accountNames[id] ?? "" },
+                        set: { accountNames[id] = $0 }
+                    )
+                },
+                accountQuotaBinding: { id in
+                    Binding(
+                        get: { accountQuotas[id] ?? 0 },
+                        set: { accountQuotas[id] = $0 }
+                    )
+                },
+                accountUsedBinding: { id in
+                    Binding(
+                        get: { accountUsed[id] ?? 0 },
+                        set: { accountUsed[id] = $0 }
+                    )
+                },
+                isPercentUsageAccount: { $0.isPaid },
+                remainingLabel: { "\($0.remainingUnits)" },
+                usageProgressColor: { $0.remainingRatio > 0.2 ? .blue : .red }
+            )
+        }
+
+        func sortedNames(
+            mode: SortMode,
+            activeFirst: Bool = false,
+            paidFirst: Bool = false,
+            apiKeyLast: Bool = false
+        ) -> [String] {
+            let view = makeView()
+            view.persistedSortModeRawValue = mode.rawValue
+            view.persistedActiveAccountFirst = activeFirst
+            view.persistedPaidAccountFirst = paidFirst
+            view.persistedAPIKeyAccountLast = apiKeyLast
+            return view.sortedAccounts.map(\.name)
+        }
+
+        let sortedAccountNamesByMode = Dictionary(uniqueKeysWithValues: SortMode.allCases.map { mode in
+            (mode.rawValue, sortedNames(mode: mode))
+        })
+
+        let prioritySortedAccountNames = sortedNames(
+            mode: .joinedAt,
+            activeFirst: true,
+            paidFirst: true,
+            apiKeyLast: true
+        )
+
+        let editableAccount = accounts.first
+        if let editableAccount {
+            var editView = makeView()
+            editView._draftAccountNames = State(initialValue: [
+                editableAccount.id: " renamed@example.com "
+            ])
+            editView.draftAccountNames[editableAccount.id] = " renamed@example.com "
+            editView.saveAccountName(editableAccount)
+
+            var cancelView = makeView()
+            cancelView._draftAccountNames = State(initialValue: [
+                editableAccount.id: "discarded@example.com"
+            ])
+            cancelView.cancelEditingAccountName(editableAccount)
+        }
+        let savedAccountName = editableAccount.flatMap { accountNames[$0.id] } ?? ""
+        let canceledDraftFallbackName = editableAccount.map {
+            let cancelView = makeView()
+            return cancelView.accountNameDraftBinding($0).wrappedValue
+        } ?? ""
+
+        let deleteView = makeView()
+        deleteView.requestDeleteSelectedGroup()
+        let requestedDeleteGroupID = deleteView.deleteConfirmationTarget?.id
+            ?? (deleteView.canDeleteSelectedGroup
+                ? DeleteConfirmationTarget.group(name: selectedGroupName).id
+                : nil)
+
+        return AccountUsagePanelStateDebugProbe(
+            sortTitles: SortMode.allCases.map(\.title),
+            sortedAccountNamesByMode: sortedAccountNamesByMode,
+            prioritySortedAccountNames: prioritySortedAccountNames,
+            savedAccountName: savedAccountName,
+            canceledDraftFallbackName: canceledDraftFallbackName,
+            requestedDeleteGroupID: requestedDeleteGroupID
+        )
+    }
+
+    @MainActor
+    static func debugDeleteConfirmationProbe(
+        groupName: String,
+        accountID: UUID,
+        accountName: String
+    ) -> AccountUsagePanelDeleteDebugProbe {
+        var deletedGroups: [String] = []
+        var removedAccountIDs: [UUID] = []
+        let view = debugScaffold(
+            selectedGroupName: groupName,
+            onRemoveAccount: { removedAccountIDs.append($0) },
+            onDeleteGroup: { deletedGroups.append($0) }
+        )
+        let groupTarget = DeleteConfirmationTarget.group(name: groupName)
+        let accountTarget = DeleteConfirmationTarget.account(id: accountID, name: accountName)
+
+        let groupID = groupTarget.id
+        let accountIDText = accountTarget.id
+        let groupTitle = view.title(for: groupTarget)
+        let accountTitle = view.title(for: accountTarget)
+        let groupMessage = view.message(for: groupTarget)
+        let accountMessage = view.message(for: accountTarget)
+
+        view.confirmDelete(groupTarget)
+        view.confirmDelete(accountTarget)
+
+        return AccountUsagePanelDeleteDebugProbe(
+            groupID: groupID,
+            accountID: accountIDText,
+            groupTitle: groupTitle,
+            accountTitle: accountTitle,
+            groupMessage: groupMessage,
+            accountMessage: accountMessage,
+            deletedGroups: deletedGroups,
+            removedAccountIDs: removedAccountIDs
+        )
+    }
+
+    @MainActor
+    static func debugRenameGroupControlsView(selectedGroupName: String) -> some View {
+        let view = debugScaffold(selectedGroupName: selectedGroupName)
+        view.renameGroupName = selectedGroupName
+        return view.renameGroupControls
+    }
+
+    @MainActor
+    private static func debugScaffold(
+        selectedGroupName: String = "Default",
+        onRemoveAccount: @escaping (UUID) -> Void = { _ in },
+        onDeleteGroup: @escaping (String) -> Void = { _ in }
+    ) -> AccountUsagePanelView {
+        let account = AgentAccount(
+            id: UUID(),
+            name: "debug@example.com",
+            groupName: selectedGroupName,
+            usedUnits: 10,
+            quota: 100,
+            apiToken: "token-debug",
+            email: "debug@example.com",
+            chatGPTAccountID: "acct-debug"
+        )
+
+        return AccountUsagePanelView(
+            newAccountName: .constant(""),
+            newAccountQuota: .constant(100),
+            selectedGroupName: .constant(selectedGroupName),
+            availableWidth: 640,
+            accounts: [account],
+            groups: [AgentAccount.defaultGroupName, selectedGroupName],
+            activeAccountID: account.id,
+            switchLaunchError: nil,
+            switchLaunchWarning: nil,
+            showAddAccountControls: false,
+            onAddAccount: { _, _ in },
+            onSwitchAndLaunch: { _ in },
+            onRemoveAccount: onRemoveAccount,
+            onMoveAccountToGroup: { _, _ in },
+            onCreateGroup: { _ in },
+            onRenameGroup: { _, _ in },
+            onDeleteGroup: onDeleteGroup,
+            accountNameBinding: { _ in .constant("debug@example.com") },
+            accountQuotaBinding: { _ in .constant(100) },
+            accountUsedBinding: { _ in .constant(10) },
+            isPercentUsageAccount: { _ in false },
+            remainingLabel: { _ in "90" },
+            usageProgressColor: { _ in .blue }
+        )
     }
 }
 #endif
