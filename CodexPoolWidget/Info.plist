@@ -17,9 +17,9 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.15</string>
+    <string>1.0.16</string>
     <key>CFBundleVersion</key>
-    <string>134</string>
+    <string>135</string>
     <key>UIDeviceFamily</key>
     <array>
         <integer>2</integer>
