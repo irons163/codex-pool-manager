@@ -41,6 +41,7 @@ struct CodexUsage: Equatable {
     let isPaid: Bool
     let planType: String?
     let rateLimitResetCreditsAvailableCount: Int?
+    let rateLimitResetCreditExpiries: [Date?]?
 
     init(
         usedUnits: Int,
@@ -55,7 +56,8 @@ struct CodexUsage: Equatable {
         secondaryUsageResetAt: Date? = nil,
         isPaid: Bool = false,
         planType: String? = nil,
-        rateLimitResetCreditsAvailableCount: Int? = nil
+        rateLimitResetCreditsAvailableCount: Int? = nil,
+        rateLimitResetCreditExpiries: [Date?]? = nil
     ) {
         self.usedUnits = usedUnits
         self.quota = quota
@@ -70,6 +72,7 @@ struct CodexUsage: Equatable {
         self.isPaid = isPaid
         self.planType = AgentAccount.normalizedPlanType(planType)
         self.rateLimitResetCreditsAvailableCount = rateLimitResetCreditsAvailableCount.map { max(0, $0) }
+        self.rateLimitResetCreditExpiries = rateLimitResetCreditExpiries
     }
 }
 
@@ -143,6 +146,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 state.updateRateLimitResetCredits(
                     for: account.id,
                     availableCount: usage.rateLimitResetCreditsAvailableCount,
+                    apiExpiries: usage.rateLimitResetCreditExpiries,
                     previousSuccessfulSyncAt: previousSuccessfulSyncAt,
                     now: now
                 )
@@ -182,6 +186,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                             state.updateRateLimitResetCredits(
                                 for: account.id,
                                 availableCount: refreshed.usage.rateLimitResetCreditsAvailableCount,
+                                apiExpiries: refreshed.usage.rateLimitResetCreditExpiries,
                                 previousSuccessfulSyncAt: previousSuccessfulSyncAt,
                                 now: now
                             )
@@ -322,31 +327,24 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
 
 struct OpenAICodexUsageClient: CodexUsageClient {
     var endpoint: URL
+    var resetCreditsEndpoint: URL
     var session: URLSession = .shared
     var onRawResponse: ((String) -> Void)?
 
     init(
         endpoint: URL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!,
+        resetCreditsEndpoint: URL? = nil,
         session: URLSession = .shared,
         onRawResponse: ((String) -> Void)? = nil
     ) {
         self.endpoint = endpoint
+        self.resetCreditsEndpoint = resetCreditsEndpoint ?? Self.makeResetCreditsEndpoint(from: endpoint)
         self.session = session
         self.onRawResponse = onRawResponse
     }
 
     func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
-        enum RequestPolicy {
-            static let timeout: TimeInterval = 30
-        }
-
-        var request = URLRequest(url: endpoint)
-        request.timeoutInterval = RequestPolicy.timeout
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-Id")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-tools-swift/0.1", forHTTPHeaderField: "User-Agent")
+        let request = makeRequest(url: endpoint, accessToken: accessToken, accountID: accountID)
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
@@ -358,6 +356,13 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         }
 
         let payload = try JSONDecoder().decode(UsagePayload.self, from: data)
+        let resetCreditDetails = try await fetchResetCreditDetails(
+            accessToken: accessToken,
+            accountID: accountID,
+            summaryAvailableCount: payload.rateLimitResetCredits?.availableCount
+        )
+        let resetCreditsAvailableCount = resetCreditDetails?.availableCount
+            ?? payload.rateLimitResetCredits?.availableCount
         let isPaid = inferPaidStatus(from: payload)
         let planType = AgentAccount.normalizedPlanType(payload.planType)
         let primaryWindow = payload.rateLimit?.primaryWindow
@@ -376,7 +381,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         // primaryUsage* => 5h window, secondaryUsage* => weekly window.
         let primaryUsagePercent = percentValue(from: resolvedWindows.fiveHourWindow?.usedPercent)
         let secondaryUsagePercent = percentValue(from: resolvedWindows.weeklyWindow?.usedPercent)
-        let accountID = payload.accountID
+        let responseAccountID = payload.accountID
         let accountEmail = payload.email
         if let usedUnits = payload.usedUnits, let quota = payload.quota {
             return CodexUsage(
@@ -384,7 +389,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 quota: quota,
                 usageWindowName: usageWindowName,
                 usageWindowResetAt: usageWindowResetAt,
-                accountID: accountID,
+                accountID: responseAccountID,
                 accountEmail: accountEmail,
                 primaryUsagePercent: primaryUsagePercent,
                 primaryUsageResetAt: resolvedWindows.fiveHourWindow?.resetAt,
@@ -392,7 +397,8 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
                 isPaid: isPaid,
                 planType: planType,
-                rateLimitResetCreditsAvailableCount: payload.rateLimitResetCredits?.availableCount
+                rateLimitResetCreditsAvailableCount: resetCreditsAvailableCount,
+                rateLimitResetCreditExpiries: resetCreditDetails?.expiries
             )
         }
         if let usedPercent = selectedWindow?.usedPercent
@@ -404,7 +410,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 quota: 100,
                 usageWindowName: usageWindowName,
                 usageWindowResetAt: usageWindowResetAt,
-                accountID: accountID,
+                accountID: responseAccountID,
                 accountEmail: accountEmail,
                 primaryUsagePercent: primaryUsagePercent,
                 primaryUsageResetAt: resolvedWindows.fiveHourWindow?.resetAt,
@@ -412,10 +418,89 @@ struct OpenAICodexUsageClient: CodexUsageClient {
                 secondaryUsageResetAt: resolvedWindows.weeklyWindow?.resetAt,
                 isPaid: isPaid,
                 planType: planType,
-                rateLimitResetCreditsAvailableCount: payload.rateLimitResetCredits?.availableCount
+                rateLimitResetCreditsAvailableCount: resetCreditsAvailableCount,
+                rateLimitResetCreditExpiries: resetCreditDetails?.expiries
             )
         }
         throw CodexSyncError.unknown
+    }
+
+    private enum RequestPolicy {
+        static let timeout: TimeInterval = 30
+    }
+
+    private struct ResetCreditDetailsResult {
+        let availableCount: Int
+        let expiries: [Date?]
+    }
+
+    private func makeRequest(url: URL, accessToken: String, accountID: String) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = RequestPolicy.timeout
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-Id")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("codex-tools-swift/0.1", forHTTPHeaderField: "User-Agent")
+        return request
+    }
+
+    private func fetchResetCreditDetails(
+        accessToken: String,
+        accountID: String,
+        summaryAvailableCount: Int?
+    ) async throws -> ResetCreditDetailsResult? {
+        guard let summaryAvailableCount, summaryAvailableCount > 0 else { return nil }
+
+        do {
+            let request = makeRequest(
+                url: resetCreditsEndpoint,
+                accessToken: accessToken,
+                accountID: accountID
+            )
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode) else {
+                return nil
+            }
+
+            let payload = try JSONDecoder().decode(RateLimitResetCreditsDetails.self, from: data)
+            let availableCredits = payload.credits.filter { credit in
+                credit.status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "available"
+            }
+            return ResetCreditDetailsResult(
+                availableCount: max(0, payload.availableCount ?? summaryAvailableCount),
+                expiries: availableCredits.map(\.expiresAt)
+            )
+        } catch {
+            try Task.checkCancellation()
+            return nil
+        }
+    }
+
+    private static func makeResetCreditsEndpoint(from usageEndpoint: URL) -> URL {
+        let fallback = URL(string: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits")!
+        guard var components = URLComponents(url: usageEndpoint, resolvingAgainstBaseURL: false) else {
+            return fallback
+        }
+
+        let path = components.path
+        if path.hasSuffix("/wham/usage") {
+            components.path = path.replacingOccurrences(
+                of: "/wham/usage",
+                with: "/wham/rate-limit-reset-credits"
+            )
+        } else if path.hasSuffix("/api/codex/usage") {
+            components.path = path.replacingOccurrences(
+                of: "/api/codex/usage",
+                with: "/api/codex/rate-limit-reset-credits"
+            )
+        } else {
+            return fallback
+        }
+        components.query = nil
+        components.fragment = nil
+        return components.url ?? fallback
     }
 
     private struct ResolvedUsageWindows {
@@ -583,6 +668,33 @@ struct OpenAICodexUsageClient: CodexUsageClient {
 
         private enum CodingKeys: String, CodingKey {
             case availableCount = "available_count"
+        }
+    }
+
+    private struct RateLimitResetCreditsDetails: Decodable {
+        let credits: [RateLimitResetCreditDetails]
+        let availableCount: Int?
+
+        private enum CodingKeys: String, CodingKey {
+            case credits
+            case availableCount = "available_count"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            credits = try container.decodeIfPresent([RateLimitResetCreditDetails].self, forKey: .credits) ?? []
+            availableCount = try container.decodeIfPresent(Int.self, forKey: .availableCount)
+        }
+    }
+
+    private struct RateLimitResetCreditDetails: Decodable {
+        let status: String
+        let expiresAt: Date?
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: DynamicCodingKey.self)
+            status = try container.decodeIfPresent(String.self, forKeys: ["status"]) ?? ""
+            expiresAt = try container.decodeDateIfPresent(forKeys: ["expires_at", "expiresAt"])
         }
     }
 

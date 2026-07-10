@@ -101,6 +101,7 @@ struct MenuBarDashboardPresenterTests {
         rateLimitResetCreditsAvailableCount: Int? = nil,
         rateLimitResetCreditsEstimatedExpiresAt: Date? = nil,
         rateLimitResetCreditEstimatedExpiries: [Date] = [],
+        rateLimitResetCreditExpirySource: RateLimitResetCreditExpirySource? = nil,
         usageSyncError: String? = nil,
         isUsageSyncExcluded: Bool = false,
         credentialType: AgentAccountCredentialType = .chatGPTOAuth
@@ -121,6 +122,7 @@ struct MenuBarDashboardPresenterTests {
             rateLimitResetCreditsAvailableCount: rateLimitResetCreditsAvailableCount,
             rateLimitResetCreditsEstimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
             rateLimitResetCreditEstimatedExpiries: rateLimitResetCreditEstimatedExpiries,
+            rateLimitResetCreditExpirySource: rateLimitResetCreditExpirySource,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -315,6 +317,49 @@ struct MenuBarDashboardPresenterTests {
                 "依前次成功同步時間加 30 天推估，實際期限可能不同。"
             ])
             #expect(row.resetCreditAccessibilityLabel == "可重置 2 次，推估 2026/7/29 23:15:42 GMT+8 到期")
+        }
+    }
+
+    @Test
+    func presenterFormatsAPIResetCreditExpiryWithoutEstimateWarning() throws {
+        try withMenuBarLanguageAndTimeZoneOverride(
+            "zh-Hant",
+            timeZone: try #require(TimeZone(secondsFromGMT: 8 * 60 * 60))
+        ) {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let firstExpiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 7,
+                day: 18,
+                hour: 8,
+                minute: 35,
+                second: 34
+            )))
+            let secondExpiry = try #require(calendar.date(from: DateComponents(
+                year: 2026,
+                month: 7,
+                day: 27,
+                hour: 7,
+                minute: 52,
+                second: 8
+            )))
+            let account = makeAccount(
+                rateLimitResetCreditsAvailableCount: 2,
+                rateLimitResetCreditsEstimatedExpiresAt: firstExpiry,
+                rateLimitResetCreditEstimatedExpiries: [firstExpiry, secondExpiry],
+                rateLimitResetCreditExpirySource: .api
+            )
+
+            let presentation = try #require(ResetCreditPresentationFormatter.presentation(for: account))
+
+            #expect(presentation.detailLines == [
+                "可重置 2 次",
+                "第 1 次期限：2026/7/18 08:35:34 GMT+8",
+                "第 2 次期限：2026/7/27 07:52:08 GMT+8"
+            ])
+            #expect(presentation.noteText == nil)
+            #expect(presentation.accessibilityLabel == "可重置 2 次，下次於 2026/7/18 08:35:34 GMT+8 到期")
         }
     }
 

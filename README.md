@@ -65,7 +65,7 @@ All screenshots below use mock or non-sensitive test data.
 - Sort and layout controls for large pools.
 - `Minimal` layout uses adaptive card sizing so column count responds to window width.
 - Dedup-aware pool statistics (`Accounts`, `Available`, `Pool Usage`) to avoid counting duplicated identities multiple times.
-- Main-window account cards show reset credits: regular mode lists each estimated expiry, while `Minimal` mode summarizes them as compact date chips such as `2 resets · 7/30, 8/1`.
+- Main-window account cards show reset credits: regular mode lists each expiry, while `Minimal` mode summarizes them as compact date chips such as `2 resets · 7/30, 8/1`.
 
 ### 2) Multiple switch modes
 
@@ -186,7 +186,7 @@ These are intentionally independent.
 - The popover mirrors main-window account ordering settings, including current account first, paid accounts first, and API Key accounts last.
 - Account list supports group filtering, shows Plus/Pro/API Key badges, and keeps `Switch` available even on the current account.
 - Rows show weekly and 5-hour remaining usage with exact reset times when available.
-- Reset credits are shown inline as `N resets available`, with one estimated expiry line per reset credit. Estimates use the previous successful sync time plus 30 days, so a warning popover explains that actual expiry may differ.
+- Reset credits are shown inline as `N resets available`, with one expiry line per credit. The app uses the API-provided `expires_at` value when available; missing details fall back to the previous successful sync time plus 30 days and retain the estimate warning.
 - Account warnings are collapsed behind a compact exclamation popover to save vertical space.
 - Refreshes periodically (every ~15s) and supports manual refresh.
 

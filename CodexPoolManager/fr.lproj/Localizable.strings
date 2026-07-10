@@ -642,5 +642,7 @@
 "menu_bar.reset_credit.badge_format" = "%d · exp. est. %@";
 "menu_bar.reset_credit.detail.title" = "Réinitialisations disponibles";
 "menu_bar.reset_credit.detail_format" = "%d réinitialisations disponibles\nExpiration estimée : %@\nEstimation basée sur la dernière synchronisation réussie plus 30 jours ; l’expiration réelle peut différer.";
+"menu_bar.reset_credit.actual_detail_format" = "%d réinitialisations disponibles\nProchaine expiration : %@";
 "menu_bar.reset_credit.per_credit_expiry_format" = "Expiration de la réinitialisation %d : %@";
 "menu_bar.reset_credit.accessibility_format" = "%d réinitialisations, expiration estimée %@";
+"menu_bar.reset_credit.actual_accessibility_format" = "%d réinitialisations, prochaine expiration %@";

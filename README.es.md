@@ -65,7 +65,7 @@ Todas las capturas usan datos de prueba o no sensibles.
 - Orden y layouts para pools grandes.
 - El layout `Minimal` usa ancho de tarjeta adaptable y ajusta automáticamente cuántas columnas caben según el ancho de la ventana.
 - Estadísticas (`Accounts`, `Available`, `Pool Usage`) con deduplicación para evitar doble conteo.
-- Las tarjetas de cuenta de la ventana principal muestran créditos de restablecimiento: el modo normal lista cada expiración estimada, mientras `Minimal` las resume en fechas compactas como `2 restablecimientos · 7/30, 8/1`.
+- Las tarjetas de cuenta de la ventana principal muestran créditos de restablecimiento: el modo normal lista cada vencimiento, mientras `Minimal` los resume en fechas compactas como `2 restablecimientos · 7/30, 8/1`.
 
 ### 2) Múltiples modos de cambio
 
@@ -90,7 +90,7 @@ Todas las capturas usan datos de prueba o no sensibles.
 ### 5) Integración de escritorio
 
 - Notificaciones nativas macOS (fallo/recuperación de sync, low usage, auto-switch).
-- Barra de menú con lista compacta de cuentas, filtro por grupo, badges de plan, popovers de aviso y expiración estimada de cada reset credit.
+- Barra de menú con lista compacta de cuentas, filtro por grupo, badges de plan, avisos de respaldo y vencimiento de cada reset credit.
 - Widget de macOS para vistazo rápido.
 
 ### 6) Backup y restore
@@ -183,7 +183,7 @@ Hay dos umbrales independientes:
 - El popover respeta las preferencias de orden del panel principal: cuenta actual primero, cuentas pagadas delante y cuentas API Key al final.
 - La lista de cuentas permite filtrar por grupo, muestra badges Plus/Pro/API Key y mantiene `Switch` disponible incluso en la cuenta actual.
 - Cada fila muestra restante semanal y de 5 horas, con hora exacta de reset cuando está disponible.
-- Los reset credits se muestran como `N resets available`, con una línea de expiración estimada por cada credit. La estimación usa el último sync exitoso anterior + 30 días, por eso un popover de aviso aclara que la expiración real puede diferir.
+- Los reset credits se muestran como `N resets available`, con una línea de vencimiento por cada credit. La aplicación prioriza el valor `expires_at` de la API; si fallan los detalles o falta una fecha, usa el último sync exitoso + 30 días y conserva el aviso de estimación.
 - Los avisos de cuenta se colapsan detrás de un popover compacto con signo de exclamación para ahorrar espacio vertical.
 - Refresh periódico (~15s) y refresh manual.
 

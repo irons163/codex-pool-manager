@@ -2905,6 +2905,7 @@ struct CodexPoolManagerTests {
         #expect(account.rateLimitResetCreditsAvailableCount == nil)
         #expect(account.rateLimitResetCreditsEstimatedExpiresAt == nil)
         #expect(account.rateLimitResetCreditEstimatedExpiries.isEmpty)
+        #expect(account.rateLimitResetCreditExpirySource == nil)
     }
 
     @Test
@@ -2927,6 +2928,7 @@ struct CodexPoolManagerTests {
         #expect(account.rateLimitResetCreditsAvailableCount == 2)
         #expect(account.rateLimitResetCreditsEstimatedExpiresAt == expiry)
         #expect(account.rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
+        #expect(account.rateLimitResetCreditExpirySource == .estimated)
     }
 
     @Test
@@ -2976,6 +2978,31 @@ struct CodexPoolManagerTests {
         #expect(redacted.rateLimitResetCreditsAvailableCount == 2)
         #expect(redacted.rateLimitResetCreditsEstimatedExpiresAt == expiry)
         #expect(redacted.rateLimitResetCreditEstimatedExpiries == [expiry, expiry])
+        #expect(redacted.rateLimitResetCreditExpirySource == .estimated)
+    }
+
+    @Test
+    func agentAccountRoundTripsAPIResetCreditExpirySource() throws {
+        let firstExpiry = Date(timeIntervalSince1970: 1_800_000_000)
+        let secondExpiry = Date(timeIntervalSince1970: 1_800_100_000)
+        let account = AgentAccount(
+            id: UUID(),
+            name: "A",
+            usedUnits: 0,
+            quota: 100,
+            rateLimitResetCreditsAvailableCount: 2,
+            rateLimitResetCreditsEstimatedExpiresAt: firstExpiry,
+            rateLimitResetCreditEstimatedExpiries: [firstExpiry, secondExpiry],
+            rateLimitResetCreditExpirySource: .api
+        )
+
+        let decoded = try JSONDecoder().decode(
+            AgentAccount.self,
+            from: JSONEncoder().encode(account)
+        )
+
+        #expect(decoded.rateLimitResetCreditEstimatedExpiries == [firstExpiry, secondExpiry])
+        #expect(decoded.rateLimitResetCreditExpirySource == .api)
     }
 
     @Test
@@ -3125,6 +3152,79 @@ struct CodexPoolManagerTests {
             previousSync.addingTimeInterval(30 * 24 * 60 * 60),
             previousSync.addingTimeInterval(30 * 24 * 60 * 60)
         ])
+        #expect(state.accounts[0].rateLimitResetCreditExpirySource == .estimated)
+    }
+
+    @Test
+    func codexSyncUsesAPIResetCreditExpiries() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let firstExpiry = Date(timeIntervalSince1970: 1_800_000_000)
+        let secondExpiry = Date(timeIntervalSince1970: 1_800_100_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 10,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditExpiries: [firstExpiry, secondExpiry]
+                )
+            ]
+        )
+
+        try await CodexUsageSyncService(client: client).sync(
+            state: &state,
+            now: Date(timeIntervalSince1970: 2_000)
+        )
+
+        #expect(state.accounts[0].rateLimitResetCreditsAvailableCount == 2)
+        #expect(state.accounts[0].rateLimitResetCreditsEstimatedExpiresAt == firstExpiry)
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [firstExpiry, secondExpiry])
+        #expect(state.accounts[0].rateLimitResetCreditExpirySource == .api)
+    }
+
+    @Test
+    func codexSyncFallsBackForMissingAPIResetCreditExpiry() async throws {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let firstExpiry = Date(timeIntervalSince1970: 1_800_000_000)
+        let previousSync = Date(timeIntervalSince1970: 1_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000, apiToken: "token-a")
+            ],
+            mode: .manual
+        )
+        state.updateAccount(a, chatGPTAccountID: "acct-a")
+        state.markUsageSynced(at: previousSync)
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-a": CodexUsage(
+                    usedUnits: 10,
+                    quota: 100,
+                    rateLimitResetCreditsAvailableCount: 2,
+                    rateLimitResetCreditExpiries: [firstExpiry, nil]
+                )
+            ]
+        )
+
+        try await CodexUsageSyncService(client: client).sync(
+            state: &state,
+            now: Date(timeIntervalSince1970: 2_000)
+        )
+
+        #expect(state.accounts[0].rateLimitResetCreditEstimatedExpiries == [
+            firstExpiry,
+            previousSync.addingTimeInterval(30 * 24 * 60 * 60)
+        ])
+        #expect(state.accounts[0].rateLimitResetCreditExpirySource == .estimated)
     }
 
     @Test
@@ -4278,6 +4378,94 @@ struct CodexPoolManagerTests {
         let usage = try await client.fetchUsage(accessToken: "token", accountID: "acct")
 
         #expect(usage.rateLimitResetCreditsAvailableCount == 2)
+        #expect(usage.rateLimitResetCreditExpiries == nil)
+    }
+
+    @Test
+    func openAICodexUsageClientParsesResetCreditExpiryDetails() async throws {
+        let usageJSON = """
+        {
+          "plan_type": "pro",
+          "rate_limit": {
+            "primary_window": { "used_percent": 12 }
+          },
+          "rate_limit_reset_credits": {
+            "available_count": 3
+          }
+        }
+        """
+        let detailsJSON = """
+        {
+          "credits": [
+            {
+              "id": "credit-1",
+              "reset_type": "codex_rate_limits",
+              "status": "available",
+              "granted_at": "2026-06-18T00:35:34.733871Z",
+              "expires_at": "2026-07-18T00:35:34.733871Z"
+            },
+            {
+              "id": "credit-redeemed",
+              "reset_type": "codex_rate_limits",
+              "status": "redeemed",
+              "granted_at": "2026-06-20T00:00:00Z",
+              "expires_at": "2026-07-20T00:00:00Z"
+            },
+            {
+              "id": "credit-2",
+              "reset_type": "codex_rate_limits",
+              "status": "available",
+              "granted_at": "2026-06-26T23:52:08.809427Z",
+              "expires_at": "2026-07-26T23:52:08.809427Z"
+            },
+            {
+              "id": "credit-3",
+              "reset_type": "codex_rate_limits",
+              "status": "available",
+              "granted_at": "2026-07-01T19:09:12.564429Z",
+              "expires_at": "2026-07-31T19:09:12.564429Z"
+            }
+          ],
+          "available_count": 3
+        }
+        """
+        let usageEndpoint = try #require(URL(
+            string: "https://reset-credit-details.example.test/backend-api/wham/usage?case=reset-credit-details"
+        ))
+        let detailsEndpoint = try #require(URL(
+            string: "https://reset-credit-details.example.test/backend-api/wham/rate-limit-reset-credits"
+        ))
+        let session = makeMockedURLSession(
+            endpoint: usageEndpoint,
+            statusCode: 200,
+            data: Data(usageJSON.utf8)
+        )
+        let detailsRequest = LockedValue<URLRequest?>(nil)
+        MockUsageURLProtocol.setMock(
+            for: detailsEndpoint.absoluteString,
+            statusCode: 200,
+            data: Data(detailsJSON.utf8),
+            requestObserver: { request in
+                detailsRequest.withLock { $0 = request }
+            }
+        )
+
+        let client = OpenAICodexUsageClient(
+            endpoint: usageEndpoint,
+            session: session
+        )
+        let usage = try await client.fetchUsage(accessToken: "token", accountID: "acct")
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let firstExpiry = try #require(formatter.date(from: "2026-07-18T00:35:34.733871Z"))
+        let secondExpiry = try #require(formatter.date(from: "2026-07-26T23:52:08.809427Z"))
+        let thirdExpiry = try #require(formatter.date(from: "2026-07-31T19:09:12.564429Z"))
+
+        #expect(usage.rateLimitResetCreditsAvailableCount == 3)
+        #expect(usage.rateLimitResetCreditExpiries == [firstExpiry, secondExpiry, thirdExpiry])
+        #expect(detailsRequest.value?.value(forHTTPHeaderField: "Authorization") == "Bearer token")
+        #expect(detailsRequest.value?.value(forHTTPHeaderField: "ChatGPT-Account-Id") == "acct")
     }
 
     @Test

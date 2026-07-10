@@ -5,6 +5,11 @@ enum AgentAccountCredentialType: String, Codable, Equatable {
     case relayAPIKey = "relay_api_key"
 }
 
+enum RateLimitResetCreditExpirySource: String, Codable, Equatable {
+    case api
+    case estimated
+}
+
 struct AgentAccount: Identifiable, Equatable, Codable {
     static let defaultGroupName = "Default"
     static let personalIdentityScope = "personal"
@@ -41,6 +46,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
     var rateLimitResetCreditsAvailableCount: Int?
     var rateLimitResetCreditsEstimatedExpiresAt: Date?
     var rateLimitResetCreditEstimatedExpiries: [Date]
+    var rateLimitResetCreditExpirySource: RateLimitResetCreditExpirySource?
     var isUsageSyncExcluded: Bool
     var usageSyncError: String?
 
@@ -75,6 +81,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         rateLimitResetCreditsAvailableCount: Int? = nil,
         rateLimitResetCreditsEstimatedExpiresAt: Date? = nil,
         rateLimitResetCreditEstimatedExpiries: [Date] = [],
+        rateLimitResetCreditExpirySource: RateLimitResetCreditExpirySource? = nil,
         isUsageSyncExcluded: Bool = false,
         usageSyncError: String? = nil
     ) {
@@ -116,6 +123,9 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         self.rateLimitResetCreditEstimatedExpiries = normalizedResetExpiries
         self.rateLimitResetCreditsEstimatedExpiresAt = (normalizedResetCount ?? 0) > 0
             ? (normalizedResetExpiries.first ?? rateLimitResetCreditsEstimatedExpiresAt)
+            : nil
+        self.rateLimitResetCreditExpirySource = (normalizedResetCount ?? 0) > 0 && !normalizedResetExpiries.isEmpty
+            ? (rateLimitResetCreditExpirySource ?? .estimated)
             : nil
         self.isUsageSyncExcluded = isUsageSyncExcluded
         self.usageSyncError = usageSyncError
@@ -168,6 +178,12 @@ struct AgentAccount: Identifiable, Equatable, Codable {
         rateLimitResetCreditsEstimatedExpiresAt = (rateLimitResetCreditsAvailableCount ?? 0) > 0
             ? (rateLimitResetCreditEstimatedExpiries.first ?? decodedResetExpiry)
             : nil
+        rateLimitResetCreditExpirySource = rateLimitResetCreditEstimatedExpiries.isEmpty
+            ? nil
+            : (try container.decodeIfPresent(
+                RateLimitResetCreditExpirySource.self,
+                forKey: .rateLimitResetCreditExpirySource
+            ) ?? .estimated)
         isUsageSyncExcluded = try container.decodeIfPresent(Bool.self, forKey: .isUsageSyncExcluded) ?? false
         usageSyncError = try container.decodeIfPresent(String.self, forKey: .usageSyncError)
     }
@@ -226,6 +242,7 @@ struct AgentAccount: Identifiable, Equatable, Codable {
             rateLimitResetCreditsAvailableCount: rateLimitResetCreditsAvailableCount,
             rateLimitResetCreditsEstimatedExpiresAt: rateLimitResetCreditsEstimatedExpiresAt,
             rateLimitResetCreditEstimatedExpiries: rateLimitResetCreditEstimatedExpiries,
+            rateLimitResetCreditExpirySource: rateLimitResetCreditExpirySource,
             isUsageSyncExcluded: isUsageSyncExcluded,
             usageSyncError: usageSyncError
         )
@@ -1074,6 +1091,7 @@ struct AccountPoolState {
             rateLimitResetCreditsAvailableCount: source.rateLimitResetCreditsAvailableCount,
             rateLimitResetCreditsEstimatedExpiresAt: source.rateLimitResetCreditsEstimatedExpiresAt,
             rateLimitResetCreditEstimatedExpiries: source.rateLimitResetCreditEstimatedExpiries,
+            rateLimitResetCreditExpirySource: source.rateLimitResetCreditExpirySource,
             isUsageSyncExcluded: source.isUsageSyncExcluded,
             usageSyncError: source.usageSyncError
         )
@@ -1112,6 +1130,7 @@ struct AccountPoolState {
     mutating func updateRateLimitResetCredits(
         for accountID: UUID,
         availableCount: Int?,
+        apiExpiries: [Date?]? = nil,
         previousSuccessfulSyncAt: Date?,
         now: Date = .now
     ) {
@@ -1120,6 +1139,7 @@ struct AccountPoolState {
             accounts[index].rateLimitResetCreditsAvailableCount = nil
             accounts[index].rateLimitResetCreditsEstimatedExpiresAt = nil
             accounts[index].rateLimitResetCreditEstimatedExpiries = []
+            accounts[index].rateLimitResetCreditExpirySource = nil
             return
         }
 
@@ -1140,20 +1160,56 @@ struct AccountPoolState {
             accounts[index].rateLimitResetCreditsAvailableCount = normalizedCount
             accounts[index].rateLimitResetCreditsEstimatedExpiresAt = nil
             accounts[index].rateLimitResetCreditEstimatedExpiries = []
+            accounts[index].rateLimitResetCreditExpirySource = nil
             return
         }
 
         let baseline = min(previousSuccessfulSyncAt ?? now, now)
         let newExpiry = baseline.addingTimeInterval(30 * 24 * 60 * 60)
-        if estimatedExpiries.count > normalizedCount {
-            estimatedExpiries = Array(estimatedExpiries.suffix(normalizedCount))
-        } else if estimatedExpiries.count < normalizedCount {
-            estimatedExpiries.append(contentsOf: Array(repeating: newExpiry, count: normalizedCount - estimatedExpiries.count))
+        let existingSource = accounts[index].rateLimitResetCreditExpirySource
+        let resolvedSource: RateLimitResetCreditExpirySource
+
+        if let apiExpiries {
+            let candidates = Array(apiExpiries.prefix(normalizedCount))
+            var resolvedExpiries: [Date] = []
+            var usedEstimate = false
+
+            for creditIndex in 0..<normalizedCount {
+                if creditIndex < candidates.count,
+                   let apiExpiry = candidates[creditIndex] {
+                    resolvedExpiries.append(apiExpiry)
+                } else if creditIndex < estimatedExpiries.count {
+                    resolvedExpiries.append(estimatedExpiries[creditIndex])
+                    usedEstimate = usedEstimate || existingSource != .api
+                } else {
+                    resolvedExpiries.append(newExpiry)
+                    usedEstimate = true
+                }
+            }
+
+            estimatedExpiries = resolvedExpiries
+            resolvedSource = usedEstimate ? .estimated : .api
+        } else {
+            let existingExpiryCount = estimatedExpiries.count
+            if estimatedExpiries.count > normalizedCount {
+                estimatedExpiries = Array(estimatedExpiries.suffix(normalizedCount))
+            } else if estimatedExpiries.count < normalizedCount {
+                estimatedExpiries.append(
+                    contentsOf: Array(
+                        repeating: newExpiry,
+                        count: normalizedCount - estimatedExpiries.count
+                    )
+                )
+            }
+            resolvedSource = existingExpiryCount < normalizedCount
+                ? .estimated
+                : (existingSource ?? .estimated)
         }
 
         accounts[index].rateLimitResetCreditsAvailableCount = normalizedCount
         accounts[index].rateLimitResetCreditEstimatedExpiries = estimatedExpiries
         accounts[index].rateLimitResetCreditsEstimatedExpiresAt = estimatedExpiries.first
+        accounts[index].rateLimitResetCreditExpirySource = resolvedSource
     }
 
     mutating func mergeUsageSyncState(from syncedState: AccountPoolState, now: Date = .now) {
@@ -1184,6 +1240,7 @@ struct AccountPoolState {
             accounts[index].rateLimitResetCreditsAvailableCount = synced.rateLimitResetCreditsAvailableCount
             accounts[index].rateLimitResetCreditsEstimatedExpiresAt = synced.rateLimitResetCreditsEstimatedExpiresAt
             accounts[index].rateLimitResetCreditEstimatedExpiries = synced.rateLimitResetCreditEstimatedExpiries
+            accounts[index].rateLimitResetCreditExpirySource = synced.rateLimitResetCreditExpirySource
             accounts[index].isUsageSyncExcluded = synced.isUsageSyncExcluded
             accounts[index].usageSyncError = synced.usageSyncError
             didUpdate = true

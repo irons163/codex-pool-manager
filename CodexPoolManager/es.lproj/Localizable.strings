@@ -642,5 +642,7 @@
 "menu_bar.reset_credit.badge_format" = "%d · vence aprox. %@";
 "menu_bar.reset_credit.detail.title" = "Restablecimientos disponibles";
 "menu_bar.reset_credit.detail_format" = "%d restablecimientos disponibles\nVencimiento estimado: %@\nEstimado desde la sincronización correcta anterior más 30 días; el vencimiento real puede variar.";
+"menu_bar.reset_credit.actual_detail_format" = "%d restablecimientos disponibles\nPróximo vencimiento: %@";
 "menu_bar.reset_credit.per_credit_expiry_format" = "Vencimiento del restablecimiento %d: %@";
 "menu_bar.reset_credit.accessibility_format" = "%d restablecimientos, vencimiento estimado %@";
+"menu_bar.reset_credit.actual_accessibility_format" = "%d restablecimientos, próximo vencimiento %@";
