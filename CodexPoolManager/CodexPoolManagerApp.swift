@@ -26,7 +26,7 @@ struct CodexPoolManagerApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Dashboard", id: "dashboard") {
+        Window("Dashboard", id: "dashboard") {
             ContentView(runtimeModel: runtimeModel)
                 .id(appLanguageOverride)
                 .environment(\.locale, L10n.locale(for: appLanguageOverride))
