@@ -128,8 +128,8 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     accessToken: account.apiToken,
                     accountID: chatGPTAccountID
                 )
-                state.updateAccount(
-                    account.id,
+                state.replaceUsageSnapshot(
+                    for: account.id,
                     quota: usage.quota,
                     usedUnits: usage.usedUnits,
                     usageWindowName: usage.usageWindowName,
@@ -164,20 +164,25 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                         ) {
                             state.updateAccount(
                                 account.id,
-                                quota: refreshed.usage.quota,
-                                usedUnits: refreshed.usage.usedUnits,
                                 apiToken: refreshed.tokens.accessToken,
                                 email: refreshed.usage.accountEmail,
                                 chatGPTAccountID: refreshed.usage.accountID ?? chatGPTAccountID,
+                                oauthRefreshToken: refreshed.refreshToken,
+                                oauthIDToken: refreshed.idToken,
+                                oauthLastRefreshAt: now,
+                                now: now,
+                                shouldEvaluate: false
+                            )
+                            state.replaceUsageSnapshot(
+                                for: account.id,
+                                quota: refreshed.usage.quota,
+                                usedUnits: refreshed.usage.usedUnits,
                                 usageWindowName: refreshed.usage.usageWindowName,
                                 usageWindowResetAt: refreshed.usage.usageWindowResetAt,
                                 primaryUsagePercent: refreshed.usage.primaryUsagePercent,
                                 primaryUsageResetAt: refreshed.usage.primaryUsageResetAt,
                                 secondaryUsagePercent: refreshed.usage.secondaryUsagePercent,
                                 secondaryUsageResetAt: refreshed.usage.secondaryUsageResetAt,
-                                oauthRefreshToken: refreshed.refreshToken,
-                                oauthIDToken: refreshed.idToken,
-                                oauthLastRefreshAt: now,
                                 isPaid: refreshed.usage.isPaid,
                                 planType: refreshed.usage.planType,
                                 now: now,
@@ -510,7 +515,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let defaultWindowName: String
     }
 
-    private enum PaidWindowRole {
+    private enum UsageWindowRole {
         case fiveHour
         case weekly
     }
@@ -520,35 +525,39 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         primaryWindow: Window?,
         secondaryWindow: Window?
     ) -> ResolvedUsageWindows {
-        if !isPaid {
-            return ResolvedUsageWindows(
-                selectedWindow: primaryWindow ?? secondaryWindow,
-                fiveHourWindow: primaryWindow,
-                weeklyWindow: secondaryWindow,
-                defaultWindowName: "primary_window"
-            )
+        let roles = resolveWindowRoles(primaryWindow: primaryWindow, secondaryWindow: secondaryWindow)
+        let defaultWindowName: String
+        if roles.weekly != nil {
+            defaultWindowName = "weekly_window"
+        } else if roles.fiveHour != nil {
+            defaultWindowName = "five_hour_window"
+        } else {
+            defaultWindowName = isPaid ? "weekly_window" : "primary_window"
         }
 
-        let roles = resolvePaidWindowRoles(primaryWindow: primaryWindow, secondaryWindow: secondaryWindow)
         return ResolvedUsageWindows(
-            selectedWindow: roles.weekly ?? primaryWindow ?? secondaryWindow,
+            // Prefer the longer window as the account's primary usage value.
+            // Some plans expose only the weekly window in primary_window.
+            selectedWindow: roles.weekly ?? roles.fiveHour,
             fiveHourWindow: roles.fiveHour,
             weeklyWindow: roles.weekly,
-            defaultWindowName: "weekly_window"
+            defaultWindowName: defaultWindowName
         )
     }
 
-    private func resolvePaidWindowRoles(
+    private func resolveWindowRoles(
         primaryWindow: Window?,
         secondaryWindow: Window?
     ) -> (fiveHour: Window?, weekly: Window?) {
         switch (primaryWindow, secondaryWindow) {
         case (nil, nil):
             return (nil, nil)
-        case let (window?, nil), let (nil, window?):
-            return (window, window)
+        case let (window?, nil):
+            return rolesForSingleWindow(window, fallback: .fiveHour)
+        case let (nil, window?):
+            return rolesForSingleWindow(window, fallback: .weekly)
         case let (primary?, secondary?):
-            if let roles = rolesFromWindowNames(primary: primary, secondary: secondary) {
+            if let roles = rolesFromWindowMetadata(primary: primary, secondary: secondary) {
                 return roles
             }
             if let roles = rolesFromWindowDurations(primary: primary, secondary: secondary) {
@@ -562,7 +571,19 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         }
     }
 
-    private func rolesFromWindowNames(primary: Window, secondary: Window) -> (fiveHour: Window, weekly: Window)? {
+    private func rolesForSingleWindow(
+        _ window: Window,
+        fallback: UsageWindowRole
+    ) -> (fiveHour: Window?, weekly: Window?) {
+        switch inferRole(from: window) ?? fallback {
+        case .fiveHour:
+            return (window, nil)
+        case .weekly:
+            return (nil, window)
+        }
+    }
+
+    private func rolesFromWindowMetadata(primary: Window, secondary: Window) -> (fiveHour: Window, weekly: Window)? {
         let primaryRole = inferRole(from: primary)
         let secondaryRole = inferRole(from: secondary)
         if primaryRole == .fiveHour && secondaryRole == .weekly {
@@ -578,9 +599,17 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         if let primaryDuration = primary.limitWindowSeconds,
            let secondaryDuration = secondary.limitWindowSeconds,
            primaryDuration != secondaryDuration {
-            return primaryDuration < secondaryDuration ? (primary, secondary) : (secondary, primary)
+            if let primaryRole = role(forLimitWindowSeconds: primaryDuration),
+               let secondaryRole = role(forLimitWindowSeconds: secondaryDuration),
+               primaryRole != secondaryRole {
+                return primaryRole == .fiveHour
+                    ? (primary, secondary)
+                    : (secondary, primary)
+            }
         }
-        if let primaryDuration = primary.resetAfterSeconds,
+        if primary.limitWindowSeconds == nil,
+           secondary.limitWindowSeconds == nil,
+           let primaryDuration = primary.resetAfterSeconds,
            let secondaryDuration = secondary.resetAfterSeconds,
            primaryDuration != secondaryDuration {
             return primaryDuration < secondaryDuration ? (primary, secondary) : (secondary, primary)
@@ -597,7 +626,11 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         return primaryReset < secondaryReset ? (primary, secondary) : (secondary, primary)
     }
 
-    private func inferRole(from window: Window) -> PaidWindowRole? {
+    private func inferRole(from window: Window) -> UsageWindowRole? {
+        if let role = window.limitWindowSeconds.flatMap(role(forLimitWindowSeconds:)) {
+            return role
+        }
+
         guard let name = window.name?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
               !name.isEmpty else {
             return nil
@@ -607,6 +640,19 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         }
         if name.contains("5h") || name.contains("five") || name.contains("hour") {
             return .fiveHour
+        }
+        return nil
+    }
+
+    private func role(forLimitWindowSeconds seconds: Double) -> UsageWindowRole? {
+        // The API currently uses 18,000 seconds for 5h and 604,800 seconds
+        // for weekly. Keep a tolerance band so unknown future durations are
+        // not silently presented as one of those two windows.
+        if seconds <= 6 * 60 * 60 {
+            return .fiveHour
+        }
+        if seconds >= 6 * 24 * 60 * 60 {
+            return .weekly
         }
         return nil
     }

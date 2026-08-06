@@ -811,17 +811,22 @@ struct AccountUsagePanelView: View {
         if Self.showsUsageMeters(for: account) {
             if paidAccount {
                 if let fiveHourPercent = account.primaryUsagePercent {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top, spacing: 12) {
-                            paidWeeklyUsageSection(for: account)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                    if hasWeeklyUsageWindow(account) {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top, spacing: 12) {
+                                paidWeeklyUsageSection(for: account)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                            VStack(alignment: .leading, spacing: 10) {
+                                paidWeeklyUsageSection(for: account)
+                                paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                            }
                         }
-                        VStack(alignment: .leading, spacing: 10) {
-                            paidWeeklyUsageSection(for: account)
-                            paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
-                        }
+                    } else {
+                        paidFiveHourUsageSection(for: account, fiveHourPercent: fiveHourPercent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 } else {
                     paidWeeklyUsageSection(for: account)
@@ -895,14 +900,16 @@ struct AccountUsagePanelView: View {
 
             if Self.showsUsageMeters(for: account) {
                 HStack(alignment: .top, spacing: 10) {
-                    circularUsageIndicator(
-                        title: L10n.text("usage.weekly_short"),
-                        usedPercent: weeklyUsagePercent(for: account),
-                        color: usageProgressColor(account),
-                        resetText: shortResetDateText(account.usageWindowResetAt)
-                    )
+                    if hasWeeklyUsageWindow(account) {
+                        circularUsageIndicator(
+                            title: L10n.text("usage.weekly_short"),
+                            usedPercent: weeklyUsagePercent(for: account),
+                            color: usageProgressColor(account),
+                            resetText: shortResetDateText(account.usageWindowResetAt)
+                        )
+                    }
 
-                    if isPaidAccount(account), let fiveHourPercent = account.primaryUsagePercent {
+                    if let fiveHourPercent = account.primaryUsagePercent {
                         circularUsageIndicator(
                             title: L10n.text("usage.five_hour_short"),
                             usedPercent: max(0, min(100, fiveHourPercent)),
@@ -940,6 +947,10 @@ struct AccountUsagePanelView: View {
             .controlSize(.small)
             .buttonStyle(.bordered)
         }
+    }
+
+    private func hasWeeklyUsageWindow(_ account: AgentAccount) -> Bool {
+        account.primaryUsagePercent == nil || account.secondaryUsagePercent != nil
     }
 
     private func weeklyUsagePercent(for account: AgentAccount) -> Int {
@@ -1238,6 +1249,9 @@ struct AccountUsagePanelView: View {
 
     private func resetRecordText(for account: AgentAccount) -> String {
         let resetText = account.usageWindowResetAt.map(localizedMonthDayHourMinuteText) ?? "--"
+        if !hasWeeklyUsageWindow(account) {
+            return L10n.text("account.five_hour_resets_format", resetText)
+        }
         return L10n.text("account.weekly_resets_format", resetText)
     }
 

@@ -935,6 +935,40 @@ struct AccountPoolState {
         evaluate(now: now)
     }
 
+    mutating func replaceUsageSnapshot(
+        for accountID: UUID,
+        quota: Int,
+        usedUnits: Int,
+        usageWindowName: String?,
+        usageWindowResetAt: Date?,
+        primaryUsagePercent: Int?,
+        primaryUsageResetAt: Date?,
+        secondaryUsagePercent: Int?,
+        secondaryUsageResetAt: Date?,
+        isPaid: Bool,
+        planType: String?,
+        now: Date = .now,
+        shouldEvaluate: Bool = true
+    ) {
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
+
+        let normalizedQuota = max(1, quota)
+        accounts[index].quota = normalizedQuota
+        accounts[index].usedUnits = max(0, min(usedUnits, normalizedQuota))
+        accounts[index].usageWindowName = usageWindowName
+        accounts[index].usageWindowResetAt = usageWindowResetAt
+        accounts[index].primaryUsagePercent = primaryUsagePercent.map { min(max($0, 0), 100) }
+        accounts[index].primaryUsageResetAt = primaryUsageResetAt
+        accounts[index].secondaryUsagePercent = secondaryUsagePercent.map { min(max($0, 0), 100) }
+        accounts[index].secondaryUsageResetAt = secondaryUsageResetAt
+        accounts[index].isPaid = isPaid
+        accounts[index].planType = AgentAccount.normalizedPlanType(planType)
+
+        if shouldEvaluate {
+            evaluate(now: now)
+        }
+    }
+
     mutating func updateAccount(
         _ accountID: UUID,
         name: String? = nil,

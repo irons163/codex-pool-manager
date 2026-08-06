@@ -4347,7 +4347,7 @@ struct CodexPoolManagerTests {
 
         #expect(usage.usedUnits == 11)
         #expect(usage.quota == 100)
-        #expect(usage.usageWindowName == "primary_window")
+        #expect(usage.usageWindowName == "weekly_window")
         #expect(usage.accountID == "user-001")
         #expect(usage.accountEmail == "philtest@example.com")
         #expect(usage.usageWindowResetAt == Date(timeIntervalSince1970: 1_774_885_346))

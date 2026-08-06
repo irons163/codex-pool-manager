@@ -760,17 +760,67 @@ struct CodexUsageSyncServiceCoverageExpansionTests {
     }
 
     @Test
-    func openAICodexUsageClientTreatsSinglePaidWindowAsBothFiveHourAndWeekly() async throws {
+    func codexSyncClearsStaleUsageWindowFieldsWhenTheAPIOmitsAWindow() async throws {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-00000000C603")!
+        let oldFiveHourReset = Date(timeIntervalSince1970: 1_700_000_000)
+        let weeklyReset = Date(timeIntervalSince1970: 1_800_000_000)
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "Stale window",
+                    usedUnits: 80,
+                    quota: 100,
+                    apiToken: "token-stale-window",
+                    chatGPTAccountID: "acct-stale-window",
+                    primaryUsagePercent: 80,
+                    primaryUsageResetAt: oldFiveHourReset,
+                    secondaryUsagePercent: 20,
+                    secondaryUsageResetAt: oldFiveHourReset,
+                    isPaid: true
+                )
+            ],
+            mode: .manual
+        )
+        let sync = CodexUsageSyncService(
+            client: MockCodexUsageClient(
+                responseByToken: [
+                    "token-stale-window": CodexUsage(
+                        usedUnits: 34,
+                        quota: 100,
+                        usageWindowName: "weekly_window",
+                        usageWindowResetAt: weeklyReset,
+                        secondaryUsagePercent: 34,
+                        secondaryUsageResetAt: weeklyReset,
+                        isPaid: true,
+                        planType: "pro"
+                    )
+                ]
+            )
+        )
+
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 1_800_000_100))
+
+        #expect(state.accounts[0].usedUnits == 34)
+        #expect(state.accounts[0].primaryUsagePercent == nil)
+        #expect(state.accounts[0].primaryUsageResetAt == nil)
+        #expect(state.accounts[0].secondaryUsagePercent == 34)
+        #expect(state.accounts[0].secondaryUsageResetAt == weeklyReset)
+        #expect(state.accounts[0].usageWindowResetAt == weeklyReset)
+    }
+
+    @Test
+    func openAICodexUsageClientUsesSinglePaidWindowOnlyForItsResolvedRole() async throws {
         let responseJSON = """
         {
           "account_id": "acct-single-window",
           "email": "single@example.com",
           "plan_type": "pro",
           "rate_limit": {
-            "secondary": {
-              "name": "usage_window",
-              "usedPercent": 66,
-              "resetAt": "2026-07-30T12:34:56.789Z"
+            "primary_window": {
+              "used_percent": 66,
+              "limit_window_seconds": 604800,
+              "reset_at": "2026-07-30T12:34:56.789Z"
             }
           }
         }
@@ -788,14 +838,52 @@ struct CodexUsageSyncServiceCoverageExpansionTests {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let resetAt = try #require(formatter.date(from: "2026-07-30T12:34:56.789Z"))
         #expect(usage.isPaid)
-        #expect(usage.primaryUsagePercent == 66)
+        #expect(usage.primaryUsagePercent == nil)
         #expect(usage.secondaryUsagePercent == 66)
-        #expect(usage.primaryUsageResetAt == resetAt)
+        #expect(usage.primaryUsageResetAt == nil)
         #expect(usage.secondaryUsageResetAt == resetAt)
         #expect(usage.usedUnits == 66)
         #expect(usage.quota == 100)
-        #expect(usage.usageWindowName == "usage_window")
+        #expect(usage.usageWindowName == "weekly_window")
         #expect(usage.usageWindowResetAt == resetAt)
+    }
+
+    @Test
+    func openAICodexUsageClientRoutesWeeklyOnlyPrimaryWindowForFreeAccount() async throws {
+        let responseJSON = """
+        {
+          "account_id": "acct-free-weekly",
+          "email": "free-weekly@example.com",
+          "plan_type": "free",
+          "rate_limit": {
+            "primary_window": {
+              "used_percent": 85,
+              "limit_window_seconds": 604800,
+              "reset_at": 1788634000
+            },
+            "secondary_window": null
+          }
+        }
+        """
+        let endpoint = try #require(URL(string: "https://chatgpt.com/backend-api/wham/usage?case=free-weekly-only"))
+        let session = makeSuccessTokenSession(
+            statusCode: 200,
+            data: Data(responseJSON.utf8)
+        )
+
+        let client = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+        let usage = try await client.fetchUsage(
+            accessToken: "token-free-weekly",
+            accountID: "acct-free-weekly"
+        )
+
+        #expect(!usage.isPaid)
+        #expect(usage.usedUnits == 85)
+        #expect(usage.quota == 100)
+        #expect(usage.primaryUsagePercent == nil)
+        #expect(usage.secondaryUsagePercent == 85)
+        #expect(usage.usageWindowName == "weekly_window")
+        #expect(usage.usageWindowResetAt == Date(timeIntervalSince1970: 1_788_634_000))
     }
 
     @Test
