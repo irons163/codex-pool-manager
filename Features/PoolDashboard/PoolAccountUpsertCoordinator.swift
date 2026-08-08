@@ -11,7 +11,7 @@ struct PoolAccountUpsertCoordinator {
         fallbackQuota: Int,
         now: Date = .now
     ) -> String {
-        var resolvedAccountID = claims?.accountID ?? claims?.subject
+        var resolvedAccountID = claims?.resolvedChatGPTAccountID
         var resolvedEmail = claims?.email
         let resolvedQuota = usage?.quota
         let resolvedUsedUnits = usage?.usedUnits

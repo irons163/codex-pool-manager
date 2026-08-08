@@ -89,12 +89,12 @@ struct PoolDashboardAuthFlowCoordinator {
         usageClient: CodexUsageFetching,
         fallbackWorkspaceID: String? = nil
     ) async -> OAuthSignInContext {
-        let claims = OAuthIDTokenClaimsParser.parse(tokens.idToken)
+        let claims = OAuthIDTokenClaimsParser.parse(tokens: tokens)
         let identityScope = claims?.resolvedIdentityScope(fallbackWorkspaceID: fallbackWorkspaceID)
             ?? AgentAccount.personalIdentityScope
 
         var usage: CodexUsage?
-        if let accountID = (claims?.accountID ?? claims?.subject), !accountID.isEmpty {
+        if let accountID = claims?.resolvedChatGPTAccountID {
             do {
                 usage = try await usageClient.fetchUsage(
                     accessToken: tokens.accessToken,

@@ -102,7 +102,18 @@ struct PoolDashboardSwitchLaunchCoordinator {
                 didSwitchAuth: false
             )
         }
-        guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+
+        var accountForSwitch = account
+        let chatGPTAccountID: String
+        if let existingAccountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID) {
+            chatGPTAccountID = existingAccountID
+        } else if let recovered = OAuthIDTokenClaimsParser.merge(
+            OAuthIDTokenClaimsParser.parse(account.oauthIDToken),
+            OAuthIDTokenClaimsParser.parse(account.apiToken)
+        )?.resolvedChatGPTAccountID {
+            chatGPTAccountID = recovered
+            accountForSwitch.chatGPTAccountID = recovered
+        } else {
             append(Message.missingAccountIDLog)
             return output(
                 errorMessage: Message.missingAccountID,
@@ -115,7 +126,7 @@ struct PoolDashboardSwitchLaunchCoordinator {
             do {
                 try await switchExecutor(
                     context.authFileURL,
-                    account,
+                    accountForSwitch,
                     chatGPTAccountID,
                     switchWithoutLaunching,
                     launchTarget,

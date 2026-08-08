@@ -232,6 +232,11 @@ struct OAuthIDTokenClaims: Equatable {
         self.organizationID = organizationID
     }
 
+    /// Prefer the ChatGPT account id claim; fall back to `sub` only when needed.
+    var resolvedChatGPTAccountID: String? {
+        Self.nonEmpty(accountID) ?? Self.nonEmpty(subject)
+    }
+
     func resolvedIdentityScope(fallbackWorkspaceID: String?) -> String {
         if let organizationID = normalizedIdentityComponent(organizationID) {
             return "org:\(organizationID)"
@@ -247,12 +252,60 @@ struct OAuthIDTokenClaims: Equatable {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return trimmed.isEmpty ? nil : trimmed
     }
+
+    static func nonEmpty(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 enum OAuthIDTokenClaimsParser {
+    private static let openAIAuthClaim = "https://api.openai.com/auth"
+    private static let openAIProfileClaim = "https://api.openai.com/profile"
+
     static func parse(_ idToken: String?) -> OAuthIDTokenClaims? {
-        guard let idToken, !idToken.isEmpty else { return nil }
-        let segments = idToken.split(separator: ".")
+        guard let payload = decodeJWTPayload(idToken) else { return nil }
+
+        return OAuthIDTokenClaims(
+            subject: nonEmptyString(payload["sub"]),
+            accountID: extractAccountID(from: payload),
+            email: extractEmail(from: payload),
+            organizationID: extractOrganizationID(from: payload)
+        )
+    }
+
+    /// Merge claims from id_token and access_token. OpenAI may put
+    /// `chatgpt_account_id` on either JWT under the auth namespace claim.
+    static func parse(tokens: OAuthTokens) -> OAuthIDTokenClaims? {
+        merge(parse(tokens.idToken), parse(tokens.accessToken))
+    }
+
+    static func merge(_ primary: OAuthIDTokenClaims?, _ secondary: OAuthIDTokenClaims?) -> OAuthIDTokenClaims? {
+        switch (primary, secondary) {
+        case (nil, nil):
+            return nil
+        case (let primary?, nil):
+            return primary
+        case (nil, let secondary?):
+            return secondary
+        case (let primary?, let secondary?):
+            return OAuthIDTokenClaims(
+                subject: OAuthIDTokenClaims.nonEmpty(primary.subject)
+                    ?? OAuthIDTokenClaims.nonEmpty(secondary.subject),
+                accountID: OAuthIDTokenClaims.nonEmpty(primary.accountID)
+                    ?? OAuthIDTokenClaims.nonEmpty(secondary.accountID),
+                email: OAuthIDTokenClaims.nonEmpty(primary.email)
+                    ?? OAuthIDTokenClaims.nonEmpty(secondary.email),
+                organizationID: OAuthIDTokenClaims.nonEmpty(primary.organizationID)
+                    ?? OAuthIDTokenClaims.nonEmpty(secondary.organizationID)
+            )
+        }
+    }
+
+    private static func decodeJWTPayload(_ token: String?) -> [String: Any]? {
+        guard let token, !token.isEmpty else { return nil }
+        let segments = token.split(separator: ".")
         guard segments.count >= 2 else { return nil }
 
         let normalized = segments[1]
@@ -268,21 +321,36 @@ enum OAuthIDTokenClaimsParser {
               let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
         }
+        return payload
+    }
 
-        let subject = payload["sub"] as? String
-        let accountID = (payload["account_id"] as? String) ?? (payload["accountId"] as? String)
-        let email = payload["email"] as? String
-        let organizationID = extractOrganizationID(from: payload)
-        return OAuthIDTokenClaims(
-            subject: subject,
-            accountID: accountID,
-            email: email,
-            organizationID: organizationID
+    private static func extractAccountID(from payload: [String: Any]) -> String? {
+        if let auth = payload[openAIAuthClaim] as? [String: Any],
+           let nested = firstNonEmptyString(
+            in: auth,
+            keys: ["chatgpt_account_id", "chatgptAccountId", "account_id", "accountId"]
+           ) {
+            return nested
+        }
+
+        return firstNonEmptyString(
+            in: payload,
+            keys: ["chatgpt_account_id", "chatgptAccountId", "account_id", "accountId"]
         )
     }
 
+    private static func extractEmail(from payload: [String: Any]) -> String? {
+        if let email = nonEmptyString(payload["email"]) {
+            return email
+        }
+        if let profile = payload[openAIProfileClaim] as? [String: Any] {
+            return nonEmptyString(profile["email"])
+        }
+        return nil
+    }
+
     private static func extractOrganizationID(from payload: [String: Any]) -> String? {
-        guard let auth = payload["https://api.openai.com/auth"] as? [String: Any],
+        guard let auth = payload[openAIAuthClaim] as? [String: Any],
               let organizations = auth["organizations"] as? [[String: Any]],
               !organizations.isEmpty else {
             return nil
@@ -299,6 +367,20 @@ enum OAuthIDTokenClaimsParser {
         }
 
         return nil
+    }
+
+    private static func firstNonEmptyString(in dictionary: [String: Any], keys: [String]) -> String? {
+        for key in keys {
+            if let value = nonEmptyString(dictionary[key]) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private static func nonEmptyString(_ value: Any?) -> String? {
+        guard let value = value as? String else { return nil }
+        return OAuthIDTokenClaims.nonEmpty(value)
     }
 }
 

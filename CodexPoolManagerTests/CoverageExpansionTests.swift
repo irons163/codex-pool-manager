@@ -1834,6 +1834,52 @@ struct RuntimeCoordinatorCoverageExpansionTests {
     }
 
     @Test
+    func signInWithOAuthResolvesNestedChatGPTAccountIDFromIDToken() async throws {
+        let idToken = try makeOAuthIDToken(payload: [
+            "sub": "user-nested-signin",
+            "https://api.openai.com/profile": [
+                "email": "nested-signin@example.com"
+            ],
+            "https://api.openai.com/auth": [
+                "chatgpt_account_id": "acct-nested-signin"
+            ]
+        ])
+        let loginService = StubOAuthCompleteLoginService(
+            signInResult: .success(
+                OAuthTokens(
+                    accessToken: "sk-nested-signin",
+                    refreshToken: "refresh-nested-signin",
+                    idToken: idToken
+                )
+            ),
+            manualPreparationResult: .failure(CoverageExpansionError.expected),
+            manualCompleteResult: .failure(CoverageExpansionError.expected)
+        )
+        let usageFetcher = StubUsageFetcher(result: .success(
+            CodexUsage(
+                usedUnits: 5,
+                quota: 100,
+                accountID: "acct-nested-signin",
+                accountEmail: "nested-signin@example.com"
+            )
+        ))
+        let coordinator = PoolDashboardRuntimeCoordinator(
+            loginServiceFactory: { loginService },
+            usageClientFactory: { usageFetcher }
+        )
+
+        let output = await coordinator.signInWithOAuth(
+            from: AccountPoolState(accounts: [], mode: .manual),
+            input: makeOAuthInput(accountNameInput: "")
+        )
+
+        #expect(output.oauthError == nil)
+        #expect(output.state.accounts.first?.chatGPTAccountID == "acct-nested-signin")
+        #expect(output.state.accounts.first?.email == "nested-signin@example.com")
+        #expect(usageFetcher.requests.value.first?.accountID == "acct-nested-signin")
+    }
+
+    @Test
     func prepareManualOAuthSignInReturnsInjectedManualPreparation() throws {
         let expectedURL = try #require(
             URL(string: "https://auth.openai.com/oauth/authorize?state=stub-state")

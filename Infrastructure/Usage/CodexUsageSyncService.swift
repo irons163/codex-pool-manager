@@ -118,10 +118,24 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 state.setUsageSyncExclusion(for: account.id, reason: missingTokenMessage, now: now, shouldEvaluate: false)
                 continue
             }
-            guard let chatGPTAccountID = account.chatGPTAccountID, !chatGPTAccountID.isEmpty else {
+
+            let resolvedAccountID: String
+            if let existingAccountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID) {
+                resolvedAccountID = existingAccountID
+            } else if let recovered = recoverChatGPTAccountID(from: account) {
+                state.updateAccount(
+                    account.id,
+                    email: recovered.email ?? account.email,
+                    chatGPTAccountID: recovered.accountID,
+                    now: now,
+                    shouldEvaluate: false
+                )
+                resolvedAccountID = recovered.accountID
+            } else {
                 state.setUsageSyncExclusion(for: account.id, reason: missingAccountIDMessage, now: now, shouldEvaluate: false)
                 continue
             }
+            let chatGPTAccountID = resolvedAccountID
 
             do {
                 let usage = try await fetchUsageWithRetry(
@@ -234,6 +248,19 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         try Task.checkCancellation()
         state.evaluate(now: now)
         state.markUsageSynced(at: now)
+    }
+
+    private func recoverChatGPTAccountID(
+        from account: AgentAccount
+    ) -> (accountID: String, email: String?)? {
+        let claims = OAuthIDTokenClaimsParser.merge(
+            OAuthIDTokenClaimsParser.parse(account.oauthIDToken),
+            OAuthIDTokenClaimsParser.parse(account.apiToken)
+        )
+        guard let accountID = claims?.resolvedChatGPTAccountID else {
+            return nil
+        }
+        return (accountID, claims?.email)
     }
 
     private func fetchUsageWithRetry(accessToken: String, accountID: String) async throws -> CodexUsage {

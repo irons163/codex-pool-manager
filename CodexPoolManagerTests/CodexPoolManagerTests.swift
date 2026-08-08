@@ -3033,6 +3033,60 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func codexSyncRecoversMissingAccountIDFromNestedIDTokenClaims() async throws {
+        let accountID = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let idTokenPayload: [String: Any] = [
+            "sub": "user-recover",
+            "https://api.openai.com/auth": [
+                "chatgpt_account_id": "acct-recovered"
+            ],
+            "https://api.openai.com/profile": [
+                "email": "recover@example.com"
+            ]
+        ]
+        let idTokenData = try JSONSerialization.data(withJSONObject: idTokenPayload)
+        let encodedPayload = idTokenData.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let idToken = "header.\(encodedPayload).sig"
+
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: accountID,
+                    name: "recover@example.com",
+                    usedUnits: 0,
+                    quota: 100,
+                    apiToken: "token-recover",
+                    chatGPTAccountID: nil,
+                    oauthIDToken: idToken
+                )
+            ],
+            mode: .manual
+        )
+
+        let client = MockCodexUsageClient(
+            responseByToken: [
+                "token-recover": CodexUsage(
+                    usedUnits: 12,
+                    quota: 100,
+                    accountID: "acct-recovered",
+                    accountEmail: "recover@example.com"
+                )
+            ]
+        )
+        let sync = CodexUsageSyncService(client: client)
+        try await sync.sync(state: &state, now: Date(timeIntervalSince1970: 20))
+
+        let account = try #require(state.accounts.first(where: { $0.id == accountID }))
+        #expect(account.chatGPTAccountID == "acct-recovered")
+        #expect(account.email == "recover@example.com")
+        #expect(account.usedUnits == 12)
+        #expect(account.isUsageSyncExcluded == false)
+    }
+
+    @Test
     func codexSyncKeepsActiveAccountWhenAllIntelligentAccountsBecomeExhausted() async throws {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
@@ -6586,6 +6640,97 @@ extension CodexPoolManagerTests {
         #expect(claims.accountID == "acct-123")
         #expect(claims.email == "demo@example.com")
         #expect(claims.organizationID == "org-primary")
+        #expect(claims.resolvedChatGPTAccountID == "acct-123")
+    }
+
+    @Test
+    func oauthIDTokenClaimsParserExtractsNestedChatGPTAccountIDAndProfileEmail() throws {
+        let payload = """
+        {
+          "sub":"user-nested",
+          "https://api.openai.com/profile": {
+            "email":"nested@example.com"
+          },
+          "https://api.openai.com/auth": {
+            "chatgpt_account_id":"acct-nested-real",
+            "chatgpt_plan_type":"plus",
+            "organizations": [
+              {"id":"org-workspace","is_default":true}
+            ]
+          }
+        }
+        """
+        let payloadData = try #require(payload.data(using: .utf8))
+        let encodedPayload = payloadData.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let token = "header.\(encodedPayload).sig"
+
+        let claims = try #require(OAuthIDTokenClaimsParser.parse(token))
+
+        #expect(claims.subject == "user-nested")
+        #expect(claims.accountID == "acct-nested-real")
+        #expect(claims.email == "nested@example.com")
+        #expect(claims.organizationID == "org-workspace")
+        #expect(claims.resolvedChatGPTAccountID == "acct-nested-real")
+    }
+
+    @Test
+    func oauthIDTokenClaimsParserPrefersNestedChatGPTAccountIDOverTopLevelAccountID() throws {
+        let payload = """
+        {
+          "sub":"user-prefer",
+          "account_id":"acct-top-level",
+          "https://api.openai.com/auth": {
+            "chatgpt_account_id":"acct-nested-preferred"
+          }
+        }
+        """
+        let payloadData = try #require(payload.data(using: .utf8))
+        let encodedPayload = payloadData.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let token = "header.\(encodedPayload).sig"
+
+        let claims = try #require(OAuthIDTokenClaimsParser.parse(token))
+        #expect(claims.accountID == "acct-nested-preferred")
+    }
+
+    @Test
+    func oauthIDTokenClaimsParserMergesAccountIDFromAccessTokenWhenIDTokenLacksIt() throws {
+        let idTokenPayload = """
+        {
+          "sub":"user-id-only",
+          "email":"id-only@example.com"
+        }
+        """
+        let accessTokenPayload = """
+        {
+          "https://api.openai.com/auth": {
+            "chatgpt_account_id":"acct-from-access"
+          }
+        }
+        """
+        func encode(_ json: String) throws -> String {
+            let data = try #require(json.data(using: .utf8))
+            return data.base64EncodedString()
+                .replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "=", with: "")
+        }
+        let tokens = OAuthTokens(
+            accessToken: "header.\(try encode(accessTokenPayload)).sig",
+            refreshToken: "refresh",
+            idToken: "header.\(try encode(idTokenPayload)).sig"
+        )
+
+        let claims = try #require(OAuthIDTokenClaimsParser.parse(tokens: tokens))
+        #expect(claims.subject == "user-id-only")
+        #expect(claims.email == "id-only@example.com")
+        #expect(claims.accountID == "acct-from-access")
+        #expect(claims.resolvedChatGPTAccountID == "acct-from-access")
     }
 
     @Test
