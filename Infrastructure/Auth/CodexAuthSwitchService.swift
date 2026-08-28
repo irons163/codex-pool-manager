@@ -249,6 +249,16 @@ struct CodexAuthSwitchService {
             }
         }
 
+        // Close first so Codex cannot treat an in-place auth.json rewrite as a revoked session.
+        var deferredBundleIdentifier: String?
+        for bundleIdentifier in closeBundleIdentifiers(for: launchTarget) {
+            let closed = await closeAppIfRunning(bundleIdentifier: bundleIdentifier)
+            if !closed {
+                deferredBundleIdentifier = bundleIdentifier
+                break
+            }
+        }
+
         try rewriteAuthFile(
             authFileURL: authFileURL,
             account: account,
@@ -256,13 +266,20 @@ struct CodexAuthSwitchService {
         )
         try resetProviderConfigForChatGPTAuth(authFileURL: authFileURL)
 
+        if let deferredBundleIdentifier {
+            scheduleDeferredLaunchMonitor(for: deferredBundleIdentifier, launchTarget: launchTarget)
+            logger("Launch is deferred. Waiting for app to close, then will relaunch automatically.")
+            return
+        }
+
         do {
-            let launchedImmediately = try await relaunchCodexApp(launchTarget: launchTarget)
-            if launchedImmediately {
+            if try await launchCodexAppWithRetry(launchTarget: launchTarget) {
                 logger(L10n.text("switch.service.log.launch_completed"))
             } else {
-                logger("Launch is deferred. Waiting for app to close, then will relaunch automatically.")
+                throw CodexAuthSwitchError.appNotFound
             }
+        } catch let error as CodexAuthSwitchError {
+            throw error
         } catch {
             throw CodexAuthSwitchError.launchFailedAfterSwitch(reason: error.localizedDescription)
         }
@@ -290,14 +307,19 @@ struct CodexAuthSwitchService {
         chatGPTAccountID: String
     ) throws {
         let originalData = try Data(contentsOf: authFileURL)
-        let accountEmail = account.name.contains("@") ? account.name : nil
-        let metadata = recoverOAuthAuthCacheMetadata(
+        let accountEmail = account.email?.contains("@") == true
+            ? account.email
+            : (account.name.contains("@") ? account.name : nil)
+        var metadata = recoverOAuthAuthCacheMetadata(
             authFileURL: authFileURL,
             originalData: originalData,
             account: account,
             chatGPTAccountID: chatGPTAccountID,
             email: accountEmail
         )
+        if metadata.lastRefresh == nil {
+            metadata.lastRefresh = Self.currentLastRefreshTimestamp()
+        }
         let rewrittenData = try CodexAuthFileSwitcher.rewriteAuthJSON(
             originalData,
             accessToken: account.apiToken,
@@ -308,6 +330,14 @@ struct CodexAuthSwitchService {
             lastRefresh: metadata.lastRefresh
         )
         try rewrittenData.write(to: authFileURL, options: .atomic)
+        let codexHome = authFileURL.deletingLastPathComponent()
+        try? CodexAuthCacheMirror.persistCurrentAccountCopy(codexHome: codexHome, authJSON: rewrittenData)
+        do {
+            try CodexAuthKeyringStore.save(authJSON: rewrittenData, codexHome: codexHome)
+            logger("Codex keyring credentials updated.")
+        } catch {
+            logger("Codex keyring update failed: \(error.localizedDescription)")
+        }
         logger(L10n.text("switch.service.log.auth_file_rewritten"))
     }
 
@@ -340,15 +370,26 @@ struct CodexAuthSwitchService {
         chatGPTAccountID: String,
         email: String?
     ) -> OAuthAuthCacheMetadata {
-        var metadata = Self.authCacheMetadata(
+        var metadata = OAuthAuthCacheMetadata(
+            refreshToken: Self.nonEmptyString(account.oauthRefreshToken),
+            idToken: Self.nonEmptyString(account.oauthIDToken),
+            lastRefresh: account.oauthLastRefreshAt.map(Self.formattedLastRefreshTimestamp)
+        )
+
+        if metadata.isComplete {
+            return metadata
+        }
+
+        if let fromCurrentFile = Self.authCacheMetadata(
             from: originalData,
             matchingAccountID: chatGPTAccountID,
             email: email,
             accessToken: account.apiToken
-        ) ?? OAuthAuthCacheMetadata()
-
-        guard !metadata.isComplete else {
-            return metadata
+        ) {
+            metadata.fillMissing(from: fromCurrentFile)
+            if metadata.isComplete {
+                return metadata
+            }
         }
 
         for url in Self.siblingAuthAccountJSONURLs(for: authFileURL) {
@@ -370,6 +411,26 @@ struct CodexAuthSwitchService {
         }
 
         return metadata
+    }
+
+    private static func nonEmptyString(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else {
+            return nil
+        }
+        return trimmed
+    }
+
+    private static func currentLastRefreshTimestamp() -> String {
+        formattedLastRefreshTimestamp(Date())
+    }
+
+    private static func formattedLastRefreshTimestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.string(from: date)
     }
 
     private static func siblingAuthAccountJSONURLs(for authFileURL: URL) -> [URL] {

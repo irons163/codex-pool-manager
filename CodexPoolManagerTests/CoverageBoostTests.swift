@@ -235,6 +235,68 @@ struct CodexAuthSwitchServiceCoverageTests {
 
     @Test
     @MainActor
+    func codexAuthSwitchServicePrefersAccountOAuthTokensOverStaleAuthFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-auth-account-tokens-\(UUID().uuidString)", isDirectory: true)
+        let authURL = directory.appendingPathComponent("auth.json")
+        let accountsDirectory = directory.appendingPathComponent("auth_accounts", isDirectory: true)
+        let currentAccountURL = directory.appendingPathComponent("current_account")
+        let mirroredAccountURL = accountsDirectory.appendingPathComponent("account-current.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: accountsDirectory, withIntermediateDirectories: true)
+        try """
+        {
+          "auth_mode": "chatgpt",
+          "tokens": {
+            "access_token": "old-access-token",
+            "account_id": "old-account",
+            "refresh_token": "old-refresh-token",
+            "id_token": "old-id-token"
+          }
+        }
+        """.write(to: authURL, atomically: true, encoding: .utf8)
+        try Data("account-current\n".utf8).write(to: currentAccountURL)
+        try Data("{}".utf8).write(to: mirroredAccountURL)
+
+        let service = CodexAuthSwitchService(providerConfigResetter: { _ in })
+        let account = AgentAccount(
+            id: UUID(),
+            name: "oauth@example.com",
+            usedUnits: 0,
+            quota: 100,
+            apiToken: "target-access-token",
+            chatGPTAccountID: "target-account",
+            oauthRefreshToken: "target-refresh-token",
+            oauthIDToken: "target-id-token"
+        )
+
+        try service.performSwitchOnly(
+            authFileURL: authURL,
+            account: account,
+            chatGPTAccountID: "target-account"
+        )
+
+        let rewritten = try JSONSerialization.jsonObject(with: Data(contentsOf: authURL)) as? [String: Any]
+        let tokens = try #require(rewritten?["tokens"] as? [String: Any])
+        #expect(tokens["access_token"] as? String == "target-access-token")
+        #expect(tokens["account_id"] as? String == "target-account")
+        #expect(tokens["refresh_token"] as? String == "target-refresh-token")
+        #expect(tokens["id_token"] as? String == "target-id-token")
+
+        let mirrored = try JSONSerialization.jsonObject(with: Data(contentsOf: mirroredAccountURL)) as? [String: Any]
+        let mirroredTokens = try #require(mirrored?["tokens"] as? [String: Any])
+        #expect(mirroredTokens["refresh_token"] as? String == "target-refresh-token")
+    }
+
+    @Test
+    func codexAuthKeyringStoreAccountMatchesCodexCLIHash() {
+        let home = URL(fileURLWithPath: "/Users/phil/.codex")
+        #expect(CodexAuthKeyringStore.storeAccount(forCodexHome: home).hasPrefix("cli|"))
+        #expect(CodexAuthKeyringStore.storeAccount(forCodexHome: home).count == 20)
+    }
+
+    @Test
+    @MainActor
     func codexAuthSwitchServiceDefaultResetterUsesAuthFileDirectoryConfig() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-auth-config-switch-\(UUID().uuidString)", isDirectory: true)

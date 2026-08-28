@@ -1,4 +1,6 @@
+import CryptoKit
 import Foundation
+import Security
 
 enum CodexAuthFileSwitcher {
     enum SwitchError: Error {
@@ -142,8 +144,10 @@ enum CodexAuthFileSwitcher {
         root[authModeKey] = chatGPTAuthMode
         root[openAIAPIKey] = NSNull()
         root.removeValue(forKey: codexAPIKey)
+        root.removeValue(forKey: "agent_identity")
+        root.removeValue(forKey: "personal_access_token")
 
-        var tokens = root[tokenContainerKey] as? [String: Any] ?? [:]
+        var tokens: [String: Any] = [:]
         tokens["access_token"] = accessToken
         tokens["account_id"] = accountID
         if let refreshToken = nonEmptyString(refreshToken) {
@@ -175,5 +179,73 @@ enum CodexAuthFileSwitcher {
             return nil
         }
         return trimmed
+    }
+}
+
+enum CodexAuthKeyringStore {
+    static let serviceName = "Codex Auth"
+
+    static func storeAccount(forCodexHome codexHome: URL) -> String {
+        let canonical = codexHome.standardizedFileURL.resolvingSymlinksInPath()
+        let path = canonical.path
+        let digest = SHA256.hash(data: Data(path.utf8))
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return "cli|" + String(hex.prefix(16))
+    }
+
+    static func save(authJSON: Data, codexHome: URL) throws {
+        guard !isRunningTests else { return }
+
+        let account = storeAccount(forCodexHome: codexHome)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: account
+        ]
+
+        let attributes: [String: Any] = [
+            kSecValueData as String: authJSON,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess {
+            return
+        }
+        if updateStatus != errSecItemNotFound {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(updateStatus))
+        }
+
+        var addQuery = query
+        addQuery[kSecValueData as String] = authJSON
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(addStatus))
+        }
+    }
+
+    private static var isRunningTests: Bool {
+        NSClassFromString("XCTestCase") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+}
+
+enum CodexAuthCacheMirror {
+    static func persistCurrentAccountCopy(codexHome: URL, authJSON: Data) throws {
+        let pointerURL = codexHome.appendingPathComponent("current_account")
+        guard FileManager.default.fileExists(atPath: pointerURL.path),
+              let pointer = try? String(contentsOf: pointerURL, encoding: .utf8) else {
+            return
+        }
+
+        let trimmed = pointer.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let fileName = trimmed.lowercased().hasSuffix(".json") ? trimmed : "\(trimmed).json"
+        let accountsDirectory = codexHome.appendingPathComponent("auth_accounts", isDirectory: true)
+        try FileManager.default.createDirectory(at: accountsDirectory, withIntermediateDirectories: true)
+        let destination = accountsDirectory.appendingPathComponent(fileName)
+        try authJSON.write(to: destination, options: .atomic)
     }
 }

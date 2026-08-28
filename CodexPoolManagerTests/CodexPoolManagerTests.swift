@@ -4970,16 +4970,17 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func codexAuthFileSwitcherPreservesModernRefreshTokensWhenSwitchingOAuthAccounts() throws {
+    func codexAuthFileSwitcherDropsStaleOAuthTokensWhenReplacementIsMissing() throws {
         let json = """
         {
           "auth_mode": "chatgpt",
           "email": "old@example.com",
+          "agent_identity": { "account_id": "old-account" },
           "tokens": {
             "access_token": "old-access-token",
             "account_id": "old-account",
-            "refresh_token": "kept-refresh-token",
-            "id_token": "kept-id-token"
+            "refresh_token": "stale-refresh-token",
+            "id_token": "stale-id-token"
           }
         }
         """
@@ -4995,10 +4996,42 @@ struct CodexPoolManagerTests {
 
         #expect(object["auth_mode"] as? String == "chatgpt")
         #expect(object["email"] as? String == "new@example.com")
+        #expect(object["agent_identity"] == nil)
         #expect(tokens["access_token"] as? String == "new-access-token")
         #expect(tokens["account_id"] as? String == "new-account")
-        #expect(tokens["refresh_token"] as? String == "kept-refresh-token")
-        #expect(tokens["id_token"] as? String == "kept-id-token")
+        #expect(tokens["refresh_token"] == nil)
+        #expect(tokens["id_token"] == nil)
+    }
+
+    @Test
+    func codexAuthFileSwitcherWritesReplacementOAuthTokensForTargetAccount() throws {
+        let json = """
+        {
+          "auth_mode": "chatgpt",
+          "tokens": {
+            "access_token": "old-access-token",
+            "account_id": "old-account",
+            "refresh_token": "stale-refresh-token",
+            "id_token": "stale-id-token"
+          }
+        }
+        """
+        let data = Data(json.utf8)
+        let rewritten = try CodexAuthFileSwitcher.rewriteAuthJSON(
+            data,
+            accessToken: "new-access-token",
+            accountID: "new-account",
+            email: "new@example.com",
+            refreshToken: "new-refresh-token",
+            idToken: "new-id-token",
+            lastRefresh: "2026-08-28T00:00:00.000Z"
+        )
+        let object = try #require(JSONSerialization.jsonObject(with: rewritten) as? [String: Any])
+        let tokens = try #require(object["tokens"] as? [String: Any])
+
+        #expect(tokens["refresh_token"] as? String == "new-refresh-token")
+        #expect(tokens["id_token"] as? String == "new-id-token")
+        #expect(object["last_refresh"] as? String == "2026-08-28T00:00:00.000Z")
     }
 
     @Test

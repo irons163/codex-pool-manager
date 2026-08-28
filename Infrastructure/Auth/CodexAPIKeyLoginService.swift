@@ -62,6 +62,10 @@ struct CodexAPIKeyLoginService {
                 withIntermediateDirectories: true
             )
             try authData.write(to: authURL, options: [.atomic])
+            try? CodexAuthKeyringStore.save(
+                authJSON: authData,
+                codexHome: authURL.deletingLastPathComponent()
+            )
             return Self.diagnosticLog(
                 stage: "written",
                 apiKeyDataLength: apiKeyData.count,
