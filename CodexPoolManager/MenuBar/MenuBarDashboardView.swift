@@ -28,7 +28,7 @@ struct MenuBarDashboardView: View {
             .padding(18)
         }
         .scrollIndicators(.hidden)
-        .frame(width: 390)
+        .frame(width: 460)
         .frame(minHeight: 420, maxHeight: 620)
         .background(background)
         .task {
@@ -353,6 +353,7 @@ private struct AccountRowView: View {
                         .font(.callout.weight(.semibold))
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .minimumScaleFactor(0.85)
                         .layoutPriority(0)
 
                     if row.isPaid {

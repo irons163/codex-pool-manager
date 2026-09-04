@@ -78,7 +78,7 @@ struct ReadmeMenuBarScreenshotGenerationTests {
 
             let data = try Self.renderPNG(
                 view,
-                size: CGSize(width: 390, height: 500)
+                size: CGSize(width: 460, height: 500)
             )
             try data.write(to: outputDirectory.appendingPathComponent(locale.fileName))
         }
