@@ -120,7 +120,7 @@ enum MenuBarDashboardPresenter {
         )
 
         return MenuBarDashboardSnapshot(
-            title: MenuBarSnapshotFormatter.menuBarTitle(snapshot: bridgeSnapshot, now: now),
+            title: MenuBarSnapshotFormatter.menuBarTitle(snapshot: bridgeSnapshot),
             totalAccountsText: totalAccountsText,
             availableAccountsText: availableAccountsText,
             usageText: usageText,

@@ -2213,13 +2213,11 @@ struct ViewSmokeCoverageTests {
             activeFiveHourResetAt: nil
         )
 
-        let paidTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: paidSnapshot, now: now)
-        #expect(paidTitle.contains("Codex "))
-        #expect(paidTitle.contains("w 44%"))
-        #expect(paidTitle.contains("5h 67%"))
+        let paidTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: paidSnapshot)
+        #expect(paidTitle == "w 44% · 5h 67%")
 
-        let freeTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: freeSnapshot, now: now)
-        #expect(freeTitle.contains("60%"))
+        let freeTitle = CodexPoolManagerApp.debugMenuBarTitle(snapshot: freeSnapshot)
+        #expect(freeTitle == "60%")
         #expect(!freeTitle.contains("5h"))
 
         let fallbackTitle = CodexPoolManagerApp.debugMenuBarTitle(
@@ -2232,9 +2230,8 @@ struct ViewSmokeCoverageTests {
                 activeFiveHourRemainingPercent: nil,
                 activeWeeklyResetAt: nil,
                 activeFiveHourResetAt: nil
-            ),
-            now: now
+            )
         )
-        #expect(fallbackTitle == "Codex -- · 1h")
+        #expect(fallbackTitle == "--")
     }
 }

@@ -56,11 +56,18 @@ struct CodexPoolManagerApp: App {
                 runtimeModel.bootstrapIfNeeded()
             }
         } label: {
-            Text(runtimeModel.menuBarSnapshot.title)
-                .monospacedDigit()
-                .task {
-                    runtimeModel.bootstrapIfNeeded()
-                }
+            HStack(spacing: 6) {
+                Image("CodexMenuBarIcon")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 18, height: 18)
+
+                Text(runtimeModel.menuBarSnapshot.title)
+                    .monospacedDigit()
+            }
+            .task {
+                runtimeModel.bootstrapIfNeeded()
+            }
         }
         .menuBarExtraStyle(.window)
     }
@@ -202,11 +209,8 @@ struct MenuBarBridgeSnapshot: Codable {
 }
 
 enum MenuBarSnapshotFormatter {
-    static func menuBarTitle(
-        snapshot: MenuBarBridgeSnapshot?,
-        now: Date = Date()
-    ) -> String {
-        guard let snapshot else { return "Codex --" }
+    static func menuBarTitle(snapshot: MenuBarBridgeSnapshot?) -> String {
+        guard let snapshot else { return "--" }
 
         var segments: [String] = []
 
@@ -234,27 +238,7 @@ enum MenuBarSnapshotFormatter {
             segments.append("5h \(fiveHourLeft)%")
         }
 
-        segments.append(shortAgeText(since: snapshot.updatedAt, now: now))
-
-        return "Codex " + segments.joined(separator: " · ")
-    }
-
-    static func shortAgeText(
-        since date: Date,
-        now: Date = Date()
-    ) -> String {
-        let seconds = max(0, Int(now.timeIntervalSince(date)))
-        if seconds < 10 { return "now" }
-        if seconds < 60 { return "\(seconds)s" }
-
-        let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes)m" }
-
-        let hours = minutes / 60
-        if hours < 24 { return "\(hours)h" }
-
-        let days = hours / 24
-        return "\(days)d"
+        return segments.joined(separator: " · ")
     }
 }
 
@@ -274,8 +258,8 @@ extension CodexPoolManagerApp {
         PreferenceValueNormalizer.normalizeIfNeeded(defaults: defaults)
     }
 
-    static func debugMenuBarTitle(snapshot: MenuBarBridgeSnapshot?, now: Date = Date()) -> String {
-        MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
+    static func debugMenuBarTitle(snapshot: MenuBarBridgeSnapshot?) -> String {
+        MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
     }
 }
 #endif

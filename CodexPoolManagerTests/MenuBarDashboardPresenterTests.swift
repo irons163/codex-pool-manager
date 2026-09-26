@@ -154,7 +154,7 @@ struct MenuBarDashboardPresenterTests {
             now: Date(timeIntervalSince1970: 1_030)
         )
 
-        #expect(snapshot.title == "Codex w 80% · 5h 75% · 30s")
+        #expect(snapshot.title == "w 80% · 5h 75%")
         #expect(snapshot.totalAccountsText == "2")
         #expect(snapshot.availableAccountsText == "2")
         #expect(snapshot.modeText == L10n.text("mode.manual"))

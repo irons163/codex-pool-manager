@@ -542,7 +542,7 @@ struct CodexAuthSwitchServiceDebugHelperTests {
 struct MenuBarSnapshotFormatterTests {
     @Test
     func menuBarTitleFallsBackWhenNoSnapshot() {
-        #expect(MenuBarSnapshotFormatter.menuBarTitle(snapshot: nil) == "Codex --")
+        #expect(MenuBarSnapshotFormatter.menuBarTitle(snapshot: nil) == "--")
     }
 
     @Test
@@ -559,8 +559,8 @@ struct MenuBarSnapshotFormatterTests {
             activeFiveHourResetAt: nil
         )
 
-        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
-        #expect(title == "Codex w 50% · 5h 42% · 1m")
+        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
+        #expect(title == "w 50% · 5h 42%")
     }
 
     @Test
@@ -577,8 +577,8 @@ struct MenuBarSnapshotFormatterTests {
             activeFiveHourResetAt: nil
         )
 
-        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
-        #expect(title == "Codex 33% · now")
+        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
+        #expect(title == "33%")
     }
 
     @Test
@@ -595,18 +595,8 @@ struct MenuBarSnapshotFormatterTests {
             activeFiveHourResetAt: nil
         )
 
-        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot, now: now)
-        #expect(title == "Codex 7 · 1h")
-    }
-
-    @Test
-    func shortAgeTextHandlesRangeBoundaries() {
-        let now = Date(timeIntervalSince1970: 4_000_000)
-        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-9), now: now) == "now")
-        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-15), now: now) == "15s")
-        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-180), now: now) == "3m")
-        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-7_200), now: now) == "2h")
-        #expect(MenuBarSnapshotFormatter.shortAgeText(since: now.addingTimeInterval(-172_800), now: now) == "2d")
+        let title = MenuBarSnapshotFormatter.menuBarTitle(snapshot: snapshot)
+        #expect(title == "7")
     }
 }
 
