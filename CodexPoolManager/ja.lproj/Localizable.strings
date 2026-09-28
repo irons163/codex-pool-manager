@@ -189,6 +189,7 @@
 "workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
 "drawer.expand" = "展開";
 "drawer.collapse" = "折りたたむ";
+"drawer.resize" = "上下にドラッグしてワークスペースパネルの高さを調整します。";
 "alert.low_usage.title" = "低使用量警告";
 "alert.dismiss" = "閉じる";
 "common.none" = "なし";
@@ -578,7 +579,6 @@
 "debug_tools.metric.lazy" = "遅延読み込み";
 "settings.usage_analytics_history_limit_format" = "使用分析の履歴上限: %d 件";
 "settings.usage_analytics_history_limit_hint" = "上限を高くするとグラフ用の同期履歴を多く保持できますが、メモリとストレージ使用量が増えます。";
-"drawer.expand_full" = "全開";
 "relay.error.invalid_provider_id" = "Provider ID には英字、数字、アンダースコアのみ使用できます。";
 "relay.error.invalid_base_url" = "中継 Base URL は有効な http または https URL である必要があります。";
 "relay.error.config_write_failed_format" = "Codex config を更新できません: %@";

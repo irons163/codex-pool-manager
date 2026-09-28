@@ -189,6 +189,7 @@
 "workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
 "drawer.expand" = "Développer";
 "drawer.collapse" = "Réduire";
+"drawer.resize" = "Faites glisser vers le haut ou le bas pour redimensionner le panneau de l’espace de travail.";
 "alert.low_usage.title" = "Alerte faible usage";
 "alert.dismiss" = "Fermer";
 "common.none" = "Aucun";
@@ -578,7 +579,6 @@
 "debug_tools.metric.lazy" = "Différé";
 "settings.usage_analytics_history_limit_format" = "Limite d'historique d'analyse : %d enregistrements";
 "settings.usage_analytics_history_limit_hint" = "Une limite plus élevée conserve plus d'historique pour les graphiques, mais utilise plus de mémoire et de stockage.";
-"drawer.expand_full" = "Ouvrir entièrement";
 "relay.error.invalid_provider_id" = "Le Provider ID ne peut contenir que des lettres, des chiffres et des traits de soulignement.";
 "relay.error.invalid_base_url" = "La Base URL du relais doit être une URL http ou https valide.";
 "relay.error.config_write_failed_format" = "Impossible de mettre à jour la config Codex : %@";

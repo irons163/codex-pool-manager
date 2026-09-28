@@ -141,9 +141,14 @@ struct PoolDashboardView: View {
         static let dashboardChromeStackBreakpoint: CGFloat = 1_000
         static let workspaceContentStackBreakpoint: CGFloat = 1_000
     }
+    private enum WorkspaceDrawerSizing {
+        static let minimumHeightRatio: CGFloat = 0.10
+        static let maximumHeightRatio: CGFloat = 0.90
+        static let defaultHeightRatio: Double = 0.38
+        static let dragThreshold: CGFloat = 4
+    }
     private enum WorkspaceDrawerState {
         case collapsed
-        case partial
         case expanded
 
         var isVisible: Bool {
@@ -154,8 +159,6 @@ struct PoolDashboardView: View {
             switch self {
             case .collapsed:
                 return "chevron.right"
-            case .partial:
-                return "chevron.up"
             case .expanded:
                 return "chevron.down"
             }
@@ -165,8 +168,6 @@ struct PoolDashboardView: View {
             switch self {
             case .collapsed:
                 return "drawer.expand"
-            case .partial:
-                return "drawer.expand_full"
             case .expanded:
                 return "drawer.collapse"
             }
@@ -175,8 +176,6 @@ struct PoolDashboardView: View {
         func next() -> WorkspaceDrawerState {
             switch self {
             case .collapsed:
-                return .partial
-            case .partial:
                 return .expanded
             case .expanded:
                 return .collapsed
@@ -228,6 +227,7 @@ struct PoolDashboardView: View {
     private static let appUpdateLastCheckedAtKey = "pool_dashboard.app_update.last_checked_at"
     private static let whatsNewLastSeenVersionIDKey = "pool_dashboard.whats_new.last_seen_version_id"
     private static let authenticationMethodKey = "pool_dashboard.authentication.method"
+    private static let workspaceDrawerHeightRatioKey = "pool_dashboard.workspace_drawer.height_ratio"
     private static let relayPreserveOfficialAuthKey = "pool_dashboard.relay.preserve_official_auth"
     private struct PendingManualOAuthContext {
         let expectedState: String
@@ -376,6 +376,7 @@ struct PoolDashboardView: View {
     @AppStorage(Self.appUpdateLastCheckedAtKey) private var appUpdateLastCheckedAt = 0.0
     @AppStorage(Self.whatsNewLastSeenVersionIDKey) private var whatsNewLastSeenVersionID = ""
     @AppStorage(Self.authenticationMethodKey) private var selectedAuthMethodRaw = AuthMethod.oauth.rawValue
+    @AppStorage(Self.workspaceDrawerHeightRatioKey) private var workspaceDrawerHeightRatio = WorkspaceDrawerSizing.defaultHeightRatio
     @AppStorage(Self.relayPreserveOfficialAuthKey) private var relayPreserveOfficialAuth = false
     @Environment(\.colorScheme) private var colorScheme
     @State private var state: AccountPoolState
@@ -389,7 +390,8 @@ struct PoolDashboardView: View {
     @State private var sessionAuthorizedAuthFileURL: URL?
     @State private var selectedWorkspace: Workspace = .authentication
     @State private var selectedGroupName: String = AgentAccount.defaultGroupName
-    @State private var workspaceDrawerState: WorkspaceDrawerState = .partial
+    @State private var workspaceDrawerState: WorkspaceDrawerState = .expanded
+    @State private var workspaceDrawerResizeStartHeight: CGFloat?
     @State private var isSidebarCollapsed = false
     @State private var isApplyingRuntimeStateUpdate = false
     @State private var lastHandledRuntimeSyncOutcomeID: UUID?
@@ -787,7 +789,7 @@ struct PoolDashboardView: View {
             }
             .frame(width: safeViewportWidth, alignment: .leading)
 
-            workspaceCollapseToggle()
+            workspaceCollapseToggle(availableHeight: viewportHeight)
                 .padding(.horizontal, ResponsiveLayout.contentHorizontalPadding)
                 .padding(.bottom, 10)
                 .background(
@@ -886,19 +888,32 @@ struct PoolDashboardView: View {
     }
 
     private func workspaceDrawerHeight(for availableHeight: CGFloat) -> CGFloat {
-        switch workspaceDrawerState {
-        case .collapsed:
-            return 0
-        case .partial:
-            return min(440, max(300, availableHeight * 0.38))
-        case .expanded:
-            return max(260, availableHeight - 56)
-        }
+        guard workspaceDrawerState.isVisible, availableHeight > 0 else { return 0 }
+
+        return Self.boundedWorkspaceDrawerHeight(
+            availableHeight: availableHeight,
+            ratio: workspaceDrawerHeightRatio
+        )
     }
 
-    private func workspaceDrawerPanel(height: CGFloat, viewportWidth: CGFloat) -> some View {
+    private static func boundedWorkspaceDrawerHeight(availableHeight: CGFloat, ratio: Double) -> CGFloat {
+        guard availableHeight.isFinite, availableHeight > 0 else { return 0 }
+
+        let safeRatio = ratio.isFinite ? CGFloat(ratio) : CGFloat(WorkspaceDrawerSizing.defaultHeightRatio)
+        let clampedRatio = min(
+            max(safeRatio, WorkspaceDrawerSizing.minimumHeightRatio),
+            WorkspaceDrawerSizing.maximumHeightRatio
+        )
+        return availableHeight * clampedRatio
+    }
+
+    private func workspaceDrawerPanel(
+        height: CGFloat,
+        viewportWidth: CGFloat
+    ) -> some View {
         let safeViewportWidth = max(0, viewportWidth)
         let contentWidth = Self.contentWidth(for: safeViewportWidth)
+        let scrollContentHeight = max(0, height - 1)
 
         return VStack(alignment: .leading, spacing: 0) {
             Rectangle()
@@ -913,13 +928,49 @@ struct PoolDashboardView: View {
                     .padding(.vertical, 12)
                     .frame(width: safeViewportWidth, alignment: .leading)
             }
-            .frame(width: safeViewportWidth, height: height, alignment: .topLeading)
+            .frame(width: safeViewportWidth, height: scrollContentHeight, alignment: .topLeading)
             .background(PoolDashboardTheme.panelStrongFill.opacity(PoolDashboardTheme.chromeStrongOpacity))
         }
-        .frame(width: safeViewportWidth, alignment: .topLeading)
+        .frame(width: safeViewportWidth, height: height, alignment: .topLeading)
     }
 
-    private func workspaceCollapseToggle() -> some View {
+    private func resizeWorkspaceDrawer(translation: CGFloat, availableHeight: CGFloat) {
+        guard availableHeight.isFinite, availableHeight > 0 else { return }
+        guard workspaceDrawerState.isVisible || translation < 0 else { return }
+
+        if workspaceDrawerResizeStartHeight == nil {
+            workspaceDrawerResizeStartHeight = workspaceDrawerState.isVisible
+                ? workspaceDrawerHeight(for: availableHeight)
+                : availableHeight * WorkspaceDrawerSizing.minimumHeightRatio
+        }
+        guard let startHeight = workspaceDrawerResizeStartHeight else { return }
+
+        workspaceDrawerState = .expanded
+        let minimumHeight = availableHeight * WorkspaceDrawerSizing.minimumHeightRatio
+        let maximumHeight = availableHeight * WorkspaceDrawerSizing.maximumHeightRatio
+        let resizedHeight = min(max(startHeight - translation, minimumHeight), maximumHeight)
+        workspaceDrawerHeightRatio = Double(resizedHeight / availableHeight)
+    }
+
+    private func updateWorkspaceDrawerInteraction(translation: CGSize, availableHeight: CGFloat) {
+        guard abs(translation.height) >= WorkspaceDrawerSizing.dragThreshold,
+              abs(translation.height) > abs(translation.width)
+        else { return }
+
+        resizeWorkspaceDrawer(translation: translation.height, availableHeight: availableHeight)
+    }
+
+    private func finishWorkspaceDrawerInteraction(translation: CGSize) {
+        let wasResizing = workspaceDrawerResizeStartHeight != nil
+        workspaceDrawerResizeStartHeight = nil
+
+        if !wasResizing,
+           max(abs(translation.width), abs(translation.height)) < WorkspaceDrawerSizing.dragThreshold {
+            toggleWorkspaceDrawer()
+        }
+    }
+
+    private func workspaceCollapseToggle(availableHeight: CGFloat) -> some View {
         HStack(spacing: 8) {
             Image(systemName: workspaceDrawerState.symbolName)
                 .font(.system(size: 10, weight: .semibold))
@@ -945,10 +996,20 @@ struct PoolDashboardView: View {
                 .fill(PoolDashboardTheme.panelMutedFill.opacity(PoolDashboardTheme.isLightPalette ? 0.72 : 0.45))
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
-                workspaceDrawerState = workspaceDrawerState.next()
-            }
+        .gesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                .onChanged { updateWorkspaceDrawerInteraction(translation: $0.translation, availableHeight: availableHeight) }
+                .onEnded { finishWorkspaceDrawerInteraction(translation: $0.translation) }
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(L10n.text("drawer.resize"))
+        .accessibilityAction(.default, toggleWorkspaceDrawer)
+    }
+
+    private func toggleWorkspaceDrawer() {
+        withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
+            workspaceDrawerState = workspaceDrawerState.next()
         }
     }
 
@@ -1162,7 +1223,7 @@ struct PoolDashboardView: View {
             selectedWorkspace = workspace
             if workspaceDrawerState == .collapsed {
                 withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
-                    workspaceDrawerState = .partial
+                    workspaceDrawerState = .expanded
                 }
             }
         } label: {
@@ -8788,7 +8849,7 @@ private extension UsageAnalyticsWorkspacePanelView {
 
 extension PoolDashboardView {
     static func debugWorkspaceDrawerStateSnapshots() -> [(isVisible: Bool, symbolName: String, actionTitleKey: String, nextSymbolName: String)] {
-        [WorkspaceDrawerState.collapsed, .partial, .expanded].map { state in
+        [WorkspaceDrawerState.collapsed, .expanded].map { state in
             (
                 isVisible: state.isVisible,
                 symbolName: state.symbolName,
@@ -8796,6 +8857,10 @@ extension PoolDashboardView {
                 nextSymbolName: state.next().symbolName
             )
         }
+    }
+
+    static func debugWorkspaceDrawerHeight(availableHeight: CGFloat, ratio: Double) -> CGFloat {
+        boundedWorkspaceDrawerHeight(availableHeight: availableHeight, ratio: ratio)
     }
 
     static func debugSpecialResetKinds() -> [(rawValue: String, interval: TimeInterval, title: String)] {

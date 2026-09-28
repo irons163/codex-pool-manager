@@ -281,6 +281,7 @@
 "workspace.developer.subtitle" = "Developer-only diagnostics and raw payload inspection.";
 "drawer.expand" = "Expand";
 "drawer.collapse" = "Collapse";
+"drawer.resize" = "Drag up or down to resize the workspace panel.";
 "alert.low_usage.title" = "Low Usage Warning";
 "alert.dismiss" = "Dismiss";
 "common.none" = "None";
@@ -587,7 +588,6 @@
 "debug_tools.metric.lazy" = "Lazy";
 "settings.usage_analytics_history_limit_format" = "Usage analytics history limit: %d records";
 "settings.usage_analytics_history_limit_hint" = "Higher limits keep more sync history for charts, but use more memory and storage.";
-"drawer.expand_full" = "Full Open";
 "relay.error.invalid_provider_id" = "Provider ID may contain only letters, numbers, and underscores.";
 "relay.error.invalid_base_url" = "Relay base URL must be a valid http or https URL.";
 "relay.error.config_write_failed_format" = "Unable to update Codex config: %@";

@@ -1193,21 +1193,24 @@ struct PoolDashboardDebugCoverageHookTests {
     @Test
     func workspaceDrawerHooksCoverCycleAndMetadata() {
         let snapshots = PoolDashboardView.debugWorkspaceDrawerStateSnapshots()
-        #expect(snapshots.count == 3)
+        #expect(snapshots.count == 2)
         #expect(snapshots[0].isVisible == false)
         #expect(snapshots[0].symbolName == "chevron.right")
         #expect(snapshots[0].actionTitleKey == "drawer.expand")
-        #expect(snapshots[0].nextSymbolName == "chevron.up")
+        #expect(snapshots[0].nextSymbolName == "chevron.down")
 
         #expect(snapshots[1].isVisible)
-        #expect(snapshots[1].symbolName == "chevron.up")
-        #expect(snapshots[1].actionTitleKey == "drawer.expand_full")
-        #expect(snapshots[1].nextSymbolName == "chevron.down")
+        #expect(snapshots[1].symbolName == "chevron.down")
+        #expect(snapshots[1].actionTitleKey == "drawer.collapse")
+        #expect(snapshots[1].nextSymbolName == "chevron.right")
+    }
 
-        #expect(snapshots[2].isVisible)
-        #expect(snapshots[2].symbolName == "chevron.down")
-        #expect(snapshots[2].actionTitleKey == "drawer.collapse")
-        #expect(snapshots[2].nextSymbolName == "chevron.right")
+    @Test
+    func workspaceDrawerHeightStaysWithinTenAndNinetyPercentOfViewport() {
+        #expect(PoolDashboardView.debugWorkspaceDrawerHeight(availableHeight: 1_000, ratio: -1) == 100)
+        #expect(PoolDashboardView.debugWorkspaceDrawerHeight(availableHeight: 1_000, ratio: 2) == 900)
+        #expect(PoolDashboardView.debugWorkspaceDrawerHeight(availableHeight: 1_000, ratio: 0.45) == 450)
+        #expect(PoolDashboardView.debugWorkspaceDrawerHeight(availableHeight: 1_000, ratio: .nan) == 380)
     }
 
     @Test

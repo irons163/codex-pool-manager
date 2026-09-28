@@ -283,6 +283,7 @@
 "workspace.developer.subtitle" = "僅供開發者使用的診斷與原始資料檢視。";
 "drawer.expand" = "展開";
 "drawer.collapse" = "收合";
+"drawer.resize" = "上下拖曳以調整工作區面板高度。";
 "alert.low_usage.title" = "低用量警示";
 "alert.dismiss" = "關閉";
 "common.none" = "無";
@@ -579,7 +580,6 @@
 "debug_tools.metric.lazy" = "延遲載入";
 "settings.usage_analytics_history_limit_format" = "用量分析歷史上限：%d 筆";
 "settings.usage_analytics_history_limit_hint" = "上限越高會保留更多同步歷史供圖表分析，但會使用更多記憶體與儲存空間。";
-"drawer.expand_full" = "全開";
 "relay.error.invalid_provider_id" = "Provider ID 只能包含英文字母、數字與底線。";
 "relay.error.invalid_base_url" = "中轉 Base URL 必須是有效的 http 或 https URL。";
 "relay.error.config_write_failed_format" = "無法更新 Codex config：%@";
