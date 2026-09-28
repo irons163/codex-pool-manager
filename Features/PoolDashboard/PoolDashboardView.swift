@@ -392,6 +392,7 @@ struct PoolDashboardView: View {
     @State private var selectedGroupName: String = AgentAccount.defaultGroupName
     @State private var workspaceDrawerState: WorkspaceDrawerState = .expanded
     @State private var workspaceDrawerResizeStartHeight: CGFloat?
+    @State private var isWorkspaceDrawerBarHovered = false
     @State private var isSidebarCollapsed = false
     @State private var isApplyingRuntimeStateUpdate = false
     @State private var lastHandledRuntimeSyncOutcomeID: UUID?
@@ -996,6 +997,8 @@ struct PoolDashboardView: View {
                 .fill(PoolDashboardTheme.panelMutedFill.opacity(PoolDashboardTheme.isLightPalette ? 0.72 : 0.45))
         )
         .contentShape(Rectangle())
+        .onHover(perform: setWorkspaceDrawerBarHovered)
+        .onDisappear { setWorkspaceDrawerBarHovered(false) }
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .global)
                 .onChanged { updateWorkspaceDrawerInteraction(translation: $0.translation, availableHeight: availableHeight) }
@@ -1005,6 +1008,19 @@ struct PoolDashboardView: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(L10n.text("drawer.resize"))
         .accessibilityAction(.default, toggleWorkspaceDrawer)
+    }
+
+    private func setWorkspaceDrawerBarHovered(_ isHovered: Bool) {
+        guard isWorkspaceDrawerBarHovered != isHovered else { return }
+        isWorkspaceDrawerBarHovered = isHovered
+
+        #if canImport(AppKit)
+        if isHovered {
+            NSCursor.resizeUpDown.push()
+        } else {
+            NSCursor.pop()
+        }
+        #endif
     }
 
     private func toggleWorkspaceDrawer() {
