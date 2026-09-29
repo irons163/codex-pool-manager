@@ -579,6 +579,8 @@
 "debug_tools.metric.lazy" = "Diferido";
 "settings.usage_analytics_history_limit_format" = "Límite de historial de analítica: %d registros";
 "settings.usage_analytics_history_limit_hint" = "Un límite más alto conserva más historial para los gráficos, pero usa más memoria y almacenamiento.";
+"settings.report_issue" = "Informar de un problema";
+"settings.report_issue_hint" = "Abre un nuevo issue de GitHub en el navegador.";
 "relay.error.invalid_provider_id" = "El Provider ID solo puede contener letras, números y guiones bajos.";
 "relay.error.invalid_base_url" = "La Base URL del relay debe ser una URL http o https válida.";
 "relay.error.config_write_failed_format" = "No se pudo actualizar la config de Codex: %@";

@@ -579,6 +579,8 @@
 "debug_tools.metric.lazy" = "遅延読み込み";
 "settings.usage_analytics_history_limit_format" = "使用分析の履歴上限: %d 件";
 "settings.usage_analytics_history_limit_hint" = "上限を高くするとグラフ用の同期履歴を多く保持できますが、メモリとストレージ使用量が増えます。";
+"settings.report_issue" = "問題を報告";
+"settings.report_issue_hint" = "ブラウザで GitHub の新しい Issue 作成ページを開きます。";
 "relay.error.invalid_provider_id" = "Provider ID には英字、数字、アンダースコアのみ使用できます。";
 "relay.error.invalid_base_url" = "中継 Base URL は有効な http または https URL である必要があります。";
 "relay.error.config_write_failed_format" = "Codex config を更新できません: %@";
