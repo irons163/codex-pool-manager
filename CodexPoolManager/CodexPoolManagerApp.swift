@@ -10,6 +10,7 @@ import AppKit
 
 @main
 struct CodexPoolManagerApp: App {
+    @State private var isMenuBarExtraInserted = true
     @AppStorage(L10n.languageOverrideKey) private var appLanguageOverride = L10n.systemLanguageCode
     @StateObject private var runtimeModel: AppPoolRuntimeModel
     @Environment(\.openWindow) private var openWindow
@@ -37,7 +38,7 @@ struct CodexPoolManagerApp: App {
             SidebarCommands()
         }
 
-        MenuBarExtra {
+        MenuBarExtra(isInserted: $isMenuBarExtraInserted) {
             MenuBarDashboardView(
                 runtimeModel: runtimeModel,
                 openDashboard: {
@@ -65,6 +66,7 @@ struct CodexPoolManagerApp: App {
                 Text(runtimeModel.menuBarSnapshot.title)
                     .monospacedDigit()
             }
+            .fixedSize(horizontal: true, vertical: false)
             .task {
                 runtimeModel.bootstrapIfNeeded()
             }
