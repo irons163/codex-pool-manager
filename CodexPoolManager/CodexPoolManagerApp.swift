@@ -58,7 +58,7 @@ struct CodexPoolManagerApp: App {
             }
         } label: {
             HStack(spacing: 6) {
-                Image(nsImage: Self.menuBarIcon)
+                Image(nsImage: CodexMenuBarIcon.image)
 
                 Text(runtimeModel.menuBarSnapshot.title)
                     .monospacedDigit()
@@ -69,18 +69,6 @@ struct CodexPoolManagerApp: App {
             }
         }
         .menuBarExtraStyle(.window)
-    }
-
-    private static var menuBarIcon: NSImage {
-        let size = NSSize(width: 18, height: 18)
-        let icon = (NSImage(named: "CodexMenuBarIcon")?.copy() as? NSImage)
-            ?? NSImage(systemSymbolName: "terminal", accessibilityDescription: "CodexPoolManager")
-            ?? NSImage(size: size)
-
-        // MenuBarExtra bridges the label image to AppKit. Set its native size
-        // instead of relying on SwiftUI layout modifiers on the 1024-point asset.
-        icon.size = size
-        return icon
     }
 }
 
