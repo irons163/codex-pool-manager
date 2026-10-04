@@ -3962,7 +3962,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func codexSyncShowsOAuthLoginExpiredWhenUnauthorizedWithoutRefreshToken() async {
+    func codexSyncShowsMissingRefreshTokenWhenUnauthorizedWithoutRefreshToken() async {
         let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
         var state = AccountPoolState(
             accounts: [
@@ -3989,7 +3989,7 @@ struct CodexPoolManagerTests {
 
         #expect(refreshRequests.value.isEmpty)
         #expect(state.accounts[0].isUsageSyncExcluded)
-        #expect(state.accounts[0].usageSyncError == L10n.text("usage.sync.error.oauth_login_expired"))
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthRefreshUnavailable.localizedDescription)
     }
 
     @Test
@@ -4019,7 +4019,7 @@ struct CodexPoolManagerTests {
             client: client,
             oauthRefreshClient: StubOAuthTokenRefreshClient(
                 requests: refreshRequests,
-                result: .failure(URLError(.userAuthenticationRequired))
+                result: .failure(OAuthTokenRefreshError.http(statusCode: 400, code: "invalid_grant"))
             ),
             oauthConfiguration: .codexDefault
         )

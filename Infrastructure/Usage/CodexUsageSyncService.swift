@@ -7,8 +7,11 @@ struct CodexClientHTTPError: Error, Equatable {
 enum CodexSyncError: Error, Equatable, LocalizedError {
     case unauthorized
     case oauthLoginExpired
+    case oauthRefreshUnavailable
+    case oauthRefreshFailed(OAuthTokenRefreshError)
     case rateLimited
     case network
+    case serviceUnavailable
     case unknown
 
     var errorDescription: String? {
@@ -17,10 +20,16 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
             return L10n.text("usage.sync.error.unauthorized")
         case .oauthLoginExpired:
             return L10n.text("usage.sync.error.oauth_login_expired")
+        case .oauthRefreshUnavailable:
+            return L10n.text("usage.sync.error.oauth_refresh_unavailable")
+        case let .oauthRefreshFailed(error):
+            return error.localizedDescription
         case .rateLimited:
             return L10n.text("usage.sync.error.rate_limited")
         case .network:
             return L10n.text("usage.sync.error.network")
+        case .serviceUnavailable:
+            return L10n.text("usage.sync.error.service_unavailable")
         case .unknown:
             return L10n.text("usage.sync.error.unknown")
         }
@@ -85,17 +94,20 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     let maxRetries: Int
     let oauthRefreshClient: (any OAuthTokenRefreshing)?
     let oauthConfiguration: OAuthClientConfiguration?
+    let onOAuthTokenRefreshed: OAuthTokenRefreshHandler?
 
     init(
         client: Client,
         maxRetries: Int = 0,
         oauthRefreshClient: (any OAuthTokenRefreshing)? = nil,
-        oauthConfiguration: OAuthClientConfiguration? = nil
+        oauthConfiguration: OAuthClientConfiguration? = nil,
+        onOAuthTokenRefreshed: OAuthTokenRefreshHandler? = nil
     ) {
         self.client = client
         self.maxRetries = max(0, maxRetries)
         self.oauthRefreshClient = oauthRefreshClient
         self.oauthConfiguration = oauthConfiguration
+        self.onOAuthTokenRefreshed = onOAuthTokenRefreshed
     }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
@@ -171,51 +183,65 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 let mapped = mapSyncError(error)
                 if mapped == .unauthorized {
                     do {
-                        if let refreshed = try await refreshOAuthTokenAndFetchUsageIfPossible(
-                            account: account,
-                            chatGPTAccountID: chatGPTAccountID,
-                            now: now
-                        ) {
+                        if let tokens = try await refreshOAuthTokenIfPossible(account: account) {
+                            // A refresh can rotate the refresh token. Commit the replacement
+                            // before another awaited request can fail or be cancelled.
                             state.updateAccount(
                                 account.id,
-                                apiToken: refreshed.tokens.accessToken,
-                                email: refreshed.usage.accountEmail,
-                                chatGPTAccountID: refreshed.usage.accountID ?? chatGPTAccountID,
-                                oauthRefreshToken: refreshed.refreshToken,
-                                oauthIDToken: refreshed.idToken,
+                                apiToken: tokens.accessToken,
+                                oauthRefreshToken: tokens.refreshToken,
+                                oauthIDToken: tokens.idToken,
                                 oauthLastRefreshAt: now,
+                                now: now,
+                                shouldEvaluate: false
+                            )
+                            state.setUsageSyncExclusion(
+                                for: account.id,
+                                reason: L10n.text("usage.sync.excluded.refreshed_pending_usage"),
+                                now: now,
+                                shouldEvaluate: false
+                            )
+                            onOAuthTokenRefreshed?(account, tokens, now)
+                            let usage = try await fetchUsageWithRetry(
+                                accessToken: tokens.accessToken,
+                                accountID: chatGPTAccountID
+                            )
+                            state.updateAccount(
+                                account.id,
+                                email: usage.accountEmail,
+                                chatGPTAccountID: usage.accountID ?? chatGPTAccountID,
                                 now: now,
                                 shouldEvaluate: false
                             )
                             state.replaceUsageSnapshot(
                                 for: account.id,
-                                quota: refreshed.usage.quota,
-                                usedUnits: refreshed.usage.usedUnits,
-                                usageWindowName: refreshed.usage.usageWindowName,
-                                usageWindowResetAt: refreshed.usage.usageWindowResetAt,
-                                primaryUsagePercent: refreshed.usage.primaryUsagePercent,
-                                primaryUsageResetAt: refreshed.usage.primaryUsageResetAt,
-                                secondaryUsagePercent: refreshed.usage.secondaryUsagePercent,
-                                secondaryUsageResetAt: refreshed.usage.secondaryUsageResetAt,
-                                isPaid: refreshed.usage.isPaid,
-                                planType: refreshed.usage.planType,
+                                quota: usage.quota,
+                                usedUnits: usage.usedUnits,
+                                usageWindowName: usage.usageWindowName,
+                                usageWindowResetAt: usage.usageWindowResetAt,
+                                primaryUsagePercent: usage.primaryUsagePercent,
+                                primaryUsageResetAt: usage.primaryUsageResetAt,
+                                secondaryUsagePercent: usage.secondaryUsagePercent,
+                                secondaryUsageResetAt: usage.secondaryUsageResetAt,
+                                isPaid: usage.isPaid,
+                                planType: usage.planType,
                                 now: now,
                                 shouldEvaluate: false
                             )
                             state.updateRateLimitResetCredits(
                                 for: account.id,
-                                availableCount: refreshed.usage.rateLimitResetCreditsAvailableCount,
-                                apiExpiries: refreshed.usage.rateLimitResetCreditExpiries,
+                                availableCount: usage.rateLimitResetCreditsAvailableCount,
+                                apiExpiries: usage.rateLimitResetCreditExpiries,
                                 previousSuccessfulSyncAt: previousSuccessfulSyncAt,
                                 now: now
                             )
                             state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
                             continue
                         }
-                        if shouldReportOAuthLoginExpired(for: account) {
+                        if hasOAuthRefreshSupport(for: account) {
                             state.setUsageSyncExclusion(
                                 for: account.id,
-                                reason: CodexSyncError.oauthLoginExpired.localizedDescription,
+                                reason: CodexSyncError.oauthRefreshUnavailable.localizedDescription,
                                 now: now,
                                 shouldEvaluate: false
                             )
@@ -224,9 +250,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     } catch is CancellationError {
                         throw CancellationError()
                     } catch {
-                        let reason = shouldReportOAuthLoginExpired(for: account)
-                            ? CodexSyncError.oauthLoginExpired.localizedDescription
-                            : mapSyncError(error).localizedDescription
+                        let reason = mapSyncError(error).localizedDescription
                         state.setUsageSyncExclusion(
                             for: account.id,
                             reason: reason,
@@ -280,11 +304,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         }
     }
 
-    private func refreshOAuthTokenAndFetchUsageIfPossible(
-        account: AgentAccount,
-        chatGPTAccountID: String,
-        now: Date
-    ) async throws -> (tokens: OAuthTokens, refreshToken: String?, idToken: String?, usage: CodexUsage)? {
+    private func refreshOAuthTokenIfPossible(account: AgentAccount) async throws -> OAuthTokens? {
         guard account.supportsCodexUsageSync,
               let oauthRefreshClient,
               let oauthConfiguration
@@ -294,40 +314,24 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         let refreshToken = account.oauthRefreshToken?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !refreshToken.isEmpty else { return nil }
 
-        let refreshedTokens: OAuthTokens
-        do {
-            refreshedTokens = try await oauthRefreshClient.refreshTokens(
-                refreshToken: refreshToken,
-                configuration: oauthConfiguration
-            )
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            throw CodexSyncError.unauthorized
-        }
+        let refreshedTokens = try await oauthRefreshClient.refreshTokens(
+            refreshToken: refreshToken,
+            configuration: oauthConfiguration
+        )
 
         let freshAccessToken = refreshedTokens.accessToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !freshAccessToken.isEmpty else {
-            throw CodexSyncError.unauthorized
+            throw OAuthTokenRefreshError.invalidResponse
         }
 
-        let usage = try await fetchUsageWithRetry(
-            accessToken: freshAccessToken,
-            accountID: chatGPTAccountID
-        )
         let nextRefreshToken = refreshedTokens.refreshToken?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let nextIDToken = refreshedTokens.idToken?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return (
-            tokens: OAuthTokens(
-                accessToken: freshAccessToken,
-                refreshToken: nextRefreshToken?.isEmpty == false ? nextRefreshToken : account.oauthRefreshToken,
-                idToken: nextIDToken?.isEmpty == false ? nextIDToken : account.oauthIDToken
-            ),
+        return OAuthTokens(
+            accessToken: freshAccessToken,
             refreshToken: nextRefreshToken?.isEmpty == false ? nextRefreshToken : account.oauthRefreshToken,
-            idToken: nextIDToken?.isEmpty == false ? nextIDToken : account.oauthIDToken,
-            usage: usage
+            idToken: nextIDToken?.isEmpty == false ? nextIDToken : account.oauthIDToken
         )
     }
 
@@ -335,12 +339,25 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         if let syncError = error as? CodexSyncError {
             return syncError
         }
+        if let refreshError = error as? OAuthTokenRefreshError {
+            if case let .http(statusCode, _) = refreshError {
+                if statusCode == 429 { return .rateLimited }
+                if (500..<600).contains(statusCode) { return .serviceUnavailable }
+            }
+            if refreshError.requiresReauthentication {
+                return .oauthLoginExpired
+            }
+            return .oauthRefreshFailed(refreshError)
+        }
         if let http = error as? CodexClientHTTPError {
             if http.statusCode == 401 || http.statusCode == 403 {
                 return .unauthorized
             }
             if http.statusCode == 429 {
                 return .rateLimited
+            }
+            if (500..<600).contains(http.statusCode) {
+                return .serviceUnavailable
             }
             return .unknown
         }
@@ -350,7 +367,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         return .unknown
     }
 
-    private func shouldReportOAuthLoginExpired(for account: AgentAccount) -> Bool {
+    private func hasOAuthRefreshSupport(for account: AgentAccount) -> Bool {
         account.supportsCodexUsageSync
             && oauthRefreshClient != nil
             && oauthConfiguration != nil

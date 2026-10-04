@@ -515,7 +515,8 @@ struct AppPoolRuntimeModelTests {
 
         #expect(tickedDate != nil)
         #expect(model.menuBarNow != initialMenuBarNow)
-        #expect(model.menuBarSnapshot.title != initialTitle)
+        // Elapsed seconds are no longer part of the menu bar title.
+        #expect(model.menuBarSnapshot.title == initialTitle)
         #expect(store.savedSnapshots.isEmpty)
         #expect(publishedSnapshots.count == 1)
     }

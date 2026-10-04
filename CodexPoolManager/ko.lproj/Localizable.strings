@@ -109,6 +109,7 @@
 "oauth.error.state_mismatch" = "권한 부여 상태 검증에 실패했습니다.";
 "oauth.error.token_exchange_failed_format" = "Token 교환 실패: %@";
 "oauth.error.invalid_response" = "유효하지 않은 응답입니다.";
+"oauth.error.refresh_failed_format" = "로그인 정보를 갱신하지 못했습니다: %@. 나중에 다시 시도해 주세요.";
 "oauth.error.invalid_port" = "유효하지 않은 포트입니다.";
 
 "local_oauth.title" = "로컬 OAuth 계정";
@@ -336,7 +337,10 @@
 "usage.sync.error.oauth_login_expired" = "로그인 정보가 만료되었습니다. 다시 로그인하거나 이 계정을 다시 가져오세요.";
 "usage.sync.error.rate_limited" = "속도 제한에 도달했습니다. 잠시 후 다시 시도해 주세요.";
 "usage.sync.error.network" = "네트워크 오류입니다. 연결을 확인해 주세요.";
+"usage.sync.error.oauth_refresh_unavailable" = "이 계정에 새로 고침 토큰이 없습니다. 다시 로그인하거나 계정을 다시 가져오세요.";
+"usage.sync.error.service_unavailable" = "서비스를 일시적으로 사용할 수 없습니다. 나중에 다시 시도해 주세요.";
 "usage.sync.error.unknown" = "동기화에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+"usage.sync.excluded.refreshed_pending_usage" = "로그인 정보는 갱신되었지만 사용량 동기화가 완료되지 않았습니다. 나중에 다시 시도해 주세요.";
 "usage.sync.excluded.missing_token" = "API token이 없어 동기화 및 스케줄링 계산에서 제외되었습니다.";
 "usage.sync.excluded.missing_account_id" = "Account ID가 없어 동기화 및 스케줄링 계산에서 제외되었습니다.";
 "activity_feed.title" = "활동 피드";

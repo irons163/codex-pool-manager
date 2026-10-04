@@ -653,7 +653,7 @@ struct OAuthLoginServiceCoverageExpansionTests {
     }
 
     @Test
-    func refreshTokenServicePropagatesHTTPFailureMessage() async throws {
+    func refreshTokenServicePreservesHTTPStatusWithoutExposingResponseBody() async throws {
         let configuration = OAuthClientConfiguration(
             issuer: URL(string: "https://auth.example.com")!,
             scopes: "openid",
@@ -665,7 +665,7 @@ struct OAuthLoginServiceCoverageExpansionTests {
         )
         let service = OAuthTokenRefreshService(session: session)
 
-        await #expect(throws: OAuthLoginError.tokenExchangeFailed("refresh denied")) {
+        await #expect(throws: OAuthTokenRefreshError.http(statusCode: 403, code: nil)) {
             _ = try await service.refreshTokens(
                 refreshToken: "refresh-token",
                 configuration: configuration

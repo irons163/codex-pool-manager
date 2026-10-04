@@ -6,8 +6,14 @@ struct PoolDashboardUsageSyncFlowCoordinator {
         let viewState: PoolDashboardViewState
     }
 
-    private let runtimeCoordinator = PoolDashboardRuntimeCoordinator()
+    private let runtimeCoordinator: PoolDashboardRuntimeCoordinator
     private let mutationCoordinator = PoolDashboardMutationCoordinator()
+
+    init(onOAuthTokenRefreshed: OAuthTokenRefreshHandler? = nil) {
+        runtimeCoordinator = PoolDashboardRuntimeCoordinator(
+            dataFlowCoordinator: PoolDashboardDataFlowCoordinator(onOAuthTokenRefreshed: onOAuthTokenRefreshed)
+        )
+    }
 
     func syncCodexUsage(
         from state: AccountPoolState,

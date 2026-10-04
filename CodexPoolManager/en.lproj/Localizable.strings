@@ -118,6 +118,7 @@
 "oauth.error.state_mismatch" = "Authorization state validation failed.";
 "oauth.error.token_exchange_failed_format" = "Token exchange failed: %@";
 "oauth.error.invalid_response" = "Invalid response.";
+"oauth.error.refresh_failed_format" = "Could not refresh sign-in: %@. Please try again later.";
 "oauth.error.invalid_port" = "Invalid port.";
 
 "local_oauth.title" = "Local OAuth Accounts";
@@ -539,8 +540,11 @@
 "usage.sync.error.oauth_login_expired" = "Sign-in information expired. Please sign in again or re-import this account.";
 "usage.sync.error.rate_limited" = "Rate limit reached. Please try again later.";
 "usage.sync.error.network" = "Network error. Please check your connection.";
+"usage.sync.error.oauth_refresh_unavailable" = "This account has no refresh token. Please sign in again or re-import it.";
+"usage.sync.error.service_unavailable" = "The service is temporarily unavailable. Please try again later.";
 "usage.sync.error.timeout" = "Sync timed out. Please try again.";
 "usage.sync.error.unknown" = "Sync failed. Please try again later.";
+"usage.sync.excluded.refreshed_pending_usage" = "Credentials were refreshed, but usage sync is not complete. Please try again later.";
 "usage.sync.excluded.missing_token" = "Missing API token. Excluded from sync and scheduling calculations.";
 "usage.sync.excluded.missing_account_id" = "Missing Account ID. Excluded from sync and scheduling calculations.";
 

@@ -109,6 +109,7 @@
 "oauth.error.state_mismatch" = "Falló la validación del estado de autorización.";
 "oauth.error.token_exchange_failed_format" = "Error al intercambiar token: %@";
 "oauth.error.invalid_response" = "Respuesta no válida.";
+"oauth.error.refresh_failed_format" = "No se pudo renovar el inicio de sesión: %@. Inténtalo más tarde.";
 "oauth.error.invalid_port" = "Puerto no válido.";
 
 "local_oauth.title" = "Cuentas OAuth locales";
@@ -336,7 +337,10 @@
 "usage.sync.error.oauth_login_expired" = "La información de inicio de sesión caducó. Vuelve a iniciar sesión o reimporta esta cuenta.";
 "usage.sync.error.rate_limited" = "Se alcanzó el límite de velocidad. Inténtalo más tarde.";
 "usage.sync.error.network" = "Error de red. Verifica tu conexión.";
+"usage.sync.error.oauth_refresh_unavailable" = "Esta cuenta no tiene un token de actualización. Vuelve a iniciar sesión o reimpórtala.";
+"usage.sync.error.service_unavailable" = "El servicio no está disponible temporalmente. Inténtalo más tarde.";
 "usage.sync.error.unknown" = "La sincronización falló. Inténtalo más tarde.";
+"usage.sync.excluded.refreshed_pending_usage" = "Las credenciales se renovaron, pero la sincronización del uso no ha terminado. Inténtalo más tarde.";
 "usage.sync.excluded.missing_token" = "Falta el token de API. Excluido de la sincronización y del cálculo de programación.";
 "usage.sync.excluded.missing_account_id" = "Falta Account ID. Excluido de la sincronización y del cálculo de programación.";
 "activity_feed.title" = "Registro de actividad";

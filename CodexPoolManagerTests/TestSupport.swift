@@ -114,7 +114,8 @@ final class LockedValue<Value> {
     }
 }
 
-actor FlakyCodexUsageClient: CodexUsageClient {
+@MainActor
+final class FlakyCodexUsageClient: CodexUsageClient {
     var failuresBeforeSuccess: Int
     let successUsage: CodexUsage
 
@@ -132,7 +133,8 @@ actor FlakyCodexUsageClient: CodexUsageClient {
     }
 }
 
-actor CancellingCodexUsageClient: CodexUsageClient {
+@MainActor
+final class CancellingCodexUsageClient: CodexUsageClient {
     private var _callCount = 0
 
     func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {

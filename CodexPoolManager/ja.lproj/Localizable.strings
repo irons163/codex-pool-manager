@@ -109,6 +109,7 @@
 "oauth.error.state_mismatch" = "認可状態の検証に失敗しました。";
 "oauth.error.token_exchange_failed_format" = "Token 交換に失敗しました: %@";
 "oauth.error.invalid_response" = "無効なレスポンスです。";
+"oauth.error.refresh_failed_format" = "ログイン情報を更新できませんでした：%@。しばらくしてから再試行してください。";
 "oauth.error.invalid_port" = "無効なポートです。";
 
 "local_oauth.title" = "ローカル OAuth アカウント";
@@ -336,7 +337,10 @@
 "usage.sync.error.oauth_login_expired" = "ログイン情報の有効期限が切れました。もう一度ログインするか、このアカウントを再インポートしてください。";
 "usage.sync.error.rate_limited" = "レート制限に達しました。しばらくしてから再試行してください。";
 "usage.sync.error.network" = "ネットワークエラーです。接続を確認してください。";
+"usage.sync.error.oauth_refresh_unavailable" = "このアカウントにはリフレッシュトークンがありません。再ログインするか再インポートしてください。";
+"usage.sync.error.service_unavailable" = "サービスを一時的に利用できません。しばらくしてから再試行してください。";
 "usage.sync.error.unknown" = "同期に失敗しました。しばらくしてから再試行してください。";
+"usage.sync.excluded.refreshed_pending_usage" = "ログイン情報は更新されましたが、使用量の同期は未完了です。しばらくしてから再試行してください。";
 "usage.sync.excluded.missing_token" = "API token がないため、同期とスケジューリング計算から除外されました。";
 "usage.sync.excluded.missing_account_id" = "Account ID がないため、同期とスケジューリング計算から除外されました。";
 "activity_feed.title" = "アクティビティフィード";

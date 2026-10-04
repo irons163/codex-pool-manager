@@ -58,7 +58,7 @@ final class AppPoolRuntimeModel: ObservableObject {
     @Published private(set) var menuBarNow: Date
 
     private let store: AccountPoolStoring
-    private let syncRunner: SyncRunner
+    private let syncRunner: SyncRunner?
     private let officialSwitchRunner: OfficialSwitchRunner
     private let relaySwitchRunner: RelaySwitchRunner
     private let defaults: UserDefaults
@@ -89,10 +89,7 @@ final class AppPoolRuntimeModel: ObservableObject {
         menuBarClockIntervalNanoseconds: UInt64 = 15_000_000_000,
         menuBarNowProvider: @escaping MenuBarNowProvider = { Date() },
         widgetPublisher: @escaping WidgetPublisher = { WidgetBridgePublisher.publish(from: $0) },
-        syncRunner: @escaping SyncRunner = { state, viewState in
-            await PoolDashboardUsageSyncFlowCoordinator()
-                .syncCodexUsage(from: state, viewState: viewState)
-        },
+        syncRunner: SyncRunner? = nil,
         officialSwitchRunner: OfficialSwitchRunner? = nil,
         relaySwitchRunner: RelaySwitchRunner? = nil,
         defaults: UserDefaults? = nil
@@ -118,10 +115,7 @@ final class AppPoolRuntimeModel: ObservableObject {
         menuBarClockIntervalNanoseconds: UInt64 = 15_000_000_000,
         menuBarNowProvider: @escaping MenuBarNowProvider = { Date() },
         widgetPublisher: @escaping WidgetPublisher = { WidgetBridgePublisher.publish(from: $0) },
-        syncRunner: @escaping SyncRunner = { state, viewState in
-            await PoolDashboardUsageSyncFlowCoordinator()
-                .syncCodexUsage(from: state, viewState: viewState)
-        },
+        syncRunner: SyncRunner? = nil,
         officialSwitchRunner: OfficialSwitchRunner? = nil,
         relaySwitchRunner: RelaySwitchRunner? = nil,
         defaults: UserDefaults? = nil
@@ -329,8 +323,22 @@ final class AppPoolRuntimeModel: ObservableObject {
 
         let previousState = state
         let previousSyncError = lastSyncError
-        let syncRevision = stateRevision
-        let output = await syncRunner(state, PoolDashboardViewState())
+        var syncRevision = stateRevision
+        let output: PoolDashboardUsageSyncFlowCoordinator.Output
+        if let syncRunner {
+            output = await syncRunner(state, PoolDashboardViewState())
+        } else {
+            let coordinator = PoolDashboardUsageSyncFlowCoordinator { [weak self] account, tokens, refreshedAt in
+                guard let self else { return }
+                let previousRevision = stateRevision
+                if preserveRefreshedOAuthCredential(for: account, tokens: tokens, refreshedAt: refreshedAt),
+                   syncRevision == previousRevision {
+                    // Our own credential checkpoint is not a conflicting user edit.
+                    syncRevision = stateRevision
+                }
+            }
+            output = await coordinator.syncCodexUsage(from: state, viewState: PoolDashboardViewState())
+        }
         let syncError = Self.normalizedSyncError(output.viewState.syncError)
         guard syncRevision == stateRevision else {
             return publishSyncOutcome(
@@ -482,6 +490,37 @@ final class AppPoolRuntimeModel: ObservableObject {
         activeSyncID = nil
         activeSyncOrigin = nil
         isSyncingUsage = false
+    }
+
+    @discardableResult
+    func preserveRefreshedOAuthCredential(
+        for originalAccount: AgentAccount,
+        tokens: OAuthTokens,
+        refreshedAt: Date
+    ) -> Bool {
+        guard let currentAccount = state.accounts.first(where: { $0.id == originalAccount.id }),
+              currentAccount.apiToken == originalAccount.apiToken,
+              currentAccount.oauthRefreshToken == originalAccount.oauthRefreshToken
+        else { return false }
+
+        state.updateAccount(
+            originalAccount.id,
+            apiToken: tokens.accessToken,
+            oauthRefreshToken: tokens.refreshToken,
+            oauthIDToken: tokens.idToken,
+            oauthLastRefreshAt: refreshedAt,
+            now: refreshedAt,
+            shouldEvaluate: false
+        )
+        state.setUsageSyncExclusion(
+            for: originalAccount.id,
+            reason: L10n.text("usage.sync.excluded.refreshed_pending_usage"),
+            now: refreshedAt,
+            shouldEvaluate: false
+        )
+        stateRevision += 1
+        saveAndPublish()
+        return true
     }
 
     private func saveAndPublish() {

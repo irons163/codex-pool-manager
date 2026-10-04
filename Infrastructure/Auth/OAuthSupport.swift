@@ -168,6 +168,50 @@ protocol OAuthTokenRefreshing {
     ) async throws -> OAuthTokens
 }
 
+enum OAuthTokenRefreshError: Error, Equatable, LocalizedError {
+    case http(statusCode: Int, code: String?)
+    case invalidResponse
+
+    var requiresReauthentication: Bool {
+        guard case let .http(statusCode, code) = self,
+              (400..<500).contains(statusCode),
+              let code
+        else { return false }
+        return [
+            "invalid_grant", "invalid_refresh_token", "token_expired",
+            "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused"
+        ].contains(code)
+    }
+
+    var errorDescription: String? {
+        switch self {
+        case let .http(statusCode, code):
+            let details = code.map { "HTTP \(statusCode), \($0)" } ?? "HTTP \(statusCode)"
+            return L10n.text("oauth.error.refresh_failed_format", details)
+        case .invalidResponse:
+            return L10n.text("oauth.error.invalid_response")
+        }
+    }
+
+    static func responseCode(from data: Data) -> String? {
+        guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        let nestedError = payload["error"] as? [String: Any]
+        let value = nestedError?["code"] as? String
+            ?? payload["error"] as? String
+            ?? payload["code"] as? String
+        guard let code = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !code.isEmpty, code.utf8.count <= 80,
+              code.utf8.allSatisfy({ (97...122).contains($0) || (48...57).contains($0) || $0 == 95 })
+        else { return nil }
+        // Keep only the machine-readable code, never a response message or token payload.
+        return code
+    }
+}
+
+typealias OAuthTokenRefreshHandler = (AgentAccount, OAuthTokens, Date) -> Void
+
 struct OAuthTokenRefreshService: OAuthTokenRefreshing {
     var session: URLSession = .shared
 
@@ -185,14 +229,18 @@ struct OAuthTokenRefreshService: OAuthTokenRefreshing {
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
-            throw OAuthLoginError.tokenExchangeFailed(L10n.text("oauth.error.invalid_response"))
+            throw OAuthTokenRefreshError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
-            throw OAuthLoginError.tokenExchangeFailed(String(message.prefix(200)))
+            throw OAuthTokenRefreshError.http(
+                statusCode: http.statusCode,
+                code: OAuthTokenRefreshError.responseCode(from: data)
+            )
         }
 
-        let tokenResponse = try JSONDecoder().decode(TokenExchangeResponse.self, from: data)
+        guard let tokenResponse = try? JSONDecoder().decode(TokenExchangeResponse.self, from: data) else {
+            throw OAuthTokenRefreshError.invalidResponse
+        }
         return OAuthTokens(
             accessToken: tokenResponse.accessToken,
             refreshToken: tokenResponse.refreshToken,

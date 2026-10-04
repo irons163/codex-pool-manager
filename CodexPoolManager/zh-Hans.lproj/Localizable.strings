@@ -118,6 +118,7 @@
 "oauth.error.state_mismatch" = "授权状态校验失败";
 "oauth.error.token_exchange_failed_format" = "Token 交换失败：%@";
 "oauth.error.invalid_response" = "无效响应";
+"oauth.error.refresh_failed_format" = "登录凭证刷新失败：%@，请稍后重试。";
 "oauth.error.invalid_port" = "port 无效";
 
 "local_oauth.title" = "本地 OAuth 账号";
@@ -497,8 +498,11 @@
 "usage.sync.error.oauth_login_expired" = "登录信息已过期，请重新登录或重新导入此账号。";
 "usage.sync.error.rate_limited" = "已达速率限制，请稍后再试。";
 "usage.sync.error.network" = "网络异常，请检查连接。";
+"usage.sync.error.oauth_refresh_unavailable" = "此账号缺少 refresh token，请重新登录或重新导入。";
+"usage.sync.error.service_unavailable" = "服务暂时不可用，请稍后重试。";
 "usage.sync.error.timeout" = "同步超时，请稍后再试。";
 "usage.sync.error.unknown" = "同步失败，请稍后再试。";
+"usage.sync.excluded.refreshed_pending_usage" = "登录凭证已更新，用量同步尚未完成，请稍后重试。";
 "usage.sync.excluded.missing_token" = "缺少 API Token，已排除于同步与调度计算";
 "usage.sync.excluded.missing_account_id" = "缺少 Account ID，已排除于同步与调度计算";
 "activity_feed.title" = "活动记录";

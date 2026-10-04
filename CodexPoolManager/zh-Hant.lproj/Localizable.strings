@@ -118,6 +118,7 @@
 "oauth.error.state_mismatch" = "授權狀態驗證失敗";
 "oauth.error.token_exchange_failed_format" = "Token 交換失敗：%@";
 "oauth.error.invalid_response" = "無效回應";
+"oauth.error.refresh_failed_format" = "登入憑證刷新失敗：%@，請稍後再試。";
 "oauth.error.invalid_port" = "port 無效";
 
 "local_oauth.title" = "本機 OAuth 帳號";
@@ -497,8 +498,11 @@
 "usage.sync.error.oauth_login_expired" = "登入資訊已過期，請重新登入或重新匯入此帳號。";
 "usage.sync.error.rate_limited" = "已達速率限制，請稍後再試。";
 "usage.sync.error.network" = "網路異常，請檢查連線。";
+"usage.sync.error.oauth_refresh_unavailable" = "此帳號缺少 refresh token，請重新登入或重新匯入。";
+"usage.sync.error.service_unavailable" = "服務暫時無法使用，請稍後再試。";
 "usage.sync.error.timeout" = "同步逾時，請稍後再試。";
 "usage.sync.error.unknown" = "同步失敗，請稍後再試。";
+"usage.sync.excluded.refreshed_pending_usage" = "登入憑證已更新，用量同步尚未完成，請稍後再試。";
 "usage.sync.excluded.missing_token" = "缺少 API Token，已排除於同步與調度計算";
 "usage.sync.excluded.missing_account_id" = "缺少 Account ID，已排除於同步與調度計算";
 "activity_feed.title" = "活動記錄";

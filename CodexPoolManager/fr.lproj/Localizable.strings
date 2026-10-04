@@ -109,6 +109,7 @@
 "oauth.error.state_mismatch" = "Échec de la validation de l'état d'autorisation.";
 "oauth.error.token_exchange_failed_format" = "Échec de l'échange de token : %@";
 "oauth.error.invalid_response" = "Réponse invalide.";
+"oauth.error.refresh_failed_format" = "Impossible de renouveler la connexion : %@. Réessayez plus tard.";
 "oauth.error.invalid_port" = "Port invalide.";
 
 "local_oauth.title" = "Comptes OAuth locaux";
@@ -336,7 +337,10 @@
 "usage.sync.error.oauth_login_expired" = "Les informations de connexion ont expiré. Connectez-vous à nouveau ou réimportez ce compte.";
 "usage.sync.error.rate_limited" = "Limite de débit atteinte. Veuillez réessayer plus tard.";
 "usage.sync.error.network" = "Erreur réseau. Vérifiez votre connexion.";
+"usage.sync.error.oauth_refresh_unavailable" = "Ce compte ne possède pas de jeton de renouvellement. Reconnectez-vous ou réimportez-le.";
+"usage.sync.error.service_unavailable" = "Le service est temporairement indisponible. Réessayez plus tard.";
 "usage.sync.error.unknown" = "Échec de la synchronisation. Veuillez réessayer plus tard.";
+"usage.sync.excluded.refreshed_pending_usage" = "Les identifiants ont été renouvelés, mais la synchronisation de l’utilisation n’est pas terminée. Réessayez plus tard.";
 "usage.sync.excluded.missing_token" = "Token API manquant. Exclu de la synchronisation et des calculs d'ordonnancement.";
 "usage.sync.excluded.missing_account_id" = "Account ID manquant. Exclu de la synchronisation et des calculs d'ordonnancement.";
 "activity_feed.title" = "Flux d'activité";

@@ -1,6 +1,8 @@
 import Foundation
 
 struct PoolDashboardDataFlowCoordinator {
+    var onOAuthTokenRefreshed: OAuthTokenRefreshHandler? = nil
+
     func exportSnapshotJSON(_ snapshot: AccountPoolSnapshot) throws -> String {
         try exportSnapshotJSON(snapshot, redactSensitive: true)
     }
@@ -24,7 +26,8 @@ struct PoolDashboardDataFlowCoordinator {
         let service = CodexUsageSyncService(
             client: client,
             oauthRefreshClient: OAuthTokenRefreshService(),
-            oauthConfiguration: .codexDefault
+            oauthConfiguration: .codexDefault,
+            onOAuthTokenRefreshed: onOAuthTokenRefreshed
         )
         var nextState = state
         try await service.sync(state: &nextState)
