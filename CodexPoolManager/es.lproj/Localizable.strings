@@ -411,7 +411,7 @@
 "schedule.summary.not_available" = "--";
 "schedule.summary.overlap_hours" = "Horas de colisión de reinicios";
 "schedule.summary.total_resets" = "Eventos de reinicio";
-"special_reset.badge" = "Alerta";
+"special_reset.badge" = "Se retirará pronto";
 "special_reset.clear_events" = "Limpiar eventos";
 "special_reset.detected_title" = "Señales de reinicio anticipado";
 "special_reset.empty" = "No se detectaron señales de reinicio anticipado.";

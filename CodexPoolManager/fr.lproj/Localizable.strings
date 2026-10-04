@@ -411,7 +411,7 @@
 "schedule.summary.not_available" = "--";
 "schedule.summary.overlap_hours" = "Heures de collision de réinitialisation";
 "schedule.summary.total_resets" = "Événements de réinitialisation";
-"special_reset.badge" = "Alerte";
+"special_reset.badge" = "Bientôt retiré";
 "special_reset.clear_events" = "Effacer les événements";
 "special_reset.detected_title" = "Signaux de réinitialisation anticipée";
 "special_reset.empty" = "Aucun signal de réinitialisation anticipée détecté.";

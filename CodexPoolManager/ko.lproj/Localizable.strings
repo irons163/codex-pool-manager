@@ -411,7 +411,7 @@
 "schedule.summary.not_available" = "--";
 "schedule.summary.overlap_hours" = "리셋 충돌 시간";
 "schedule.summary.total_resets" = "리셋 이벤트";
-"special_reset.badge" = "알림";
+"special_reset.badge" = "곧 제거 예정";
 "special_reset.clear_events" = "이벤트 지우기";
 "special_reset.detected_title" = "조기 리셋 신호";
 "special_reset.empty" = "조기 리셋 신호가 감지되지 않았습니다.";

@@ -411,7 +411,7 @@
 "schedule.summary.not_available" = "--";
 "schedule.summary.overlap_hours" = "リセット衝突時間";
 "schedule.summary.total_resets" = "リセットイベント";
-"special_reset.badge" = "アラート";
+"special_reset.badge" = "まもなく削除";
 "special_reset.clear_events" = "イベントをクリア";
 "special_reset.detected_title" = "早期リセットのシグナル";
 "special_reset.empty" = "早期リセットのシグナルは検出されていません。";
