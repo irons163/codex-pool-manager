@@ -405,6 +405,7 @@ struct PoolDashboardView: View {
     @State private var specialResetWatchState = SpecialResetWatchState()
     @State private var usageAnalyticsState = UsageAnalyticsState()
     @State private var usageAnalyticsStateLoaded = false
+    @State private var showsQuotaAnalytics = false
     @State private var appUpdateAvailablePrompt: AppUpdatePrompt?
     @State private var appUpdatePrompt: AppUpdatePrompt?
     @State private var whatsNewPrompt: WhatsNewAnnouncement?
@@ -1567,13 +1568,24 @@ struct PoolDashboardView: View {
     }
 
     private var usageAnalyticsPanel: some View {
-        UsageAnalyticsWorkspacePanelView(
-            analyticsState: usageAnalyticsState,
-            accounts: state.accounts,
-            onClearIdleDelay: clearUsageAnalyticsIdleDelay
-        )
-        .onAppear {
-            ensureUsageAnalyticsStateLoaded()
+        VStack(alignment: .leading, spacing: 14) {
+            Picker(L10n.text("usage_analytics.title"), selection: $showsQuotaAnalytics) {
+                Text(L10n.text("session_usage.title")).tag(false)
+                Text(L10n.text("session_usage.quota_trends")).tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 360)
+            if showsQuotaAnalytics {
+                UsageAnalyticsWorkspacePanelView(
+                    analyticsState: usageAnalyticsState,
+                    accounts: state.accounts,
+                    onClearIdleDelay: clearUsageAnalyticsIdleDelay
+                )
+                .onAppear { ensureUsageAnalyticsStateLoaded() }
+            } else {
+                SessionUsageAnalyticsPanelView()
+            }
         }
     }
 

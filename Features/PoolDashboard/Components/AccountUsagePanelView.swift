@@ -218,12 +218,7 @@ struct AccountUsagePanelView: View {
                 }
 
                 ScrollView {
-                    LazyVGrid(columns: gridColumns(for: effectiveGridWidth), alignment: .leading, spacing: accountGridSpacing) {
-                        ForEach(sortedAccounts) { account in
-                            accountCard(account)
-                        }
-                    }
-                    .frame(width: measuredGridWidth, alignment: .leading)
+                    accountGrid
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(minHeight: PoolDashboardTheme.usageListMinHeight)
@@ -292,12 +287,21 @@ struct AccountUsagePanelView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            HStack(alignment: .center, spacing: 10) {
-                accountUsageTitle
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 10) {
+                    accountUsageTitle
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                sortingLayoutControls
+                    sortingLayoutControls
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    accountUsageTitle
+                    sortingLayoutControls
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -307,6 +311,8 @@ struct AccountUsagePanelView: View {
         Text(L10n.text("account_usage.title"))
             .font(.system(size: 15, weight: .semibold, design: .rounded))
             .foregroundStyle(PoolDashboardTheme.textPrimary.opacity(PoolDashboardTheme.groupLabelOpacity))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder
@@ -317,9 +323,17 @@ struct AccountUsagePanelView: View {
                 sortAndLayoutControls
             }
         } else {
-            HStack(spacing: 10) {
-                sortPriorityToggles
-                sortAndLayoutControls
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    sortPriorityToggles
+                    sortAndLayoutControls
+                }
+                .fixedSize(horizontal: true, vertical: false)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    sortPriorityToggles
+                    sortAndLayoutControls
+                }
             }
         }
     }
@@ -379,9 +393,17 @@ struct AccountUsagePanelView: View {
                 layoutModePicker
             }
         } else {
-            HStack(spacing: 10) {
-                sortMenuControl
-                layoutModePicker
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    sortMenuControl
+                    layoutModePicker
+                }
+                .fixedSize(horizontal: true, vertical: false)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    sortMenuControl
+                    layoutModePicker
+                }
             }
         }
     }
@@ -436,15 +458,35 @@ struct AccountUsagePanelView: View {
             )
         }
         .menuStyle(.borderlessButton)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private var layoutModePicker: some View {
-        Picker(L10n.text("layout.title"), selection: layoutModeBinding) {
-            ForEach(LayoutMode.allCases) { mode in
-                Text(mode.title).tag(mode)
+        HStack(spacing: 6) {
+            Text(L10n.text("layout.title"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                #if DEBUG
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: AccountUsageLayoutTitleSizePreferenceKey.self,
+                            value: proxy.size
+                        )
+                    }
+                }
+                #endif
+
+            Picker(L10n.text("layout.title"), selection: layoutModeBinding) {
+                ForEach(LayoutMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
         }
-        .pickerStyle(.segmented)
     }
 
     private var groupManagerRow: some View {
@@ -681,10 +723,22 @@ struct AccountUsagePanelView: View {
         }
     }
 
+    private var accountGrid: some View {
+        LazyVGrid(columns: gridColumns(for: effectiveGridWidth), alignment: .leading, spacing: accountGridSpacing) {
+            ForEach(sortedAccounts) { account in
+                accountCard(account)
+            }
+        }
+        .frame(width: measuredGridWidth, alignment: .leading)
+        #if DEBUG
+        .coordinateSpace(name: "accountUsageGrid")
+        #endif
+    }
+
     private func gridColumns(for availableWidth: CGFloat) -> [GridItem] {
         if layoutMode == .minimal {
             guard availableWidth > 0 else {
-                return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing)]
+                return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing, alignment: .topLeading)]
             }
 
             let columns = max(1, Int((availableWidth + accountGridSpacing) / (minimalCardMinWidth + accountGridSpacing)))
@@ -699,7 +753,7 @@ struct AccountUsagePanelView: View {
         }
 
         guard let fixedColumns = layoutMode.fixedColumns else {
-            return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing)]
+            return [GridItem(.adaptive(minimum: minimalCardMinWidth, maximum: minimalCardMaxWidth), spacing: accountGridSpacing, alignment: .topLeading)]
         }
 
         let columnsThatFit: Int
@@ -711,7 +765,7 @@ struct AccountUsagePanelView: View {
         let visibleColumns = min(fixedColumns, columnsThatFit)
 
         return Array(
-            repeating: GridItem(.flexible(minimum: 0), spacing: accountGridSpacing),
+            repeating: GridItem(.flexible(minimum: 0), spacing: accountGridSpacing, alignment: .topLeading),
             count: visibleColumns
         )
     }
@@ -781,7 +835,17 @@ struct AccountUsagePanelView: View {
                 fullAccountCardContent(account)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        #if DEBUG
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: AccountUsageCardContentFramePreferenceKey.self,
+                    value: [account.id: proxy.frame(in: .named("accountUsageGrid"))]
+                )
+            }
+        }
+        #endif
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .dashboardListRowCard()
@@ -800,6 +864,16 @@ struct AccountUsagePanelView: View {
             color: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? PoolDashboardTheme.glowA.opacity(0.35) : .clear,
             radius: (isCurrentAccount && !PoolDashboardTheme.isLightPalette) ? 12 : 0
         )
+        #if DEBUG
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: AccountUsageCardFramePreferenceKey.self,
+                    value: [account.id: proxy.frame(in: .named("accountUsageGrid"))]
+                )
+            }
+        }
+        #endif
     }
 
     @ViewBuilder
@@ -1419,6 +1493,33 @@ struct AccountUsagePanelView: View {
 }
 
 #if DEBUG
+struct AccountUsageCardFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] { [:] }
+
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, next in next })
+    }
+}
+
+struct AccountUsageCardContentFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] { [:] }
+
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, next in next })
+    }
+}
+
+struct AccountUsageLayoutTitleSizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize { .zero }
+
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        let next = nextValue()
+        if next != .zero {
+            value = next
+        }
+    }
+}
+
 struct AccountUsagePanelDeleteDebugProbe: Equatable {
     let groupID: String
     let accountID: String
@@ -1440,6 +1541,16 @@ struct AccountUsagePanelStateDebugProbe: Equatable {
 }
 
 extension AccountUsagePanelView {
+    @MainActor
+    static func debugAccountGridView(accounts: [AgentAccount], availableWidth: CGFloat) -> some View {
+        debugScaffold(availableWidth: availableWidth, accounts: accounts).accountGrid
+    }
+
+    @MainActor
+    static func debugHeaderControlsView(availableWidth: CGFloat) -> some View {
+        debugScaffold(availableWidth: availableWidth).headerRow
+    }
+
     static func debugUsesStackedHeaderControls(availableWidth: CGFloat) -> Bool {
         usesStackedHeaderControls(availableWidth: availableWidth)
     }
@@ -1646,6 +1757,8 @@ extension AccountUsagePanelView {
     @MainActor
     private static func debugScaffold(
         selectedGroupName: String = "Default",
+        availableWidth: CGFloat = 640,
+        accounts: [AgentAccount]? = nil,
         onRemoveAccount: @escaping (UUID) -> Void = { _ in },
         onDeleteGroup: @escaping (String) -> Void = { _ in }
     ) -> AccountUsagePanelView {
@@ -1660,14 +1773,15 @@ extension AccountUsagePanelView {
             chatGPTAccountID: "acct-debug"
         )
 
+        let displayedAccounts = accounts ?? [account]
         return AccountUsagePanelView(
             newAccountName: .constant(""),
             newAccountQuota: .constant(100),
             selectedGroupName: .constant(selectedGroupName),
-            availableWidth: 640,
-            accounts: [account],
+            availableWidth: availableWidth,
+            accounts: displayedAccounts,
             groups: [AgentAccount.defaultGroupName, selectedGroupName],
-            activeAccountID: account.id,
+            activeAccountID: displayedAccounts.first?.id,
             switchLaunchError: nil,
             switchLaunchWarning: nil,
             showAddAccountControls: false,
@@ -1678,7 +1792,7 @@ extension AccountUsagePanelView {
             onCreateGroup: { _ in },
             onRenameGroup: { _, _ in },
             onDeleteGroup: onDeleteGroup,
-            accountNameBinding: { _ in .constant("debug@example.com") },
+            accountNameBinding: { id in .constant(displayedAccounts.first(where: { $0.id == id })?.name ?? "") },
             accountQuotaBinding: { _ in .constant(100) },
             accountUsedBinding: { _ in .constant(10) },
             isPercentUsageAccount: { _ in false },

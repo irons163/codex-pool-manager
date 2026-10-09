@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CCE100000000000000000021 /* CustomDump in Frameworks */ = {isa = PBXBuildFile; productRef = CCE100000000000000000023 /* CustomDump */; };
+		CCE100000000000000000011 /* CodexSessionAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE100000000000000000001 /* CodexSessionAnalytics.swift */; };
+		CCE100000000000000000012 /* CodexSessionUsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE100000000000000000002 /* CodexSessionUsageStore.swift */; };
+		CCE100000000000000000013 /* SessionUsageAnalyticsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE100000000000000000003 /* SessionUsageAnalyticsModel.swift */; };
+		CCE100000000000000000014 /* SessionUsageAnalyticsPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE100000000000000000004 /* SessionUsageAnalyticsPanelView.swift */; };
 		0AA1BB2CC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */; };
 		0AA1BB2DC3DD4EE5FF667788 /* Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */; };
 		4969AB27C103A272942164A3 /* CodexPoolWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB3B5FA95B1A071D4B48B37E /* CodexPoolWidget.swift */; };
@@ -123,6 +128,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CCE100000000000000000001 /* CodexSessionAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSessionAnalytics.swift; sourceTree = "<group>"; };
+		CCE100000000000000000002 /* CodexSessionUsageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSessionUsageStore.swift; sourceTree = "<group>"; };
+		CCE100000000000000000003 /* SessionUsageAnalyticsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUsageAnalyticsModel.swift; sourceTree = "<group>"; };
+		CCE100000000000000000004 /* SessionUsageAnalyticsPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUsageAnalyticsPanelView.swift; sourceTree = "<group>"; };
 		0AA1BB2BC3DD4EE5FF667788 /* Resources/AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = "<group>"; };
 		0DD2922FE9D177DB7B5607A3 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		185DE0D92CAF2F4EB4656CC6 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
@@ -243,6 +252,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CCE100000000000000000021 /* CustomDump in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,6 +332,7 @@
 		4AB61EAC2F739CB1001AC4CB /* Usage */ = {
 			isa = PBXGroup;
 			children = (
+				CCE100000000000000000002 /* CodexSessionUsageStore.swift */,
 				4AB61E8D2F738FCF001AC4CB /* CodexUsageSyncService.swift */,
 			);
 			path = Usage;
@@ -338,6 +349,7 @@
 		4AB61EAE2F739CB1001AC4CB /* PoolDashboard */ = {
 			isa = PBXGroup;
 			children = (
+				CCE100000000000000000003 /* SessionUsageAnalyticsModel.swift */,
 				4AB61E912F738FCF001AC4CB /* LocalOAuthImportViewModel.swift */,
 				4AB61E8E2F738FCF001AC4CB /* PoolDashboardView.swift */,
 				4AB61EB62F739E92001AC4CB /* Components */,
@@ -379,6 +391,7 @@
 		4AB61EB62F739E92001AC4CB /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				CCE100000000000000000004 /* SessionUsageAnalyticsPanelView.swift */,
 				4AB61EB72F739E92001AC4CB /* DashboardHeaderSectionView.swift */,
 				4AB61EB92F739E92001AC4CB /* SyncToolbarView.swift */,
 				4AB61EBB2F739E92001AC4CB /* GlassPanel.swift */,
@@ -459,6 +472,7 @@
 		FCE881F34D1DF70160302C55 /* Analytics */ = {
 			isa = PBXGroup;
 			children = (
+				CCE100000000000000000001 /* CodexSessionAnalytics.swift */,
 				AAE83F8D2F6F095DD5AA7EE9 /* UsageAnalytics.swift */,
 			);
 			path = Analytics;
@@ -507,6 +521,9 @@
 				4AFBA5942F72203C008D97C1 /* CodexPoolManagerTests */,
 			);
 			name = CodexPoolManagerTests;
+			packageProductDependencies = (
+				CCE100000000000000000023 /* CustomDump */,
+			);
 			productName = CodexPoolManagerTests;
 			productReference = 4AFBA5912F72203C008D97C1 /* CodexPoolManagerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -607,6 +624,7 @@
 			mainGroup = 4AFBA5792F72203A008D97C1;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				CCE100000000000000000022 /* XCRemoteSwiftPackageReference "swift-custom-dump" */,
 				7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -668,6 +686,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CCE100000000000000000011 /* CodexSessionAnalytics.swift in Sources */,
+				CCE100000000000000000012 /* CodexSessionUsageStore.swift in Sources */,
+				CCE100000000000000000013 /* SessionUsageAnalyticsModel.swift in Sources */,
+				CCE100000000000000000014 /* SessionUsageAnalyticsPanelView.swift in Sources */,
 				4A9D866A2F768B4D00157EC1 /* PanelAdaptiveActionRowView.swift in Sources */,
 				4AB61EBE2F739F12001AC4CB /* PoolDashboardTheme.swift in Sources */,
 				4AB61EB82F739E92001AC4CB /* DashboardHeaderSectionView.swift in Sources */,
@@ -1224,6 +1246,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		CCE100000000000000000022 /* XCRemoteSwiftPackageReference "swift-custom-dump" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-custom-dump";
+			requirement = {
+				kind = exactVersion;
+				version = 1.7.3;
+			};
+		};
 		7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
@@ -1235,6 +1265,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		CCE100000000000000000023 /* CustomDump */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CCE100000000000000000022 /* XCRemoteSwiftPackageReference "swift-custom-dump" */;
+			productName = CustomDump;
+		};
 		7A1B2C3D4E5F60718293A4B6 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7A1B2C3D4E5F60718293A4B7 /* XCRemoteSwiftPackageReference "Sparkle" */;

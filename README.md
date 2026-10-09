@@ -108,6 +108,9 @@ All screenshots below use mock or non-sensitive test data.
 
 ### 8) Usage analytics and schedule planning
 
+- CC Switch-style session analytics show tokens, usage events, cache hit rate, estimated cost, trends, a 53-week activity heatmap, and model/request breakdowns.
+- Session analytics read local Codex `sessions` and `archived_sessions` metadata without a proxy. Prices are user-configured USD per million tokens; estimates are not subscription bills, and unpriced models stay unknown.
+- Existing account quota analytics remain available under `Quota trends`.
 - Dedicated `Schedule` workspace for reset timeline planning across accounts.
 - Daily/weekly usage analytics to identify consumption patterns.
 - Coverage view to highlight potential uncovered windows between account resets.
@@ -260,6 +263,16 @@ The UI is organized into workspaces for clearer operational boundaries.
 - early-reset tolerance configuration
 - early-reset signal detection summary and records
 - optional desktop alerting + event list management
+
+### Usage Analytics
+
+- `Usage statistics` is the default view. Use date/model filters and the request, model, and pricing tabs.
+- Data source defaults to `CODEX_HOME`, or `~/.codex`; choose `Data source` to select another Codex home or session folder. Scans refresh every 60 seconds while this page is open, or with `Sync now`.
+- Active/archive copies and replayed fork history are deduplicated. Unreadable logs, unresolved fork parents, and safety limits produce an incomplete-statistics warning.
+- Only token-event metadata is retained in memory; conversation contents and credentials are not stored. Rows are usage events, not complete HTTP requests, and cannot reliably be attributed to pool accounts.
+- Request details show the latest 200 matching rows. Summary and charts include all retained matching records (up to the indicated safety limits).
+- Configure each model's input, cached-input, and output rates in `Pricing`. Cached input is part of the input count and is charged only once.
+- `Quota trends` preserves the previous account history, reports, and export controls.
 
 ### Settings
 
