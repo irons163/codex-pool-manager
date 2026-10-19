@@ -1,12 +1,50 @@
 # Issue reporting service
 
 This Cloudflare Worker receives in-app issue reports at `POST /reports` and sends
-them to one fixed recipient using either an Apps Script relay or Cloudflare's
+them to one fixed recipient using ForwardHello, an Apps Script relay, or Cloudflare's
 email binding. No email API key,
 SMTP password, GitHub token, or user login credential is included in the app.
 
 The repository configuration starts with reporting disabled. Deployment addresses
 and secrets live in ignored local configuration and server settings.
+
+## Send through an existing ForwardHello workspace
+
+Use this path when a workspace already has a verified sender domain and production
+sending access. The app submits to the Cloudflare Worker; only the Worker contacts
+ForwardHello. The API key never enters the app or the public request body.
+
+1. Create a dedicated Sending access key in ForwardHello, scoped to the verified
+   sender domain. Keep other applications' keys unchanged. No Full access is needed.
+2. Prepare an ignored local configuration:
+
+   ```sh
+   node scripts/configure-forwardhello.mjs \
+     --from '<verified-sender-address>' --to '<report-recipient>' \
+     --account '<cloudflare-account-id>'
+   ```
+
+   The base URL defaults to `https://app.forwardhello.com`. The adapter permits
+   only official ForwardHello HTTPS origins, refuses redirects, and bounds response
+   parsing. To replace an earlier disabled configuration, add `--replace-inactive`;
+   the script preserves a backup and refuses to replace an enabled configuration.
+3. Store `FORWARD_API_KEY` with `npx wrangler secret put FORWARD_API_KEY --config
+   wrangler.local.jsonc` after approving creation of the dedicated credential.
+4. Set `REPORTS_ENABLED` to `"true"` in the local configuration, validate with
+   `npm test` and `npm run check -- --config wrangler.local.jsonc`, then deploy
+   using `npm run deploy -- --config wrangler.local.jsonc`.
+5. Check `/health`, submit one approved test report, and confirm the actual delivery
+   status in ForwardHello. Set the GitHub repository variable `FEEDBACK_ENDPOINT`
+   to the Worker's `/reports` URL before building the app release.
+
+ForwardHello submissions use the report UUID in `Idempotency-Key`, fixed server-side
+sender and recipient addresses, and `reply_to` only when supplied by the reporter.
+The adapter accepts only genuine live `queued`, `sent`, or `delivered` receipts with
+a ForwardHello email ID. Simulated test-mode outcomes and unknown or failed statuses
+cannot produce a success message in the app. An accepted queued report means it
+has been submitted; it does not claim inbox delivery. Provider errors are not logged
+or returned to app users. ForwardHello retains messages under the workspace's own
+data-retention policy.
 
 ## Send without a domain using Google Apps Script
 
@@ -132,7 +170,8 @@ Tests use a fake email binding and do not send real mail. `check` is a dry run
 that bundles and checks bindings without deploying. Local development with
 `npm run dev` uses the disabled configuration by default.
 
-References: [Apps Script web apps](https://developers.google.com/apps-script/guides/web),
+References: [ForwardHello API](https://forwardhello.com/docs/reference),
+[Apps Script web apps](https://developers.google.com/apps-script/guides/web),
 [MailApp](https://developers.google.com/apps-script/reference/mail/mail-app),
 [Google quotas](https://developers.google.com/apps-script/guides/services/quotas),
 [ContentService redirects](https://developers.google.com/apps-script/guides/content#redirects),

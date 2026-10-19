@@ -1,4 +1,5 @@
 import { googleRelayReady, sendViaGoogleRelay } from "./google-relay.js";
+import { forwardHelloReady, sendViaForwardHello } from "./forwardhello.js";
 
 const encoder = new TextEncoder();
 const maxBodyBytes = 32_768;
@@ -19,6 +20,7 @@ function validEmail(value) {
 
 function ready(env) {
   const mailReady = env.MAIL_PROVIDER === "apps_script" ? googleRelayReady(env)
+    : env.MAIL_PROVIDER === "forwardhello" ? validEmail(env.REPORT_FROM) && forwardHelloReady(env)
     : (!env.MAIL_PROVIDER || env.MAIL_PROVIDER === "cloudflare") && validEmail(env.REPORT_FROM) && env.REPORT_EMAIL;
   return env.REPORTS_ENABLED === "true" && validEmail(env.REPORT_TO)
     && mailReady && env.REPORT_GATE && env.REPORT_RATE_LIMITER;
@@ -104,9 +106,10 @@ export default {
 };
 
 export class ReportDeliveryGate {
-  constructor(state, env) {
+  constructor(state, env, fetcher = fetch) {
     this.storage = state.storage;
     this.env = env;
+    this.fetcher = fetcher;
   }
 
   async fetch(request) {
@@ -143,6 +146,8 @@ export class ReportDeliveryGate {
     try {
       if (this.env.MAIL_PROVIDER === "apps_script") {
         await sendViaGoogleRelay(this.env, report);
+      } else if (this.env.MAIL_PROVIDER === "forwardhello") {
+        await sendViaForwardHello(this.env, report, this.fetcher);
       } else {
         await this.env.REPORT_EMAIL.send({
           from: this.env.REPORT_FROM,

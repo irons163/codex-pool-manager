@@ -3,6 +3,8 @@ node_modules/
 .dev.vars*
 .env*
 wrangler.local.jsonc
+wrangler.previous-*.local.jsonc
+forward-api-key.local
 google-relay-secret.local
 .clasp.json
 .clasprc.json
