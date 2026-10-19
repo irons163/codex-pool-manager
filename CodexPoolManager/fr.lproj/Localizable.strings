@@ -728,3 +728,4 @@
 "report.error.rate_limited" = "Trop de signalements. Veuillez réessayer plus tard.";
 "report.error.pending" = "L’envoi de ce signalement reste à confirmer. Réessayez plus tard ou utilisez GitHub.";
 "report.error.failed" = "L’envoi n’a pas pu être confirmé. Votre texte est conservé ; réessayez plus tard ou utilisez GitHub.";
+"report.recipient_format" = "Adresse de signalement : %@";

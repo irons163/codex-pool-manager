@@ -729,3 +729,4 @@
 "report.error.rate_limited" = "回報次數過多，請稍後再試。";
 "report.error.pending" = "此回報的寄送狀態仍待確認，請稍後再試或使用 GitHub 回報。";
 "report.error.failed" = "尚未確認送出，內容已保留；請稍後重試或使用 GitHub 回報。";
+"report.recipient_format" = "回報信箱：%@";

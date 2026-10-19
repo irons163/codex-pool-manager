@@ -728,3 +728,4 @@
 "report.error.rate_limited" = "報告回数が多すぎます。しばらくしてから再試行してください。";
 "report.error.pending" = "この報告の送信状況はまだ確認できません。後で再試行するか、GitHub で報告してください。";
 "report.error.failed" = "送信を確認できませんでした。入力内容は保持されています。後で再試行するか、GitHub で報告してください。";
+"report.recipient_format" = "報告先：%@";

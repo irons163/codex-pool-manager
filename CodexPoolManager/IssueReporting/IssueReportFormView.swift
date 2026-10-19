@@ -115,6 +115,11 @@ struct IssueReportFormView: View {
             Label(L10n.text("settings.report_issue_email"), systemImage: "envelope")
                 .font(.title2.weight(.semibold))
 
+            Text(L10n.text("report.recipient_format", IssueReportConfiguration.emailAddress))
+                .font(.callout)
+                .foregroundStyle(PoolDashboardTheme.textSecondary)
+                .textSelection(.enabled)
+
             if model.isSubmitted {
                 Label(L10n.text("report.success"), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(PoolDashboardTheme.success)

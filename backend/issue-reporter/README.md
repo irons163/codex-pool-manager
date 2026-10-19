@@ -8,6 +8,20 @@ SMTP password, GitHub token, or user login credential is included in the app.
 The repository configuration starts with reporting disabled. Deployment addresses
 and secrets live in ignored local configuration and server settings.
 
+## CodexPool public report address
+
+The public report inbox is `feedback@codexpool.zero2codex.dev`. For the Cloudflare
+deployment, set both `REPORT_FROM` and `REPORT_TO` to that address. Email Routing
+for the `codexpool.zero2codex.dev` subdomain forwards incoming reports to the
+owner's separately verified destination mailbox. The app displays only the public
+report address; its backend submits email to that address rather than directly
+addressing the private destination.
+
+Before enabling submissions, verify the public address as an allowed destination
+for the Worker's email binding, and complete the subdomain's sender verification.
+The forwarding destination remains in Cloudflare's routing settings and does not
+need to be included in the app or committed deployment configuration.
+
 ## Send through an existing ForwardHello workspace
 
 Use this path when a workspace already has a verified sender domain and production
@@ -118,11 +132,13 @@ before sending, and the Worker's daily cap still applies. Google's quota can cha
      --account '<cloudflare-account-id>'
    ```
 
-   This writes the ignored `wrangler.local.jsonc`, locks the email binding to the
-   selected sender and recipient, and enables reporting. It does not deploy or send.
-   An existing local configuration is never overwritten.
+   This writes the ignored `wrangler.local.jsonc` and locks the email binding to the
+   selected sender and recipient. Reporting stays disabled until verification is
+   complete. To replace a previous disabled configuration, use `--replace-inactive`;
+   the script keeps a backup and refuses to replace an enabled configuration.
 4. Run `npm test` and `npm run check -- --config wrangler.local.jsonc`.
-5. Deploy with `npm run deploy -- --config wrangler.local.jsonc`. Keep the Durable
+5. After sender and recipient verification, set `REPORTS_ENABLED` to `"true"` in
+   the local config and deploy with `npm run deploy -- --config wrangler.local.jsonc`. Keep the Durable
    Object binding name, object name, and migration history on later deployments.
 6. Check `GET https://<deployed-worker-host>/health`. A ready configuration returns
    `200` and `{"ready":true}`. This checks configuration only; it does not verify

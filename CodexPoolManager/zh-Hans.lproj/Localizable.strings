@@ -729,3 +729,4 @@
 "report.error.rate_limited" = "报告次数过多，请稍后重试。";
 "report.error.pending" = "此报告的发送状态仍待确认，请稍后重试或通过 GitHub 报告。";
 "report.error.failed" = "尚未确认提交，内容已保留；请稍后重试或通过 GitHub 报告。";
+"report.recipient_format" = "反馈邮箱：%@";

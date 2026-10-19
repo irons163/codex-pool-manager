@@ -2,6 +2,7 @@ import Foundation
 
 enum IssueReportConfiguration {
     static let githubURL = URL(string: "https://github.com/irons163/codex-pool-manager/issues/new")!
+    static let emailAddress = "feedback@codexpool.zero2codex.dev"
 
     static var endpoint: URL? {
         validatedEndpoint(Bundle.main.object(forInfoDictionaryKey: "CodexPoolFeedbackEndpoint") as? String)

@@ -737,3 +737,4 @@
 "report.error.rate_limited" = "Too many reports. Please try again later.";
 "report.error.pending" = "Delivery of this report is still unconfirmed. Please try again later or report on GitHub.";
 "report.error.failed" = "Submission could not be confirmed. Your text is preserved; retry later or report on GitHub.";
+"report.recipient_format" = "Report inbox: %@";

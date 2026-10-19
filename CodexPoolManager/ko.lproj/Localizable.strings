@@ -728,3 +728,4 @@
 "report.error.rate_limited" = "신고 횟수가 너무 많습니다. 나중에 다시 시도해 주세요.";
 "report.error.pending" = "이 신고의 전송 상태를 아직 확인하지 못했습니다. 나중에 다시 시도하거나 GitHub로 신고해 주세요.";
 "report.error.failed" = "제출을 확인하지 못했습니다. 입력한 내용은 유지됩니다. 나중에 다시 시도하거나 GitHub로 신고해 주세요.";
+"report.recipient_format" = "신고 수신 주소: %@";

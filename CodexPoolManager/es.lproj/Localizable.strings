@@ -728,3 +728,4 @@
 "report.error.rate_limited" = "Demasiados informes. Inténtalo de nuevo más tarde.";
 "report.error.pending" = "El envío de este informe aún no se ha confirmado. Inténtalo más tarde o utiliza GitHub.";
 "report.error.failed" = "No se pudo confirmar el envío. Tu texto se conserva; inténtalo más tarde o utiliza GitHub.";
+"report.recipient_format" = "Correo para informes: %@";
