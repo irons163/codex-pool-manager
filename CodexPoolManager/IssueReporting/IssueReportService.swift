@@ -86,7 +86,13 @@ struct IssueReportService {
 
     init(endpoint: URL?, transport: Transport? = nil) {
         self.endpoint = IssueReportConfiguration.validatedEndpoint(endpoint?.absoluteString)
-        self.transport = transport ?? Self.performRequest
+        if let transport {
+            self.transport = transport
+        } else {
+            self.transport = { request in
+                try await Self.performRequest(request)
+            }
+        }
     }
 
     func send(_ report: IssueReportPayload) async throws {
