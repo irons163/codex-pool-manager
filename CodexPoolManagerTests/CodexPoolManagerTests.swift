@@ -4272,7 +4272,7 @@ struct CodexPoolManagerTests {
         }
         let client = MockCodexUsageClient(
             responseByToken: [:],
-            shouldThrowError: CodexClientHTTPError(statusCode: 500)
+            shouldThrowError: CodexClientHTTPError(statusCode: 418)
         )
         let sync = CodexUsageSyncService(client: client)
         try? await sync.sync(state: &state)

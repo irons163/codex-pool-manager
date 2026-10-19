@@ -223,6 +223,8 @@ Focus 模式不進行智慧自動切換。
 - `~/.config/codex/auth.json`
 - `~/.openai/auth.json`
 
+也會掃描各路徑同層 `auth_accounts/` 目錄中的 JSON 檔。同步用量時，會依工作區帳號 ID 尋找較新的本機登入資訊，驗證有效後才更新帳號池。同一 email 的個人與企業工作區會保有各自的登入資訊；若登入資訊與工作區不符，會停止同步與切換並提示重新登入。
+
 ### 公開 OAuth Client
 
 預設支援公開 client 流程，也可改用你自己的 OAuth client 參數。

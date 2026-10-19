@@ -73,6 +73,47 @@ enum LocalCodexAccountDiscovery {
         return deduplicated(extractAccounts(from: root, source: source))
     }
 
+    /// Codex can rotate credentials while the pool still holds an older copy.
+    /// Match the selected workspace, never the email or the JWT's user subject.
+    static func newerTokens(
+        for account: AgentAccount,
+        in localAccounts: [LocalCodexOAuthAccount]
+    ) -> OAuthTokens? {
+        guard account.supportsCodexUsageSync,
+              let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID)?.lowercased()
+        else { return nil }
+
+        let currentIssuedAt = OAuthIDTokenClaimsParser.issuedAt(account.apiToken)
+        let candidates = localAccounts.compactMap { local -> (OAuthTokens, Date)? in
+            let tokens = OAuthTokens(
+                accessToken: local.accessToken,
+                refreshToken: OAuthIDTokenClaims.nonEmpty(local.refreshToken),
+                idToken: OAuthIDTokenClaims.nonEmpty(local.idToken)
+            )
+            let claims = OAuthIDTokenClaimsParser.parse(tokens: tokens)
+            let tokenAccountID = OAuthIDTokenClaimsParser.parse(local.accessToken)?.accountID
+                ?? claims?.accountID
+            guard OAuthIDTokenClaims.nonEmpty(tokenAccountID)?.lowercased() == accountID,
+                  local.chatGPTAccountID.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == accountID }) ?? true,
+                  !OAuthIDTokenClaimsParser.hasConflictingAccountID(
+                    accountID, accessToken: tokens.accessToken, idToken: tokens.idToken ?? account.oauthIDToken
+                  ),
+                  tokens.refreshToken != nil,
+                  let issuedAt = OAuthIDTokenClaimsParser.issuedAt(local.accessToken)
+            else { return nil }
+
+            if local.accessToken == account.apiToken {
+                // Fill missing metadata only; an old cache must not replace a
+                // refresh token that the pool has already rotated.
+                guard OAuthIDTokenClaims.nonEmpty(account.oauthRefreshToken) == nil else { return nil }
+            } else {
+                guard issuedAt > (currentIssuedAt ?? .distantPast) else { return nil }
+            }
+            return (tokens, issuedAt)
+        }
+        return candidates.max(by: { $0.1 < $1.1 })?.0
+    }
+
     private static func extractAccounts(from node: Any, source: String) -> [LocalCodexOAuthAccount] {
         var accounts: [LocalCodexOAuthAccount] = []
 
@@ -123,11 +164,22 @@ enum LocalCodexAccountDiscovery {
     }
 
     private static func candidateAuthFiles(homeDirectory: URL) -> [URL] {
-        [
+        let primaryFiles = [
             homeDirectory.appending(path: ".codex/auth.json"),
             homeDirectory.appending(path: ".config/codex/auth.json"),
             homeDirectory.appending(path: ".openai/auth.json")
         ]
+        return primaryFiles.flatMap { primary in
+            let directory = primary.deletingLastPathComponent().appending(path: "auth_accounts")
+            let cachedAccounts = (try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )) ?? []
+            return [primary] + cachedAccounts
+                .filter { $0.pathExtension.lowercased() == "json" }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        }
     }
 
     private static func findString(in dictionary: [String: Any], keys: [String]) -> String? {
@@ -164,7 +216,7 @@ enum LocalCodexAccountDiscovery {
         var output: [LocalCodexOAuthAccount] = []
 
         for account in accounts {
-            let key = "\(account.email ?? account.displayName)|\(account.accessToken)"
+            let key = "\(account.chatGPTAccountID ?? "")|\(account.email ?? account.displayName)|\(account.accessToken)"
             if seen.insert(key).inserted {
                 output.append(account)
             }

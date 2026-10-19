@@ -117,7 +117,8 @@ struct PoolAccountUpsertCoordinator {
         let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? fallbackName) : fallbackName
         let resolvedAccountID = usage.accountID ?? chatGPTAccountID
-        let resolvedIdentityScope = AgentAccount.personalIdentityScope
+        let resolvedIdentityScope = OAuthIDTokenClaimsParser.parse(tokens: tokens)?
+            .resolvedIdentityScope(fallbackWorkspaceID: nil) ?? AgentAccount.personalIdentityScope
 
         let existingAccountID = OAuthAccountUpsertResolver.resolveExistingAccountID(
             in: state.accounts,

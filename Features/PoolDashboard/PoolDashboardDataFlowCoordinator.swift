@@ -27,7 +27,8 @@ struct PoolDashboardDataFlowCoordinator {
             client: client,
             oauthRefreshClient: OAuthTokenRefreshService(),
             oauthConfiguration: .codexDefault,
-            onOAuthTokenRefreshed: onOAuthTokenRefreshed
+            onOAuthTokenRefreshed: onOAuthTokenRefreshed,
+            localAccounts: LocalCodexAccountDiscovery.discover()
         )
         var nextState = state
         try await service.sync(state: &nextState)

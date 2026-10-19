@@ -338,6 +338,7 @@
 "usage.sync.error.rate_limited" = "속도 제한에 도달했습니다. 잠시 후 다시 시도해 주세요.";
 "usage.sync.error.network" = "네트워크 오류입니다. 연결을 확인해 주세요.";
 "usage.sync.error.oauth_refresh_unavailable" = "이 계정에 새로 고침 토큰이 없습니다. 다시 로그인하거나 계정을 다시 가져오세요.";
+"auth.workspace_mismatch" = "이 계정의 로그인 정보는 다른 워크스페이스에 속합니다. 올바른 워크스페이스를 선택하여 다시 로그인하거나 가져오세요.";
 "usage.sync.error.service_unavailable" = "서비스를 일시적으로 사용할 수 없습니다. 나중에 다시 시도해 주세요.";
 "usage.sync.error.unknown" = "동기화에 실패했습니다. 잠시 후 다시 시도해 주세요.";
 "usage.sync.excluded.refreshed_pending_usage" = "로그인 정보는 갱신되었지만 사용량 동기화가 완료되지 않았습니다. 나중에 다시 시도해 주세요.";

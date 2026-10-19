@@ -211,6 +211,8 @@ The app scans local auth JSON from common locations:
 - `~/.config/codex/auth.json`
 - `~/.openai/auth.json`
 
+It also scans JSON files in each location's sibling `auth_accounts/` directory. During usage sync, newer local credentials are matched by workspace account ID and verified before replacing the pool's copy. Personal and business workspaces sharing an email keep separate credentials; mismatched workspace credentials are excluded from sync and switching.
+
 ### Public OAuth client
 
 By default, the app supports public client flow and also allows your own OAuth client parameters.

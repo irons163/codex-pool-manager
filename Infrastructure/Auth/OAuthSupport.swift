@@ -329,6 +329,19 @@ enum OAuthIDTokenClaimsParser {
         merge(parse(tokens.idToken), parse(tokens.accessToken))
     }
 
+    static func issuedAt(_ token: String?) -> Date? {
+        guard let timestamp = decodeJWTPayload(token)?["iat"] as? TimeInterval,
+              timestamp.isFinite else { return nil }
+        return Date(timeIntervalSince1970: timestamp)
+    }
+
+    static func hasConflictingAccountID(_ accountID: String, accessToken: String, idToken: String?) -> Bool {
+        let expected = accountID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return [parse(accessToken)?.accountID, parse(idToken)?.accountID]
+            .compactMap { OAuthIDTokenClaims.nonEmpty($0) }
+            .contains { $0.lowercased() != expected }
+    }
+
     static func merge(_ primary: OAuthIDTokenClaims?, _ secondary: OAuthIDTokenClaims?) -> OAuthIDTokenClaims? {
         switch (primary, secondary) {
         case (nil, nil):

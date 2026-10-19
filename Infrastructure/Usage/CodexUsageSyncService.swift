@@ -8,6 +8,7 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
     case unauthorized
     case oauthLoginExpired
     case oauthRefreshUnavailable
+    case oauthWorkspaceMismatch
     case oauthRefreshFailed(OAuthTokenRefreshError)
     case rateLimited
     case network
@@ -22,6 +23,8 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
             return L10n.text("usage.sync.error.oauth_login_expired")
         case .oauthRefreshUnavailable:
             return L10n.text("usage.sync.error.oauth_refresh_unavailable")
+        case .oauthWorkspaceMismatch:
+            return L10n.text("auth.workspace_mismatch")
         case let .oauthRefreshFailed(error):
             return error.localizedDescription
         case .rateLimited:
@@ -95,27 +98,65 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     let oauthRefreshClient: (any OAuthTokenRefreshing)?
     let oauthConfiguration: OAuthClientConfiguration?
     let onOAuthTokenRefreshed: OAuthTokenRefreshHandler?
+    let localAccounts: [LocalCodexOAuthAccount]
 
     init(
         client: Client,
         maxRetries: Int = 0,
         oauthRefreshClient: (any OAuthTokenRefreshing)? = nil,
         oauthConfiguration: OAuthClientConfiguration? = nil,
-        onOAuthTokenRefreshed: OAuthTokenRefreshHandler? = nil
+        onOAuthTokenRefreshed: OAuthTokenRefreshHandler? = nil,
+        localAccounts: [LocalCodexOAuthAccount] = []
     ) {
         self.client = client
         self.maxRetries = max(0, maxRetries)
         self.oauthRefreshClient = oauthRefreshClient
         self.oauthConfiguration = oauthConfiguration
         self.onOAuthTokenRefreshed = onOAuthTokenRefreshed
+        self.localAccounts = localAccounts
     }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
         let missingTokenMessage = L10n.text("usage.sync.excluded.missing_token")
         let missingAccountIDMessage = L10n.text("usage.sync.excluded.missing_account_id")
         let previousSuccessfulSyncAt = state.lastUsageSyncAt
-        for account in state.accounts {
+        for originalAccount in state.accounts {
             try Task.checkCancellation()
+
+            var account = originalAccount
+            var recoveredUsage: CodexUsage?
+            if let tokens = LocalCodexAccountDiscovery.newerTokens(for: account, in: localAccounts),
+               let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID) {
+                do {
+                    let usage = try await fetchUsageWithRetry(accessToken: tokens.accessToken, accountID: accountID)
+                    if let responseID = OAuthIDTokenClaims.nonEmpty(usage.accountID),
+                       responseID.lowercased() != accountID.lowercased() {
+                        throw CodexSyncError.unknown
+                    }
+                    state.updateAccount(
+                        account.id,
+                        apiToken: tokens.accessToken,
+                        oauthRefreshToken: tokens.refreshToken,
+                        oauthIDToken: tokens.idToken,
+                        oauthLastRefreshAt: now,
+                        now: now,
+                        shouldEvaluate: false
+                    )
+                    // Checkpoint the verified credential before syncing another
+                    // account, whose request may fail or be cancelled.
+                    onOAuthTokenRefreshed?(originalAccount, tokens, now)
+                    account.apiToken = tokens.accessToken
+                    account.oauthRefreshToken = tokens.refreshToken
+                    account.oauthIDToken = tokens.idToken
+                    account.oauthLastRefreshAt = now
+                    recoveredUsage = usage
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    // A local cache can also be revoked. Keep the pool's existing
+                    // credential and try its normal usage/refresh path below.
+                }
+            }
 
             guard account.supportsCodexUsageSync else {
                 state.setUsageSyncExclusion(
@@ -149,11 +190,28 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
             }
             let chatGPTAccountID = resolvedAccountID
 
-            do {
-                let usage = try await fetchUsageWithRetry(
-                    accessToken: account.apiToken,
-                    accountID: chatGPTAccountID
+            guard !OAuthIDTokenClaimsParser.hasConflictingAccountID(
+                chatGPTAccountID, accessToken: account.apiToken, idToken: account.oauthIDToken
+            ) else {
+                state.setUsageSyncExclusion(
+                    for: account.id,
+                    reason: CodexSyncError.oauthWorkspaceMismatch.localizedDescription,
+                    now: now,
+                    shouldEvaluate: false
                 )
+                continue
+            }
+
+            do {
+                let usage: CodexUsage
+                if let recoveredUsage {
+                    usage = recoveredUsage
+                } else {
+                    usage = try await fetchUsageWithRetry(
+                        accessToken: account.apiToken,
+                        accountID: chatGPTAccountID
+                    )
+                }
                 state.replaceUsageSnapshot(
                     for: account.id,
                     quota: usage.quota,
@@ -322,6 +380,13 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         let freshAccessToken = refreshedTokens.accessToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !freshAccessToken.isEmpty else {
             throw OAuthTokenRefreshError.invalidResponse
+        }
+
+        if let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID),
+           OAuthIDTokenClaimsParser.hasConflictingAccountID(
+            accountID, accessToken: freshAccessToken, idToken: refreshedTokens.idToken
+           ) {
+            throw CodexSyncError.oauthWorkspaceMismatch
         }
 
         let nextRefreshToken = refreshedTokens.refreshToken?

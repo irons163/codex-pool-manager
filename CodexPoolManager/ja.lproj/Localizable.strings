@@ -338,6 +338,7 @@
 "usage.sync.error.rate_limited" = "レート制限に達しました。しばらくしてから再試行してください。";
 "usage.sync.error.network" = "ネットワークエラーです。接続を確認してください。";
 "usage.sync.error.oauth_refresh_unavailable" = "このアカウントにはリフレッシュトークンがありません。再ログインするか再インポートしてください。";
+"auth.workspace_mismatch" = "このアカウントのログイン情報は別のワークスペースに属しています。正しいワークスペースを選択して再ログインするか、インポートしてください。";
 "usage.sync.error.service_unavailable" = "サービスを一時的に利用できません。しばらくしてから再試行してください。";
 "usage.sync.error.unknown" = "同期に失敗しました。しばらくしてから再試行してください。";
 "usage.sync.excluded.refreshed_pending_usage" = "ログイン情報は更新されましたが、使用量の同期は未完了です。しばらくしてから再試行してください。";

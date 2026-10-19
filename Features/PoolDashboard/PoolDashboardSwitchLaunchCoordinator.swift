@@ -122,6 +122,18 @@ struct PoolDashboardSwitchLaunchCoordinator {
             )
         }
 
+        guard !OAuthIDTokenClaimsParser.hasConflictingAccountID(
+            chatGPTAccountID, accessToken: accountForSwitch.apiToken, idToken: accountForSwitch.oauthIDToken
+        ) else {
+            let message = CodexSyncError.oauthWorkspaceMismatch.localizedDescription
+            append(message)
+            return output(
+                errorMessage: message,
+                sessionAuthorizedAuthFileURL: currentAuthorizedAuthFileURL,
+                didSwitchAuth: false
+            )
+        }
+
         func attemptSwitch(_ context: SwitchAttemptContext) async -> Output {
             do {
                 try await switchExecutor(
