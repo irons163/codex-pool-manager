@@ -340,6 +340,7 @@
 "usage.sync.error.network" = "Error de red. Verifica tu conexión.";
 "usage.sync.error.oauth_refresh_unavailable" = "Esta cuenta no tiene un token de actualización. Vuelve a iniciar sesión o reimpórtala.";
 "auth.workspace_mismatch" = "La información de inicio de sesión de esta cuenta pertenece a otro espacio de trabajo. Vuelve a iniciar sesión o importa el espacio de trabajo correcto.";
+"auth.user_mismatch" = "La información de inicio de sesión de esta cuenta pertenece a otro usuario. Vuelve a iniciar sesión o reimporta esta cuenta.";
 "usage.sync.error.service_unavailable" = "El servicio no está disponible temporalmente. Inténtalo más tarde.";
 "usage.sync.error.unknown" = "La sincronización falló. Inténtalo más tarde.";
 "usage.sync.excluded.refreshed_pending_usage" = "Las credenciales se renovaron, pero la sincronización del uso no ha terminado. Inténtalo más tarde.";

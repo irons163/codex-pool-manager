@@ -667,40 +667,16 @@ struct AccountUsagePanelView: View {
         let normalizedGroupName = AgentAccount.normalizedGroupName(groupName)
         return accounts.contains { account in
             AgentAccount.normalizedGroupName(account.groupName) == normalizedGroupName
-                && isCurrentEquivalentAccount(account)
+                && isCurrentAccount(account)
         }
     }
 
-    private func isCurrentEquivalentAccount(_ account: AgentAccount) -> Bool {
-        guard let activeAccount else { return false }
-        if activeAccount.id == account.id { return true }
-
-        if identifiersMatch(activeAccount.chatGPTAccountID, account.chatGPTAccountID),
-           activeAccount.identityScope == account.identityScope {
-            return true
-        }
-
-        if !activeAccount.apiToken.isEmpty,
-           !account.apiToken.isEmpty,
-           activeAccount.apiToken == account.apiToken {
-            return true
-        }
-
-        return false
+    private func isCurrentAccount(_ account: AgentAccount) -> Bool {
+        Self.isCurrentAccount(account, activeAccountID: activeAccountID)
     }
 
-    private func identifiersMatch(_ lhs: String?, _ rhs: String?) -> Bool {
-        guard let lhs = normalizedIdentifier(lhs),
-              let rhs = normalizedIdentifier(rhs) else {
-            return false
-        }
-        return lhs == rhs
-    }
-
-    private func normalizedIdentifier(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return normalized.isEmpty ? nil : normalized
+    static func isCurrentAccount(_ account: AgentAccount, activeAccountID: UUID?) -> Bool {
+        account.id == activeAccountID
     }
 
     private var addRow: some View {
@@ -810,7 +786,7 @@ struct AccountUsagePanelView: View {
         }
 
         if persistedActiveAccountFirst,
-           let activeIndex = reordered.firstIndex(where: isCurrentEquivalentAccount) {
+           let activeIndex = reordered.firstIndex(where: isCurrentAccount) {
             let activeAccount = reordered.remove(at: activeIndex)
             reordered.insert(activeAccount, at: 0)
         }
@@ -827,7 +803,7 @@ struct AccountUsagePanelView: View {
     }
 
     private func accountCard(_ account: AgentAccount) -> some View {
-        let isCurrentAccount = isCurrentEquivalentAccount(account)
+        let isCurrentAccount = isCurrentAccount(account)
         return VStack(alignment: .leading, spacing: 8) {
             if layoutMode == .minimal {
                 minimalAccountCardContent(account)
@@ -1112,7 +1088,7 @@ struct AccountUsagePanelView: View {
                     .disabled(!hasPendingAccountNameChanges(account))
                 }
 
-                if isCurrentEquivalentAccount(account) {
+                if isCurrentAccount(account) {
                     Text(L10n.text("account.current_badge"))
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textPrimary)

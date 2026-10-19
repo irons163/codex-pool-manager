@@ -6995,7 +6995,7 @@ extension CodexPoolManagerTests {
                     usedUnits: 100,
                     quota: 100,
                     apiToken: "token-old",
-                    email: "old@example.com",
+                    email: "new@example.com",
                     chatGPTAccountID: "acct-1",
                     usageWindowName: "weekly_window",
                     usageWindowResetAt: resetAt
@@ -7037,6 +7037,7 @@ extension CodexPoolManagerTests {
                     usedUnits: 0,
                     quota: 100,
                     apiToken: "token-old",
+                    email: "real@example.com",
                     chatGPTAccountID: "acct-1"
                 )
             ],
@@ -7076,6 +7077,7 @@ extension CodexPoolManagerTests {
                     usedUnits: 0,
                     quota: 100,
                     apiToken: "token-old",
+                    email: "real@example.com",
                     chatGPTAccountID: "acct-1"
                 )
             ],
@@ -7109,6 +7111,7 @@ extension CodexPoolManagerTests {
                     usedUnits: 0,
                     quota: 100,
                     apiToken: "token-old",
+                    email: "new@example.com",
                     chatGPTAccountID: "acct-1"
                 )
             ],

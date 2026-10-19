@@ -6,13 +6,14 @@ import Testing
 struct WorkspaceCredentialSyncTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
-    private func token(accountID: String, issuedAt: Double) throws -> String {
+    private func token(accountID: String, issuedAt: Double, email: String = "dual@example.com", subject: String = "shared-user") throws -> String {
         let payload: [String: Any] = [
-            "sub": "shared-user",
-            "email": "dual@example.com",
+            "sub": subject,
+            "email": email,
             "iat": issuedAt,
             "https://api.openai.com/auth": [
                 "chatgpt_account_id": accountID,
+                "chatgpt_user_id": subject,
                 "organizations": [["id": "shared-org", "is_default": true]]
             ]
         ]
@@ -24,14 +25,14 @@ struct WorkspaceCredentialSyncTests {
         return "header.\(encoded).signature"
     }
 
-    private func account(accountID: String, issuedAt: Double = 100) throws -> AgentAccount {
+    private func account(accountID: String, issuedAt: Double = 100, email: String = "dual@example.com", subject: String = "shared-user") throws -> AgentAccount {
         AgentAccount(
             id: UUID(),
-            name: "dual@example.com",
+            name: email,
             usedUnits: 12,
             quota: 100,
-            apiToken: try token(accountID: accountID, issuedAt: issuedAt),
-            email: "dual@example.com",
+            apiToken: try token(accountID: accountID, issuedAt: issuedAt, email: email, subject: subject),
+            email: email,
             chatGPTAccountID: accountID,
             identityScope: "org:shared-org",
             oauthRefreshToken: "pool-refresh-\(accountID)",
@@ -40,18 +41,161 @@ struct WorkspaceCredentialSyncTests {
         )
     }
 
-    private func local(accountID: String, issuedAt: Double = 200) throws -> LocalCodexOAuthAccount {
-        let accessToken = try token(accountID: accountID, issuedAt: issuedAt)
+    private func local(accountID: String, issuedAt: Double = 200, email: String = "dual@example.com", subject: String = "shared-user") throws -> LocalCodexOAuthAccount {
+        let accessToken = try token(accountID: accountID, issuedAt: issuedAt, email: email, subject: subject)
         return LocalCodexOAuthAccount(
             id: "local-\(accountID)-\(issuedAt)",
-            displayName: "dual@example.com",
-            email: "dual@example.com",
+            displayName: email,
+            email: email,
             source: "fixture/auth.json",
             accessToken: accessToken,
             refreshToken: "local-refresh-\(accountID)-\(issuedAt)",
             idToken: accessToken,
             chatGPTAccountID: accountID
         )
+    }
+
+    @Test
+    func sharedWorkspaceMembersKeepSeparateCredentialsAndUsage() async throws {
+        let first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        let second = try account(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+        let newerSecond = try local(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+        var state = AccountPoolState(accounts: [first, second], mode: .manual)
+        let savedIDs = LockedValue<[UUID]>([])
+        let service = CodexUsageSyncService(
+            client: MockCodexUsageClient(responseByToken: [
+                first.apiToken: CodexUsage(usedUnits: 11, quota: 100, isPaid: true, planType: "team"),
+                newerSecond.accessToken: CodexUsage(usedUnits: 22, quota: 100, isPaid: true, planType: "team")
+            ]),
+            onOAuthTokenRefreshed: { account, _, _ in savedIDs.withLock { $0.append(account.id) } },
+            localAccounts: [newerSecond]
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(savedIDs.value == [second.id])
+        #expect(state.accounts[0].apiToken == first.apiToken)
+        #expect(state.accounts[0].usedUnits == 11)
+        #expect(state.accounts[1].apiToken == newerSecond.accessToken)
+        #expect(state.accounts[1].usedUnits == 22)
+    }
+
+    @Test
+    func wrongMemberCredentialIsExcludedWithoutRequestsOrRefresh() async throws {
+        var first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        let other = try local(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+        first.apiToken = other.accessToken
+        first.oauthIDToken = other.idToken
+        var state = AccountPoolState(accounts: [first], mode: .manual)
+        let requests = LockedValue<[(String, String)]>([])
+        let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        let service = CodexUsageSyncService(
+            client: WorkspaceUsageClient(acceptedToken: other.accessToken, requests: requests),
+            oauthRefreshClient: StubOAuthTokenRefreshClient(requests: refreshRequests, result: .success(OAuthTokens(accessToken: other.accessToken, refreshToken: other.refreshToken, idToken: other.idToken))),
+            oauthConfiguration: .codexDefault,
+            localAccounts: [other]
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(requests.value.isEmpty)
+        #expect(refreshRequests.value.isEmpty)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthUserMismatch.localizedDescription)
+
+        let switched = LockedValue(false)
+        let coordinator = PoolDashboardSwitchLaunchCoordinator(switchExecutor: { _, _, _, _, _, _ in
+            switched.withLock { $0 = true }
+        })
+        let output = await coordinator.switchAndLaunch(
+            account: first, currentAuthorizedAuthFileURL: nil,
+            authFileAccessService: WorkspaceAuthFileResolver(), authorizeAuthFile: { nil }
+        )
+        #expect(!switched.value)
+        #expect(!output.didSwitchAuth)
+        #expect(output.errorMessage == CodexSyncError.oauthUserMismatch.localizedDescription)
+    }
+
+    @Test
+    func correctOlderCredentialCanRepairAnAlreadyMixedMemberRecord() async throws {
+        var first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        let other = try local(accountID: "shared-workspace", issuedAt: 300, email: "second@example.com", subject: "user-second")
+        let own = try local(accountID: "shared-workspace", issuedAt: 200, email: "first@example.com", subject: "user-first")
+        first.apiToken = other.accessToken
+        first.oauthIDToken = other.idToken
+        let store = AppPoolRuntimeModelTests.SpyStore()
+        let model = AppPoolRuntimeModel(store: store, initialState: AccountPoolState(accounts: [first], mode: .manual), widgetPublisher: { _ in })
+        var state = model.state
+        let service = CodexUsageSyncService(
+            client: WorkspaceUsageClient(acceptedToken: own.accessToken, requests: LockedValue([])),
+            onOAuthTokenRefreshed: { account, tokens, date in
+                #expect(model.preserveRefreshedOAuthCredential(for: account, tokens: tokens, refreshedAt: date))
+            },
+            localAccounts: [other, own]
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(state.accounts[0].email == "first@example.com")
+        #expect(state.accounts[0].apiToken == own.accessToken)
+        #expect(model.state.accounts[0].apiToken == own.accessToken)
+        #expect(!state.accounts[0].isUsageSyncExcluded)
+    }
+
+    @Test
+    func refreshAndCheckpointRejectOtherMembersInTheSameWorkspace() async throws {
+        let first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        let other = try local(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+        let wrongTokens = OAuthTokens(accessToken: other.accessToken, refreshToken: other.refreshToken, idToken: other.idToken)
+        var state = AccountPoolState(accounts: [first], mode: .manual)
+        let service = CodexUsageSyncService(
+            client: MockCodexUsageClient(responseByToken: [:], shouldThrowError: CodexClientHTTPError(statusCode: 401)),
+            oauthRefreshClient: StubOAuthTokenRefreshClient(requests: LockedValue([]), result: .success(wrongTokens)),
+            oauthConfiguration: .codexDefault
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(state.accounts[0].apiToken == first.apiToken)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthUserMismatch.localizedDescription)
+        let store = AppPoolRuntimeModelTests.SpyStore()
+        let model = AppPoolRuntimeModel(store: store, initialState: AccountPoolState(accounts: [first], mode: .manual), widgetPublisher: { _ in })
+        #expect(!model.preserveRefreshedOAuthCredential(for: first, tokens: wrongTokens, refreshedAt: now))
+        #expect(store.savedSnapshots.isEmpty)
+    }
+
+    @Test
+    func upsertAndAuthCacheDistinguishMembersSharingWorkspaceAndScope() throws {
+        let first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        let second = try account(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+        let newerSecond = try local(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+
+        let resolved = OAuthAccountUpsertResolver.resolveExistingAccountID(
+            in: [first, second], chatGPTAccountID: "shared-workspace", accessToken: newerSecond.accessToken,
+            identityScope: "org:shared-org", email: "second@example.com", idToken: newerSecond.idToken
+        )
+        #expect(resolved == second.id)
+        let cache: [String: Any] = ["tokens": ["account_id": "shared-workspace", "access_token": newerSecond.accessToken, "id_token": newerSecond.idToken!]]
+        #expect(!CodexAuthSwitchService.authCacheMatches(cache, accountID: "shared-workspace", accessToken: first.apiToken, account: first))
+        #expect(CodexAuthSwitchService.authCacheMatches(cache, accountID: "shared-workspace", accessToken: second.apiToken, account: second))
+    }
+
+    @Test
+    func userIDStillSeparatesMembersWithoutEmailClaims() throws {
+        let first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        let other = try local(accountID: "shared-workspace", email: "", subject: "user-second")
+        #expect(LocalCodexAccountDiscovery.newerTokens(for: first, in: [other]) == nil)
+    }
+
+    @Test
+    func onlyTheSelectedCardIsCurrentEvenWithSharedWorkspaceOrCopiedTokens() throws {
+        let first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
+        var second = try account(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
+        second.apiToken = first.apiToken
+        let highlighted = [first, second].filter {
+            AccountUsagePanelView.isCurrentAccount($0, activeAccountID: first.id)
+        }
+        #expect(highlighted.map(\.id) == [first.id])
+        #expect(!AccountUsagePanelView.isCurrentAccount(first, activeAccountID: nil))
     }
 
     @Test
@@ -329,8 +473,9 @@ struct WorkspaceCredentialSyncTests {
             "tokens": ["access_token": "other-workspace-token", "refresh_token": "other-workspace-refresh"]
         ]
 
-        #expect(!CodexAuthSwitchService.authCacheMatches(cache, accountID: "personal", accessToken: "personal-token"))
-        #expect(CodexAuthSwitchService.authCacheMatches(cache, accountID: "personal", accessToken: "other-workspace-token"))
+        let account = AgentAccount(id: UUID(), name: "dual@example.com", usedUnits: 0, quota: 100, apiToken: "personal-token")
+        #expect(!CodexAuthSwitchService.authCacheMatches(cache, accountID: "personal", accessToken: "personal-token", account: account))
+        #expect(CodexAuthSwitchService.authCacheMatches(cache, accountID: "personal", accessToken: "other-workspace-token", account: account))
     }
 
     @Test
@@ -339,7 +484,8 @@ struct WorkspaceCredentialSyncTests {
             "tokens": ["account_id": "personal", "access_token": try token(accountID: "business", issuedAt: 200)]
         ]
 
-        #expect(!CodexAuthSwitchService.authCacheMatches(cache, accountID: "personal", accessToken: "personal-token"))
+        let account = AgentAccount(id: UUID(), name: "dual@example.com", usedUnits: 0, quota: 100, apiToken: "personal-token")
+        #expect(!CodexAuthSwitchService.authCacheMatches(cache, accountID: "personal", accessToken: "personal-token", account: account))
     }
 }
 

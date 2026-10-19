@@ -195,7 +195,7 @@ struct CodexAuthSwitchServiceCoverageTests {
           "last_refresh": "2026-05-10T02:33:21.730788Z",
           "OPENAI_API_KEY": null,
           "tokens": {
-            "access_token": "old-oauth-access-token",
+            "access_token": "new-oauth-access-token",
             "account_id": "user-oauth-account",
             "refresh_token": "stored-refresh-token",
             "id_token": "stored-id-token"

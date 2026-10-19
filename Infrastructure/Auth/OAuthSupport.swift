@@ -272,12 +272,14 @@ struct OAuthIDTokenClaims: Equatable {
     let accountID: String?
     let email: String?
     let organizationID: String?
+    let userID: String?
 
-    init(subject: String?, accountID: String?, email: String?, organizationID: String? = nil) {
+    init(subject: String?, accountID: String?, email: String?, organizationID: String? = nil, userID: String? = nil) {
         self.subject = subject
         self.accountID = accountID
         self.email = email
         self.organizationID = organizationID
+        self.userID = userID
     }
 
     /// Prefer the ChatGPT account id claim; fall back to `sub` only when needed.
@@ -319,7 +321,10 @@ enum OAuthIDTokenClaimsParser {
             subject: nonEmptyString(payload["sub"]),
             accountID: extractAccountID(from: payload),
             email: extractEmail(from: payload),
-            organizationID: extractOrganizationID(from: payload)
+            organizationID: extractOrganizationID(from: payload),
+            userID: (payload[openAIAuthClaim] as? [String: Any]).flatMap {
+                firstNonEmptyString(in: $0, keys: ["chatgpt_user_id", "user_id"])
+            } ?? firstNonEmptyString(in: payload, keys: ["chatgpt_user_id", "user_id"])
         )
     }
 
@@ -342,6 +347,46 @@ enum OAuthIDTokenClaimsParser {
             .contains { $0.lowercased() != expected }
     }
 
+    static func normalizedEmail(_ email: String?) -> String? {
+        OAuthIDTokenClaims.nonEmpty(email)?.lowercased()
+    }
+
+    /// A ChatGPT account ID identifies a workspace shared by multiple users.
+    /// Stored email anchors the intended owner even if an older pool version
+    /// has already copied another workspace member's credential into this row.
+    static func matchesUser(
+        of account: AgentAccount,
+        accessToken: String,
+        idToken: String?,
+        requireProof: Bool = false
+    ) -> Bool {
+        let currentParts = [parse(account.apiToken), parse(account.oauthIDToken)].compactMap { $0 }
+        let current = merge(parse(account.oauthIDToken), parse(account.apiToken))
+        let expectedEmail = normalizedEmail(account.email) ?? normalizedEmail(current?.email)
+        let currentOwnerIsConsistent = currentParts.allSatisfy { claim in
+            guard let expectedEmail, let email = normalizedEmail(claim.email) else { return true }
+            return email == expectedEmail
+        }
+        let expectedUserID = currentOwnerIsConsistent ? OAuthIDTokenClaims.nonEmpty(current?.userID) : nil
+        let expectedSubject = currentOwnerIsConsistent ? OAuthIDTokenClaims.nonEmpty(current?.subject) : nil
+        var hasProof = false
+        for claim in [parse(accessToken), parse(idToken)].compactMap({ $0 }) {
+            if let expectedEmail, let email = normalizedEmail(claim.email) {
+                guard email == expectedEmail else { return false }
+                hasProof = true
+            }
+            if let expectedUserID, let userID = OAuthIDTokenClaims.nonEmpty(claim.userID) {
+                guard userID == expectedUserID else { return false }
+                hasProof = true
+            }
+            if let expectedSubject, let subject = OAuthIDTokenClaims.nonEmpty(claim.subject) {
+                guard subject == expectedSubject else { return false }
+                hasProof = true
+            }
+        }
+        return !requireProof || hasProof
+    }
+
     static func merge(_ primary: OAuthIDTokenClaims?, _ secondary: OAuthIDTokenClaims?) -> OAuthIDTokenClaims? {
         switch (primary, secondary) {
         case (nil, nil):
@@ -359,7 +404,9 @@ enum OAuthIDTokenClaimsParser {
                 email: OAuthIDTokenClaims.nonEmpty(primary.email)
                     ?? OAuthIDTokenClaims.nonEmpty(secondary.email),
                 organizationID: OAuthIDTokenClaims.nonEmpty(primary.organizationID)
-                    ?? OAuthIDTokenClaims.nonEmpty(secondary.organizationID)
+                    ?? OAuthIDTokenClaims.nonEmpty(secondary.organizationID),
+                userID: OAuthIDTokenClaims.nonEmpty(primary.userID)
+                    ?? OAuthIDTokenClaims.nonEmpty(secondary.userID)
             )
         }
     }

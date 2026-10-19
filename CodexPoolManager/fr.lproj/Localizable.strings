@@ -340,6 +340,7 @@
 "usage.sync.error.network" = "Erreur réseau. Vérifiez votre connexion.";
 "usage.sync.error.oauth_refresh_unavailable" = "Ce compte ne possède pas de jeton de renouvellement. Reconnectez-vous ou réimportez-le.";
 "auth.workspace_mismatch" = "Les informations de connexion de ce compte appartiennent à un autre espace de travail. Reconnectez-vous ou importez le bon espace de travail.";
+"auth.user_mismatch" = "Les informations de connexion de ce compte appartiennent à un autre utilisateur. Reconnectez-vous ou réimportez ce compte.";
 "usage.sync.error.service_unavailable" = "Le service est temporairement indisponible. Réessayez plus tard.";
 "usage.sync.error.unknown" = "Échec de la synchronisation. Veuillez réessayer plus tard.";
 "usage.sync.excluded.refreshed_pending_usage" = "Les identifiants ont été renouvelés, mais la synchronisation de l’utilisation n’est pas terminée. Réessayez plus tard.";

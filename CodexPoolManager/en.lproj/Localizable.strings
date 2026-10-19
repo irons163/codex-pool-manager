@@ -543,6 +543,7 @@
 "usage.sync.error.network" = "Network error. Please check your connection.";
 "usage.sync.error.oauth_refresh_unavailable" = "This account has no refresh token. Please sign in again or re-import it.";
 "auth.workspace_mismatch" = "This account's sign-in information belongs to a different workspace. Sign in again or import the correct workspace.";
+"auth.user_mismatch" = "This account's sign-in information belongs to another user. Sign in again or re-import this account.";
 "usage.sync.error.service_unavailable" = "The service is temporarily unavailable. Please try again later.";
 "usage.sync.error.timeout" = "Sync timed out. Please try again.";
 "usage.sync.error.unknown" = "Sync failed. Please try again later.";

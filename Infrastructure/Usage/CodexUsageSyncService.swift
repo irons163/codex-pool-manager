@@ -9,6 +9,7 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
     case oauthLoginExpired
     case oauthRefreshUnavailable
     case oauthWorkspaceMismatch
+    case oauthUserMismatch
     case oauthRefreshFailed(OAuthTokenRefreshError)
     case rateLimited
     case network
@@ -25,6 +26,8 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
             return L10n.text("usage.sync.error.oauth_refresh_unavailable")
         case .oauthWorkspaceMismatch:
             return L10n.text("auth.workspace_mismatch")
+        case .oauthUserMismatch:
+            return L10n.text("auth.user_mismatch")
         case let .oauthRefreshFailed(error):
             return error.localizedDescription
         case .rateLimited:
@@ -190,6 +193,18 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
             }
             let chatGPTAccountID = resolvedAccountID
 
+            guard OAuthIDTokenClaimsParser.matchesUser(
+                of: account, accessToken: account.apiToken, idToken: account.oauthIDToken
+            ) else {
+                state.setUsageSyncExclusion(
+                    for: account.id,
+                    reason: CodexSyncError.oauthUserMismatch.localizedDescription,
+                    now: now,
+                    shouldEvaluate: false
+                )
+                continue
+            }
+
             guard !OAuthIDTokenClaimsParser.hasConflictingAccountID(
                 chatGPTAccountID, accessToken: account.apiToken, idToken: account.oauthIDToken
             ) else {
@@ -266,7 +281,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                             )
                             state.updateAccount(
                                 account.id,
-                                email: usage.accountEmail,
+                                email: account.email ?? usage.accountEmail,
                                 chatGPTAccountID: usage.accountID ?? chatGPTAccountID,
                                 now: now,
                                 shouldEvaluate: false
@@ -380,6 +395,12 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         let freshAccessToken = refreshedTokens.accessToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !freshAccessToken.isEmpty else {
             throw OAuthTokenRefreshError.invalidResponse
+        }
+
+        guard OAuthIDTokenClaimsParser.matchesUser(
+            of: account, accessToken: freshAccessToken, idToken: refreshedTokens.idToken ?? account.oauthIDToken
+        ) else {
+            throw CodexSyncError.oauthUserMismatch
         }
 
         if let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID),

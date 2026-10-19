@@ -23,7 +23,7 @@ struct PoolAccountUpsertCoordinator {
 
         if let usage {
             resolvedAccountID = usage.accountID ?? resolvedAccountID
-            resolvedEmail = usage.accountEmail ?? resolvedEmail
+            resolvedEmail = resolvedEmail ?? usage.accountEmail
         }
 
         let trimmedInput = accountNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -36,7 +36,9 @@ struct PoolAccountUpsertCoordinator {
             in: state.accounts,
             chatGPTAccountID: resolvedAccountID,
             accessToken: tokens.accessToken,
-            identityScope: resolvedIdentityScope
+            identityScope: resolvedIdentityScope,
+            email: resolvedEmail,
+            idToken: tokens.idToken
         )
 
         if let existingAccountID {
@@ -114,7 +116,8 @@ struct PoolAccountUpsertCoordinator {
         chatGPTAccountID: String,
         now: Date = .now
     ) {
-        let normalizedEmail = usage.accountEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedEmail = (OAuthIDTokenClaimsParser.parse(tokens: tokens)?.email ?? usage.accountEmail)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedName = (normalizedEmail?.isEmpty == false) ? (normalizedEmail ?? fallbackName) : fallbackName
         let resolvedAccountID = usage.accountID ?? chatGPTAccountID
         let resolvedIdentityScope = OAuthIDTokenClaimsParser.parse(tokens: tokens)?
@@ -124,7 +127,9 @@ struct PoolAccountUpsertCoordinator {
             in: state.accounts,
             chatGPTAccountID: resolvedAccountID,
             accessToken: tokens.accessToken,
-            identityScope: resolvedIdentityScope
+            identityScope: resolvedIdentityScope,
+            email: normalizedEmail,
+            idToken: tokens.idToken
         )
 
         if let existingAccountID {

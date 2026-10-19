@@ -306,6 +306,9 @@ struct CodexAuthSwitchService {
         account: AgentAccount,
         chatGPTAccountID: String
     ) throws {
+        guard OAuthIDTokenClaimsParser.matchesUser(of: account, accessToken: account.apiToken, idToken: account.oauthIDToken) else {
+            throw CodexSyncError.oauthUserMismatch
+        }
         let originalData = try Data(contentsOf: authFileURL)
         let accountEmail = account.email?.contains("@") == true
             ? account.email
@@ -381,7 +384,8 @@ struct CodexAuthSwitchService {
         if let fromCurrentFile = Self.authCacheMetadata(
             from: originalData,
             matchingAccountID: chatGPTAccountID,
-            accessToken: account.apiToken
+            accessToken: account.apiToken,
+            account: account
         ) {
             metadata.fillMissing(from: fromCurrentFile)
             if metadata.isComplete {
@@ -394,7 +398,8 @@ struct CodexAuthSwitchService {
                   let candidate = Self.authCacheMetadata(
                     from: data,
                     matchingAccountID: chatGPTAccountID,
-                    accessToken: account.apiToken
+                    accessToken: account.apiToken,
+                    account: account
                   )
             else {
                 continue
@@ -446,10 +451,11 @@ struct CodexAuthSwitchService {
     private static func authCacheMetadata(
         from data: Data,
         matchingAccountID accountID: String,
-        accessToken: String
+        accessToken: String,
+        account: AgentAccount
     ) -> OAuthAuthCacheMetadata? {
         guard let object = try? JSONSerialization.jsonObject(with: data),
-              authCacheMatches(object, accountID: accountID, accessToken: accessToken)
+              authCacheMatches(object, accountID: accountID, accessToken: accessToken, account: account)
         else {
             return nil
         }
@@ -464,7 +470,8 @@ struct CodexAuthSwitchService {
     static func authCacheMatches(
         _ object: Any,
         accountID: String,
-        accessToken: String
+        accessToken: String,
+        account: AgentAccount
     ) -> Bool {
         let explicitAccountIDs = strings(in: object, forKeys: ["account_id", "accountId", "chatgpt_account_id", "chatgptAccountId"])
         let cachedTokens = strings(in: object, forKeys: ["access_token", "accessToken", "id_token", "idToken"])
@@ -476,8 +483,19 @@ struct CodexAuthSwitchService {
         }
         if !accountID.isEmpty, !accountIDs.isEmpty {
             let expected = accountID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            return accountIDs.allSatisfy { $0 == expected }
+            guard accountIDs.allSatisfy({ $0 == expected }) else { return false }
         }
+
+        guard cachedTokens.allSatisfy({
+            OAuthIDTokenClaimsParser.matchesUser(of: account, accessToken: $0, idToken: nil)
+        }) else { return false }
+        let cachedAccessTokens = strings(in: object, forKeys: ["access_token", "accessToken", "token"])
+        let hasUserProof = cachedAccessTokens.contains {
+            OAuthIDTokenClaimsParser.matchesUser(of: account, accessToken: $0, idToken: nil, requireProof: true)
+        }
+        guard cachedAccessTokens.contains(accessToken) || hasUserProof else { return false }
+
+        if !accountID.isEmpty, !accountIDs.isEmpty { return true }
 
         let accessTokens = strings(in: object, forKeys: ["access_token", "accessToken", "token"])
         if !accessToken.isEmpty, !accessTokens.isEmpty {

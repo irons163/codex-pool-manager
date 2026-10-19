@@ -74,7 +74,7 @@ enum LocalCodexAccountDiscovery {
     }
 
     /// Codex can rotate credentials while the pool still holds an older copy.
-    /// Match the selected workspace, never the email or the JWT's user subject.
+    /// Match both the workspace and its user; workspace membership alone is not identity.
     static func newerTokens(
         for account: AgentAccount,
         in localAccounts: [LocalCodexOAuthAccount]
@@ -83,7 +83,10 @@ enum LocalCodexAccountDiscovery {
               let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID)?.lowercased()
         else { return nil }
 
-        let currentIssuedAt = OAuthIDTokenClaimsParser.issuedAt(account.apiToken)
+        let currentIdentityIsValid = !OAuthIDTokenClaimsParser.hasConflictingAccountID(
+            accountID, accessToken: account.apiToken, idToken: account.oauthIDToken
+        ) && OAuthIDTokenClaimsParser.matchesUser(of: account, accessToken: account.apiToken, idToken: account.oauthIDToken)
+        let currentIssuedAt = currentIdentityIsValid ? OAuthIDTokenClaimsParser.issuedAt(account.apiToken) : nil
         let candidates = localAccounts.compactMap { local -> (OAuthTokens, Date)? in
             let tokens = OAuthTokens(
                 accessToken: local.accessToken,
@@ -97,6 +100,10 @@ enum LocalCodexAccountDiscovery {
                   local.chatGPTAccountID.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == accountID }) ?? true,
                   !OAuthIDTokenClaimsParser.hasConflictingAccountID(
                     accountID, accessToken: tokens.accessToken, idToken: tokens.idToken ?? account.oauthIDToken
+                  ),
+                  OAuthIDTokenClaimsParser.matchesUser(
+                    of: account, accessToken: tokens.accessToken, idToken: tokens.idToken,
+                    requireProof: true
                   ),
                   tokens.refreshToken != nil,
                   let issuedAt = OAuthIDTokenClaimsParser.issuedAt(local.accessToken)

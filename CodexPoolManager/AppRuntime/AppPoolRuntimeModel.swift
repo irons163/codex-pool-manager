@@ -500,7 +500,8 @@ final class AppPoolRuntimeModel: ObservableObject {
     ) -> Bool {
         guard let currentAccount = state.accounts.first(where: { $0.id == originalAccount.id }),
               currentAccount.apiToken == originalAccount.apiToken,
-              currentAccount.oauthRefreshToken == originalAccount.oauthRefreshToken
+              currentAccount.oauthRefreshToken == originalAccount.oauthRefreshToken,
+              OAuthIDTokenClaimsParser.matchesUser(of: currentAccount, accessToken: tokens.accessToken, idToken: tokens.idToken)
         else { return false }
 
         state.updateAccount(
