@@ -197,6 +197,58 @@ struct CodexSessionAnalyticsTests {
 }
 
 struct CodexSessionUsageStoreTests {
+    @Test(arguments: [false, true])
+    func readsUsageBeyond128MiBWithoutBufferingConversationBodies(singleLongLine: Bool) async throws {
+        let fixture = SessionAnalyticsFixture.self
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-large-session-\(UUID())", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("rollout-\(fixture.parentID).jsonl")
+        let first = try [fixture.meta(), fixture.context("model-before"), fixture.event(total: fixture.usage(100, 20, 10), last: fixture.usage(100, 20, 10))].joined(separator: "\n") + "\n"
+        try Data(first.utf8).write(to: url)
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+        try handle.seekToEnd()
+        let bodyPrefix = Data(#"{"type":"response_item","payload":{"content":"quoted \"type\":\"token_count\" output: "#.utf8)
+        let bodySuffix = Data("\"}}\n".utf8)
+        let chunk = Data(repeating: 120, count: 512 * 1_024)
+        if singleLongLine { try handle.write(contentsOf: bodyPrefix) }
+        for _ in 0..<258 {
+            if !singleLongLine { try handle.write(contentsOf: bodyPrefix) }
+            try handle.write(contentsOf: chunk)
+            if !singleLongLine { try handle.write(contentsOf: bodySuffix) }
+        }
+        if singleLongLine { try handle.write(contentsOf: bodySuffix) }
+        let last = try [fixture.context("model-after"), fixture.event(total: fixture.usage(150, 30, 20), last: fixture.usage(50, 10, 10))].joined(separator: "\n")
+        try handle.write(contentsOf: Data(last.utf8))
+        #expect(try handle.offset() > 128 * 1_024 * 1_024)
+
+        let report = try await CodexSessionUsageStore().scan(root: directory)
+
+        expectNoDifference(report.records.map(\.model), ["model-before", "model-after"])
+        expectNoDifference(report.records.map(\.tokens), [CodexSessionTokens(input: 100, cachedInput: 20, output: 10), CodexSessionTokens(input: 50, cachedInput: 10, output: 10)])
+        expectNoDifference(report.unavailableFiles, 0)
+        expectNoDifference(report.isPartial, false)
+    }
+
+    @Test
+    func oversizedUsageLineStillReportsPartialAndReadsFollowingEvents() async throws {
+        let fixture = SessionAnalyticsFixture.self
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-large-usage-line-\(UUID())", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("rollout-\(fixture.parentID).jsonl")
+        let oversized = try fixture.line("event_msg", payload: ["type": "token_count", "info": ["last_token_usage": fixture.usage(200)]])
+            .dropLast() + ",\"padding\":\"" + String(repeating: "x", count: 600_000) + "\"}"
+        let text = try [fixture.meta(), String(oversized), fixture.event(last: fixture.usage(100, 20, 10))].joined(separator: "\n")
+        try Data(text.utf8).write(to: url)
+
+        let report = try await CodexSessionUsageStore().scan(root: directory)
+
+        expectNoDifference(report.records.map(\.tokens), [CodexSessionTokens(input: 100, cachedInput: 20, output: 10)])
+        expectNoDifference(report.isLimited, true)
+    }
+
     @Test(arguments: ["sessions", "archived_sessions"])
     func scansSessionDirectoriesLinkedToExternalStorage(name: String) async throws {
         let fixture = SessionAnalyticsFixture.self
@@ -292,7 +344,7 @@ struct CodexSessionUsageStoreTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("rollout-\(fixture.parentID).jsonl")
-        let body = "{\"type\":\"response_item\",\"payload\":{\"content\":\"" + String(repeating: "x", count: 600_000) + "\"}}"
+        let body = "{\"type\":\"response_item\",\"payload\":{\"content\":\"token_count " + String(repeating: "x", count: 600_000) + "\"}}"
         let text = try [fixture.meta(), body, fixture.event(last: fixture.usage(100, 20, 10))].joined(separator: "\n")
         try Data(text.utf8).write(to: url)
         let report = try await CodexSessionUsageStore().scan(root: directory)

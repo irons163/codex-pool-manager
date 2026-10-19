@@ -1,6 +1,18 @@
 import Foundation
+import Darwin
 
 nonisolated enum CodexSessionLogParser {
+    private static let metadataTypePattern = try! NSRegularExpression(
+        pattern: #"(?<!\\)"type"\s*:\s*"(session_meta|turn_context|token_count)""#
+    )
+
+    nonisolated private static func metadataType(in data: Data) -> String? {
+        let head = String(decoding: data.prefix(512), as: UTF8.self)
+        guard let match = metadataTypePattern.firstMatch(in: head, range: NSRange(head.startIndex..., in: head)),
+              let range = Range(match.range(at: 1), in: head) else { return nil }
+        return String(head[range])
+    }
+
     nonisolated struct Signature: Hashable, Sendable {
         let total: CodexSessionTokens?
         let last: CodexSessionTokens?
@@ -37,8 +49,7 @@ nonisolated enum CodexSessionLogParser {
         nonisolated init() {}
 
         nonisolated mutating func consume(_ data: Data) {
-            let head = String(decoding: data.prefix(512), as: UTF8.self)
-            guard head.contains("session_meta") || head.contains("turn_context") || head.contains("token_count"),
+            guard CodexSessionLogParser.metadataType(in: data) != nil,
                   let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let type = value["type"] as? String,
                   let payload = value["payload"] as? [String: Any] else { return }
@@ -101,27 +112,57 @@ nonisolated enum CodexSessionLogParser {
         var reader = Reader()
         var pending = Data()
         var discardingLine = false
-        var bytesRead = 0
-        let byteLimit = 128 * 1_024 * 1_024
-        while let chunk = try handle.read(upToCount: 64 * 1_024), !chunk.isEmpty {
+        var checkedHeader = false
+        var isUsageLine = false
+        let headerLimit = 512
+        let lineLimit = 512 * 1_024
+
+        // Read the complete snapshot present when the scan starts. Conversation
+        // bodies can be hundreds of MiB; only metadata lines need buffering.
+        // A fixed EOF also prevents an actively appended log from extending a scan.
+        var remaining = try handle.seekToEnd()
+        try handle.seek(toOffset: 0)
+        while remaining > 0 {
             try Task.checkCancellation()
-            bytesRead += chunk.count
-            guard bytesRead <= byteLimit else { reader.result.isLimited = true; break }
-            let parts = chunk.split(separator: 10, omittingEmptySubsequences: false)
-            for (index, part) in parts.enumerated() {
-                if !discardingLine {
-                    pending.append(contentsOf: part)
-                    if pending.count > 512 * 1_024 {
-                        let head = String(decoding: pending.prefix(512), as: UTF8.self)
-                        if head.contains("token_count") { reader.result.isLimited = true }
-                        pending.removeAll(keepingCapacity: true)
-                        discardingLine = true
+            guard let chunk = try handle.read(upToCount: Int(min(remaining, 64 * 1_024))), !chunk.isEmpty else { break }
+            remaining -= UInt64(chunk.count)
+            chunk.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+                guard let base = bytes.baseAddress else { return }
+                var offset = 0
+                while offset < bytes.count {
+                    let newline = memchr(base.advanced(by: offset), 10, bytes.count - offset)
+                    let end = newline.map { base.distance(to: $0) } ?? bytes.count
+                    if !discardingLine {
+                        var start = offset
+                        if !checkedHeader {
+                            let prefixEnd = start + min(headerLimit - pending.count, end - start)
+                            pending.append(contentsOf: bytes[start..<prefixEnd])
+                            start = prefixEnd
+                            if pending.count == headerLimit {
+                                checkedHeader = true
+                                let type = metadataType(in: pending)
+                                isUsageLine = type == "token_count"
+                                discardingLine = type == nil
+                            }
+                        }
+                        if !discardingLine {
+                            if end - start > lineLimit - pending.count {
+                                if isUsageLine { reader.result.isLimited = true }
+                                discardingLine = true
+                            } else {
+                                pending.append(contentsOf: bytes[start..<end])
+                            }
+                        }
+                        if discardingLine { pending.removeAll(keepingCapacity: true) }
                     }
-                }
-                if index < parts.count - 1 {
-                    if !discardingLine { reader.consume(pending) }
-                    pending.removeAll(keepingCapacity: true)
-                    discardingLine = false
+                    if newline != nil {
+                        if !discardingLine { reader.consume(pending) }
+                        pending.removeAll(keepingCapacity: true)
+                        discardingLine = false
+                        checkedHeader = false
+                        isUsageLine = false
+                    }
+                    offset = end + 1
                 }
             }
         }
