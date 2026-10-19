@@ -587,7 +587,9 @@
 "settings.usage_analytics_history_limit_format" = "Límite de historial de analítica: %d registros";
 "settings.usage_analytics_history_limit_hint" = "Un límite más alto conserva más historial para los gráficos, pero usa más memoria y almacenamiento.";
 "settings.report_issue" = "Informar de un problema";
-"settings.report_issue_hint" = "Abre un nuevo issue de GitHub en el navegador.";
+"settings.report_issue_hint" = "Elige informar de un problema en GitHub o por correo electrónico.";
+"settings.report_issue_github" = "Informar en GitHub";
+"settings.report_issue_email" = "Informar por correo";
 "relay.error.invalid_provider_id" = "El Provider ID solo puede contener letras, números y guiones bajos.";
 "relay.error.invalid_base_url" = "La Base URL del relay debe ser una URL http o https válida.";
 "relay.error.config_write_failed_format" = "No se pudo actualizar la config de Codex: %@";
@@ -709,3 +711,20 @@
 "session_usage.metric.tokens" = "Tokens";
 "session_usage.metric.requests" = "Eventos";
 "session_usage.metric.cost" = "Coste";
+
+"report.title" = "Asunto";
+"report.reply_email" = "Correo de respuesta (opcional)";
+"report.message" = "Descripción del problema y pasos para reproducirlo";
+"report.form_hint" = "Envía tu informe aquí sin abrir una aplicación de correo.";
+"report.include_system_info" = "Adjuntar versión de la app e información del sistema";
+"report.privacy_hint" = "Solo se envían este formulario y la información seleccionada. No incluyas contraseñas, claves API ni credenciales de acceso.";
+"report.success" = "Tu informe se ha enviado. Gracias.";
+"report.cancel" = "Cancelar";
+"report.close" = "Cerrar";
+"report.send" = "Enviar informe";
+"report.error.unavailable" = "El envío por correo no está disponible temporalmente. Utiliza GitHub.";
+"report.error.invalid_content" = "Escribe un asunto y una descripción, o acorta el contenido demasiado largo.";
+"report.error.invalid_email" = "Escribe un correo de respuesta válido o deja el campo vacío.";
+"report.error.rate_limited" = "Demasiados informes. Inténtalo de nuevo más tarde.";
+"report.error.pending" = "El envío de este informe aún no se ha confirmado. Inténtalo más tarde o utiliza GitHub.";
+"report.error.failed" = "No se pudo confirmar el envío. Tu texto se conserva; inténtalo más tarde o utiliza GitHub.";

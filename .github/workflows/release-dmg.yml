@@ -176,6 +176,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ARCH_ID: ${{ matrix.arch.id }}
           ARCH_LABEL: ${{ matrix.arch.label }}
+          FEEDBACK_ENDPOINT: ${{ vars.FEEDBACK_ENDPOINT }}
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
           RELEASE_CHANNEL: ${{ github.event.inputs.release_channel }}
           RELEASE_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || 'false' }}

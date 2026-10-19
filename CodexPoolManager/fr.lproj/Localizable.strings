@@ -587,7 +587,9 @@
 "settings.usage_analytics_history_limit_format" = "Limite d'historique d'analyse : %d enregistrements";
 "settings.usage_analytics_history_limit_hint" = "Une limite plus élevée conserve plus d'historique pour les graphiques, mais utilise plus de mémoire et de stockage.";
 "settings.report_issue" = "Signaler un problème";
-"settings.report_issue_hint" = "Ouvre une nouvelle issue GitHub dans votre navigateur.";
+"settings.report_issue_hint" = "Choisissez de signaler un problème sur GitHub ou par e-mail.";
+"settings.report_issue_github" = "Signaler sur GitHub";
+"settings.report_issue_email" = "Signaler par e-mail";
 "relay.error.invalid_provider_id" = "Le Provider ID ne peut contenir que des lettres, des chiffres et des traits de soulignement.";
 "relay.error.invalid_base_url" = "La Base URL du relais doit être une URL http ou https valide.";
 "relay.error.config_write_failed_format" = "Impossible de mettre à jour la config Codex : %@";
@@ -709,3 +711,20 @@
 "session_usage.metric.tokens" = "Tokens";
 "session_usage.metric.requests" = "Événements";
 "session_usage.metric.cost" = "Coût";
+
+"report.title" = "Objet";
+"report.reply_email" = "Adresse de réponse (facultatif)";
+"report.message" = "Description du problème et étapes de reproduction";
+"report.form_hint" = "Envoyez votre signalement ici sans ouvrir une application de messagerie.";
+"report.include_system_info" = "Joindre la version de l’application et les informations système";
+"report.privacy_hint" = "Seuls ce formulaire et les informations sélectionnées sont envoyés. N’incluez aucun mot de passe, clé API ou identifiant de connexion.";
+"report.success" = "Votre signalement a été envoyé. Merci.";
+"report.cancel" = "Annuler";
+"report.close" = "Fermer";
+"report.send" = "Envoyer";
+"report.error.unavailable" = "Le signalement par e-mail est temporairement indisponible. Veuillez utiliser GitHub.";
+"report.error.invalid_content" = "Saisissez un objet et une description, ou raccourcissez le contenu trop long.";
+"report.error.invalid_email" = "Saisissez une adresse de réponse valide ou laissez le champ vide.";
+"report.error.rate_limited" = "Trop de signalements. Veuillez réessayer plus tard.";
+"report.error.pending" = "L’envoi de ce signalement reste à confirmer. Réessayez plus tard ou utilisez GitHub.";
+"report.error.failed" = "L’envoi n’a pas pu être confirmé. Votre texte est conservé ; réessayez plus tard ou utilisez GitHub.";

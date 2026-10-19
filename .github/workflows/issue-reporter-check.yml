@@ -1,0 +1,33 @@
+name: Issue reporter checks
+
+on:
+  push:
+    paths:
+      - 'backend/issue-reporter/**'
+      - '.github/workflows/issue-reporter-check.yml'
+  pull_request:
+    paths:
+      - 'backend/issue-reporter/**'
+      - '.github/workflows/issue-reporter-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/issue-reporter
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/issue-reporter/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run check

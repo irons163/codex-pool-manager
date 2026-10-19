@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "codex-pool-issue-reporter",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-19",
+  "workers_dev": true,
+  "vars": {
+    "REPORTS_ENABLED": "false",
+    "REPORT_FROM": "",
+    "REPORT_TO": "",
+    "MAX_REPORTS_PER_DAY": "100"
+  },
+  "send_email": [{ "name": "REPORT_EMAIL" }],
+  "ratelimits": [{
+    "name": "REPORT_RATE_LIMITER",
+    "namespace_id": "101901",
+    "simple": { "limit": 5, "period": 60 }
+  }],
+  "durable_objects": {
+    "bindings": [{ "name": "REPORT_GATE", "class_name": "ReportDeliveryGate" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReportDeliveryGate"] }],
+  "observability": { "enabled": false }
+}

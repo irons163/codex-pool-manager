@@ -229,7 +229,6 @@ struct PoolDashboardView: View {
     private static let authenticationMethodKey = "pool_dashboard.authentication.method"
     private static let workspaceDrawerHeightRatioKey = "pool_dashboard.workspace_drawer.height_ratio"
     private static let relayPreserveOfficialAuthKey = "pool_dashboard.relay.preserve_official_auth"
-    private static let reportIssueURL = URL(string: "https://github.com/irons163/codex-pool-manager/issues/new")!
     private struct PendingManualOAuthContext {
         let expectedState: String
         let codeVerifier: String
@@ -395,6 +394,7 @@ struct PoolDashboardView: View {
     @State private var workspaceDrawerResizeStartHeight: CGFloat?
     @State private var isWorkspaceDrawerBarHovered = false
     @State private var isSidebarCollapsed = false
+    @State private var showsIssueReportForm = false
     @State private var isApplyingRuntimeStateUpdate = false
     @State private var lastHandledRuntimeSyncOutcomeID: UUID?
     @State private var themeRenderToken = 0
@@ -622,6 +622,9 @@ struct PoolDashboardView: View {
             }
         }
         .frame(minWidth: PoolDashboardTheme.minWidth, minHeight: PoolDashboardTheme.minHeight)
+        .sheet(isPresented: $showsIssueReportForm) {
+            IssueReportFormView()
+        }
         .onAppear {
             syncThemePaletteIfNeeded()
             refreshRelayAPIKeyReadiness()
@@ -1091,33 +1094,9 @@ struct PoolDashboardView: View {
     }
 
     private func sidebarReportIssueLink(isCompact: Bool = false) -> some View {
-        Link(destination: Self.reportIssueURL) {
-            HStack(spacing: 8) {
-                Image(systemName: "ladybug")
-                    .frame(width: 16)
-                    .accessibilityHidden(true)
-
-                if !isCompact {
-                    Text(L10n.text("settings.report_issue"))
-
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                        .accessibilityHidden(true)
-                }
-            }
-            .font(.system(size: 12, weight: .medium, design: .rounded))
-            .foregroundStyle(PoolDashboardTheme.textSecondary)
-            .frame(maxWidth: .infinity, minHeight: 28, alignment: isCompact ? .center : .leading)
-            .padding(.horizontal, isCompact ? 0 : 10)
-            .padding(.vertical, isCompact ? 0 : 4)
-            .contentShape(Rectangle())
+        ReportIssueMenuView(isCompact: isCompact) {
+            showsIssueReportForm = true
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(L10n.text("settings.report_issue"))
-        .help(L10n.text("settings.report_issue_hint"))
     }
 
     private var visibleWorkspaces: [Workspace] {

@@ -588,7 +588,9 @@
 "settings.usage_analytics_history_limit_format" = "用量分析歷史上限：%d 筆";
 "settings.usage_analytics_history_limit_hint" = "上限越高會保留更多同步歷史供圖表分析，但會使用更多記憶體與儲存空間。";
 "settings.report_issue" = "回報問題";
-"settings.report_issue_hint" = "在瀏覽器開啟 GitHub 的新問題頁面。";
+"settings.report_issue_hint" = "選擇透過 GitHub 或電子郵件回報問題。";
+"settings.report_issue_github" = "GitHub 回報";
+"settings.report_issue_email" = "寄信回報";
 "relay.error.invalid_provider_id" = "Provider ID 只能包含英文字母、數字與底線。";
 "relay.error.invalid_base_url" = "中轉 Base URL 必須是有效的 http 或 https URL。";
 "relay.error.config_write_failed_format" = "無法更新 Codex config：%@";
@@ -710,3 +712,20 @@
 "session_usage.metric.tokens" = "Token";
 "session_usage.metric.requests" = "請求數";
 "session_usage.metric.cost" = "費用";
+
+"report.title" = "主旨";
+"report.reply_email" = "回覆信箱（選填）";
+"report.message" = "問題說明與重現步驟";
+"report.form_hint" = "直接在此送出，無需開啟郵件程式。";
+"report.include_system_info" = "附上 App 版本與系統資訊";
+"report.privacy_hint" = "僅傳送此表單內容及勾選的資訊。請勿填入密碼、API 金鑰或登入憑證。";
+"report.success" = "回報已送出，謝謝你的回報。";
+"report.cancel" = "取消";
+"report.close" = "關閉";
+"report.send" = "送出回報";
+"report.error.unavailable" = "寄信回報暫時無法使用，請改用 GitHub 回報。";
+"report.error.invalid_content" = "請填寫主旨與問題內容，或縮短過長的內容。";
+"report.error.invalid_email" = "請填寫有效的回覆信箱，或保留空白。";
+"report.error.rate_limited" = "回報次數過多，請稍後再試。";
+"report.error.pending" = "此回報的寄送狀態仍待確認，請稍後再試或使用 GitHub 回報。";
+"report.error.failed" = "尚未確認送出，內容已保留；請稍後重試或使用 GitHub 回報。";

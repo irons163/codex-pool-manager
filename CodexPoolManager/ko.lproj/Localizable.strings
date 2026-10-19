@@ -587,7 +587,9 @@
 "settings.usage_analytics_history_limit_format" = "사용량 분석 기록 한도: %d개";
 "settings.usage_analytics_history_limit_hint" = "한도를 높이면 차트용 동기화 기록을 더 많이 보관하지만 메모리와 저장 공간을 더 사용합니다.";
 "settings.report_issue" = "문제 신고";
-"settings.report_issue_hint" = "브라우저에서 새 GitHub 이슈 작성 페이지를 엽니다.";
+"settings.report_issue_hint" = "GitHub 또는 이메일로 문제를 신고하는 방법을 선택합니다.";
+"settings.report_issue_github" = "GitHub로 신고";
+"settings.report_issue_email" = "이메일로 신고";
 "relay.error.invalid_provider_id" = "Provider ID에는 영문자, 숫자, 밑줄만 사용할 수 있습니다.";
 "relay.error.invalid_base_url" = "릴레이 Base URL은 유효한 http 또는 https URL이어야 합니다.";
 "relay.error.config_write_failed_format" = "Codex config를 업데이트할 수 없습니다: %@";
@@ -709,3 +711,20 @@
 "session_usage.metric.tokens" = "토큰";
 "session_usage.metric.requests" = "이벤트";
 "session_usage.metric.cost" = "비용";
+
+"report.title" = "제목";
+"report.reply_email" = "답장 받을 이메일 (선택)";
+"report.message" = "문제 설명 및 재현 단계";
+"report.form_hint" = "이메일 앱을 열지 않고 여기서 바로 신고할 수 있습니다.";
+"report.include_system_info" = "앱 버전 및 시스템 정보 첨부";
+"report.privacy_hint" = "이 양식과 선택한 정보만 전송됩니다. 비밀번호, API 키 또는 로그인 인증 정보를 입력하지 마세요.";
+"report.success" = "신고가 제출되었습니다. 감사합니다.";
+"report.cancel" = "취소";
+"report.close" = "닫기";
+"report.send" = "신고 보내기";
+"report.error.unavailable" = "이메일 신고를 일시적으로 사용할 수 없습니다. GitHub로 신고해 주세요.";
+"report.error.invalid_content" = "제목과 설명을 입력하거나 너무 긴 내용을 줄여 주세요.";
+"report.error.invalid_email" = "올바른 답장 이메일을 입력하거나 비워 두세요.";
+"report.error.rate_limited" = "신고 횟수가 너무 많습니다. 나중에 다시 시도해 주세요.";
+"report.error.pending" = "이 신고의 전송 상태를 아직 확인하지 못했습니다. 나중에 다시 시도하거나 GitHub로 신고해 주세요.";
+"report.error.failed" = "제출을 확인하지 못했습니다. 입력한 내용은 유지됩니다. 나중에 다시 시도하거나 GitHub로 신고해 주세요.";

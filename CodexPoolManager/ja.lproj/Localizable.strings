@@ -587,7 +587,9 @@
 "settings.usage_analytics_history_limit_format" = "使用分析の履歴上限: %d 件";
 "settings.usage_analytics_history_limit_hint" = "上限を高くするとグラフ用の同期履歴を多く保持できますが、メモリとストレージ使用量が増えます。";
 "settings.report_issue" = "問題を報告";
-"settings.report_issue_hint" = "ブラウザで GitHub の新しい Issue 作成ページを開きます。";
+"settings.report_issue_hint" = "GitHub またはメールで問題を報告する方法を選択します。";
+"settings.report_issue_github" = "GitHub で報告";
+"settings.report_issue_email" = "メールで報告";
 "relay.error.invalid_provider_id" = "Provider ID には英字、数字、アンダースコアのみ使用できます。";
 "relay.error.invalid_base_url" = "中継 Base URL は有効な http または https URL である必要があります。";
 "relay.error.config_write_failed_format" = "Codex config を更新できません: %@";
@@ -709,3 +711,20 @@
 "session_usage.metric.tokens" = "トークン";
 "session_usage.metric.requests" = "イベント";
 "session_usage.metric.cost" = "費用";
+
+"report.title" = "件名";
+"report.reply_email" = "返信先メールアドレス（任意）";
+"report.message" = "問題の説明と再現手順";
+"report.form_hint" = "メールアプリを開かずに、ここから報告を送信できます。";
+"report.include_system_info" = "アプリのバージョンとシステム情報を添付";
+"report.privacy_hint" = "このフォームと選択した情報のみ送信されます。パスワード、API キー、ログイン認証情報は入力しないでください。";
+"report.success" = "報告を送信しました。ありがとうございます。";
+"report.cancel" = "キャンセル";
+"report.close" = "閉じる";
+"report.send" = "報告を送信";
+"report.error.unavailable" = "メールでの報告は現在利用できません。GitHub で報告してください。";
+"report.error.invalid_content" = "件名と説明を入力するか、長すぎる内容を短くしてください。";
+"report.error.invalid_email" = "有効な返信先を入力するか、空欄にしてください。";
+"report.error.rate_limited" = "報告回数が多すぎます。しばらくしてから再試行してください。";
+"report.error.pending" = "この報告の送信状況はまだ確認できません。後で再試行するか、GitHub で報告してください。";
+"report.error.failed" = "送信を確認できませんでした。入力内容は保持されています。後で再試行するか、GitHub で報告してください。";

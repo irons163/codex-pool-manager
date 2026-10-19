@@ -12,6 +12,7 @@ DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
 ARCHS="${ARCHS:-}"
 ARCH_LABEL="${ARCH_LABEL:-}"
 SWIFT_ACTIVE_COMPILATION_CONDITIONS_OVERRIDE="${SWIFT_ACTIVE_COMPILATION_CONDITIONS_OVERRIDE:-}"
+FEEDBACK_ENDPOINT="${FEEDBACK_ENDPOINT:-}"
 
 WORK_DIR="$(pwd)/build/release"
 ARCHIVE_PATH="$WORK_DIR/${APP_NAME}.xcarchive"
@@ -71,6 +72,28 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
+# Add the deployed feedback endpoint before re-signing the final app bundle.
+# An empty endpoint leaves email submission unavailable; GitHub remains usable.
+python3 - "$APP_PATH/Contents/Info.plist" "$FEEDBACK_ENDPOINT" <<'PY'
+import plistlib
+import sys
+from urllib.parse import urlsplit
+
+path, endpoint = sys.argv[1:]
+if endpoint:
+    parsed = urlsplit(endpoint)
+    if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password
+            or parsed.query or parsed.fragment or parsed.path != '/reports'):
+        raise SystemExit('FEEDBACK_ENDPOINT must be an HTTPS /reports URL without credentials, query, or fragment.')
+with open(path, 'rb') as file:
+    info = plistlib.load(file)
+info.pop('CodexPoolFeedbackEndpoint', None)
+if endpoint:
+    info['CodexPoolFeedbackEndpoint'] = endpoint
+with open(path, 'wb') as file:
+    plistlib.dump(info, file)
+PY
+
 sign_with_developer_id() {
   local target="$1"
   codesign \
@@ -108,7 +131,6 @@ if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
 
   echo "Signing Sparkle framework and main app"
   sign_with_developer_id "$SPARKLE_FRAMEWORK"
-  sign_with_developer_id "$APP_PATH"
 
   SPARKLE_UPDATER="$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
   if [[ -d "$SPARKLE_UPDATER" ]]; then
@@ -124,6 +146,7 @@ if [[ -d "$SPARKLE_FRAMEWORK" ]]; then
     fi
   fi
 fi
+sign_with_developer_id "$APP_PATH"
 
 APP_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
 if [[ ! -f "$APP_BINARY" ]]; then
