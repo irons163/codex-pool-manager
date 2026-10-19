@@ -53,8 +53,9 @@ Path(sys.argv[1]).write_text(str(server.server_port))
 server.serve_forever()
 PY
 TASK_TRANSPORT_SERVER_PID=$!
-for TASK_TRANSPORT_ATTEMPT in {1..100}; do
+for TASK_TRANSPORT_ATTEMPT in {1..400}; do
   [[ -s "$TASK_TRANSPORT_TEMP/port" ]] && break
+  kill -0 "$TASK_TRANSPORT_SERVER_PID" 2>/dev/null || { echo 'Loopback test server exited.' >&2; exit 1; }
   sleep 0.05
 done
 [[ -s "$TASK_TRANSPORT_TEMP/port" ]] || { echo 'Loopback test server did not start.' >&2; exit 1; }

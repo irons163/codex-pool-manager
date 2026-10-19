@@ -31,6 +31,9 @@ jobs:
           set -euo pipefail
           XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)"
           echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Exercise real transport with Release optimization
         env:
           ISSUE_REPORT_SMOKE_OUTPUT: ${{ runner.temp }}/issue-report-transport-smoke
