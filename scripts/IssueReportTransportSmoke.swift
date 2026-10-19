@@ -106,6 +106,20 @@ private struct IssueReportTransportSmoke {
         }
         defer { deadline.cancel() }
 
+        let probeURL = endpoint()
+        var probeRequest = URLRequest(url: probeURL)
+        probeRequest.httpMethod = "POST"
+        probeRequest.httpBody = Data("request lifetime probe".utf8)
+        let bridgedProbe = probeRequest as NSURLRequest
+        precondition(bridgedProbe.url == probeURL)
+        print("PASS: request remains valid after Foundation bridging")
+        let probeConfiguration = URLSessionConfiguration.ephemeral
+        probeConfiguration.protocolClasses = [ReportStubProtocol.self]
+        ReportStubProtocol.registry.set(.response(200, Data("probe".utf8)), for: probeURL)
+        let (probeData, _) = try await IssueReportHTTPTransport(configuration: probeConfiguration).send(probeRequest)
+        precondition(probeData == Data("probe".utf8))
+        print("PASS: transport receives a freshly built request intact")
+
         let successURL = endpoint()
         let sender = service(successURL)
         for status in [202, 200, 202, 200, 202] {

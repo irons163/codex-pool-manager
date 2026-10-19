@@ -78,7 +78,8 @@ enum IssueReportError: Error, LocalizedError, Equatable {
 struct IssueReportService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
     let endpoint: URL?
-    private let transport: Transport
+    private let transport: Transport?
+    private let sender: IssueReportHTTPTransport?
 
     init() {
         self.init(endpoint: IssueReportConfiguration.endpoint)
@@ -86,13 +87,11 @@ struct IssueReportService {
 
     init(endpoint: URL?, sessionConfiguration: URLSessionConfiguration? = nil, transport: Transport? = nil) {
         self.endpoint = IssueReportConfiguration.validatedEndpoint(endpoint?.absoluteString)
-        if let transport {
-            self.transport = transport
+        self.transport = transport
+        if transport == nil {
+            self.sender = IssueReportHTTPTransport(configuration: sessionConfiguration)
         } else {
-            let sender = IssueReportHTTPTransport(configuration: sessionConfiguration)
-            self.transport = { request in
-                try await sender.send(request)
-            }
+            self.sender = nil
         }
     }
 
@@ -103,7 +102,15 @@ struct IssueReportService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONEncoder().encode(report)
-        let (data, response) = try await transport(request)
+        let data: Data
+        let response: URLResponse
+        if let transport {
+            (data, response) = try await transport(request)
+        } else if let sender {
+            (data, response) = try await sender.send(request)
+        } else {
+            throw IssueReportError.unavailable
+        }
         guard let response = response as? HTTPURLResponse else { throw IssueReportError.invalidResponse }
         switch response.statusCode {
         case 200, 202:
