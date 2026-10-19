@@ -1,8 +1,7 @@
 import Foundation
 
-// Keep Foundation's session and delegate alive across the complete request.
-// Completion-handler tasks avoid the async URLSession overlay that crashes in
-// the shipped Swift 6.2 build on macOS 26.4.
+// Own the session and delegate across the complete request, with explicit
+// completion and cancellation handling for each task.
 nonisolated final class IssueReportHTTPTransport: Sendable {
     private let session: URLSession
     private let redirectDelegate: IssueReportRedirectDelegate

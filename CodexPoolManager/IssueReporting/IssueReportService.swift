@@ -104,6 +104,8 @@ struct IssueReportService {
         request.httpBody = try JSONEncoder().encode(report)
         let data: Data
         let response: URLResponse
+        // Keep the production call direct: Swift 6.2 Release builds invalidate
+        // URLRequest when it is forwarded through the stored async adapter.
         if let transport {
             (data, response) = try await transport(request)
         } else if let sender {
