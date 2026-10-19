@@ -2,6 +2,7 @@ name: Issue report transport checks
 
 on:
   push:
+    branches: ['**']
     paths:
       - 'CodexPoolManager/IssueReporting/**'
       - 'CodexPoolManager/Support/L10n.swift'
@@ -38,7 +39,26 @@ jobs:
         env:
           ISSUE_REPORT_SMOKE_OUTPUT: ${{ runner.temp }}/issue-report-transport-smoke
         run: bash scripts/test_issue_report_transport.sh
+      - name: Show transport crash location
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          reports = Path.home() / 'Library/Logs/DiagnosticReports'
+          paths = sorted(reports.glob('issue-report-transport-smoke*.ips'), key=lambda path: path.stat().st_mtime)
+          for path in paths[-2:]:
+              _, body = path.read_text().split('\n', 1)
+              report = json.loads(body)
+              print('Transport exception:', report.get('exception'))
+              for thread in report.get('threads', []):
+                  if thread.get('triggered'):
+                      for frame in thread.get('frames', [])[:18]:
+                          print(frame.get('symbol', '<application frame>'), frame.get('imageOffset'))
+          PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: issue-report-transport-smoke
           path: ${{ runner.temp }}/issue-report-transport-smoke

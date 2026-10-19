@@ -33,6 +33,13 @@ python3 - "$TASK_TRANSPORT_TEMP/port" <<'PY' &
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
+
+class LoopbackServer(ThreadingHTTPServer):
+    def server_bind(self):
+        TCPServer.server_bind(self)
+        self.server_name = 'localhost'
+        self.server_port = self.server_address[1]
 
 class RedirectHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -48,7 +55,7 @@ class RedirectHandler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
-server = ThreadingHTTPServer(('127.0.0.1', 0), RedirectHandler)
+server = LoopbackServer(('127.0.0.1', 0), RedirectHandler)
 Path(sys.argv[1]).write_text(str(server.server_port))
 server.serve_forever()
 PY

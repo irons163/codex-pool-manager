@@ -99,6 +99,7 @@ private struct IssueReportTransportSmoke {
 
     static func main() async throws {
         setbuf(stdout, nil)
+        print("Starting actual URLSession transport checks")
         let deadline = Task.detached {
             do { try await Task.sleep(for: .seconds(25)) } catch { return }
             fatalError("The real URLSession transport did not complete within 25 seconds")
