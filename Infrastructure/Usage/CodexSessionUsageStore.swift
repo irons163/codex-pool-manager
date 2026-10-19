@@ -224,8 +224,13 @@ actor CodexSessionUsageStore {
         var paths: [URL] = []
         var limited = false
         var unavailable = 0
+        var scannedDirectories: Set<URL> = []
         for directory in directories {
-            guard let enumerator = fileManager.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey], options: [.skipsHiddenFiles, .skipsPackageDescendants], errorHandler: { _, _ in unavailable += 1; return true }) else { unavailable += 1; continue }
+            // FileManager does not enumerate a directory URL that is itself a
+            // symlink. Codex sessions are often moved to an external volume.
+            let resolvedDirectory = directory.resolvingSymlinksInPath()
+            guard scannedDirectories.insert(resolvedDirectory).inserted else { continue }
+            guard let enumerator = fileManager.enumerator(at: resolvedDirectory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey], options: [.skipsHiddenFiles, .skipsPackageDescendants], errorHandler: { _, _ in unavailable += 1; return true }) else { unavailable += 1; continue }
             while let url = enumerator.nextObject() as? URL {
                 try Task.checkCancellation()
                 guard url.pathExtension == "jsonl" else { continue }

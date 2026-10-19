@@ -197,6 +197,68 @@ struct CodexSessionAnalyticsTests {
 }
 
 struct CodexSessionUsageStoreTests {
+    @Test(arguments: ["sessions", "archived_sessions"])
+    func scansSessionDirectoriesLinkedToExternalStorage(name: String) async throws {
+        let fixture = SessionAnalyticsFixture.self
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-linked-sessions-\(UUID())", isDirectory: true)
+        let root = directory.appendingPathComponent(".codex", isDirectory: true)
+        let storage = directory.appendingPathComponent("external-storage", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: storage, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent(name), withDestinationURL: storage)
+        let text = try [fixture.meta(), fixture.event(last: fixture.usage(100, 20, 10))].joined(separator: "\n")
+        try Data(text.utf8).write(to: storage.appendingPathComponent("rollout-\(fixture.parentID).jsonl"))
+
+        let report = try await CodexSessionUsageStore().scan(root: root)
+
+        expectNoDifference(report.scannedFiles, 1)
+        expectNoDifference(report.records.map(\.tokens), [CodexSessionTokens(input: 100, cachedInput: 20, output: 10)])
+        expectNoDifference(report.unavailableFiles, 0)
+        expectNoDifference(report.isPartial, false)
+    }
+
+    @Test
+    func scansASymlinkSelectedAsTheSourceRoot() async throws {
+        let fixture = SessionAnalyticsFixture.self
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-linked-root-\(UUID())", isDirectory: true)
+        let root = directory.appendingPathComponent("source-link", isDirectory: true)
+        let storage = directory.appendingPathComponent("external-storage", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: storage, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: root, withDestinationURL: storage)
+        let text = try [fixture.meta(), fixture.event(last: fixture.usage(100, 20, 10))].joined(separator: "\n")
+        try Data(text.utf8).write(to: storage.appendingPathComponent("rollout-\(fixture.parentID).jsonl"))
+
+        let report = try await CodexSessionUsageStore().scan(root: root)
+
+        expectNoDifference(report.scannedFiles, 1)
+        expectNoDifference(report.records.count, 1)
+        expectNoDifference(report.isPartial, false)
+    }
+
+    @Test
+    func sharedLinkedDirectoriesAreOnlyScannedOnce() async throws {
+        let fixture = SessionAnalyticsFixture.self
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-linked-duplicates-\(UUID())", isDirectory: true)
+        let root = directory.appendingPathComponent(".codex", isDirectory: true)
+        let storage = directory.appendingPathComponent("external-storage", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: storage, withIntermediateDirectories: true)
+        for name in ["sessions", "archived_sessions"] {
+            try FileManager.default.createSymbolicLink(at: root.appendingPathComponent(name), withDestinationURL: storage)
+        }
+        let text = try [fixture.meta(), fixture.event(last: fixture.usage(100, 20, 10))].joined(separator: "\n")
+        try Data(text.utf8).write(to: storage.appendingPathComponent("rollout-\(fixture.parentID).jsonl"))
+
+        let report = try await CodexSessionUsageStore().scan(root: root)
+
+        expectNoDifference(report.scannedFiles, 1)
+        expectNoDifference(report.records.count, 1)
+        expectNoDifference(report.isPartial, false)
+    }
+
     @Test
     func rescansAppendAndArchiveMovesWithoutDuplicating() async throws {
         let fixture = SessionAnalyticsFixture.self
