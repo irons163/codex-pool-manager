@@ -84,13 +84,14 @@ struct IssueReportService {
         self.init(endpoint: IssueReportConfiguration.endpoint)
     }
 
-    init(endpoint: URL?, transport: Transport? = nil) {
+    init(endpoint: URL?, sessionConfiguration: URLSessionConfiguration? = nil, transport: Transport? = nil) {
         self.endpoint = IssueReportConfiguration.validatedEndpoint(endpoint?.absoluteString)
         if let transport {
             self.transport = transport
         } else {
+            let sender = IssueReportHTTPTransport(configuration: sessionConfiguration)
             self.transport = { request in
-                try await Self.performRequest(request)
+                try await sender.send(request)
             }
         }
     }
@@ -116,25 +117,5 @@ struct IssueReportService {
         case 503: throw IssueReportError.unavailable
         default: throw IssueReportError.failed
         }
-    }
-
-    private static func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpCookieStorage = nil
-        configuration.urlCredentialStorage = nil
-        configuration.urlCache = nil
-        let session = URLSession(configuration: configuration, delegate: IssueReportRedirectDelegate(), delegateQueue: nil)
-        defer { session.finishTasksAndInvalidate() }
-        return try await session.data(for: request)
-    }
-}
-
-private final class IssueReportRedirectDelegate: NSObject, URLSessionTaskDelegate {
-    nonisolated func urlSession(
-        _ session: URLSession, task: URLSessionTask,
-        willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
-        completionHandler: @escaping (URLRequest?) -> Void
-    ) {
-        completionHandler(nil)
     }
 }

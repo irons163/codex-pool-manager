@@ -1,0 +1,42 @@
+name: Issue report transport checks
+
+on:
+  push:
+    paths:
+      - 'CodexPoolManager/IssueReporting/**'
+      - 'CodexPoolManager/Support/L10n.swift'
+      - 'scripts/IssueReportTransportSmoke.swift'
+      - 'scripts/test_issue_report_transport.sh'
+      - '.github/workflows/issue-report-transport-check.yml'
+  pull_request:
+    paths:
+      - 'CodexPoolManager/IssueReporting/**'
+      - 'CodexPoolManager/Support/L10n.swift'
+      - 'scripts/IssueReportTransportSmoke.swift'
+      - 'scripts/test_issue_report_transport.sh'
+      - '.github/workflows/issue-report-transport-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  transport:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select release Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)"
+          echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+      - name: Exercise real transport with Release optimization
+        env:
+          ISSUE_REPORT_SMOKE_OUTPUT: ${{ runner.temp }}/issue-report-transport-smoke
+        run: bash scripts/test_issue_report_transport.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: issue-report-transport-smoke
+          path: ${{ runner.temp }}/issue-report-transport-smoke
+          retention-days: 7
