@@ -1,3 +1,5 @@
+import { googleRelayReady, sendViaGoogleRelay } from "./google-relay.js";
+
 const encoder = new TextEncoder();
 const maxBodyBytes = 32_768;
 const retentionMilliseconds = 24 * 60 * 60 * 1000;
@@ -16,8 +18,10 @@ function validEmail(value) {
 }
 
 function ready(env) {
-  return env.REPORTS_ENABLED === "true" && validEmail(env.REPORT_FROM) && validEmail(env.REPORT_TO)
-    && env.REPORT_EMAIL && env.REPORT_GATE && env.REPORT_RATE_LIMITER;
+  const mailReady = env.MAIL_PROVIDER === "apps_script" ? googleRelayReady(env)
+    : (!env.MAIL_PROVIDER || env.MAIL_PROVIDER === "cloudflare") && validEmail(env.REPORT_FROM) && env.REPORT_EMAIL;
+  return env.REPORTS_ENABLED === "true" && validEmail(env.REPORT_TO)
+    && mailReady && env.REPORT_GATE && env.REPORT_RATE_LIMITER;
 }
 
 export function validateReport(value) {
@@ -137,16 +141,20 @@ export class ReportDeliveryGate {
     if (decision === "limited") return failure("daily_limit", 429, { "Retry-After": "3600" });
 
     try {
-      await this.env.REPORT_EMAIL.send({
-        from: this.env.REPORT_FROM,
-        to: this.env.REPORT_TO,
-        subject: `[CodexPoolManager] ${report.title}`,
-        ...(report.replyEmail ? { replyTo: report.replyEmail } : {}),
-        text: [
-          `Report ID: ${report.id}`, "", report.message,
-          ...(report.systemInfo ? ["", "--- User-approved system information ---", report.systemInfo] : []),
-        ].join("\n"),
-      });
+      if (this.env.MAIL_PROVIDER === "apps_script") {
+        await sendViaGoogleRelay(this.env, report);
+      } else {
+        await this.env.REPORT_EMAIL.send({
+          from: this.env.REPORT_FROM,
+          to: this.env.REPORT_TO,
+          subject: `[CodexPoolManager] ${report.title}`,
+          ...(report.replyEmail ? { replyTo: report.replyEmail } : {}),
+          text: [
+            `Report ID: ${report.id}`, "", report.message,
+            ...(report.systemInfo ? ["", "--- User-approved system information ---", report.systemInfo] : []),
+          ].join("\n"),
+        });
+      }
       await this.storage.put(key, { digest, state: "sent", expiresAt: now + retentionMilliseconds });
       return json({ accepted: true, reportID: report.id }, 202);
     } catch {
