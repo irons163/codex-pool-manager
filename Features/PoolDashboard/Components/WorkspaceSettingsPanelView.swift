@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct WorkspaceSettingsPanelView: View {
-    private static let reportIssueURL = URL(string: "https://github.com/irons163/codex-pool-manager/issues/new")!
-
     let switchWithoutLaunchingBinding: Binding<Bool>
     let launchTargetBinding: Binding<String>
     let autoSyncEnabledBinding: Binding<Bool>
@@ -167,18 +165,6 @@ struct WorkspaceSettingsPanelView: View {
                             .font(.caption)
                             .foregroundStyle(PoolDashboardTheme.textMuted)
                     }
-                }
-                .dashboardInfoCard()
-
-                VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                    Link(destination: Self.reportIssueURL) {
-                        Label(L10n.text("settings.report_issue"), systemImage: "ladybug")
-                    }
-                    .buttonStyle(.bordered)
-
-                    Text(L10n.text("settings.report_issue_hint"))
-                        .font(.caption)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
                 }
                 .dashboardInfoCard()
             }
