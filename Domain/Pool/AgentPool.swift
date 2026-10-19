@@ -284,8 +284,22 @@ struct AgentAccount: Identifiable, Equatable, Codable {
 }
 
 extension AgentAccount {
+    var isBusinessAccount: Bool {
+        switch Self.normalizedPlanType(planType) {
+        case "team", "business", "enterprise":
+            return true
+        default:
+            return false
+        }
+    }
+
+    var paidBadgeText: String {
+        L10n.text(isBusinessAccount ? "account.business_badge" : "account.paid_badge")
+    }
+
     var planBadgeText: String? {
         guard isPaid else { return nil }
+        if isBusinessAccount { return paidBadgeText }
         switch planType {
         case "plus":
             return "Plus"

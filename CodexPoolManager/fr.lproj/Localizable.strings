@@ -56,6 +56,7 @@
 "account.name.placeholder" = "Nom du compte";
 "account.current_badge" = "Actuel";
 "account.paid_badge" = "Payant";
+"account.business_badge" = "Entreprise";
 "account.weekly_usage_percent_format" = "Usage hebdomadaire : %d%%";
 "account.weekly_usage_units_format" = "Usage hebdomadaire : %d / %d";
 "account.weekly_resets_format" = "Réinitialisation : %@";

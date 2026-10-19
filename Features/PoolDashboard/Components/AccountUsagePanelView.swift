@@ -953,7 +953,7 @@ struct AccountUsagePanelView: View {
 
             HStack(spacing: 6) {
                 if isPaidAccount(account) {
-                    Text(L10n.text("account.paid_badge"))
+                    Text(account.paidBadgeText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textPrimary)
                         .padding(.horizontal, 6)
@@ -1129,7 +1129,7 @@ struct AccountUsagePanelView: View {
                 }
 
                 if isPaidAccount(account) {
-                    Text(L10n.text("account.paid_badge"))
+                    Text(account.paidBadgeText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PoolDashboardTheme.textPrimary)
                         .padding(.horizontal, 8)

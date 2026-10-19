@@ -5615,7 +5615,7 @@ private struct DailyUsagePlanningWorkspacePanelView: View {
                 .foregroundStyle(PoolDashboardTheme.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-            Text(account.isPaid ? L10n.text("account.paid_badge") : L10n.text("schedule.plan.account.free"))
+            Text(account.isPaid ? account.paidBadgeText : L10n.text("schedule.plan.account.free"))
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(PoolDashboardTheme.textMuted)
         }
