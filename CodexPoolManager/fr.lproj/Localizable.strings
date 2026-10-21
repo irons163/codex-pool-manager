@@ -336,6 +336,9 @@
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "Échec de l'autorisation. Vérifiez votre token API.";
 "usage.sync.error.oauth_login_expired" = "Les informations de connexion ont expiré. Connectez-vous à nouveau ou réimportez ce compte.";
+"usage.sync.error.oauth_login_revoked" = "Le serveur a révoqué cet identifiant de connexion ; il ne s’agit pas d’une expiration normale. Reconnectez-vous ou importez les identifiants les plus récents.";
+"usage.sync.error.oauth_refresh_token_reused" = "Le jeton de renouvellement a déjà été utilisé, peut-être par une autre application Codex en même temps. Importez les identifiants les plus récents ; si cela échoue, reconnectez-vous.";
+"usage.sync.error.oauth_login_invalid" = "Le serveur a refusé le jeton de renouvellement. Cela ne confirme pas une expiration. Reconnectez-vous ou importez les identifiants les plus récents.";
 "usage.sync.error.rate_limited" = "Limite de débit atteinte. Veuillez réessayer plus tard.";
 "usage.sync.error.network" = "Erreur réseau. Vérifiez votre connexion.";
 "usage.sync.error.oauth_refresh_unavailable" = "Ce compte ne possède pas de jeton de renouvellement. Reconnectez-vous ou réimportez-le.";

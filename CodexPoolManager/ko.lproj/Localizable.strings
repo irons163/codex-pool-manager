@@ -336,6 +336,9 @@
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "권한 부여에 실패했습니다. API token을 확인해 주세요.";
 "usage.sync.error.oauth_login_expired" = "로그인 정보가 만료되었습니다. 다시 로그인하거나 이 계정을 다시 가져오세요.";
+"usage.sync.error.oauth_login_revoked" = "서버가 이 로그인 자격 증명을 취소했습니다. 정상적인 만료가 아닙니다. 다시 로그인하거나 최신 자격 증명을 가져오세요.";
+"usage.sync.error.oauth_refresh_token_reused" = "갱신 토큰이 이미 사용되었습니다. 다른 Codex 앱이 동시에 갱신했을 수 있습니다. 최신 자격 증명을 가져오고, 계속 실패하면 다시 로그인하세요.";
+"usage.sync.error.oauth_login_invalid" = "서버가 갱신 토큰을 거부했습니다. 만료 여부는 확인되지 않았습니다. 다시 로그인하거나 최신 자격 증명을 가져오세요.";
 "usage.sync.error.rate_limited" = "속도 제한에 도달했습니다. 잠시 후 다시 시도해 주세요.";
 "usage.sync.error.network" = "네트워크 오류입니다. 연결을 확인해 주세요.";
 "usage.sync.error.oauth_refresh_unavailable" = "이 계정에 새로 고침 토큰이 없습니다. 다시 로그인하거나 계정을 다시 가져오세요.";

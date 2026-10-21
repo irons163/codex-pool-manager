@@ -497,6 +497,9 @@
 "sync.failure.with_description_format" = "%@：%@";
 "usage.sync.error.unauthorized" = "授權失敗，請檢查 API Token。";
 "usage.sync.error.oauth_login_expired" = "登入資訊已過期，請重新登入或重新匯入此帳號。";
+"usage.sync.error.oauth_login_revoked" = "此登入憑證已被伺服器撤銷，並非正常到期。請重新登入，或匯入最新的登入資料。";
+"usage.sync.error.oauth_refresh_token_reused" = "登入更新憑證已被使用，可能與其他 Codex 程式同時更新。請匯入最新的登入資料；若仍失敗，請重新登入。";
+"usage.sync.error.oauth_login_invalid" = "伺服器拒絕了登入更新憑證，無法確認是否到期。請重新登入，或匯入最新的登入資料。";
 "usage.sync.error.rate_limited" = "已達速率限制，請稍後再試。";
 "usage.sync.error.network" = "網路異常，請檢查連線。";
 "usage.sync.error.oauth_refresh_unavailable" = "此帳號缺少 refresh token，請重新登入或重新匯入。";

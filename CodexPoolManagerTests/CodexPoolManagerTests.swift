@@ -3993,7 +3993,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func codexSyncShowsOAuthLoginExpiredWhenRefreshTokenFails() async {
+    func codexSyncShowsRejectedLoginWhenRefreshTokenFails() async {
         let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
         var state = AccountPoolState(
             accounts: [
@@ -4028,7 +4028,7 @@ struct CodexPoolManagerTests {
 
         #expect(refreshRequests.value.map(\.refreshToken) == ["stale-refresh-token"])
         #expect(state.accounts[0].isUsageSyncExcluded)
-        #expect(state.accounts[0].usageSyncError == L10n.text("usage.sync.error.oauth_login_expired"))
+        #expect(state.accounts[0].usageSyncError == L10n.text("usage.sync.error.oauth_login_invalid"))
     }
 
     @Test

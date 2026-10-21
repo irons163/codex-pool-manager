@@ -56,6 +56,115 @@ struct WorkspaceCredentialSyncTests {
     }
 
     @Test
+    func localRotationDuringUsageIsRecoveredBeforeRefreshingOldToken() async throws {
+        let original = try account(accountID: "business")
+        let newer = try local(accountID: "business")
+        let available = LockedValue<[LocalCodexOAuthAccount]>([])
+        let requests = LockedValue<[(String, String)]>([])
+        let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        let checkpoints = LockedValue<[OAuthTokens]>([])
+        var state = AccountPoolState(accounts: [original], mode: .manual)
+        let service = CodexUsageSyncService(
+            client: WorkspaceUsageClient(acceptedToken: newer.accessToken, requests: requests, onFetch: { token in
+                if token == original.apiToken { available.withLock { $0 = [newer] } }
+            }),
+            oauthRefreshClient: StubOAuthTokenRefreshClient(requests: refreshRequests, result: .failure(OAuthTokenRefreshError.http(statusCode: 400, code: "refresh_token_reused"))),
+            oauthConfiguration: .codexDefault,
+            onOAuthTokenRefreshed: { _, tokens, _ in checkpoints.withLock { $0.append(tokens) } },
+            localAccountsProvider: { available.value }
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(requests.value.map { $0.0 } == [original.apiToken, newer.accessToken])
+        #expect(refreshRequests.value.isEmpty)
+        #expect(checkpoints.value.map(\.refreshToken) == [newer.refreshToken])
+        #expect(state.accounts[0].oauthRefreshToken == newer.refreshToken)
+        #expect(!state.accounts[0].isUsageSyncExcluded)
+    }
+
+    @Test
+    func localRotationDuringRefreshFailureRecoversWithoutReauthentication() async throws {
+        let original = try account(accountID: "business")
+        let newer = try local(accountID: "business")
+        let available = LockedValue<[LocalCodexOAuthAccount]>([])
+        let refreshRequests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        var state = AccountPoolState(accounts: [original], mode: .manual)
+        let service = CodexUsageSyncService(
+            client: WorkspaceUsageClient(acceptedToken: newer.accessToken, requests: LockedValue([])),
+            oauthRefreshClient: RacingOAuthRefreshClient {
+                refreshRequests.withLock { $0.append((original.oauthRefreshToken!, "fixture")) }
+                available.withLock { $0 = [newer] }
+                throw OAuthTokenRefreshError.http(statusCode: 400, code: "refresh_token_reused")
+            },
+            oauthConfiguration: .codexDefault,
+            localAccountsProvider: { available.value }
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(refreshRequests.value.count == 1)
+        #expect(state.accounts[0].apiToken == newer.accessToken)
+        #expect(state.accounts[0].oauthRefreshToken == newer.refreshToken)
+        #expect(state.accounts[0].usedUnits == 24)
+        #expect(!state.accounts[0].isUsageSyncExcluded)
+    }
+
+    @Test(arguments: [true, false])
+    func recoveryAfterRefreshFailureCannotBorrowAnotherWorkspaceOrMember(wrongWorkspace: Bool) async throws {
+        let original = try account(accountID: "business")
+        let other = try local(
+            accountID: wrongWorkspace ? "personal" : "business",
+            email: wrongWorkspace ? "dual@example.com" : "other@example.com",
+            subject: wrongWorkspace ? "shared-user" : "other-user"
+        )
+        let available = LockedValue<[LocalCodexOAuthAccount]>([])
+        let requests = LockedValue<[(String, String)]>([])
+        var state = AccountPoolState(accounts: [original], mode: .manual)
+        let service = CodexUsageSyncService(
+            client: WorkspaceUsageClient(acceptedToken: other.accessToken, requests: requests),
+            oauthRefreshClient: RacingOAuthRefreshClient {
+                available.withLock { $0 = [other] }
+                throw OAuthTokenRefreshError.http(statusCode: 400, code: "refresh_token_reused")
+            },
+            oauthConfiguration: .codexDefault,
+            localAccountsProvider: { available.value }
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(requests.value.map { $0.0 } == [original.apiToken])
+        #expect(state.accounts[0].apiToken == original.apiToken)
+        #expect(state.accounts[0].oauthRefreshToken == original.oauthRefreshToken)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthRefreshTokenReused.localizedDescription)
+    }
+
+    @Test
+    func recoveryAfterSuccessfulRefreshDoesNotRollBackToAnOlderCache() async throws {
+        let original = try account(accountID: "business")
+        let older = try local(accountID: "business", issuedAt: 200)
+        let fresh = try local(accountID: "business", issuedAt: 300)
+        let available = LockedValue<[LocalCodexOAuthAccount]>([])
+        let requests = LockedValue<[(String, String)]>([])
+        var state = AccountPoolState(accounts: [original], mode: .manual)
+        let service = CodexUsageSyncService(
+            client: WorkspaceUsageClient(acceptedToken: older.accessToken, requests: requests, onFetch: { token in
+                if token == fresh.accessToken { available.withLock { $0 = [older] } }
+            }),
+            oauthRefreshClient: StubOAuthTokenRefreshClient(requests: LockedValue([]), result: .success(OAuthTokens(accessToken: fresh.accessToken, refreshToken: fresh.refreshToken, idToken: fresh.idToken))),
+            oauthConfiguration: .codexDefault,
+            localAccountsProvider: { available.value }
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(requests.value.map { $0.0 } == [original.apiToken, fresh.accessToken])
+        #expect(state.accounts[0].apiToken == fresh.accessToken)
+        #expect(state.accounts[0].oauthRefreshToken == fresh.refreshToken)
+        #expect(state.accounts[0].isUsageSyncExcluded)
+    }
+
+    @Test
     func sharedWorkspaceMembersKeepSeparateCredentialsAndUsage() async throws {
         let first = try account(accountID: "shared-workspace", email: "first@example.com", subject: "user-first")
         let second = try account(accountID: "shared-workspace", email: "second@example.com", subject: "user-second")
@@ -493,8 +602,10 @@ private struct WorkspaceUsageClient: CodexUsageClient {
     let acceptedToken: String
     let requests: LockedValue<[(String, String)]>
     var cancelOtherRequests: Bool = false
+    var onFetch: ((String) -> Void)? = nil
 
     func fetchUsage(accessToken: String, accountID: String) async throws -> CodexUsage {
+        onFetch?(accessToken)
         requests.withLock { $0.append((accessToken, accountID)) }
         guard accessToken == acceptedToken else {
             if cancelOtherRequests { throw CancellationError() }
@@ -507,5 +618,13 @@ private struct WorkspaceUsageClient: CodexUsageClient {
 private struct WorkspaceAuthFileResolver: AuthFileURLResolving {
     func resolveAuthFileURLForSwitch(sessionAuthorizedURL: URL?) throws -> URL {
         URL(fileURLWithPath: "/unused/workspace-test-auth.json")
+    }
+}
+
+private struct RacingOAuthRefreshClient: OAuthTokenRefreshing {
+    let action: () throws -> OAuthTokens
+
+    func refreshTokens(refreshToken: String, configuration: OAuthClientConfiguration) async throws -> OAuthTokens {
+        try action()
     }
 }

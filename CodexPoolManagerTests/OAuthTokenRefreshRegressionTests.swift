@@ -30,7 +30,7 @@ struct OAuthTokenRefreshRegressionTests {
 
     @Test(arguments: [
         "invalid_grant", "invalid_refresh_token", "token_expired",
-        "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused"
+        "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused", "token_revoked"
     ])
     func confirmedRefreshFailuresRequireSignIn(code: String) async throws {
         var state = makeState()
@@ -47,9 +47,72 @@ struct OAuthTokenRefreshRegressionTests {
         try await service.sync(state: &state, now: now)
 
         #expect(refreshRequests.value.count == 1)
-        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthLoginExpired.localizedDescription)
+        let expected: CodexSyncError
+        switch code {
+        case "token_expired", "refresh_token_expired": expected = .oauthLoginExpired
+        case "refresh_token_invalidated", "token_revoked": expected = .oauthLoginRevoked
+        case "refresh_token_reused": expected = .oauthRefreshTokenReused
+        default: expected = .oauthLoginInvalid
+        }
+        #expect(state.accounts[0].usageSyncError == expected.localizedDescription)
         #expect(state.accounts[0].apiToken == "old-access")
         #expect(state.accounts[0].oauthRefreshToken == "old-refresh")
+    }
+
+    @Test
+    func revokedUsageIsNotReportedAsExpirationWhenRefreshIsRejected() async throws {
+        var state = makeState()
+        let service = CodexUsageSyncService(
+            client: MockCodexUsageClient(responseByToken: [:], shouldThrowError: CodexClientHTTPError(statusCode: 401, code: "token_revoked")),
+            oauthRefreshClient: StubOAuthTokenRefreshClient(
+                requests: LockedValue([]),
+                result: .failure(OAuthTokenRefreshError.http(statusCode: 400, code: "invalid_grant"))
+            ),
+            oauthConfiguration: .codexDefault
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthLoginRevoked.localizedDescription)
+        #expect(state.accounts[0].oauthRefreshToken == "old-refresh")
+    }
+
+    @Test
+    func revokedUsageRetainsReasonWhenNoRefreshCredentialExists() async throws {
+        var account = makeState().accounts[0]
+        account.oauthRefreshToken = nil
+        var state = AccountPoolState(accounts: [account], mode: .manual)
+        let requests = LockedValue<[(refreshToken: String, clientID: String)]>([])
+        let service = CodexUsageSyncService(
+            client: MockCodexUsageClient(responseByToken: [:], shouldThrowError: CodexClientHTTPError(statusCode: 401, code: "token_revoked")),
+            oauthRefreshClient: StubOAuthTokenRefreshClient(requests: requests, result: .success(freshTokens)),
+            oauthConfiguration: .codexDefault
+        )
+
+        try await service.sync(state: &state, now: now)
+
+        #expect(requests.value.isEmpty)
+        #expect(state.accounts[0].usageSyncError == CodexSyncError.oauthLoginRevoked.localizedDescription)
+    }
+
+    @Test(arguments: [
+        #"{"error":{"code":"token_revoked","message":"secret-access-token"}}"#,
+        #"{"error":{"message":"secret-access-token"}}"#,
+        #"{"error":{"code":"secret token text"}}"#
+    ])
+    func usageHTTPFailureRetainsOnlySafeMachineCode(body: String) async throws {
+        let endpoint = URL(string: "https://usage-error.example.test/" + UUID().uuidString)!
+        let session = makeMockedURLSession(endpoint: endpoint, statusCode: 401, data: Data(body.utf8))
+        defer { session.invalidateAndCancel() }
+        let service = OpenAICodexUsageClient(endpoint: endpoint, session: session)
+
+        do {
+            _ = try await service.fetchUsage(accessToken: "request-secret", accountID: "account")
+            Issue.record("Expected a usage HTTP error")
+        } catch let error as CodexClientHTTPError {
+            #expect(error.statusCode == 401)
+            #expect(error.code == (body.contains("token_revoked") ? "token_revoked" : nil))
+        }
     }
 
     @Test(arguments: [URLError.Code.timedOut, .notConnectedToInternet, .networkConnectionLost])

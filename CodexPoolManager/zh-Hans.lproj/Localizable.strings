@@ -497,6 +497,9 @@
 "sync.failure.with_description_format" = "%@：%@";
 "usage.sync.error.unauthorized" = "授权失败，请检查 API Token。";
 "usage.sync.error.oauth_login_expired" = "登录信息已过期，请重新登录或重新导入此账号。";
+"usage.sync.error.oauth_login_revoked" = "此登录凭证已被服务器撤销，并非正常到期。请重新登录，或导入最新的登录资料。";
+"usage.sync.error.oauth_refresh_token_reused" = "登录更新凭证已被使用，可能与其他 Codex 程序同时更新。请导入最新的登录资料；若仍失败，请重新登录。";
+"usage.sync.error.oauth_login_invalid" = "服务器拒绝了登录更新凭证，无法确认是否到期。请重新登录，或导入最新的登录资料。";
 "usage.sync.error.rate_limited" = "已达速率限制，请稍后再试。";
 "usage.sync.error.network" = "网络异常，请检查连接。";
 "usage.sync.error.oauth_refresh_unavailable" = "此账号缺少 refresh token，请重新登录或重新导入。";

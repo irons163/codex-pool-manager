@@ -172,15 +172,29 @@ enum OAuthTokenRefreshError: Error, Equatable, LocalizedError {
     case http(statusCode: Int, code: String?)
     case invalidResponse
 
-    var requiresReauthentication: Bool {
+    enum ReauthenticationReason {
+        case expired
+        case revoked
+        case reused
+        case invalid
+    }
+
+    var reauthenticationReason: ReauthenticationReason? {
         guard case let .http(statusCode, code) = self,
               (400..<500).contains(statusCode),
               let code
-        else { return false }
-        return [
-            "invalid_grant", "invalid_refresh_token", "token_expired",
-            "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused"
-        ].contains(code)
+        else { return nil }
+        switch code {
+        case "token_expired", "refresh_token_expired": return .expired
+        case "token_revoked", "refresh_token_invalidated": return .revoked
+        case "refresh_token_reused": return .reused
+        case "invalid_grant", "invalid_refresh_token": return .invalid
+        default: return nil
+        }
+    }
+
+    var requiresReauthentication: Bool {
+        reauthenticationReason != nil
     }
 
     var errorDescription: String? {

@@ -2,11 +2,15 @@ import Foundation
 
 struct CodexClientHTTPError: Error, Equatable {
     let statusCode: Int
+    var code: String? = nil
 }
 
 enum CodexSyncError: Error, Equatable, LocalizedError {
     case unauthorized
     case oauthLoginExpired
+    case oauthLoginRevoked
+    case oauthRefreshTokenReused
+    case oauthLoginInvalid
     case oauthRefreshUnavailable
     case oauthWorkspaceMismatch
     case oauthUserMismatch
@@ -22,6 +26,12 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
             return L10n.text("usage.sync.error.unauthorized")
         case .oauthLoginExpired:
             return L10n.text("usage.sync.error.oauth_login_expired")
+        case .oauthLoginRevoked:
+            return L10n.text("usage.sync.error.oauth_login_revoked")
+        case .oauthRefreshTokenReused:
+            return L10n.text("usage.sync.error.oauth_refresh_token_reused")
+        case .oauthLoginInvalid:
+            return L10n.text("usage.sync.error.oauth_login_invalid")
         case .oauthRefreshUnavailable:
             return L10n.text("usage.sync.error.oauth_refresh_unavailable")
         case .oauthWorkspaceMismatch:
@@ -38,6 +48,15 @@ enum CodexSyncError: Error, Equatable, LocalizedError {
             return L10n.text("usage.sync.error.service_unavailable")
         case .unknown:
             return L10n.text("usage.sync.error.unknown")
+        }
+    }
+
+    var allowsOAuthRefresh: Bool {
+        switch self {
+        case .unauthorized, .oauthLoginExpired, .oauthLoginRevoked, .oauthRefreshTokenReused, .oauthLoginInvalid:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -102,6 +121,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
     let oauthConfiguration: OAuthClientConfiguration?
     let onOAuthTokenRefreshed: OAuthTokenRefreshHandler?
     let localAccounts: [LocalCodexOAuthAccount]
+    let localAccountsProvider: (() -> [LocalCodexOAuthAccount])?
 
     init(
         client: Client,
@@ -109,7 +129,8 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         oauthRefreshClient: (any OAuthTokenRefreshing)? = nil,
         oauthConfiguration: OAuthClientConfiguration? = nil,
         onOAuthTokenRefreshed: OAuthTokenRefreshHandler? = nil,
-        localAccounts: [LocalCodexOAuthAccount] = []
+        localAccounts: [LocalCodexOAuthAccount] = [],
+        localAccountsProvider: (() -> [LocalCodexOAuthAccount])? = nil
     ) {
         self.client = client
         self.maxRetries = max(0, maxRetries)
@@ -117,6 +138,7 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         self.oauthConfiguration = oauthConfiguration
         self.onOAuthTokenRefreshed = onOAuthTokenRefreshed
         self.localAccounts = localAccounts
+        self.localAccountsProvider = localAccountsProvider
     }
 
     func sync(state: inout AccountPoolState, now: Date = .now) async throws {
@@ -128,37 +150,9 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
 
             var account = originalAccount
             var recoveredUsage: CodexUsage?
-            if let tokens = LocalCodexAccountDiscovery.newerTokens(for: account, in: localAccounts),
-               let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID) {
-                do {
-                    let usage = try await fetchUsageWithRetry(accessToken: tokens.accessToken, accountID: accountID)
-                    if let responseID = OAuthIDTokenClaims.nonEmpty(usage.accountID),
-                       responseID.lowercased() != accountID.lowercased() {
-                        throw CodexSyncError.unknown
-                    }
-                    state.updateAccount(
-                        account.id,
-                        apiToken: tokens.accessToken,
-                        oauthRefreshToken: tokens.refreshToken,
-                        oauthIDToken: tokens.idToken,
-                        oauthLastRefreshAt: now,
-                        now: now,
-                        shouldEvaluate: false
-                    )
-                    // Checkpoint the verified credential before syncing another
-                    // account, whose request may fail or be cancelled.
-                    onOAuthTokenRefreshed?(originalAccount, tokens, now)
-                    account.apiToken = tokens.accessToken
-                    account.oauthRefreshToken = tokens.refreshToken
-                    account.oauthIDToken = tokens.idToken
-                    account.oauthLastRefreshAt = now
-                    recoveredUsage = usage
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch {
-                    // A local cache can also be revoked. Keep the pool's existing
-                    // credential and try its normal usage/refresh path below.
-                }
+            if let recovered = try await recoverLocalCredential(for: account, state: &state, now: now) {
+                account = recovered.account
+                recoveredUsage = recovered.usage
             }
 
             guard account.supportsCodexUsageSync else {
@@ -227,35 +221,19 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                         accountID: chatGPTAccountID
                     )
                 }
-                state.replaceUsageSnapshot(
-                    for: account.id,
-                    quota: usage.quota,
-                    usedUnits: usage.usedUnits,
-                    usageWindowName: usage.usageWindowName,
-                    usageWindowResetAt: usage.usageWindowResetAt,
-                    primaryUsagePercent: usage.primaryUsagePercent,
-                    primaryUsageResetAt: usage.primaryUsageResetAt,
-                    secondaryUsagePercent: usage.secondaryUsagePercent,
-                    secondaryUsageResetAt: usage.secondaryUsageResetAt,
-                    isPaid: usage.isPaid,
-                    planType: usage.planType,
-                    now: now,
-                    shouldEvaluate: false
-                )
-                state.updateRateLimitResetCredits(
-                    for: account.id,
-                    availableCount: usage.rateLimitResetCreditsAvailableCount,
-                    apiExpiries: usage.rateLimitResetCreditExpiries,
-                    previousSuccessfulSyncAt: previousSuccessfulSyncAt,
-                    now: now
-                )
-                state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
+                applyUsage(usage, for: account.id, state: &state, previousSuccessfulSyncAt: previousSuccessfulSyncAt, now: now)
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
                 let mapped = mapSyncError(error)
-                if mapped == .unauthorized {
+                if mapped.allowsOAuthRefresh {
                     do {
+                        // Codex may have rotated its credential while the usage request
+                        // was in flight. Re-read it before spending the saved refresh token.
+                        if let recovered = try await recoverLocalCredential(for: account, state: &state, now: now) {
+                            applyUsage(recovered.usage, for: account.id, state: &state, previousSuccessfulSyncAt: previousSuccessfulSyncAt, now: now)
+                            continue
+                        }
                         if let tokens = try await refreshOAuthTokenIfPossible(account: account) {
                             // A refresh can rotate the refresh token. Commit the replacement
                             // before another awaited request can fail or be cancelled.
@@ -275,6 +253,10 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                                 shouldEvaluate: false
                             )
                             onOAuthTokenRefreshed?(account, tokens, now)
+                            account.apiToken = tokens.accessToken
+                            account.oauthRefreshToken = tokens.refreshToken
+                            account.oauthIDToken = tokens.idToken
+                            account.oauthLastRefreshAt = now
                             let usage = try await fetchUsageWithRetry(
                                 accessToken: tokens.accessToken,
                                 accountID: chatGPTAccountID
@@ -286,35 +268,13 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                                 now: now,
                                 shouldEvaluate: false
                             )
-                            state.replaceUsageSnapshot(
-                                for: account.id,
-                                quota: usage.quota,
-                                usedUnits: usage.usedUnits,
-                                usageWindowName: usage.usageWindowName,
-                                usageWindowResetAt: usage.usageWindowResetAt,
-                                primaryUsagePercent: usage.primaryUsagePercent,
-                                primaryUsageResetAt: usage.primaryUsageResetAt,
-                                secondaryUsagePercent: usage.secondaryUsagePercent,
-                                secondaryUsageResetAt: usage.secondaryUsageResetAt,
-                                isPaid: usage.isPaid,
-                                planType: usage.planType,
-                                now: now,
-                                shouldEvaluate: false
-                            )
-                            state.updateRateLimitResetCredits(
-                                for: account.id,
-                                availableCount: usage.rateLimitResetCreditsAvailableCount,
-                                apiExpiries: usage.rateLimitResetCreditExpiries,
-                                previousSuccessfulSyncAt: previousSuccessfulSyncAt,
-                                now: now
-                            )
-                            state.setUsageSyncExclusion(for: account.id, reason: nil, now: now, shouldEvaluate: false)
+                            applyUsage(usage, for: account.id, state: &state, previousSuccessfulSyncAt: previousSuccessfulSyncAt, now: now)
                             continue
                         }
                         if hasOAuthRefreshSupport(for: account) {
                             state.setUsageSyncExclusion(
                                 for: account.id,
-                                reason: CodexSyncError.oauthRefreshUnavailable.localizedDescription,
+                                reason: (mapped == .unauthorized ? CodexSyncError.oauthRefreshUnavailable : mapped).localizedDescription,
                                 now: now,
                                 shouldEvaluate: false
                             )
@@ -323,10 +283,19 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                     } catch is CancellationError {
                         throw CancellationError()
                     } catch {
-                        let reason = mapSyncError(error).localizedDescription
+                        let refreshFailure = mapSyncError(error)
+                        if refreshFailure.allowsOAuthRefresh,
+                           let recovered = try await recoverLocalCredential(for: account, state: &state, now: now) {
+                            applyUsage(recovered.usage, for: account.id, state: &state, previousSuccessfulSyncAt: previousSuccessfulSyncAt, now: now)
+                            continue
+                        }
+                        // invalid_grant does not establish that a token expired. Keep
+                        // an explicit revocation reported by the original usage request.
+                        let failure = refreshFailure == .oauthLoginInvalid && mapped == .oauthLoginRevoked
+                            ? mapped : refreshFailure
                         state.setUsageSyncExclusion(
                             for: account.id,
-                            reason: reason,
+                            reason: failure.localizedDescription,
                             now: now,
                             shouldEvaluate: false
                         )
@@ -345,6 +314,78 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
         try Task.checkCancellation()
         state.evaluate(now: now)
         state.markUsageSynced(at: now)
+    }
+
+    private func recoverLocalCredential(
+        for account: AgentAccount,
+        state: inout AccountPoolState,
+        now: Date
+    ) async throws -> (account: AgentAccount, usage: CodexUsage)? {
+        let candidates = localAccountsProvider?() ?? localAccounts
+        guard let tokens = LocalCodexAccountDiscovery.newerTokens(for: account, in: candidates),
+              let accountID = OAuthIDTokenClaims.nonEmpty(account.chatGPTAccountID)
+        else { return nil }
+        do {
+            let usage = try await fetchUsageWithRetry(accessToken: tokens.accessToken, accountID: accountID)
+            if let responseID = OAuthIDTokenClaims.nonEmpty(usage.accountID),
+               responseID.lowercased() != accountID.lowercased() {
+                return nil
+            }
+            state.updateAccount(
+                account.id,
+                apiToken: tokens.accessToken,
+                oauthRefreshToken: tokens.refreshToken,
+                oauthIDToken: tokens.idToken,
+                oauthLastRefreshAt: now,
+                now: now,
+                shouldEvaluate: false
+            )
+            // Checkpoint verified replacements before another request can fail or cancel.
+            onOAuthTokenRefreshed?(account, tokens, now)
+            var recovered = account
+            recovered.apiToken = tokens.accessToken
+            recovered.oauthRefreshToken = tokens.refreshToken
+            recovered.oauthIDToken = tokens.idToken
+            recovered.oauthLastRefreshAt = now
+            return (recovered, usage)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // A cached credential can also be revoked; retain the pool's copy.
+            return nil
+        }
+    }
+
+    private func applyUsage(
+        _ usage: CodexUsage,
+        for accountID: UUID,
+        state: inout AccountPoolState,
+        previousSuccessfulSyncAt: Date?,
+        now: Date
+    ) {
+        state.replaceUsageSnapshot(
+            for: accountID,
+            quota: usage.quota,
+            usedUnits: usage.usedUnits,
+            usageWindowName: usage.usageWindowName,
+            usageWindowResetAt: usage.usageWindowResetAt,
+            primaryUsagePercent: usage.primaryUsagePercent,
+            primaryUsageResetAt: usage.primaryUsageResetAt,
+            secondaryUsagePercent: usage.secondaryUsagePercent,
+            secondaryUsageResetAt: usage.secondaryUsageResetAt,
+            isPaid: usage.isPaid,
+            planType: usage.planType,
+            now: now,
+            shouldEvaluate: false
+        )
+        state.updateRateLimitResetCredits(
+            for: accountID,
+            availableCount: usage.rateLimitResetCreditsAvailableCount,
+            apiExpiries: usage.rateLimitResetCreditExpiries,
+            previousSuccessfulSyncAt: previousSuccessfulSyncAt,
+            now: now
+        )
+        state.setUsageSyncExclusion(for: accountID, reason: nil, now: now, shouldEvaluate: false)
     }
 
     private func recoverChatGPTAccountID(
@@ -430,14 +471,20 @@ struct CodexUsageSyncService<Client: CodexUsageClient> {
                 if statusCode == 429 { return .rateLimited }
                 if (500..<600).contains(statusCode) { return .serviceUnavailable }
             }
-            if refreshError.requiresReauthentication {
-                return .oauthLoginExpired
+            if let reason = refreshError.reauthenticationReason {
+                switch reason {
+                case .expired: return .oauthLoginExpired
+                case .revoked: return .oauthLoginRevoked
+                case .reused: return .oauthRefreshTokenReused
+                case .invalid: return .oauthLoginInvalid
+                }
             }
             return .oauthRefreshFailed(refreshError)
         }
         if let http = error as? CodexClientHTTPError {
             if http.statusCode == 401 || http.statusCode == 403 {
-                return .unauthorized
+                let failure = mapSyncError(OAuthTokenRefreshError.http(statusCode: http.statusCode, code: http.code))
+                return failure.allowsOAuthRefresh ? failure : .unauthorized
             }
             if http.statusCode == 429 {
                 return .rateLimited
@@ -484,7 +531,7 @@ struct OpenAICodexUsageClient: CodexUsageClient {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw CodexClientHTTPError(statusCode: statusCode)
+            throw CodexClientHTTPError(statusCode: statusCode, code: OAuthTokenRefreshError.responseCode(from: data))
         }
         if let raw = String(data: data, encoding: .utf8) {
             onRawResponse?(raw)

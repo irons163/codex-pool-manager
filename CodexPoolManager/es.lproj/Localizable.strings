@@ -336,6 +336,9 @@
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "Autorización fallida. Verifica tu token de API.";
 "usage.sync.error.oauth_login_expired" = "La información de inicio de sesión caducó. Vuelve a iniciar sesión o reimporta esta cuenta.";
+"usage.sync.error.oauth_login_revoked" = "El servidor revocó esta credencial; no caducó de forma normal. Inicia sesión de nuevo o importa las credenciales más recientes.";
+"usage.sync.error.oauth_refresh_token_reused" = "El token de actualización ya se usó, posiblemente por otra aplicación de Codex al mismo tiempo. Importa las credenciales más recientes; si falla, vuelve a iniciar sesión.";
+"usage.sync.error.oauth_login_invalid" = "El servidor rechazó el token de actualización. Esto no confirma que haya caducado. Inicia sesión de nuevo o importa las credenciales más recientes.";
 "usage.sync.error.rate_limited" = "Se alcanzó el límite de velocidad. Inténtalo más tarde.";
 "usage.sync.error.network" = "Error de red. Verifica tu conexión.";
 "usage.sync.error.oauth_refresh_unavailable" = "Esta cuenta no tiene un token de actualización. Vuelve a iniciar sesión o reimpórtala.";

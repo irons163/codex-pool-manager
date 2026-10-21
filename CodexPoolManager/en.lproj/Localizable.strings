@@ -539,6 +539,9 @@
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "Authorization failed. Please check your API token.";
 "usage.sync.error.oauth_login_expired" = "Sign-in information expired. Please sign in again or re-import this account.";
+"usage.sync.error.oauth_login_revoked" = "The server revoked this sign-in credential; it did not expire normally. Sign in again or import the latest credentials.";
+"usage.sync.error.oauth_refresh_token_reused" = "The refresh token was already used, possibly by another Codex app refreshing at the same time. Import the latest credentials; sign in again if that fails.";
+"usage.sync.error.oauth_login_invalid" = "The server rejected the refresh token. This does not confirm expiration. Sign in again or import the latest credentials.";
 "usage.sync.error.rate_limited" = "Rate limit reached. Please try again later.";
 "usage.sync.error.network" = "Network error. Please check your connection.";
 "usage.sync.error.oauth_refresh_unavailable" = "This account has no refresh token. Please sign in again or re-import it.";

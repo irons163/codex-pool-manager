@@ -336,6 +336,9 @@
 "sync.failure.with_description_format" = "%@: %@";
 "usage.sync.error.unauthorized" = "認可に失敗しました。API token を確認してください。";
 "usage.sync.error.oauth_login_expired" = "ログイン情報の有効期限が切れました。もう一度ログインするか、このアカウントを再インポートしてください。";
+"usage.sync.error.oauth_login_revoked" = "このログイン認証情報は通常の期限切れではなく、サーバーにより失効されました。再ログインするか、最新の認証情報をインポートしてください。";
+"usage.sync.error.oauth_refresh_token_reused" = "更新トークンは使用済みです。別の Codex アプリが同時に更新した可能性があります。最新の認証情報をインポートし、解決しない場合は再ログインしてください。";
+"usage.sync.error.oauth_login_invalid" = "サーバーが更新トークンを拒否しました。有効期限切れとは断定できません。再ログインするか、最新の認証情報をインポートしてください。";
 "usage.sync.error.rate_limited" = "レート制限に達しました。しばらくしてから再試行してください。";
 "usage.sync.error.network" = "ネットワークエラーです。接続を確認してください。";
 "usage.sync.error.oauth_refresh_unavailable" = "このアカウントにはリフレッシュトークンがありません。再ログインするか再インポートしてください。";
