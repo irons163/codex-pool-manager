@@ -1,0 +1,26 @@
+# CodexPoolManager v1.0.24-rc.2
+
+Date de sortie : 2026-11-05
+
+## Nouvelles fonctionnalités
+
+- Ajout du mode de bascule « Ordre défini » : réorganisez les comptes dans la page Stratégie d'exécution et alternez dans cet ordre, en revenant au premier après le dernier.
+- Le seuil de bascule s'applique aussi à ce mode ; les comptes exclus de la synchronisation et les comptes Relay sont ignorés automatiquement.
+
+## Améliorations
+
+- Dans le tri par usage restant, les comptes expirés ou exclus de la synchronisation passent sous les comptes sains, tandis que le compte actif reste en premier.
+- Les comptes professionnels utilisent un badge violet pour les distinguer des comptes personnels.
+
+## Corrections
+
+- Distinction entre identifiants révoqués et autres erreurs de synchronisation, avec récupération automatique après rotation du jeton.
+- Correction de la vérification des mises à jour Sparkle : la clé publique EdDSA est intégrée et les archives de release sont signées.
+
+## Suppressions
+
+- Suppression de l'espace `OpenAI Reset Alert`, de ses notifications, de son état de surveillance et de ses réglages associés.
+
+## Remarques
+
+- Les versions créées avant l'intégration de la clé publique Sparkle doivent installer cette version manuellement une fois. Les mises à jour suivantes sont vérifiées automatiquement.
