@@ -51,10 +51,6 @@ Codex Pool Manager는 하나의 제어 패널에서 Codex/OpenAI OAuth 계정 �
 
 ![Widget 빈 상태 예시](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert (모의 데이터)
-
-![OpenAI Reset Alert (모의 데이터)](docs/images/openai-reset-alert.png)
-
 ## 핵심 기능
 
 ### 1) 계정 풀 관리
@@ -113,14 +109,6 @@ Codex Pool Manager는 하나의 제어 패널에서 Codex/OpenAI OAuth 계정 �
 - 계정 간 커버리지 공백 구간을 표시해 사용 불가 시간대 사전 확인
 - 계정별 추세선, 임계값 이벤트, 이상 징후 요약 제공
 - 분석 데이터를 JSON/CSV로 내보내기 가능
-
-### 9) OpenAI 리셋 모니터링
-
-- 유료 계정용 `OpenAI Reset Alert` 워크스페이스 제공
-- 주간 리셋과 5시간 리셋을 동시에 추적
-- 예상보다 이른 리셋을 감지(허용 오차 설정 가능)
-- 데스크톱 알림 및 이벤트 히스토리 제공
-- API 일시 불안정으로 인한 오탐 노이즈를 줄이기 위해 일일 알림 상한을 둡니다.
 
 ## 지능형 전환 동작 방식
 
@@ -243,13 +231,6 @@ Focus 모드에서는 지능형 자동 전환이 실행되지 않습니다.
 - 커버리지 갭 힌트로 계정 사용 계획 지원
 - 계정별 추세선 및 임계값/이상 이벤트
 - 분석 데이터 내보내기 (`Copy JSON`, `Export CSV`, `Export JSON`)
-
-### OpenAI Reset Alert
-
-- 유료 계정 리셋 목표 추적
-- 조기 리셋 허용 오차 설정
-- 조기 리셋 신호 요약/기록
-- 데스크톱 알림 및 이벤트 목록 관리
 
 ### Settings
 

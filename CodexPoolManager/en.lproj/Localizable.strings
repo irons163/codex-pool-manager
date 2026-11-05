@@ -279,8 +279,6 @@
 "schedule.plan.notification.body" = "%@: used %d%% / plan %d%% (over %d%%).";
 "workspace.usage_analytics.title" = "Usage Analytics";
 "workspace.usage_analytics.subtitle" = "Analyze tokens, cache, estimated costs, and quota trends.";
-"workspace.openai_reset_alert.title" = "OpenAI Reset Alert";
-"workspace.openai_reset_alert.subtitle" = "Track paid-account reset targets and alert when reset appears earlier than expected.";
 "workspace.settings.title" = "Settings";
 "workspace.settings.subtitle" = "Manage launch behavior, sync cadence, and language.";
 "workspace.capacity.title" = "Capacity";
@@ -418,26 +416,6 @@
 "schedule.events.five_hour" = "5h";
 "schedule.events.more_format" = "+%d more events";
 "schedule.row.range_format" = "%@ · %@ - %@";
-"special_reset.title" = "OpenAI Reset Alert";
-"special_reset.subtitle" = "Track paid-account reset windows and alert when a reset appears to happen before expected time.";
-"special_reset.enable_monitor" = "Enable watch";
-"special_reset.enable_notification" = "Desktop notifications";
-"special_reset.grace_minutes_format" = "Early-reset tolerance: %d min";
-"special_reset.badge" = "Removing soon";
-"special_reset.summary.paid_accounts" = "Paid Accounts";
-"special_reset.summary.last_checked" = "Last Checked";
-"special_reset.summary.detected" = "Detected";
-"special_reset.detected_title" = "Early Reset Signals";
-"special_reset.empty" = "No early-reset signals detected.";
-"special_reset.reset_baseline" = "Reset Baseline";
-"special_reset.clear_events" = "Clear Events";
-"special_reset.kind.weekly" = "Weekly";
-"special_reset.kind.five_hour" = "5-hour";
-"special_reset.records_title" = "Tracked Reset Targets";
-"special_reset.records_row_format" = "Weekly reset: %@ · 5-hour reset: %@";
-"special_reset.notification.title" = "Potential OpenAI-side Reset Detected";
-"special_reset.notification.body_format" = "%@ appears to have reset early in both windows.\nWeekly expected: %@\nWeekly observed: %@\n5-hour expected: %@\n5-hour observed: %@";
-"special_reset.event.message_format" = "%@\nWeekly expected: %@\nWeekly observed: %@\n5-hour expected: %@\n5-hour observed: %@\nDetected: %@";
 
 "overview.reset_all" = "Reset All Usage";
 "overview.reset_all_confirm" = "Confirm Reset All Usage";
@@ -599,7 +577,6 @@
 "debug_tools.metric.activities" = "Activities";
 "debug_tools.metric.analytics_records" = "Analytics Records";
 "debug_tools.metric.analytics_snapshots" = "Analytics Snapshots";
-"debug_tools.metric.reset_watch" = "Reset Watch Records/Events";
 "debug_tools.metric.local_oauth" = "Local OAuth Accounts";
 "debug_tools.metric.raw_json" = "Raw JSON Buffer";
 "debug_tools.metric.backup_json" = "Backup JSON Buffer";

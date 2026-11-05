@@ -51,10 +51,6 @@ Todas las capturas usan datos de prueba o no sensibles.
 
 ![Estado vacío del Widget](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert (datos de prueba)
-
-![OpenAI Reset Alert (datos de prueba)](docs/images/openai-reset-alert.png)
-
 ## Funciones clave
 
 ### 1) Gestión del pool de cuentas
@@ -113,14 +109,6 @@ Todas las capturas usan datos de prueba o no sensibles.
 - Vista de cobertura para detectar ventanas sin cobertura entre resets.
 - Líneas de tendencia por cuenta, eventos de umbral y resumen de anomalías.
 - Exportación de analítica en JSON/CSV.
-
-### 9) Monitoreo de reset de OpenAI
-
-- Workspace dedicado `OpenAI Reset Alert` para cuentas de pago.
-- Monitorea juntos reset semanal y reset de 5 horas.
-- Detecta reset anticipado (con tolerancia configurable).
-- Notificaciones desktop e historial de eventos.
-- Límite diario de notificaciones para reducir ruido por falsos positivos en periodos de inestabilidad de API.
 
 ## Cómo funciona el cambio inteligente
 
@@ -239,13 +227,6 @@ Si el callback del navegador no puede completarse dentro de la app:
 - detección de gaps de cobertura para planificar mejor
 - líneas por cuenta y eventos de umbral/anomalías
 - exportación de analítica (`Copy JSON`, `Export CSV`, `Export JSON`)
-
-### OpenAI Reset Alert
-
-- tracking de objetivos de reset en cuentas de pago
-- configuración de tolerancia de early-reset
-- resumen y registros de señales detectadas
-- alertas desktop y gestión de eventos
 
 ### Settings
 

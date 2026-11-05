@@ -2011,16 +2011,6 @@ struct ViewSmokeCoverageTests {
 
         let whatsNew = PoolDashboardView.debugWhatsNewOverlayView()
         renderInHostingView(whatsNew, size: CGSize(width: 900, height: 760))
-
-        let specialReset = PoolDashboardView.debugSpecialResetWatchPanelView(store: store)
-        renderInHostingView(specialReset, size: CGSize(width: 1200, height: 760))
-    }
-
-    @Test
-    @MainActor
-    func populatedSpecialResetWatchPanelRendersRecordsAndLatestEvent() {
-        let specialReset = PoolDashboardView.debugPopulatedSpecialResetWatchPanelView()
-        renderInHostingView(specialReset, size: CGSize(width: 1200, height: 900))
     }
 
     @Test

@@ -51,10 +51,6 @@ Codex Pool Manager は、Codex/OpenAI OAuth アカウントのプールを 1 つ
 
 ![Widget（空状態サンプル）](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert（モックデータ）
-
-![OpenAI Reset Alert（モックデータ）](docs/images/openai-reset-alert.png)
-
 ## 主要機能
 
 ### 1) アカウントプール管理
@@ -113,14 +109,6 @@ Codex Pool Manager は、Codex/OpenAI OAuth アカウントのプールを 1 つ
 - アカウント間のカバレッジ不足時間帯を検出して、空白リスクを把握。
 - アカウント別のトレンド線、閾値イベント、異常サマリーを表示。
 - 分析データを JSON/CSV でエクスポート可能。
-
-### 9) OpenAI リセット監視
-
-- 有料アカウント向け `OpenAI Reset Alert` ワークスペースを提供。
-- 週次リセットと 5 時間リセットを同時監視。
-- 想定より早いリセットを検出（設定可能な許容値あり）。
-- デスクトップ通知とイベント履歴を提供。
-- API の一時的な揺れによる誤検知を抑えるため、通知は 1 日あたりの上限があります。
 
 ## インテリジェント切り替えの仕組み
 
@@ -243,13 +231,6 @@ Focus ではインテリジェント自動切り替えは実行されません�
 - カバレッジギャップの検出で運用計画を支援
 - アカウント別トレンド線と閾値/異常イベント
 - 分析データのエクスポート（`Copy JSON`、`Export CSV`、`Export JSON`）
-
-### OpenAI Reset Alert
-
-- 有料アカウントのリセット目標監視
-- 早期リセット許容値の設定
-- 早期リセットシグナルの要約/履歴
-- デスクトップ通知とイベント管理
 
 ### Settings
 

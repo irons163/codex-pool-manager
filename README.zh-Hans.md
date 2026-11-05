@@ -51,10 +51,6 @@ Codex Pool Manager 是一款 macOS 工具，让你在同一个控制面板里管
 
 ![Widget 空状态示例](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert（模拟数据）
-
-![OpenAI Reset Alert（模拟数据）](docs/images/openai-reset-alert.png)
-
 ## 主要功能
 
 ### 1) 账号池管理
@@ -113,14 +109,6 @@ Codex Pool Manager 是一款 macOS 工具，让你在同一个控制面板里管
 - 显示覆盖/未覆盖时段，提前发现可能无账号可用的空档。
 - 提供单账号趋势线、阈值事件与异常摘要。
 - 支持导出分析数据（JSON/CSV）用于后续分析。
-
-### 9) OpenAI 重置监控
-
-- 提供独立 `OpenAI Reset Alert` 工作区监控付费账号重置。
-- 同时监控周重置与 5 小时重置目标。
-- 当重置时间早于预期（在容差范围内）时标记为提前重置信号。
-- 支持桌面通知与事件历史记录。
-- 提供每日通知上限，降低 API 短暂异常时的误报噪音。
 
 ## 智能切换工作原理
 
@@ -247,13 +235,6 @@ Focus 模式不会进行智能自动切换。
 - 覆盖缺口提示，便于规划账号使用
 - 单账号趋势线与阈值/异常事件
 - 分析数据导出（`Copy JSON`、`Export CSV`、`Export JSON`）
-
-### OpenAI Reset Alert
-
-- 付费账号重置目标追踪
-- 提前重置容差配置
-- 提前重置信号摘要与记录
-- 桌面提醒与事件列表管理
 
 ### Settings
 

@@ -51,10 +51,6 @@ Toutes les captures ci-dessous utilisent des données de test ou non sensibles.
 
 ![État vide du Widget](docs/images/widget-empty-state.png)
 
-### OpenAI Reset Alert (données de test)
-
-![OpenAI Reset Alert (données de test)](docs/images/openai-reset-alert.png)
-
 ## Fonctionnalités clés
 
 ### 1) Gestion du pool de comptes
@@ -113,14 +109,6 @@ Toutes les captures ci-dessous utilisent des données de test ou non sensibles.
 - Vue de couverture pour repérer les créneaux non couverts entre resets.
 - Courbes par compte, événements de seuil et résumés d'anomalies.
 - Export des données analytiques en JSON/CSV.
-
-### 9) Monitoring OpenAI reset
-
-- Espace dédié `OpenAI Reset Alert` pour les comptes payants.
-- Surveillance conjointe des resets hebdo et 5h.
-- Détection des resets plus tôt que prévu (tolérance configurable).
-- Notifications desktop et historique d'événements.
-- Limite de notifications quotidienne pour réduire le bruit en cas d'instabilité API.
 
 ## Fonctionnement du switch intelligent
 
@@ -241,13 +229,6 @@ Si le callback navigateur ne peut pas être finalisé in-app :
 - détection des gaps de couverture pour planifier l'utilisation
 - courbes par compte + événements de seuil/anomalies
 - export analytique (`Copy JSON`, `Export CSV`, `Export JSON`)
-
-### OpenAI Reset Alert
-
-- tracking des cibles reset des comptes payants
-- configuration de la tolérance d'early-reset
-- résumé + enregistrements des signaux détectés
-- alertes desktop + gestion des événements
 
 ### Settings
 
