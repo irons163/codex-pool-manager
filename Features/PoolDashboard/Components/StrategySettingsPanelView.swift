@@ -3,11 +3,13 @@ import SwiftUI
 struct StrategySettingsPanelView: View {
     let mode: SwitchMode
     let accounts: [AgentAccount]
+    var orderedAccounts: [AgentAccount] = []
     let activeAccount: AgentAccount?
     let intelligentCandidateName: String?
     let canIntelligentSwitch: Bool
     let intelligentCooldownRemaining: Int
     let hasLowUsageWarning: Bool
+    var moveOrderedAccount: ((UUID, Int) -> Void)? = nil
 
     let modeBinding: Binding<SwitchMode>
     let manualSelectionBinding: Binding<UUID>
@@ -16,7 +18,7 @@ struct StrategySettingsPanelView: View {
     let lowUsageAlertThresholdBinding: Binding<Double>
     let lowUsageAlertsEnabledBinding: Binding<Bool>
     private var visibleModes: [SwitchMode] {
-        [.intelligent, .focus]
+        [.intelligent, .ordered, .focus]
     }
 
     var body: some View {
@@ -57,10 +59,14 @@ struct StrategySettingsPanelView: View {
                 .dashboardInfoCard()
                 .opacity(lowUsageAlertsEnabledBinding.wrappedValue ? 1 : 0.65)
 
-                if mode == .intelligent {
+                if mode == .intelligent || mode == .ordered {
                     VStack(alignment: .leading, spacing: PoolDashboardTheme.compactFieldSpacing) {
-                        Text(L10n.text("strategy.low_usage_threshold_format", Int(switchThresholdBinding.wrappedValue * 100)))
-                            .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        Text(
+                            mode == .ordered
+                                ? L10n.text("strategy.order.threshold_format", Int(switchThresholdBinding.wrappedValue * 100))
+                                : L10n.text("strategy.low_usage_threshold_format", Int(switchThresholdBinding.wrappedValue * 100))
+                        )
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
                         Slider(value: switchThresholdBinding, in: 0...0.5, step: 0.01)
                             .tint(PoolDashboardTheme.glowA)
                     }
@@ -93,6 +99,71 @@ struct StrategySettingsPanelView: View {
         .sectionCardStyle()
         .tint(PoolDashboardTheme.glowA)
 
+        if mode == .ordered {
+            orderedAccountsSection
+        }
+    }
+
+    private var orderedAccountsSection: some View {
+        GroupBox(L10n.text("strategy.order.title")) {
+            VStack(alignment: .leading, spacing: PoolDashboardTheme.strategyPanelSpacing) {
+                Text(L10n.text("strategy.order.hint"))
+                    .font(.footnote)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+
+                if orderedAccounts.isEmpty {
+                    Text(L10n.text("strategy.order.empty"))
+                        .foregroundStyle(PoolDashboardTheme.textSecondary)
+                        .dashboardInfoCard()
+                } else {
+                    ForEach(Array(orderedAccounts.enumerated()), id: \.element.id) { index, account in
+                        orderedAccountRow(index: index, account: account)
+                    }
+                }
+            }
+        }
+        .sectionCardStyle()
+        .tint(PoolDashboardTheme.glowA)
+    }
+
+    private func orderedAccountRow(index: Int, account: AgentAccount) -> some View {
+        HStack(spacing: 8) {
+            Text("\(index + 1).")
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.name)
+                    .foregroundStyle(PoolDashboardTheme.textPrimary)
+                if account.isUsageSyncExcluded {
+                    Text(L10n.text("strategy.order.excluded"))
+                        .font(.caption)
+                        .foregroundStyle(PoolDashboardTheme.textMuted)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                moveOrderedAccount?(account.id, -1)
+            } label: {
+                Image(systemName: "arrow.up")
+            }
+            .buttonStyle(.plain)
+            .disabled(index == 0)
+            .help(L10n.text("strategy.order.move_up"))
+
+            Button {
+                moveOrderedAccount?(account.id, 1)
+            } label: {
+                Image(systemName: "arrow.down")
+            }
+            .buttonStyle(.plain)
+            .disabled(index == orderedAccounts.count - 1)
+            .help(L10n.text("strategy.order.move_down"))
+        }
+        .dashboardInfoCard()
     }
 
     @ViewBuilder
@@ -123,6 +194,8 @@ struct StrategySettingsPanelView: View {
         switch mode {
         case .intelligent:
             return L10n.text("mode.intelligent")
+        case .ordered:
+            return L10n.text("mode.ordered")
         case .manual:
             return L10n.text("mode.manual")
         case .focus:

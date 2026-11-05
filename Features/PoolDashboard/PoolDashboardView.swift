@@ -1539,11 +1539,15 @@ struct PoolDashboardView: View {
         StrategySettingsPanelView(
             mode: state.mode == .manual ? .intelligent : state.mode,
             accounts: state.accounts,
+            orderedAccounts: state.orderedSwitchAccounts,
             activeAccount: state.activeAccount,
             intelligentCandidateName: intelligentCandidateName,
             canIntelligentSwitch: state.canIntelligentSwitch(),
             intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
             hasLowUsageWarning: state.hasLowUsageWarning,
+            moveOrderedAccount: { accountID, offset in
+                state.moveSwitchOrderAccount(accountID, offset: offset)
+            },
             modeBinding: strategyBindings.mode,
             manualSelectionBinding: strategyBindings.manualSelection,
             minSwitchIntervalBinding: strategyBindings.minSwitchInterval,

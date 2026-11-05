@@ -12,6 +12,7 @@
 "mode.intelligent" = "지능형 전환";
 "mode.manual" = "수동 전환";
 "mode.focus" = "집중 모드";
+"mode.ordered" = "지정 순서";
 
 "account_usage.title" = "계정 사용량";
 "sort.title" = "정렬";
@@ -132,6 +133,13 @@
 "strategy.subtitle" = "런타임이 계정을 선택하고 순환하는 방식을 제어합니다.";
 "strategy.switch_mode" = "전환 모드";
 "strategy.parameters" = "전략 파라미터";
+"strategy.order.title" = "전환 순서";
+"strategy.order.hint" = "아래 순서대로 전환하며 마지막 다음에는 처음으로 돌아갑니다.";
+"strategy.order.empty" = "정렬할 사용량 동기화 계정이 없습니다.";
+"strategy.order.excluded" = "사용량 동기화 제외됨(전환 시 건너뜀)";
+"strategy.order.move_up" = "위로";
+"strategy.order.move_down" = "아래로";
+"strategy.order.threshold_format" = "전환 임계값: %d%%";
 "strategy.general_settings" = "일반 설정";
 "strategy.low_usage_threshold_format" = "저사용량 경고 임계값: %d%%";
 "strategy.switch_threshold_format" = "스마트 전환 낮은 잔여 사용량 임계값: %d%%";

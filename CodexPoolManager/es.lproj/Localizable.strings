@@ -12,6 +12,7 @@
 "mode.intelligent" = "Inteligente";
 "mode.manual" = "Manual";
 "mode.focus" = "Enfoque";
+"mode.ordered" = "Orden definido";
 
 "account_usage.title" = "Uso de cuentas";
 "sort.title" = "Ordenar";
@@ -132,6 +133,13 @@
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
 "strategy.switch_mode" = "Modo de cambio";
 "strategy.parameters" = "Parámetros de estrategia";
+"strategy.order.title" = "Orden de cambio";
+"strategy.order.hint" = "Las cuentas cambian en el orden siguiente y vuelven a la primera después de la última.";
+"strategy.order.empty" = "No hay cuentas sincronizadas para ordenar.";
+"strategy.order.excluded" = "Sincronización excluida; se omite al cambiar";
+"strategy.order.move_up" = "Subir";
+"strategy.order.move_down" = "Bajar";
+"strategy.order.threshold_format" = "Umbral de cambio: %d%%";
 "strategy.general_settings" = "Configuración general";
 "strategy.low_usage_threshold_format" = "Umbral de alerta de bajo uso: %d%%";
 "strategy.switch_threshold_format" = "Umbral inteligente de bajo uso restante: %d%%";

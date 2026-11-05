@@ -265,6 +265,65 @@ struct ViewSmokeCoverageTests {
 
     @Test
     @MainActor
+    func strategySettingsPanelViewBodyRendersOrderedModeWithReorderControls() {
+        let accounts = [
+            makeSmokeAccount(name: "first@example.com"),
+            makeSmokeAccount(name: "second@example.com")
+        ]
+        let modeBox = BindingBox<SwitchMode>(.ordered)
+        let manualSelectionBox = BindingBox<UUID>(accounts[0].id)
+        let minIntervalBox = BindingBox<Double>(60)
+        let switchThresholdBox = BindingBox<Double>(0.2)
+        let lowUsageThresholdBox = BindingBox<Double>(0.15)
+        let lowUsageAlertsEnabledBox = BindingBox(true)
+        var movedAccountID: UUID?
+        var movedOffset: Int?
+
+        let ordered = StrategySettingsPanelView(
+            mode: .ordered,
+            accounts: accounts,
+            orderedAccounts: accounts,
+            activeAccount: accounts[0],
+            intelligentCandidateName: nil,
+            canIntelligentSwitch: false,
+            intelligentCooldownRemaining: 0,
+            hasLowUsageWarning: false,
+            moveOrderedAccount: { accountID, offset in
+                movedAccountID = accountID
+                movedOffset = offset
+            },
+            modeBinding: binding(modeBox),
+            manualSelectionBinding: binding(manualSelectionBox),
+            minSwitchIntervalBinding: binding(minIntervalBox),
+            switchThresholdBinding: binding(switchThresholdBox),
+            lowUsageAlertThresholdBinding: binding(lowUsageThresholdBox),
+            lowUsageAlertsEnabledBinding: binding(lowUsageAlertsEnabledBox)
+        )
+        let _ = ordered.body
+        #expect(movedAccountID == nil)
+        #expect(movedOffset == nil)
+
+        let empty = StrategySettingsPanelView(
+            mode: .ordered,
+            accounts: [],
+            orderedAccounts: [],
+            activeAccount: nil,
+            intelligentCandidateName: nil,
+            canIntelligentSwitch: false,
+            intelligentCooldownRemaining: 0,
+            hasLowUsageWarning: false,
+            modeBinding: binding(modeBox),
+            manualSelectionBinding: binding(manualSelectionBox),
+            minSwitchIntervalBinding: binding(minIntervalBox),
+            switchThresholdBinding: binding(switchThresholdBox),
+            lowUsageAlertThresholdBinding: binding(lowUsageThresholdBox),
+            lowUsageAlertsEnabledBinding: binding(lowUsageAlertsEnabledBox)
+        )
+        let _ = empty.body
+    }
+
+    @Test
+    @MainActor
     func workspaceSettingsPanelViewBodyRendersAndNormalizesBindings() {
         let switchWithoutLaunchBox = BindingBox(false)
         let launchTargetBox = BindingBox("invalid-launch-target")

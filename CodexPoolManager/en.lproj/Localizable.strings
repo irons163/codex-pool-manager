@@ -12,6 +12,7 @@
 "mode.intelligent" = "Intelligent";
 "mode.manual" = "Manual";
 "mode.focus" = "Focus";
+"mode.ordered" = "Ordered";
 
 "account_usage.title" = "Account Usage";
 "sort.title" = "Sort";
@@ -141,6 +142,13 @@
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
 "strategy.switch_mode" = "Switch Mode";
 "strategy.parameters" = "Strategy Parameters";
+"strategy.order.title" = "Switch Order";
+"strategy.order.hint" = "Accounts switch in the order below and wrap back to the first after the last.";
+"strategy.order.empty" = "No usage-synced accounts to order.";
+"strategy.order.excluded" = "Usage sync excluded; skipped when switching";
+"strategy.order.move_up" = "Move up";
+"strategy.order.move_down" = "Move down";
+"strategy.order.threshold_format" = "Switch threshold: %d%%";
 "strategy.general_settings" = "General Settings";
 "strategy.low_usage_threshold_format" = "Intelligent switch threshold: %d%%";
 "strategy.low_usage_alert_enabled" = "Low remaining usage alert";

@@ -43,7 +43,7 @@ struct ActiveAccountPanelView: View {
                         )
                     }
 
-                    if (mode == .focus || mode == .intelligent) && hasLowUsageWarning {
+                    if (mode == .focus || mode == .intelligent || mode == .ordered) && hasLowUsageWarning {
                         PanelStatusCalloutView(
                             message: L10n.text("active_account.low_usage.message_format", Int(lowUsageAlertThresholdRatio * 100)),
                             title: L10n.text("active_account.low_usage.title"),

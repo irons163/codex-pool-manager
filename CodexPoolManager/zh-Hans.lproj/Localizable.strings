@@ -12,6 +12,7 @@
 "mode.intelligent" = "智能切换";
 "mode.manual" = "手动切换";
 "mode.focus" = "专注模式";
+"mode.ordered" = "指定顺序";
 
 "account_usage.title" = "账号用量";
 "sort.title" = "排序";
@@ -141,6 +142,13 @@
 "strategy.subtitle" = "控制运行时如何选择并轮换账号。";
 "strategy.switch_mode" = "切换模式";
 "strategy.parameters" = "策略参数";
+"strategy.order.title" = "切换顺序";
+"strategy.order.hint" = "按下列顺序循环切换账号，最后一个之后回到第一个。";
+"strategy.order.empty" = "目前没有可排序的用量同步账号。";
+"strategy.order.excluded" = "已排除用量同步，切换时会跳过";
+"strategy.order.move_up" = "上移";
+"strategy.order.move_down" = "下移";
+"strategy.order.threshold_format" = "切换阈值：%d%%";
 "strategy.general_settings" = "一般设置";
 "strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";
 "strategy.low_usage_alert_enabled" = "低剩余用量提醒";

@@ -311,6 +311,8 @@ enum MenuBarDashboardPresenter {
             return L10n.text("mode.manual")
         case .intelligent:
             return L10n.text("mode.intelligent")
+        case .ordered:
+            return L10n.text("mode.ordered")
         case .focus:
             return L10n.text("mode.focus")
         }

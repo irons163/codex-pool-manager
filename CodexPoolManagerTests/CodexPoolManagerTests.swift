@@ -2532,6 +2532,111 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func orderedModeSwitchesThroughConfiguredOrderAndWraps() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let c = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 100, quota: 1000),
+                AgentAccount(id: c, name: "C", usedUnits: 100, quota: 1000)
+            ],
+            mode: .ordered,
+            minSwitchInterval: 0,
+            lowUsageThresholdRatio: 0.15
+        )
+
+        let start = Date(timeIntervalSince1970: 0)
+        state.evaluate(now: start)
+        #expect(state.activeAccount?.id == a)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, c])
+
+        state.recordUsage(units: 750, now: start.addingTimeInterval(10))
+        #expect(state.activeAccount?.id == b)
+
+        state.recordUsage(units: 750, now: start.addingTimeInterval(20))
+        #expect(state.activeAccount?.id == c)
+
+        state.updateAccount(a, usedUnits: 0, shouldEvaluate: false)
+        state.recordUsage(units: 750, now: start.addingTimeInterval(30))
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
+    func orderedModeSkipsExcludedAndRelayAccounts() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let relay = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let d = UUID(uuidString: "00000000-0000-0000-0000-0000000000D4")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 100, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 0, quota: 1000, isUsageSyncExcluded: true),
+                AgentAccount(
+                    id: relay,
+                    name: "Relay",
+                    usedUnits: 0,
+                    quota: 1000,
+                    apiToken: "relay-key",
+                    credentialType: .relayAPIKey
+                ),
+                AgentAccount(id: d, name: "D", usedUnits: 0, quota: 1000)
+            ],
+            mode: .ordered,
+            minSwitchInterval: 0,
+            lowUsageThresholdRatio: 0.15
+        )
+
+        let start = Date(timeIntervalSince1970: 0)
+        state.evaluate(now: start)
+        #expect(state.activeAccount?.id == a)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, d])
+
+        state.recordUsage(units: 750, now: start.addingTimeInterval(10))
+        #expect(state.activeAccount?.id == d)
+
+        state.setUsageSyncExclusion(for: d, reason: "expired", now: start.addingTimeInterval(20))
+        #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
+    func orderedModePersistsManualOrderAndAppendsNewAccounts() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let c = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 0, quota: 1000),
+                AgentAccount(id: c, name: "C", usedUnits: 0, quota: 1000)
+            ],
+            mode: .ordered
+        )
+
+        state.moveSwitchOrderAccount(c, offset: -1)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, c, b])
+
+        let restored = AccountPoolState(snapshot: state.snapshot)
+        #expect(restored.orderedSwitchAccounts.map(\.id) == [a, c, b])
+
+        let newID = state.addAccount(name: "New", quota: 1000)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, c, b, newID])
+
+        state.removeAccount(c)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, newID])
+    }
+
+    @Test
+    func lowUsageAlertPolicyTreatsOrderedModeAsManaged() {
+        var policy = LowUsageAlertPolicy()
+        let first = policy.shouldTriggerAlert(mode: .ordered, hasLowUsageWarning: true)
+        let second = policy.shouldTriggerAlert(mode: .ordered, hasLowUsageWarning: true)
+        #expect(first)
+        #expect(!second)
+    }
+
+    @Test
     func focusLockIsActiveAndMatchesActiveAccountInFocusMode() {
         let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
@@ -5643,6 +5748,24 @@ extension CodexPoolManagerTests {
         #expect(state.lowUsageAlertThresholdRatio == 0.25)
         #expect(!state.lowUsageAlertsEnabled)
         #expect(state.minUsageRatioDeltaToSwitch == 0.1)
+    }
+
+    @Test
+    func poolDashboardStrategyBindingAdapterPreservesOrderedMode() {
+        var state = AccountPoolState(
+            accounts: [AgentAccount(id: UUID(), name: "A", usedUnits: 0, quota: 100)],
+            mode: .intelligent
+        )
+        let binding = Binding<AccountPoolState>(
+            get: { state },
+            set: { state = $0 }
+        )
+        let adapter = PoolDashboardStrategyBindingAdapter(state: binding)
+
+        adapter.mode.wrappedValue = .ordered
+
+        #expect(state.mode == .ordered)
+        #expect(adapter.mode.wrappedValue == .ordered)
     }
 
     @Test

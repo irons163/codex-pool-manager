@@ -12,6 +12,7 @@
 "mode.intelligent" = "インテリジェント";
 "mode.manual" = "手動";
 "mode.focus" = "フォーカス";
+"mode.ordered" = "指定順序";
 
 "account_usage.title" = "アカウント使用量";
 "sort.title" = "並び替え";
@@ -132,6 +133,13 @@
 "strategy.subtitle" = "Control how runtime selects and rotates accounts.";
 "strategy.switch_mode" = "切替モード";
 "strategy.parameters" = "戦略パラメータ";
+"strategy.order.title" = "切り替え順序";
+"strategy.order.hint" = "以下の順序で切り替え、最後の次は先頭に戻ります。";
+"strategy.order.empty" = "並べ替え可能な使用量同期アカウントがありません。";
+"strategy.order.excluded" = "使用量同期から除外中（切り替え時にスキップ）";
+"strategy.order.move_up" = "上へ";
+"strategy.order.move_down" = "下へ";
+"strategy.order.threshold_format" = "切り替えしきい値: %d%%";
 "strategy.general_settings" = "一般設定";
 "strategy.low_usage_threshold_format" = "低使用量アラートしきい値: %d%%";
 "strategy.switch_threshold_format" = "スマート切り替え低残量しきい値: %d%%";
