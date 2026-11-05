@@ -936,7 +936,7 @@ struct AccountUsagePanelView: View {
                         .padding(.vertical, 3)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.orange.opacity(0.28))
+                                .fill(paidBadgeColor(for: account).opacity(0.28))
                         )
                 }
 
@@ -1112,11 +1112,11 @@ struct AccountUsagePanelView: View {
                         .padding(.vertical, 5)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.orange.opacity(0.34))
+                                .fill(paidBadgeColor(for: account).opacity(0.34))
                         )
                         .overlay(
                             Capsule(style: .continuous)
-                                .stroke(Color.orange.opacity(0.6), lineWidth: 0.8)
+                                .stroke(paidBadgeColor(for: account).opacity(0.6), lineWidth: 0.8)
                         )
                 }
 
@@ -1180,6 +1180,10 @@ struct AccountUsagePanelView: View {
 
     private func isPaidAccount(_ account: AgentAccount) -> Bool {
         account.isPaid
+    }
+
+    private func paidBadgeColor(for account: AgentAccount) -> Color {
+        account.isBusinessAccount ? .purple : .orange
     }
 
     private static func accountsWithAPIKeyLast(_ accounts: [AgentAccount]) -> [AgentAccount] {
