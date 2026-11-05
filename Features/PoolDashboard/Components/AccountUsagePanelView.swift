@@ -785,6 +785,10 @@ struct AccountUsagePanelView: View {
             reordered = Self.accountsWithAPIKeyLast(reordered)
         }
 
+        if sortMode == .remainingHigh {
+            reordered = reordered.stablePartitioned { !$0.isUsageSyncExcluded }
+        }
+
         if persistedActiveAccountFirst,
            let activeIndex = reordered.firstIndex(where: isCurrentAccount) {
             let activeAccount = reordered.remove(at: activeIndex)
@@ -1515,6 +1519,7 @@ struct AccountUsagePanelStateDebugProbe: Equatable {
     let sortTitles: [String]
     let sortedAccountNamesByMode: [String: [String]]
     let prioritySortedAccountNames: [String]
+    let remainingHighPrioritySortedAccountNames: [String]
     let savedAccountName: String
     let canceledDraftFallbackName: String
     let requestedDeleteGroupID: String?
@@ -1651,6 +1656,13 @@ extension AccountUsagePanelView {
             apiKeyLast: true
         )
 
+        let remainingHighPrioritySortedAccountNames = sortedNames(
+            mode: .remainingHigh,
+            activeFirst: true,
+            paidFirst: true,
+            apiKeyLast: true
+        )
+
         let editableAccount = accounts.first
         if let editableAccount {
             var editView = makeView()
@@ -1683,6 +1695,7 @@ extension AccountUsagePanelView {
             sortTitles: SortMode.allCases.map(\.title),
             sortedAccountNamesByMode: sortedAccountNamesByMode,
             prioritySortedAccountNames: prioritySortedAccountNames,
+            remainingHighPrioritySortedAccountNames: remainingHighPrioritySortedAccountNames,
             savedAccountName: savedAccountName,
             canceledDraftFallbackName: canceledDraftFallbackName,
             requestedDeleteGroupID: requestedDeleteGroupID

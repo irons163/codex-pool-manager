@@ -1007,9 +1007,64 @@ struct ViewSmokeCoverageTests {
         #expect(stateProbe.sortedAccountNamesByMode["remainingHigh"]?.last == "a-excluded@example.com")
         #expect(stateProbe.prioritySortedAccountNames.first == "active@example.com")
         #expect(stateProbe.prioritySortedAccountNames.last == "relay@example.com")
+        #expect(stateProbe.remainingHighPrioritySortedAccountNames == [
+            "active@example.com",
+            "z-low@example.com",
+            "relay@example.com",
+            "a-excluded@example.com"
+        ])
         #expect(stateProbe.savedAccountName == "renamed@example.com")
         #expect(stateProbe.canceledDraftFallbackName == "active@example.com")
         #expect(stateProbe.requestedDeleteGroupID == "group:Ops")
+    }
+
+    @Test
+    @MainActor
+    func remainingHighSortSinksExpiredPaidAccountsBelowHealthyFreeAccounts() {
+        let baseDate = Date(timeIntervalSince1970: 1_760_000_000)
+        func makeAccount(
+            _ idSuffix: Int,
+            name: String,
+            usedUnits: Int,
+            isPaid: Bool,
+            isExcluded: Bool = false,
+            credentialType: AgentAccountCredentialType = .chatGPTOAuth
+        ) -> AgentAccount {
+            AgentAccount(
+                id: UUID(uuidString: String(format: "bbbbbbbb-bbbb-bbbb-bbbb-%012d", idSuffix))!,
+                createdAt: baseDate.addingTimeInterval(Double(idSuffix)),
+                name: name,
+                groupName: "Ops",
+                usedUnits: usedUnits,
+                quota: 100,
+                apiToken: "token-\(idSuffix)",
+                credentialType: credentialType,
+                email: name,
+                chatGPTAccountID: credentialType == .chatGPTOAuth ? "acct-\(idSuffix)" : nil,
+                isPaid: isPaid,
+                isUsageSyncExcluded: isExcluded
+            )
+        }
+
+        let active = makeAccount(1, name: "active@example.com", usedUnits: 0, isPaid: true)
+        let healthyPaid = makeAccount(2, name: "healthy-paid@example.com", usedUnits: 20, isPaid: true)
+        let expiredPaid = makeAccount(3, name: "expired-paid@example.com", usedUnits: 100, isPaid: true, isExcluded: true)
+        let healthyFree = makeAccount(4, name: "healthy-free@example.com", usedUnits: 10, isPaid: false)
+        let relay = makeAccount(5, name: "relay@example.com", usedUnits: 0, isPaid: false, credentialType: .relayAPIKey)
+
+        let stateProbe = AccountUsagePanelView.debugStateMutationProbe(
+            accounts: [active, healthyPaid, expiredPaid, healthyFree, relay],
+            selectedGroupName: "Ops",
+            activeAccountID: active.id
+        )
+
+        #expect(stateProbe.remainingHighPrioritySortedAccountNames == [
+            "active@example.com",
+            "healthy-paid@example.com",
+            "healthy-free@example.com",
+            "relay@example.com",
+            "expired-paid@example.com"
+        ])
     }
 
     @Test
