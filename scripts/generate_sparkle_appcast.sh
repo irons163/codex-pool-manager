@@ -79,14 +79,17 @@ sanitize_release_notes() {
 }
 
 xml_escape() {
-  local value="$1"
+  # sed keeps replacement ampersands literal on both macOS Bash and newer Bash.
+  printf '%s' "$1" | sed \
+    -e 's/&/\&amp;/g' \
+    -e 's/</\&lt;/g' \
+    -e 's/>/\&gt;/g' \
+    -e 's/"/\&quot;/g'
+}
 
-  value="${value//&/&amp;}"
-  value="${value//</&lt;}"
-  value="${value//>/&gt;}"
-  value="${value//\"/&quot;}"
-
-  printf '%s' "$value"
+cdata_escape() {
+  # Split a closing delimiter across adjacent CDATA sections without losing text.
+  printf '%s' "$1" | sed 's/]]>/]]]]><![CDATA[>/g'
 }
 
 localized_release_notes_links_xml() {
@@ -156,21 +159,21 @@ generate_feed() {
      xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
      xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
-    <title>${APP_NAME} Updates (${arch_label})</title>
+    <title>$(xml_escape "$APP_NAME") Updates (${arch_label})</title>
     <link>https://github.com/irons163/codex-pool-manager/releases</link>
-    <description>Latest ${APP_NAME} updates for ${arch_label}</description>
+    <description>Latest $(xml_escape "$APP_NAME") updates for ${arch_label}</description>
     <language>en</language>
     <item>
-      <title>${RELEASE_NAME}</title>
+      <title>$(xml_escape "$RELEASE_NAME")</title>
       <pubDate>${PUB_DATE}</pubDate>
-      <description sparkle:format="plain-text"><![CDATA[${RELEASE_NOTES_SANITIZED}]]></description>
+      <description sparkle:format="plain-text"><![CDATA[$(cdata_escape "$RELEASE_NOTES_SANITIZED")]]></description>
 ${RELEASE_NOTES_LINKS_XML}
       <enclosure
-        url="${url}"
-        sparkle:version="${BUILD_VERSION}"
-        sparkle:shortVersionString="${SHORT_VERSION}"
+        url="$(xml_escape "$url")"
+        sparkle:version="$(xml_escape "$BUILD_VERSION")"
+        sparkle:shortVersionString="$(xml_escape "$SHORT_VERSION")"
         type="application/x-apple-diskimage"
-        length="${size}" />
+        length="$(xml_escape "$size")" />
     </item>
   </channel>
 </rss>
