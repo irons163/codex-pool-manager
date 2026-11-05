@@ -58,6 +58,9 @@
 "account.current_badge" = "Actuel";
 "account.paid_badge" = "Payant";
 "account.business_badge" = "Entreprise";
+"account.free_badge" = "Gratuit";
+"account.personal_workspace" = "Personnel";
+"account.organization_workspace" = "Organisation";
 "account.weekly_usage_percent_format" = "Usage hebdomadaire : %d%%";
 "account.weekly_usage_units_format" = "Usage hebdomadaire : %d / %d";
 "account.weekly_resets_format" = "Réinitialisation : %@";

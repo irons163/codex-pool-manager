@@ -62,6 +62,9 @@
 "account.current_badge" = "当前";
 "account.paid_badge" = "付费";
 "account.business_badge" = "企业";
+"account.free_badge" = "免费";
+"account.personal_workspace" = "个人";
+"account.organization_workspace" = "组织";
 "account.weekly_usage_percent_format" = "周用量：%d%%";
 "account.weekly_usage_units_format" = "周用量：%d / %d";
 "account.weekly_resets_format" = "重置：%@";

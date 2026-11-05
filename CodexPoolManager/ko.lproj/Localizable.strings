@@ -58,6 +58,9 @@
 "account.current_badge" = "현재";
 "account.paid_badge" = "유료";
 "account.business_badge" = "기업";
+"account.free_badge" = "무료";
+"account.personal_workspace" = "개인";
+"account.organization_workspace" = "조직";
 "account.weekly_usage_percent_format" = "주간 사용량: %d%%";
 "account.weekly_usage_units_format" = "주간 사용량: %d / %d";
 "account.weekly_resets_format" = "리셋: %@";

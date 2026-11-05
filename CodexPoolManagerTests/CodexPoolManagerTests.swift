@@ -2581,7 +2581,7 @@ struct CodexPoolManagerTests {
                     apiToken: "relay-key",
                     credentialType: .relayAPIKey
                 ),
-                AgentAccount(id: d, name: "D", usedUnits: 0, quota: 1000)
+                AgentAccount(id: d, name: "D", usedUnits: 200, quota: 1000)
             ],
             mode: .ordered,
             minSwitchInterval: 0,
@@ -2591,13 +2591,54 @@ struct CodexPoolManagerTests {
         let start = Date(timeIntervalSince1970: 0)
         state.evaluate(now: start)
         #expect(state.activeAccount?.id == a)
-        #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, d])
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, d, b])
 
         state.recordUsage(units: 750, now: start.addingTimeInterval(10))
         #expect(state.activeAccount?.id == d)
 
         state.setUsageSyncExclusion(for: d, reason: "expired", now: start.addingTimeInterval(20))
         #expect(state.activeAccount?.id == a)
+    }
+
+    @Test
+    func orderedModeSeedsRecommendedOrderAndMigratesLegacySnapshots() {
+        let active = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let paidHigh = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let freeHigh = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let excludedPaid = UUID(uuidString: "00000000-0000-0000-0000-0000000000D4")!
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: active, name: "Active", usedUnits: 50, quota: 100),
+                AgentAccount(id: paidHigh, name: "Paid High", usedUnits: 0, quota: 100, isPaid: true),
+                AgentAccount(id: freeHigh, name: "Free High", usedUnits: 0, quota: 100),
+                AgentAccount(
+                    id: excludedPaid,
+                    name: "Excluded Paid",
+                    usedUnits: 0,
+                    quota: 100,
+                    isPaid: true,
+                    isUsageSyncExcluded: true
+                )
+            ],
+            mode: .ordered
+        )
+
+        #expect(state.orderedSwitchAccounts.map(\.id) == [paidHigh, freeHigh, active, excludedPaid])
+
+        var legacySnapshot = state.snapshot
+        legacySnapshot.activeAccountID = active
+        legacySnapshot.switchOrderAccountIDs = []
+        legacySnapshot.switchOrderSeedVersion = 0
+        legacySnapshot.hasCustomizedSwitchOrder = false
+        let migrated = AccountPoolState(snapshot: legacySnapshot)
+        #expect(migrated.orderedSwitchAccounts.map(\.id) == [active, paidHigh, freeHigh, excludedPaid])
+
+        var customizedSnapshot = migrated.snapshot
+        customizedSnapshot.switchOrderAccountIDs = [excludedPaid, active, paidHigh, freeHigh]
+        customizedSnapshot.switchOrderSeedVersion = 0
+        customizedSnapshot.hasCustomizedSwitchOrder = true
+        let preserved = AccountPoolState(snapshot: customizedSnapshot)
+        #expect(preserved.orderedSwitchAccounts.map(\.id) == [excludedPaid, active, paidHigh, freeHigh])
     }
 
     @Test
@@ -2616,6 +2657,7 @@ struct CodexPoolManagerTests {
 
         state.moveSwitchOrderAccount(c, offset: -1)
         #expect(state.orderedSwitchAccounts.map(\.id) == [a, c, b])
+        #expect(state.snapshot.hasCustomizedSwitchOrder)
 
         let restored = AccountPoolState(snapshot: state.snapshot)
         #expect(restored.orderedSwitchAccounts.map(\.id) == [a, c, b])

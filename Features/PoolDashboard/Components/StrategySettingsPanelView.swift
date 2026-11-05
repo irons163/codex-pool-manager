@@ -144,11 +144,10 @@ struct StrategySettingsPanelView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.name)
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
-                if account.isUsageSyncExcluded {
-                    Text(L10n.text("strategy.order.excluded"))
-                        .font(.caption)
-                        .foregroundStyle(PoolDashboardTheme.textMuted)
-                }
+                Text(orderedAccountDetailText(for: account))
+                    .font(.caption)
+                    .foregroundStyle(PoolDashboardTheme.textMuted)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 8)
@@ -213,6 +212,30 @@ struct StrategySettingsPanelView: View {
 
     private func intelligentRemainingPercent(for account: AgentAccount) -> Int {
         account.smartSwitchRemainingPercent
+    }
+
+    private func orderedAccountDetailText(for account: AgentAccount) -> String {
+        var parts: [String] = []
+
+        if account.isBusinessAccount {
+            parts.append(L10n.text("account.business_badge"))
+        } else if account.isPaid {
+            parts.append(L10n.text("account.paid_badge"))
+        } else {
+            parts.append(L10n.text("account.free_badge"))
+        }
+
+        parts.append(
+            account.identityScope == AgentAccount.personalIdentityScope
+                ? L10n.text("account.personal_workspace")
+                : L10n.text("account.organization_workspace")
+        )
+
+        if account.isUsageSyncExcluded {
+            parts.append(L10n.text("strategy.order.excluded"))
+        }
+
+        return parts.joined(separator: " · ")
     }
 
     private func localizedModeTitle(_ mode: SwitchMode) -> String {

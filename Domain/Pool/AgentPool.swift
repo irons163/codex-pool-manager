@@ -454,6 +454,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
     var manualAccountID: UUID?
     var focusLockedAccountID: UUID?
     var switchOrderAccountIDs: [UUID]
+    var switchOrderSeedVersion: Int
+    var hasCustomizedSwitchOrder: Bool
     var minSwitchInterval: TimeInterval
     var lowUsageThresholdRatio: Double
     var lowUsageAlertThresholdRatio: Double
@@ -474,6 +476,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         manualAccountID: UUID?,
         focusLockedAccountID: UUID?,
         switchOrderAccountIDs: [UUID] = [],
+        switchOrderSeedVersion: Int = 0,
+        hasCustomizedSwitchOrder: Bool = false,
         minSwitchInterval: TimeInterval,
         lowUsageThresholdRatio: Double,
         lowUsageAlertThresholdRatio: Double? = nil,
@@ -493,6 +497,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         self.manualAccountID = manualAccountID
         self.focusLockedAccountID = focusLockedAccountID
         self.switchOrderAccountIDs = switchOrderAccountIDs
+        self.switchOrderSeedVersion = switchOrderSeedVersion
+        self.hasCustomizedSwitchOrder = hasCustomizedSwitchOrder
         self.minSwitchInterval = minSwitchInterval
         self.lowUsageThresholdRatio = lowUsageThresholdRatio
         self.lowUsageAlertThresholdRatio = lowUsageAlertThresholdRatio ?? lowUsageThresholdRatio
@@ -515,6 +521,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
         manualAccountID = try container.decodeIfPresent(UUID.self, forKey: .manualAccountID)
         focusLockedAccountID = try container.decodeIfPresent(UUID.self, forKey: .focusLockedAccountID)
         switchOrderAccountIDs = try container.decodeIfPresent([UUID].self, forKey: .switchOrderAccountIDs) ?? []
+        switchOrderSeedVersion = try container.decodeIfPresent(Int.self, forKey: .switchOrderSeedVersion) ?? 0
+        hasCustomizedSwitchOrder = try container.decodeIfPresent(Bool.self, forKey: .hasCustomizedSwitchOrder) ?? false
         minSwitchInterval = try container.decode(TimeInterval.self, forKey: .minSwitchInterval)
         lowUsageThresholdRatio = try container.decode(Double.self, forKey: .lowUsageThresholdRatio)
         lowUsageAlertThresholdRatio = try container.decodeIfPresent(Double.self, forKey: .lowUsageAlertThresholdRatio) ?? lowUsageThresholdRatio
@@ -537,6 +545,8 @@ struct AccountPoolSnapshot: Codable, Equatable {
             manualAccountID: manualAccountID,
             focusLockedAccountID: focusLockedAccountID,
             switchOrderAccountIDs: switchOrderAccountIDs,
+            switchOrderSeedVersion: switchOrderSeedVersion,
+            hasCustomizedSwitchOrder: hasCustomizedSwitchOrder,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
@@ -557,6 +567,8 @@ struct AccountPoolState {
         case syncIncludedAccounts
     }
 
+    private static let currentSwitchOrderSeedVersion = 1
+
     private(set) var accounts: [AgentAccount]
     private(set) var groups: [String]
     private(set) var activities: [PoolActivity]
@@ -566,6 +578,8 @@ struct AccountPoolState {
 
     private var focusLockedAccountID: UUID?
     private var switchOrderAccountIDs: [UUID]
+    private var switchOrderSeedVersion: Int
+    private var hasCustomizedSwitchOrder: Bool
     private var lastSwitchAt: Date?
     private(set) var lastUsageSyncAt: Date?
 
@@ -597,7 +611,9 @@ struct AccountPoolState {
         self.activeAccountID = nil
         self.manualAccountID = accounts.first?.id
         self.focusLockedAccountID = nil
-        self.switchOrderAccountIDs = accounts.filter(\.supportsCodexUsageSync).map(\.id)
+        self.switchOrderAccountIDs = Self.defaultSwitchOrderAccountIDs(accounts: accounts, activeAccountID: nil)
+        self.switchOrderSeedVersion = Self.currentSwitchOrderSeedVersion
+        self.hasCustomizedSwitchOrder = false
         self.lastSwitchAt = nil
         self.lastUsageSyncAt = nil
         self.minSwitchInterval = minSwitchInterval
@@ -620,6 +636,8 @@ struct AccountPoolState {
         self.manualAccountID = snapshot.manualAccountID
         self.focusLockedAccountID = snapshot.focusLockedAccountID
         self.switchOrderAccountIDs = snapshot.switchOrderAccountIDs
+        self.switchOrderSeedVersion = snapshot.switchOrderSeedVersion
+        self.hasCustomizedSwitchOrder = snapshot.hasCustomizedSwitchOrder
         self.lastSwitchAt = snapshot.lastSwitchAt
         self.lastUsageSyncAt = snapshot.lastUsageSyncAt
         self.switchWithoutLaunching = snapshot.switchWithoutLaunching
@@ -630,6 +648,13 @@ struct AccountPoolState {
         self.lowUsageAlertThresholdRatio = min(0.9, max(0.01, snapshot.lowUsageAlertThresholdRatio))
         self.lowUsageAlertsEnabled = snapshot.lowUsageAlertsEnabled
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
+        if !hasCustomizedSwitchOrder && switchOrderSeedVersion < Self.currentSwitchOrderSeedVersion {
+            switchOrderAccountIDs = Self.defaultSwitchOrderAccountIDs(
+                accounts: accounts,
+                activeAccountID: snapshot.activeAccountID
+            )
+            switchOrderSeedVersion = Self.currentSwitchOrderSeedVersion
+        }
         rebuildGroups()
         evaluate(now: .now)
     }
@@ -715,6 +740,8 @@ struct AccountPoolState {
         }
         let movedID = switchOrderAccountIDs.remove(at: index)
         switchOrderAccountIDs.insert(movedID, at: targetIndex)
+        hasCustomizedSwitchOrder = true
+        switchOrderSeedVersion = Self.currentSwitchOrderSeedVersion
     }
 
     var snapshot: AccountPoolSnapshot {
@@ -727,6 +754,8 @@ struct AccountPoolState {
             manualAccountID: manualAccountID,
             focusLockedAccountID: focusLockedAccountID,
             switchOrderAccountIDs: switchOrderAccountIDs,
+            switchOrderSeedVersion: switchOrderSeedVersion,
+            hasCustomizedSwitchOrder: hasCustomizedSwitchOrder,
             minSwitchInterval: minSwitchInterval,
             lowUsageThresholdRatio: lowUsageThresholdRatio,
             lowUsageAlertThresholdRatio: lowUsageAlertThresholdRatio,
@@ -1538,6 +1567,40 @@ struct AccountPoolState {
                 .map(\.id)
         )
         return orderedSwitchAccounts.filter { availableIDs.contains($0.id) }
+    }
+
+    private static func defaultSwitchOrderAccountIDs(
+        accounts: [AgentAccount],
+        activeAccountID: UUID?
+    ) -> [UUID] {
+        accounts
+            .filter(\.supportsCodexUsageSync)
+            .enumerated()
+            .sorted { lhs, rhs in
+                let left = lhs.element
+                let right = rhs.element
+                let leftIsActive = left.id == activeAccountID
+                let rightIsActive = right.id == activeAccountID
+                if leftIsActive != rightIsActive {
+                    return leftIsActive
+                }
+                if left.isUsageSyncExcluded != right.isUsageSyncExcluded {
+                    return !left.isUsageSyncExcluded
+                }
+                let leftRemaining = left.smartSwitchRemainingRatio
+                let rightRemaining = right.smartSwitchRemainingRatio
+                if leftRemaining != rightRemaining {
+                    return leftRemaining > rightRemaining
+                }
+                if left.isPaid != right.isPaid {
+                    return left.isPaid
+                }
+                if left.createdAt != right.createdAt {
+                    return left.createdAt < right.createdAt
+                }
+                return lhs.offset < rhs.offset
+            }
+            .map(\.element.id)
     }
 
     private mutating func normalizeSwitchOrderAccountIDs() {
