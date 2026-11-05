@@ -139,6 +139,7 @@
 "strategy.order.excluded" = "사용량 동기화 제외됨(전환 시 건너뜀)";
 "strategy.order.move_up" = "위로";
 "strategy.order.move_down" = "아래로";
+"strategy.order.drag_hint" = "드래그하여 순서 변경";
 "strategy.order.threshold_format" = "전환 임계값: %d%%";
 "strategy.general_settings" = "일반 설정";
 "strategy.low_usage_threshold_format" = "저사용량 경고 임계값: %d%%";

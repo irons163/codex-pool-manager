@@ -148,6 +148,7 @@
 "strategy.order.excluded" = "已排除用量同步，切换时会跳过";
 "strategy.order.move_up" = "上移";
 "strategy.order.move_down" = "下移";
+"strategy.order.drag_hint" = "拖拽调整顺序";
 "strategy.order.threshold_format" = "切换阈值：%d%%";
 "strategy.general_settings" = "一般设置";
 "strategy.low_usage_threshold_format" = "低用量提醒阈值：%d%%";

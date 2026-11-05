@@ -139,6 +139,7 @@
 "strategy.order.excluded" = "Synchronisation exclue ; ignoré lors des bascules";
 "strategy.order.move_up" = "Monter";
 "strategy.order.move_down" = "Descendre";
+"strategy.order.drag_hint" = "Glisser pour réordonner";
 "strategy.order.threshold_format" = "Seuil de bascule : %d%%";
 "strategy.general_settings" = "Paramètres généraux";
 "strategy.low_usage_threshold_format" = "Seuil d'alerte faible usage : %d%%";

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct StrategySettingsPanelView: View {
     let mode: SwitchMode
@@ -17,6 +18,7 @@ struct StrategySettingsPanelView: View {
     let switchThresholdBinding: Binding<Double>
     let lowUsageAlertThresholdBinding: Binding<Double>
     let lowUsageAlertsEnabledBinding: Binding<Bool>
+    @State private var draggingOrderedAccountID: UUID?
     private var visibleModes: [SwitchMode] {
         [.intelligent, .ordered, .focus]
     }
@@ -133,6 +135,12 @@ struct StrategySettingsPanelView: View {
                 .monospacedDigit()
                 .foregroundStyle(PoolDashboardTheme.textMuted)
 
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(PoolDashboardTheme.textMuted)
+                .help(L10n.text("strategy.order.drag_hint"))
+                .accessibilityLabel(L10n.text("strategy.order.drag_hint"))
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.name)
                     .foregroundStyle(PoolDashboardTheme.textPrimary)
@@ -146,7 +154,7 @@ struct StrategySettingsPanelView: View {
             Spacer(minLength: 8)
 
             Button {
-                moveOrderedAccount?(account.id, -1)
+                moveOrderedAccount?(account.id, index - 1)
             } label: {
                 Image(systemName: "arrow.up")
             }
@@ -155,7 +163,7 @@ struct StrategySettingsPanelView: View {
             .help(L10n.text("strategy.order.move_up"))
 
             Button {
-                moveOrderedAccount?(account.id, 1)
+                moveOrderedAccount?(account.id, index + 1)
             } label: {
                 Image(systemName: "arrow.down")
             }
@@ -163,6 +171,23 @@ struct StrategySettingsPanelView: View {
             .disabled(index == orderedAccounts.count - 1)
             .help(L10n.text("strategy.order.move_down"))
         }
+        .opacity(draggingOrderedAccountID == account.id ? 0.55 : 1)
+        .contentShape(Rectangle())
+        .onDrag {
+            draggingOrderedAccountID = account.id
+            return NSItemProvider(object: account.id.uuidString as NSString)
+        }
+        .onDrop(
+            of: [.text],
+            delegate: OrderedAccountDropDelegate(
+                targetAccountID: account.id,
+                orderedAccounts: orderedAccounts,
+                draggingAccountID: $draggingOrderedAccountID,
+                moveAccount: { accountID, targetIndex in
+                    moveOrderedAccount?(accountID, targetIndex)
+                }
+            )
+        )
         .dashboardInfoCard()
     }
 
@@ -201,5 +226,31 @@ struct StrategySettingsPanelView: View {
         case .focus:
             return L10n.text("mode.focus")
         }
+    }
+}
+
+private struct OrderedAccountDropDelegate: DropDelegate {
+    let targetAccountID: UUID
+    let orderedAccounts: [AgentAccount]
+    @Binding var draggingAccountID: UUID?
+    let moveAccount: (UUID, Int) -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let draggingAccountID,
+              draggingAccountID != targetAccountID,
+              let targetIndex = orderedAccounts.firstIndex(where: { $0.id == targetAccountID })
+        else {
+            return
+        }
+        moveAccount(draggingAccountID, targetIndex)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingAccountID = nil
+        return true
     }
 }

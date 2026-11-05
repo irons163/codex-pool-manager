@@ -139,6 +139,7 @@
 "strategy.order.excluded" = "使用量同期から除外中（切り替え時にスキップ）";
 "strategy.order.move_up" = "上へ";
 "strategy.order.move_down" = "下へ";
+"strategy.order.drag_hint" = "ドラッグして並べ替え";
 "strategy.order.threshold_format" = "切り替えしきい値: %d%%";
 "strategy.general_settings" = "一般設定";
 "strategy.low_usage_threshold_format" = "低使用量アラートしきい値: %d%%";

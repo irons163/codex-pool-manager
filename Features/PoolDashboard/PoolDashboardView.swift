@@ -1415,8 +1415,10 @@ struct PoolDashboardView: View {
             canIntelligentSwitch: state.canIntelligentSwitch(),
             intelligentCooldownRemaining: state.intelligentSwitchCooldownRemaining(),
             hasLowUsageWarning: state.hasLowUsageWarning,
-            moveOrderedAccount: { accountID, offset in
-                state.moveSwitchOrderAccount(accountID, offset: offset)
+            moveOrderedAccount: { accountID, targetIndex in
+                withAnimation(.easeInOut(duration: PoolDashboardTheme.fastAnimationDuration)) {
+                    state.moveSwitchOrderAccount(accountID, to: targetIndex)
+                }
             },
             modeBinding: strategyBindings.mode,
             manualSelectionBinding: strategyBindings.manualSelection,

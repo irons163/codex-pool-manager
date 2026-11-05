@@ -139,6 +139,7 @@
 "strategy.order.excluded" = "Sincronización excluida; se omite al cambiar";
 "strategy.order.move_up" = "Subir";
 "strategy.order.move_down" = "Bajar";
+"strategy.order.drag_hint" = "Arrastra para reordenar";
 "strategy.order.threshold_format" = "Umbral de cambio: %d%%";
 "strategy.general_settings" = "Configuración general";
 "strategy.low_usage_threshold_format" = "Umbral de alerta de bajo uso: %d%%";

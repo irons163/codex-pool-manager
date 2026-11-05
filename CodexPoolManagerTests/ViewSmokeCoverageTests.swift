@@ -277,7 +277,7 @@ struct ViewSmokeCoverageTests {
         let lowUsageThresholdBox = BindingBox<Double>(0.15)
         let lowUsageAlertsEnabledBox = BindingBox(true)
         var movedAccountID: UUID?
-        var movedOffset: Int?
+        var movedTargetIndex: Int?
 
         let ordered = StrategySettingsPanelView(
             mode: .ordered,
@@ -288,9 +288,9 @@ struct ViewSmokeCoverageTests {
             canIntelligentSwitch: false,
             intelligentCooldownRemaining: 0,
             hasLowUsageWarning: false,
-            moveOrderedAccount: { accountID, offset in
+            moveOrderedAccount: { accountID, targetIndex in
                 movedAccountID = accountID
-                movedOffset = offset
+                movedTargetIndex = targetIndex
             },
             modeBinding: binding(modeBox),
             manualSelectionBinding: binding(manualSelectionBox),
@@ -301,7 +301,7 @@ struct ViewSmokeCoverageTests {
         )
         let _ = ordered.body
         #expect(movedAccountID == nil)
-        #expect(movedOffset == nil)
+        #expect(movedTargetIndex == nil)
 
         let empty = StrategySettingsPanelView(
             mode: .ordered,

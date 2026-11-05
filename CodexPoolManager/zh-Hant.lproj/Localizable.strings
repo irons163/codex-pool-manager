@@ -148,6 +148,7 @@
 "strategy.order.excluded" = "已排除用量同步，切換時會跳過";
 "strategy.order.move_up" = "上移";
 "strategy.order.move_down" = "下移";
+"strategy.order.drag_hint" = "拖曳調整順序";
 "strategy.order.threshold_format" = "切換門檻：%d%%";
 "strategy.general_settings" = "一般設定";
 "strategy.low_usage_threshold_format" = "智能切換門檻：%d%%";

@@ -702,9 +702,19 @@ struct AccountPoolState {
     mutating func moveSwitchOrderAccount(_ accountID: UUID, offset: Int) {
         normalizeSwitchOrderAccountIDs()
         guard let index = switchOrderAccountIDs.firstIndex(of: accountID) else { return }
-        let targetIndex = index + offset
-        guard switchOrderAccountIDs.indices.contains(targetIndex) else { return }
-        switchOrderAccountIDs.swapAt(index, targetIndex)
+        moveSwitchOrderAccount(accountID, to: index + offset)
+    }
+
+    mutating func moveSwitchOrderAccount(_ accountID: UUID, to targetIndex: Int) {
+        normalizeSwitchOrderAccountIDs()
+        guard let index = switchOrderAccountIDs.firstIndex(of: accountID),
+              index != targetIndex,
+              switchOrderAccountIDs.indices.contains(targetIndex)
+        else {
+            return
+        }
+        let movedID = switchOrderAccountIDs.remove(at: index)
+        switchOrderAccountIDs.insert(movedID, at: targetIndex)
     }
 
     var snapshot: AccountPoolSnapshot {

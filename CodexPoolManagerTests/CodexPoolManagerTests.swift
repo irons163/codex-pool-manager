@@ -2628,6 +2628,30 @@ struct CodexPoolManagerTests {
     }
 
     @Test
+    func orderedModeMoveToIndexReordersAccounts() {
+        let a = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let b = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let c = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        var state = AccountPoolState(
+            accounts: [
+                AgentAccount(id: a, name: "A", usedUnits: 0, quota: 1000),
+                AgentAccount(id: b, name: "B", usedUnits: 0, quota: 1000),
+                AgentAccount(id: c, name: "C", usedUnits: 0, quota: 1000)
+            ],
+            mode: .ordered
+        )
+
+        state.moveSwitchOrderAccount(c, to: 0)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [c, a, b])
+
+        state.moveSwitchOrderAccount(c, to: 2)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, c])
+
+        state.moveSwitchOrderAccount(a, to: 99)
+        #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, c])
+    }
+
+    @Test
     func lowUsageAlertPolicyTreatsOrderedModeAsManaged() {
         var policy = LowUsageAlertPolicy()
         let first = policy.shouldTriggerAlert(mode: .ordered, hasLowUsageWarning: true)
