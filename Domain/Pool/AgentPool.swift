@@ -567,7 +567,7 @@ struct AccountPoolState {
         case syncIncludedAccounts
     }
 
-    private static let currentSwitchOrderSeedVersion = 1
+    private static let currentSwitchOrderSeedVersion = 2
 
     private(set) var accounts: [AgentAccount]
     private(set) var groups: [String]
@@ -611,7 +611,7 @@ struct AccountPoolState {
         self.activeAccountID = nil
         self.manualAccountID = accounts.first?.id
         self.focusLockedAccountID = nil
-        self.switchOrderAccountIDs = Self.defaultSwitchOrderAccountIDs(accounts: accounts, activeAccountID: nil)
+        self.switchOrderAccountIDs = Self.defaultSwitchOrderAccountIDs(accounts: accounts)
         self.switchOrderSeedVersion = Self.currentSwitchOrderSeedVersion
         self.hasCustomizedSwitchOrder = false
         self.lastSwitchAt = nil
@@ -649,10 +649,7 @@ struct AccountPoolState {
         self.lowUsageAlertsEnabled = snapshot.lowUsageAlertsEnabled
         self.minUsageRatioDeltaToSwitch = min(0.5, max(0, snapshot.minUsageRatioDeltaToSwitch))
         if !hasCustomizedSwitchOrder && switchOrderSeedVersion < Self.currentSwitchOrderSeedVersion {
-            switchOrderAccountIDs = Self.defaultSwitchOrderAccountIDs(
-                accounts: accounts,
-                activeAccountID: snapshot.activeAccountID
-            )
+            switchOrderAccountIDs = Self.defaultSwitchOrderAccountIDs(accounts: accounts)
             switchOrderSeedVersion = Self.currentSwitchOrderSeedVersion
         }
         rebuildGroups()
@@ -1569,28 +1566,23 @@ struct AccountPoolState {
         return orderedSwitchAccounts.filter { availableIDs.contains($0.id) }
     }
 
-    private static func defaultSwitchOrderAccountIDs(
-        accounts: [AgentAccount],
-        activeAccountID: UUID?
-    ) -> [UUID] {
+    private static func defaultSwitchOrderAccountIDs(accounts: [AgentAccount]) -> [UUID] {
         accounts
             .filter(\.supportsCodexUsageSync)
             .enumerated()
             .sorted { lhs, rhs in
                 let left = lhs.element
                 let right = rhs.element
-                let leftIsActive = left.id == activeAccountID
-                let rightIsActive = right.id == activeAccountID
-                if leftIsActive != rightIsActive {
-                    return leftIsActive
-                }
                 if left.isUsageSyncExcluded != right.isUsageSyncExcluded {
                     return !left.isUsageSyncExcluded
                 }
-                let leftRemaining = left.smartSwitchRemainingRatio
-                let rightRemaining = right.smartSwitchRemainingRatio
-                if leftRemaining != rightRemaining {
-                    return leftRemaining > rightRemaining
+                let leftSwitchRemaining = left.smartSwitchRemainingRatio
+                let rightSwitchRemaining = right.smartSwitchRemainingRatio
+                if leftSwitchRemaining != rightSwitchRemaining {
+                    return leftSwitchRemaining > rightSwitchRemaining
+                }
+                if left.remainingRatio != right.remainingRatio {
+                    return left.remainingRatio > right.remainingRatio
                 }
                 if left.isPaid != right.isPaid {
                     return left.isPaid

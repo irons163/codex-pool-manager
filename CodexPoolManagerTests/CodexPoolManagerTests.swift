@@ -2631,7 +2631,7 @@ struct CodexPoolManagerTests {
         legacySnapshot.switchOrderSeedVersion = 0
         legacySnapshot.hasCustomizedSwitchOrder = false
         let migrated = AccountPoolState(snapshot: legacySnapshot)
-        #expect(migrated.orderedSwitchAccounts.map(\.id) == [active, paidHigh, freeHigh, excludedPaid])
+        #expect(migrated.orderedSwitchAccounts.map(\.id) == [paidHigh, freeHigh, active, excludedPaid])
 
         var customizedSnapshot = migrated.snapshot
         customizedSnapshot.switchOrderAccountIDs = [excludedPaid, active, paidHigh, freeHigh]
@@ -2691,6 +2691,28 @@ struct CodexPoolManagerTests {
 
         state.moveSwitchOrderAccount(a, to: 99)
         #expect(state.orderedSwitchAccounts.map(\.id) == [a, b, c])
+    }
+
+    @Test
+    func orderedModeSeedBreaksSwitchRemainingTiesByWeeklyRemaining() {
+        let paidLowWeekly = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let freeFullWeekly = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: paidLowWeekly,
+                    name: "Paid Low Weekly",
+                    usedUnits: 80,
+                    quota: 100,
+                    primaryUsagePercent: 0,
+                    isPaid: true
+                ),
+                AgentAccount(id: freeFullWeekly, name: "Free Full Weekly", usedUnits: 0, quota: 100)
+            ],
+            mode: .ordered
+        )
+
+        #expect(state.orderedSwitchAccounts.map(\.id) == [freeFullWeekly, paidLowWeekly])
     }
 
     @Test
