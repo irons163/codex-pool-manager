@@ -128,6 +128,76 @@ if [[ -z "$X86_64_SIZE" || "$X86_64_SIZE" == "null" ]]; then
   X86_64_SIZE="0"
 fi
 
+SPARKLE_PRIVATE_KEY="${SPARKLE_PRIVATE_KEY:-}"
+if [[ -z "$SPARKLE_PRIVATE_KEY" ]]; then
+  echo "SPARKLE_PRIVATE_KEY is required to sign Sparkle update archives." >&2
+  exit 1
+fi
+export SPARKLE_PRIVATE_KEY
+
+SIGNING_TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$SIGNING_TMP_DIR"' EXIT
+
+sign_update_file() {
+  local file="$1"
+
+  python3 - "$file" <<'PY'
+import base64
+import os
+import sys
+from pathlib import Path
+
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+except ImportError:
+    raise SystemExit(
+        "Python 'cryptography' is required to sign Sparkle update archives."
+    )
+
+encoded_seed = os.environ.get("SPARKLE_PRIVATE_KEY", "").strip()
+if not encoded_seed:
+    raise SystemExit("SPARKLE_PRIVATE_KEY is required to sign Sparkle update archives.")
+
+try:
+    seed = base64.b64decode(encoded_seed, validate=True)
+except Exception as error:
+    raise SystemExit(f"SPARKLE_PRIVATE_KEY is not valid base64: {error}")
+
+if len(seed) != 32:
+    raise SystemExit(
+        f"SPARKLE_PRIVATE_KEY must decode to 32 bytes, got {len(seed)} bytes."
+    )
+
+private_key = Ed25519PrivateKey.from_private_bytes(seed)
+signature = private_key.sign(Path(sys.argv[1]).read_bytes())
+print(base64.b64encode(signature).decode("ascii"))
+PY
+}
+
+resolve_signing_file() {
+  local label="$1"
+  local url="$2"
+  local override_path="$3"
+
+  if [[ -n "$override_path" ]]; then
+    if [[ ! -f "$override_path" ]]; then
+      echo "Update archive not found: ${override_path}" >&2
+      exit 1
+    fi
+    printf '%s' "$override_path"
+    return 0
+  fi
+
+  local downloaded_path="${SIGNING_TMP_DIR}/${label}.dmg"
+  curl --fail --silent --show-error --location "$url" --output "$downloaded_path"
+  printf '%s' "$downloaded_path"
+}
+
+ARM64_FILE="$(resolve_signing_file "arm64" "$ARM64_URL" "${ARM64_FILE:-}")"
+X86_64_FILE="$(resolve_signing_file "x86_64" "$X86_64_URL" "${X86_64_FILE:-}")"
+ARM64_SIGNATURE="$(sign_update_file "$ARM64_FILE")"
+X86_64_SIGNATURE="$(sign_update_file "$X86_64_FILE")"
+
 if [[ -n "$PUBLISHED_AT" && "$PUBLISHED_AT" != "null" ]]; then
   if PUB_DATE="$(date -u -d "$PUBLISHED_AT" "+%a, %d %b %Y %H:%M:%S +0000" 2>/dev/null)"; then
     :
@@ -148,7 +218,8 @@ generate_feed() {
   local arch_label="$1"
   local url="$2"
   local size="$3"
-  local out_file="$4"
+  local signature="$4"
+  local out_file="$5"
 
   cat > "$out_file" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
@@ -169,6 +240,7 @@ ${RELEASE_NOTES_LINKS_XML}
         url="${url}"
         sparkle:version="${BUILD_VERSION}"
         sparkle:shortVersionString="${SHORT_VERSION}"
+        sparkle:edSignature="${signature}"
         type="application/x-apple-diskimage"
         length="${size}" />
     </item>
@@ -177,8 +249,8 @@ ${RELEASE_NOTES_LINKS_XML}
 EOF
 }
 
-generate_feed "arm64" "$ARM64_URL" "$ARM64_SIZE" "${OUTPUT_DIR}/appcast-arm64.xml"
-generate_feed "x86_64" "$X86_64_URL" "$X86_64_SIZE" "${OUTPUT_DIR}/appcast-x86_64.xml"
+generate_feed "arm64" "$ARM64_URL" "$ARM64_SIZE" "$ARM64_SIGNATURE" "${OUTPUT_DIR}/appcast-arm64.xml"
+generate_feed "x86_64" "$X86_64_URL" "$X86_64_SIZE" "$X86_64_SIGNATURE" "${OUTPUT_DIR}/appcast-x86_64.xml"
 
 echo "Generated Sparkle appcasts:"
 ls -la "${OUTPUT_DIR}"/appcast-*.xml

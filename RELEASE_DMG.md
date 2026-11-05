@@ -15,11 +15,19 @@ Add these repository secrets:
 - `APPLE_API_KEY_ID`
 - `APPLE_API_ISSUER_ID`
 - `APPLE_API_PRIVATE_KEY_BASE64`
+- `SPARKLE_PRIVATE_KEY`
 
 Notes:
 
 - `APPLE_CERTIFICATE_P12_BASE64`: Base64-encoded `Developer ID Application` certificate (`.p12`)
 - `APPLE_API_PRIVATE_KEY_BASE64`: Base64-encoded App Store Connect API key (`.p8`)
+- `SPARKLE_PRIVATE_KEY`: Base64-encoded Ed25519 private key (32-byte seed) used to sign Sparkle update archives. Generate it with Sparkle's `generate_keys`, export it with `generate_keys -x <file>`, and store the file contents as this secret. The matching public key must be embedded in the app as `SUPublicEDKey`.
+
+### Sparkle EdDSA signing
+
+`scripts/generate_sparkle_appcast.sh` downloads each DMG, signs it with `SPARKLE_PRIVATE_KEY`, and writes the `sparkle:edSignature` attribute into the appcast enclosure. The `publish-sparkle-appcast` job requires the secret and installs the Python `cryptography` package to perform the signature.
+
+When rotating keys, first ship a release that embeds the new `SUPublicEDKey`, then switch the appcast signatures. Installs that predate `SUPublicEDKey` cannot be updated through Sparkle and require one manual install.
 
 ## 2. Release Trigger
 

@@ -1019,14 +1019,12 @@
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/CodexPoolManager-Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
 				INFOPLIST_KEY_CFBundleIconFile = AppIcon.icns;
 				INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_SUAllowsInsecureUpdates = YES;
-				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUFeedURL = "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1059,14 +1057,12 @@
 				ENABLE_TESTING_SEARCH_PATHS = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/CodexPoolManager-Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Codex Pool Manager";
 				INFOPLIST_KEY_CFBundleIconFile = AppIcon.icns;
 				INFOPLIST_KEY_CFBundleName = "Codex Pool Manager";
 				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.irons.CodexPoolManager.oauth\";\n    CFBundleURLSchemes =     (\n        codexpoolmanager\n    );\n}";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_SUAllowsInsecureUpdates = YES;
-				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUFeedURL = "https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

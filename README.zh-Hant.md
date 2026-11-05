@@ -342,6 +342,7 @@ open CodexPoolManager.xcodeproj
 - `APPLE_API_KEY_ID`
 - `APPLE_API_ISSUER_ID`
 - `APPLE_API_PRIVATE_KEY_BASE64`
+- `SPARKLE_PRIVATE_KEY`
 
 詳細設定請見 [RELEASE_DMG.md](RELEASE_DMG.md)。
 

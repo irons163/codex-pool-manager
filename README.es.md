@@ -299,6 +299,7 @@ Empaquetado DMG + notarization automatizado en:
 - `APPLE_API_KEY_ID`
 - `APPLE_API_ISSUER_ID`
 - `APPLE_API_PRIVATE_KEY_BASE64`
+- `SPARKLE_PRIVATE_KEY`
 
 Para setup detallado, ver [RELEASE_DMG.md](RELEASE_DMG.md).
 

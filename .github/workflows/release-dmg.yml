@@ -250,6 +250,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Sparkle appcast signing dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user --break-system-packages 'cryptography>=42'
+
+      - name: Validate Sparkle signing secret
+        shell: bash
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
+            echo "Missing required secret: SPARKLE_PRIVATE_KEY" >&2
+            exit 1
+          fi
+
       - name: Upload localized release notes to GitHub Release
         shell: bash
         env:
@@ -298,6 +315,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
           RELEASE_PRERELEASE: ${{ github.event_name == 'release' && github.event.release.prerelease || 'false' }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           chmod +x scripts/generate_sparkle_appcast.sh

@@ -305,6 +305,7 @@ Widget もテストする場合、関連 target の Team 署名を合わせて�
 - `APPLE_API_KEY_ID`
 - `APPLE_API_ISSUER_ID`
 - `APPLE_API_PRIVATE_KEY_BASE64`
+- `SPARKLE_PRIVATE_KEY`
 
 詳細は [RELEASE_DMG.md](RELEASE_DMG.md) を参照してください。
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/irons163/codex-pool-manager/releases/latest/download/appcast-arm64.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>xqK7UwBBusiHX8BQxQoKhTPmIUXRjrWD/kPCCrByIFI=</string>
+</dict>
+</plist>
