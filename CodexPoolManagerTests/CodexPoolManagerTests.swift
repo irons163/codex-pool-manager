@@ -2694,7 +2694,7 @@ struct CodexPoolManagerTests {
     }
 
     @Test
-    func orderedModeSeedBreaksSwitchRemainingTiesByWeeklyRemaining() {
+    func orderedModeSeedPrioritizesPaidAccountsBeforeFreeAccounts() {
         let paidLowWeekly = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
         let freeFullWeekly = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
         let state = AccountPoolState(
@@ -2712,7 +2712,38 @@ struct CodexPoolManagerTests {
             mode: .ordered
         )
 
-        #expect(state.orderedSwitchAccounts.map(\.id) == [freeFullWeekly, paidLowWeekly])
+        #expect(state.orderedSwitchAccounts.map(\.id) == [paidLowWeekly, freeFullWeekly])
+    }
+
+    @Test
+    func orderedModeSeedDemotesExhaustedPaidAccountsBelowAvailableFreeAccounts() {
+        let availablePaid = UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!
+        let availableFree = UUID(uuidString: "00000000-0000-0000-0000-0000000000B2")!
+        let exhaustedPaid = UUID(uuidString: "00000000-0000-0000-0000-0000000000C3")!
+        let state = AccountPoolState(
+            accounts: [
+                AgentAccount(
+                    id: availablePaid,
+                    name: "Available Paid",
+                    usedUnits: 80,
+                    quota: 100,
+                    primaryUsagePercent: 0,
+                    isPaid: true
+                ),
+                AgentAccount(id: availableFree, name: "Available Free", usedUnits: 0, quota: 100),
+                AgentAccount(
+                    id: exhaustedPaid,
+                    name: "Exhausted Paid",
+                    usedUnits: 50,
+                    quota: 100,
+                    primaryUsagePercent: 100,
+                    isPaid: true
+                )
+            ],
+            mode: .ordered
+        )
+
+        #expect(state.orderedSwitchAccounts.map(\.id) == [availablePaid, availableFree, exhaustedPaid])
     }
 
     @Test

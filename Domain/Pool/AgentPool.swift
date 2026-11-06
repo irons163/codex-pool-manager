@@ -567,7 +567,7 @@ struct AccountPoolState {
         case syncIncludedAccounts
     }
 
-    private static let currentSwitchOrderSeedVersion = 2
+    private static let currentSwitchOrderSeedVersion = 4
 
     private(set) var accounts: [AgentAccount]
     private(set) var groups: [String]
@@ -1578,13 +1578,21 @@ struct AccountPoolState {
                 }
                 let leftSwitchRemaining = left.smartSwitchRemainingRatio
                 let rightSwitchRemaining = right.smartSwitchRemainingRatio
+                let leftIsAvailable = leftSwitchRemaining > 0
+                let rightIsAvailable = rightSwitchRemaining > 0
+                if leftIsAvailable != rightIsAvailable {
+                    return leftIsAvailable
+                }
+                if leftIsAvailable && left.isPaid != right.isPaid {
+                    return left.isPaid
+                }
                 if leftSwitchRemaining != rightSwitchRemaining {
                     return leftSwitchRemaining > rightSwitchRemaining
                 }
                 if left.remainingRatio != right.remainingRatio {
                     return left.remainingRatio > right.remainingRatio
                 }
-                if left.isPaid != right.isPaid {
+                if !leftIsAvailable && left.isPaid != right.isPaid {
                     return left.isPaid
                 }
                 if left.createdAt != right.createdAt {
